@@ -1,0 +1,45 @@
+{
+  "investigation_title": "Investigation Title",
+  "sample_names": "alpha,beta,gamma",
+  "a_measurement_type": [
+      "transcriptome profiling"
+  ],
+  "lib_kit": [
+    "Illumina TruSeq Stranded mRNA"
+  ],
+  "organism": [
+    "Homo sapiens",
+    "Mus musculus"
+  ],
+  "batch": "1",
+  "lib_kits": {
+    "Illumina TruSeq Stranded mRNA": {
+      "name": "Illumina TruSeq Stranded mRNA"
+    }
+  },
+  "organisms": {
+    "Homo sapiens": {
+      "name": "Homo sapiens",
+      "taxon": "9606"
+    },
+    "Mus musculus": {
+      "name": "Mus musculus",
+      "taxon": "10090"
+    }
+  },
+  "instrument": "Illumina NovaSeq 6000",
+  "center_name": "",
+  "center_contact": "",
+
+  "study_title": "{{cookiecutter.investigation_title}}",
+  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
+  "s_file_name": "{{cookiecutter.i_dir_name}}",
+  "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
+  "a_technology_type": "nucleotide sequencing",
+  "a_measurement_abbreviation": "{% if cookiecutter.a_measurement_type == 'transcriptome profiling' %}mRNA_seq{% else %}UNKNOWN{% endif %}",
+  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}",
+  "sample_type": "x-charite-medgen-blood-book-id",
+  "lib_strategy": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}RNA-seq{% else %}UNKNOWN{% endif %}",
+  "lib_selection": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}PolyA{% else %}UNKNOWN{% endif %}",
+  "lib_layout": "PAIRED"
+}

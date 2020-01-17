@@ -1,0 +1,13 @@
+# Base requirements
+
+# Attrs, helpful for removing boilerplate.
+attrs
+
+# Cookiecutter for templating ISA-tab directories.
+cookiecutter
+
+# Easy logging.
+logzero
+
+# Functionaly programming tools.
+toolz

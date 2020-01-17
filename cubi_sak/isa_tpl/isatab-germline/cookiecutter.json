@@ -1,0 +1,69 @@
+{
+  "investigation_title": "Investigation Title",
+  "sample_names": "index,mother,father",
+  "a_measurement_type": [
+      "exome sequencing",
+      "genome sequencing",
+      "panel sequencing"
+  ],
+  "lib_kit": [
+    "Agilent SureSelect Human All Exon V6r2",
+    "Agilent SureSelect Human All Exon V5",
+    "Agilent SureSelect Human All Exon V4",
+    "Agilent SureSelect Human All Exon V7",
+    "IDT xGen Exome Research Panel V1.0",
+    "IDT xGen Exome Research Panel V1.0 with YCGA 620kbp spike-in",
+    "Illumina TruSeq PCR-free",
+    "Illumina TruSeq Nano"
+  ],
+  "batch": "1",
+  "lib_kits": {
+    "Agilent SureSelect Human All Exon V6r2": {
+      "name": "Agilent SureSelect Human All Exon V6r2",
+      "cat_id": "S04380110"
+    },
+    "Agilent SureSelect Human All Exon V5": {
+      "name": "Agilent SureSelect Human All Exon V5",
+      "cat_id": "S04380110"
+    },
+    "Agilent SureSelect Human All Exon V4": {
+      "name": "Agilent SureSelect Human All Exon V4",
+      "cat_id": "S03723314"
+    },
+    "Agilent SureSelect Human All Exon V7": {
+      "name": "Agilent SureSelect Human All Exon V7",
+      "cat_id": "S31285117"
+    },
+    "IDT xGen Exome Research Panel V1.0": {
+      "name": "IDT xGen Exome Research Panel V1.0",
+      "cat_id": ""
+    },
+    "IDT xGen Exome Research Panel V1.0 with YCGA 620kbp spike-in": {
+      "name": "IDT xGen Exome Research Panel V1.0 with YCGA 620kbp spike-in",
+      "cat_id": ""
+    },
+    "Illumina TruSeq PCR-free": {
+      "name": "IDT xGen Exome Research Panel V1.0 with YCGA 620kbp spike-in",
+      "cat_id": ""
+    },
+    "Illumina TruSeq Nano": {
+      "name": "IDT xGen Exome Research Panel V1.0 with YCGA 620kbp spike-in",
+      "cat_id": ""
+    }
+  },
+  "instrument": "Illumina NextSeq 500",
+  "center_name": "",
+  "center_contact": "",
+
+  "study_title": "{{cookiecutter.investigation_title}}",
+  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
+  "s_file_name": "{{cookiecutter.i_dir_name}}",
+  "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
+  "a_technology_type": "nucleotide sequencing",
+  "a_measurement_abbreviation": "{% if cookiecutter.a_measurement_type == 'exome sequencing' %}WES{% else %}WGS{% endif %}",
+  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}",
+  "sample_type": "x-charite-medgen-blood-book-id",
+  "lib_strategy": "{% if cookiecutter.a_measurement_abbreviation == 'WES' %}WXS{% else %}WGS{% endif %}",
+  "lib_selection": "{% if cookiecutter.a_measurement_abbreviation == 'WES' %}Hybrid Selection{% else %}RANDOM{% endif %}",
+  "lib_layout": "PAIRED"
+}

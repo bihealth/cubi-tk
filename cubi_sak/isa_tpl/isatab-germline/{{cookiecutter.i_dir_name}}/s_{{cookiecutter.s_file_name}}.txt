@@ -1,0 +1,5 @@
+Source Name	Characteristics[UUID]	Characteristics[External links]	Characteristics[Batch]	Characteristics[Family]	Characteristics[Organism]	Term Source REF	Term Accession Number	Characteristics[Mother]	Characteristics[Father]	Comment[Family notes]	Characteristics[Sex]	Characteristics[Disease status]	Characteristics[OMIM disease]	Term Source REF	Term Accession Number	Characteristics[Orphanet disease]	Term Source REF	Term Accession Number	Characteristics[HPO terms]	Term Source REF	Term Accession Number	Comment[Disease notes]	Protocol REF	Performer	Sample Name	Characteristics[External links]	Characteristics[Cell origin]	Term Source REF	Term Accession Number	Characteristics[Cell type]	Term Source REF	Term Accession Number
+{% set sample_names = cookiecutter.sample_names.split(",") -%}
+{%- for sample_name in sample_names -%}
+{{sample_name|replace("-", "_")}}		{{cookiecutter.sample_type}}:{{sample_name}}	{{cookiecutter.batch}}	FAM_{{sample_name|replace("-", "_")}}	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	0	0		UNKNOWN	UNKNOWN											Sample collection		{{sample_name|replace("-", "_")}}-N1							
+{% endfor %}
