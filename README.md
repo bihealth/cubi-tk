@@ -22,6 +22,7 @@ $ pip install -e .
 ## Building the Manual
 
 ```bash
+$ pip install -r requirements/develop.txt
 $ cd docs_manual
 $ make clean html
 $ ls _build/html/index.html

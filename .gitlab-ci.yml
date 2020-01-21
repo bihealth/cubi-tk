@@ -13,4 +13,5 @@ all_tests:
     - black -l 100 --check .
     - flake8 .
     - python setup.py check
+    - cd docs_manual && make clean html
   when: on_success

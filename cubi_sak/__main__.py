@@ -13,10 +13,15 @@ from .isa_tpl import run as run_isa_tpl
 from .isa_tpl import setup_argparse as setup_argparse_isa_tpl
 
 
+def setup_argparse_only():
+    """Wrapper for ``setup_argparse()`` that only returns the parser."""
+    return setup_argparse()[0]
+
+
 def setup_argparse():
     """Create argument parser."""
     # Construct argument parser and set global options.
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="cubi-sak")
     parser.add_argument("--verbose", action="store_true", default=False, help="Increase verbosity.")
     parser.add_argument("--version", action="version", version="%%(prog)s %s" % __version__)
 
