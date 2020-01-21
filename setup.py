@@ -33,11 +33,8 @@ test_requirements = parse_requirements("requirements/test.txt")
 install_requirements = parse_requirements("requirements/base.txt")
 
 setup(
-    author="Dieter Beule, Jennifer Kirwan, Mathias Kuhring, Manuel Holtgrewe, Mikko Nieminen",
-    author_email=(
-        "dieter.beule@bihealth.de, jennifer.kirwan@bihalth.de, mathias.kuhring@bihealth.de, "
-        "manuel.holtgrewe@bihealth.de, mikko.nieminen@bihealth.de"
-    ),
+    author="Manuel Holtgrewe, Patrick Pett",
+    author_email=("manuel.holtgrewe@bihealth.de, patrick.pett@bihealth.de"),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -49,16 +46,16 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],
-    entry_points={"console_scripts": ("cubi-sak= cubi_sak.__main__:main",)},
-    description="Implementation of ISA-tools data model and ISA-TAB",
+    entry_points={"console_scripts": ("cubi-sak = cubi_sak.__main__:main",)},
+    description="Tooling for connecting GitLab, pipelines, and SODAR at CUBI.",
     install_requires=install_requirements,
     license="MIT license",
     long_description=readme + "\n\n" + history,
     long_description_content_type="text/markdown",
     include_package_data=True,
     keywords="cubi_sak",
-    name="cubi_sak",
-    packages=find_packages(include=["cubi_sak*"]),
+    name="cubi-sak",
+    packages=find_packages(include=["cubi_sak"]),
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/bihealth/cubi_sak",

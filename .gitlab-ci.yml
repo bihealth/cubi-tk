@@ -12,4 +12,5 @@ all_tests:
     - coverage report
     - black -l 100 --check .
     - flake8 .
+    - python setup.py check
   when: on_success
