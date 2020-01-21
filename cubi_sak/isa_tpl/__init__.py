@@ -94,7 +94,7 @@ TEMPLATES = {tpl.name: tpl for tpl in _TEMPLATES}
 def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
     """Run cookiecutter, ``tpl`` will be bound with ``toolz.curry``."""
     extra_context = {}
-    for name in tpl.configuration:
+    for name in tpl.configuration:  # pragma: nocover
         if getattr(args, "var_%s", None) is not None:
             extra_context[name] = getattr(args, "var_%s" % name)
 
@@ -149,9 +149,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
             )
 
 
-def run(args, parser, subparser):
+def run(args, parser, subparser):  # pragma: nocover
     """Main entry point for isa-tpl command."""
-    if not args.tpl:
+    if not args.tpl:  # pragma: nocover
         return run_nocmd(args, parser, subparser)
     else:
         return args.isa_tpl_cmd(args, parser, subparser)

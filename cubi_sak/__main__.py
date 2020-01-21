@@ -11,10 +11,15 @@ from cubi_sak import __version__
 from .common import run_nocmd
 from .isa_tpl import run as run_isa_tpl
 from .isa_tpl import setup_argparse as setup_argparse_isa_tpl
+from .snappy import run as run_snappy
+from .snappy import setup_argparse as setup_argparse_snappy
 
 
-def setup_argparse_only():
-    """Wrapper for ``setup_argparse()`` that only returns the parser."""
+def setup_argparse_only():  # pragma: nocover
+    """Wrapper for ``setup_argparse()`` that only returns the parser.
+
+    Only used in sphinx documentation via ``sphinx-argparse``.
+    """
     return setup_argparse()[0]
 
 
@@ -32,6 +37,9 @@ def setup_argparse():
         subparsers.add_parser(
             "isa-tpl", help="Create of ISA-tab directories from predefined templates."
         )
+    )
+    setup_argparse_snappy(
+        subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline.")
     )
 
     return parser, subparsers
@@ -53,12 +61,12 @@ def main(argv=None):
     logzero.loglevel(level=level)
 
     # Handle the actual command line.
-    cmds = {None: run_nocmd, "isa-tpl": run_isa_tpl}
+    cmds = {None: run_nocmd, "isa-tpl": run_isa_tpl, "snappy": run_snappy}
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)
     if not res:
         logger.info("All done. Have a nice day!")
-    else:
+    else:  # pragma: nocover
         logger.error("Something did not work out correctly.")
     return res
 

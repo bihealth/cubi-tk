@@ -1,0 +1,1718 @@
+{
+  "studies": {
+    "20eb436e-3e9a-4b48-ad8b-86586d144363": {
+      "study": {
+        "top_header": [
+          {
+            "value": "Source",
+            "colour": "info",
+            "colspan": 15
+          },
+          {
+            "value": "Process",
+            "colour": "danger",
+            "colspan": 2
+          },
+          {
+            "value": "Sample",
+            "colour": "warning",
+            "colspan": 4
+          }
+        ],
+        "field_header": [
+          {
+            "value": "Name",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 8
+          },
+          {
+            "value": "Uuid",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 4
+          },
+          {
+            "value": "External Links",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "EXTERNAL_LINKS",
+            "max_value_len": 1
+          },
+          {
+            "value": "Batch",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "NUMERIC",
+            "max_value_len": 5
+          },
+          {
+            "value": "Family",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 10
+          },
+          {
+            "value": "Organism",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "ONTOLOGY",
+            "max_value_len": 13
+          },
+          {
+            "value": "Mother",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 8
+          },
+          {
+            "value": "Father",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 8
+          },
+          {
+            "value": "Family Notes",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 11
+          },
+          {
+            "value": "Sex",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 6
+          },
+          {
+            "value": "Disease Status",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 13
+          },
+          {
+            "value": "Omim Disease",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "ONTOLOGY",
+            "max_value_len": 28
+          },
+          {
+            "value": "Orphanet Disease",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "ONTOLOGY",
+            "max_value_len": 22
+          },
+          {
+            "value": "Hpo Terms",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "ONTOLOGY",
+            "max_value_len": 10
+          },
+          {
+            "value": "Disease Notes",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SOURCE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 13
+          },
+          {
+            "value": "Protocol",
+            "obj_cls": "Process",
+            "item_type": null,
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 16
+          },
+          {
+            "value": "Performer",
+            "obj_cls": "Process",
+            "item_type": null,
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 9
+          },
+          {
+            "value": "Name",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SAMPLE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": null,
+            "max_value_len": 12
+          },
+          {
+            "value": "External Links",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SAMPLE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "EXTERNAL_LINKS",
+            "max_value_len": 0
+          },
+          {
+            "value": "Cell Origin",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SAMPLE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "ONTOLOGY",
+            "max_value_len": 10
+          },
+          {
+            "value": "Cell Type",
+            "obj_cls": "GenericMaterial",
+            "item_type": "SAMPLE",
+            "num_col": false,
+            "config_set": false,
+            "col_type": "ONTOLOGY",
+            "max_value_len": 9
+          }
+        ],
+        "table_data": [
+          [
+            {
+              "value": "index"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "1"
+            },
+            {
+              "value": "FAM_index"
+            },
+            {
+              "value": "Homo sapiens",
+              "link": "https://bioportal.bioontology.org/ontologies/NCBITAXON/?p=classes&conceptid=http://purl.bioontology.org/ontology/NCBITAXON/9606",
+              "tooltip": "NCBITAXON"
+            },
+            {
+              "value": "mother"
+            },
+            {
+              "value": "father"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "male"
+            },
+            {
+              "value": "affected"
+            },
+            {
+              "value": "CATEL-MANZKE SYNDROME",
+              "link": "https://bioportal.bioontology.org/ontologies/OMIM/?p=classes&conceptid=http://purl.bioontology.org/ontology/OMIM/616145",
+              "tooltip": "OMIM"
+            },
+            {
+              "value": "Catel-Manzke syndrome",
+              "link": "https://bioportal.bioontology.org/ontologies/ORDO/?p=classes&conceptid=http://www.orpha.net/ORDO/Orphanet_1388",
+              "tooltip": "ORDO"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "Sample collection"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "index-N1"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            }
+          ],
+          [
+            {
+              "value": "father"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "x-charite-medgen-blood-book-id:father"
+            },
+            {
+              "value": "1"
+            },
+            {
+              "value": "FAM_index"
+            },
+            {
+              "value": "Homo sapiens",
+              "link": "https://bioportal.bioontology.org/ontologies/NCBITAXON/?p=classes&conceptid=http://purl.bioontology.org/ontology/NCBITAXON/9606",
+              "tooltip": "NCBITAXON"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "male"
+            },
+            {
+              "value": "unaffected"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "Sample collection"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "father-N1"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            }
+          ],
+          [
+            {
+              "value": "mother"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "x-charite-medgen-blood-book-id:mother"
+            },
+            {
+              "value": "1"
+            },
+            {
+              "value": "FAM_index"
+            },
+            {
+              "value": "Homo sapiens",
+              "link": "https://bioportal.bioontology.org/ontologies/NCBITAXON/?p=classes&conceptid=http://purl.bioontology.org/ontology/NCBITAXON/9606",
+              "tooltip": "NCBITAXON"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": "0"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "female"
+            },
+            {
+              "value": "unaffected"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "Sample collection"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": "mother-N1"
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            },
+            {
+              "value": ""
+            }
+          ]
+        ],
+        "col_values": [
+          1,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0
+        ],
+        "col_last_vis": 17
+      },
+      "assays": {
+        "8e52e0d2-42ec-48fb-9dc7-ea041a56409f": {
+          "top_header": [
+            {
+              "value": "Source",
+              "colour": "info",
+              "colspan": 15
+            },
+            {
+              "value": "Process",
+              "colour": "danger",
+              "colspan": 2
+            },
+            {
+              "value": "Sample",
+              "colour": "warning",
+              "colspan": 4
+            },
+            {
+              "value": "Process",
+              "colour": "danger",
+              "colspan": 4
+            },
+            {
+              "value": "Extract Name",
+              "colour": "success",
+              "colspan": 2
+            },
+            {
+              "value": "Process",
+              "colour": "danger",
+              "colspan": 24
+            },
+            {
+              "value": "Library Name",
+              "colour": "success",
+              "colspan": 3
+            },
+            {
+              "value": "Process",
+              "colour": "danger",
+              "colspan": 8
+            },
+            {
+              "value": "Raw Data File",
+              "colour": "success",
+              "colspan": 1
+            }
+          ],
+          "field_header": [
+            {
+              "value": "Name",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 8
+            },
+            {
+              "value": "Uuid",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 4
+            },
+            {
+              "value": "External Links",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "EXTERNAL_LINKS",
+              "max_value_len": 1
+            },
+            {
+              "value": "Batch",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "NUMERIC",
+              "max_value_len": 5
+            },
+            {
+              "value": "Family",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 10
+            },
+            {
+              "value": "Organism",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "ONTOLOGY",
+              "max_value_len": 13
+            },
+            {
+              "value": "Mother",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 8
+            },
+            {
+              "value": "Father",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 8
+            },
+            {
+              "value": "Family Notes",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 11
+            },
+            {
+              "value": "Sex",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 6
+            },
+            {
+              "value": "Disease Status",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 13
+            },
+            {
+              "value": "Omim Disease",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "ONTOLOGY",
+              "max_value_len": 28
+            },
+            {
+              "value": "Orphanet Disease",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "ONTOLOGY",
+              "max_value_len": 22
+            },
+            {
+              "value": "Hpo Terms",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "ONTOLOGY",
+              "max_value_len": 10
+            },
+            {
+              "value": "Disease Notes",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SOURCE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 13
+            },
+            {
+              "value": "Protocol",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 16
+            },
+            {
+              "value": "Performer",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 9
+            },
+            {
+              "value": "Name",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SAMPLE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 12
+            },
+            {
+              "value": "External Links",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SAMPLE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "EXTERNAL_LINKS",
+              "max_value_len": 0
+            },
+            {
+              "value": "Cell Origin",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SAMPLE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "ONTOLOGY",
+              "max_value_len": 10
+            },
+            {
+              "value": "Cell Type",
+              "obj_cls": "GenericMaterial",
+              "item_type": "SAMPLE",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "ONTOLOGY",
+              "max_value_len": 9
+            },
+            {
+              "value": "Protocol",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 27
+            },
+            {
+              "value": "Concentration Measurement",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 24
+            },
+            {
+              "value": "Performer",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 9
+            },
+            {
+              "value": "Perform Date",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 12
+            },
+            {
+              "value": "Name",
+              "obj_cls": "GenericMaterial",
+              "item_type": "MATERIAL",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 17
+            },
+            {
+              "value": "Concentration",
+              "obj_cls": "GenericMaterial",
+              "item_type": "MATERIAL",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 12
+            },
+            {
+              "value": "Protocol",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 24
+            },
+            {
+              "value": "Provider Name",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 15
+            },
+            {
+              "value": "Provider Contact",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": "CONTACT",
+              "max_value_len": 15
+            },
+            {
+              "value": "Provider Project Id",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 18
+            },
+            {
+              "value": "Provider Sample Id",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 17
+            },
+            {
+              "value": "Provider Qc Status",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 18
+            },
+            {
+              "value": "Requestor Contact",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": "CONTACT",
+              "max_value_len": 16
+            },
+            {
+              "value": "Requestor Project",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 16
+            },
+            {
+              "value": "Requestor Sample Id",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 18
+            },
+            {
+              "value": "Concentration Measurement",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 24
+            },
+            {
+              "value": "Library Source",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 14
+            },
+            {
+              "value": "Library Strategy",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 15
+            },
+            {
+              "value": "Library Selection",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 16
+            },
+            {
+              "value": "Library Layout",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 14
+            },
+            {
+              "value": "Library Kit",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 39
+            },
+            {
+              "value": "Library Kit Catalogue Id",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 22
+            },
+            {
+              "value": "Target Insert Size",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 17
+            },
+            {
+              "value": "Wet-Lab Insert Size",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 18
+            },
+            {
+              "value": "Barcode Kit",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 11
+            },
+            {
+              "value": "Barcode Kit Catalogue Id",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 23
+            },
+            {
+              "value": "Barcode Name",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 13
+            },
+            {
+              "value": "Barcode Sequence",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 17
+            },
+            {
+              "value": "Performer",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 9
+            },
+            {
+              "value": "Perform Date",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 12
+            },
+            {
+              "value": "Name",
+              "obj_cls": "GenericMaterial",
+              "item_type": "MATERIAL",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 23
+            },
+            {
+              "value": "Folder Name",
+              "obj_cls": "GenericMaterial",
+              "item_type": "MATERIAL",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 11
+            },
+            {
+              "value": "Concentration",
+              "obj_cls": "GenericMaterial",
+              "item_type": "MATERIAL",
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 12
+            },
+            {
+              "value": "Protocol",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 27
+            },
+            {
+              "value": "Platform",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 10
+            },
+            {
+              "value": "Instrument Model",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 19
+            },
+            {
+              "value": "Base Quality Encoding",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 20
+            },
+            {
+              "value": "Center Name",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 15
+            },
+            {
+              "value": "Center Contact",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": "CONTACT",
+              "max_value_len": 13
+            },
+            {
+              "value": "Performer",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 9
+            },
+            {
+              "value": "Perform Date",
+              "obj_cls": "Process",
+              "item_type": null,
+              "num_col": false,
+              "config_set": false,
+              "col_type": null,
+              "max_value_len": 12
+            },
+            {
+              "value": "Name",
+              "obj_cls": "GenericMaterial",
+              "item_type": "DATA",
+              "num_col": false,
+              "config_set": false,
+              "col_type": "LINK_FILE",
+              "max_value_len": 4
+            }
+          ],
+          "table_data": [
+            [
+              {
+                "value": "index"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "1"
+              },
+              {
+                "value": "FAM_index"
+              },
+              {
+                "value": "Homo sapiens",
+                "link": "https://bioportal.bioontology.org/ontologies/NCBITAXON/?p=classes&conceptid=http://purl.bioontology.org/ontology/NCBITAXON/9606",
+                "tooltip": "NCBITAXON"
+              },
+              {
+                "value": "mother"
+              },
+              {
+                "value": "father"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "male"
+              },
+              {
+                "value": "affected"
+              },
+              {
+                "value": "CATEL-MANZKE SYNDROME",
+                "link": "https://bioportal.bioontology.org/ontologies/OMIM/?p=classes&conceptid=http://purl.bioontology.org/ontology/OMIM/616145",
+                "tooltip": "OMIM"
+              },
+              {
+                "value": "Catel-Manzke syndrome",
+                "link": "https://bioportal.bioontology.org/ontologies/ORDO/?p=classes&conceptid=http://www.orpha.net/ORDO/Orphanet_1388",
+                "tooltip": "ORDO"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Sample collection"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "index-N1"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Nucleic acid extraction WES"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": null
+              },
+              {
+                "value": "index-N1-DNA1"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Library construction WES"
+              },
+              {
+                "value": "Genomics Unit"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "GENOMIC"
+              },
+              {
+                "value": "WXS"
+              },
+              {
+                "value": "Hybrid Selection"
+              },
+              {
+                "value": "PAIRED"
+              },
+              {
+                "value": "Agilent SureSelect Human All Exons V6r2"
+              },
+              {
+                "value": "S07604514"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": null
+              },
+              {
+                "value": "index-N1-DNA1-WES1"
+              },
+              {
+                "value": "index"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Nucleic acid sequencing WES"
+              },
+              {
+                "value": "ILLUMINA"
+              },
+              {
+                "value": "Illumina HiSeq 1500"
+              },
+              {
+                "value": "Phred+33"
+              },
+              {
+                "value": "Genomics Unit"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "2016-11-22"
+              },
+              {
+                "value": ""
+              }
+            ],
+            [
+              {
+                "value": "father"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "x-charite-medgen-blood-book-id:father"
+              },
+              {
+                "value": "1"
+              },
+              {
+                "value": "FAM_index"
+              },
+              {
+                "value": "Homo sapiens",
+                "link": "https://bioportal.bioontology.org/ontologies/NCBITAXON/?p=classes&conceptid=http://purl.bioontology.org/ontology/NCBITAXON/9606",
+                "tooltip": "NCBITAXON"
+              },
+              {
+                "value": "0"
+              },
+              {
+                "value": "0"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "male"
+              },
+              {
+                "value": "unaffected"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Sample collection"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "father-N1"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Nucleic acid extraction WES"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": null
+              },
+              {
+                "value": "father-N1-DNA1"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Library construction WES"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "GENOMIC"
+              },
+              {
+                "value": "WXS"
+              },
+              {
+                "value": "Hybrid Selection"
+              },
+              {
+                "value": "PAIRED"
+              },
+              {
+                "value": "Agilent SureSelect Human All Exons V6r2"
+              },
+              {
+                "value": "S07604514"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": null
+              },
+              {
+                "value": "father-N1-DNA1-WES1"
+              },
+              {
+                "value": "father"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Nucleic acid sequencing WES"
+              },
+              {
+                "value": "ILLUMINA"
+              },
+              {
+                "value": "Illumina HiSeq 1500"
+              },
+              {
+                "value": "Phred+33"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "2016-11-22"
+              },
+              {
+                "value": ""
+              }
+            ],
+            [
+              {
+                "value": "mother"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "x-charite-medgen-blood-book-id:mother"
+              },
+              {
+                "value": "1"
+              },
+              {
+                "value": "FAM_index"
+              },
+              {
+                "value": "Homo sapiens",
+                "link": "https://bioportal.bioontology.org/ontologies/NCBITAXON/?p=classes&conceptid=http://purl.bioontology.org/ontology/NCBITAXON/9606",
+                "tooltip": "NCBITAXON"
+              },
+              {
+                "value": "0"
+              },
+              {
+                "value": "0"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "female"
+              },
+              {
+                "value": "unaffected"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Sample collection"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "mother-N1"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Nucleic acid extraction WES"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": null
+              },
+              {
+                "value": "mother-N1-DNA1"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Library construction WES"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "GENOMIC"
+              },
+              {
+                "value": "WXS"
+              },
+              {
+                "value": "Hybrid Selection"
+              },
+              {
+                "value": "PAIRED"
+              },
+              {
+                "value": "Agilent SureSelect Human All Exons V6r2"
+              },
+              {
+                "value": "S07604514"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": null
+              },
+              {
+                "value": "mother-N1-DNA1-WES1"
+              },
+              {
+                "value": "mother"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "Nucleic acid sequencing WES"
+              },
+              {
+                "value": "ILLUMINA"
+              },
+              {
+                "value": "Illumina HiSeq 1500"
+              },
+              {
+                "value": "Phred+33"
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": ""
+              },
+              {
+                "value": "2016-11-22"
+              },
+              {
+                "value": ""
+              }
+            ]
+          ],
+          "col_values": [
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0
+          ],
+          "col_last_vis": 61
+        }
+      }
+    }
+  }
+}

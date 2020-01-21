@@ -11,3 +11,6 @@ logzero
 
 # Functionaly programming tools.
 toolz
+
+# HTTP requests for humans.
+requests

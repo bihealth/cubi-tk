@@ -1,8 +1,10 @@
-.. _cmd_main:
+.. _cli:
 
 ======================
 Command Line Interface
 ======================
+
+.. _cli_main:
 
 .. argparse::
    :module: cubi_sak.__main__
