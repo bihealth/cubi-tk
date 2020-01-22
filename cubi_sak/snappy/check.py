@@ -10,39 +10,41 @@ from biomedsheets import shortcuts
 from logzero import logger
 import vcfpy
 
-from .itransfer_common import load_sheet_tsv
+from .itransfer_common import load_sheets_tsv
 from .. import parse_ped
 
 
 class GermlineSheetChecker:
     """Helper class that implements the consistency checks within germline sheets."""
 
-    def __init__(self, sheet: shortcuts.GermlineCaseSheet):
+    def __init__(self, sheets: typing.Iterable[shortcuts.GermlineCaseSheet]):
         #: Shortcut sheet.
-        self.sheet = sheet
+        self.sheets = list(sheets)
 
     def run_checks(self):
         """Execute checks, return True if all good else False."""
         logger.info("Running germline sheet checks...")
-        results = [
-            self._check_parent_sex(),
-            self._check_dangling_parents(),
-            self._check_family_id(),
-        ]
+        results = []
+        for sheet in self.sheets:
+            results += [
+                self._check_parent_sex(sheet),
+                self._check_dangling_parents(sheet),
+                self._check_family_id(sheet),
+            ]
         return all(results)
 
-    def _check_parent_sex(self):
+    def _check_parent_sex(self, sheet: shortcuts.GermlineCaseSheet):
         """Check whether parent sex is consistent."""
         logger.info("Checking for parent sex consistency...")
         ok = True
 
         name_to_sex = {}
         fathers = set()
-        father_of = {}
+        father_of: typing.Dict[str, typing.Set[str]] = {}
         mothers = set()
-        mother_of = {}
+        mother_of: typing.Dict[str, typing.Set[str]] = {}
 
-        for donor in self.sheet.donors:
+        for donor in sheet.donors:
             if donor.father:
                 fathers.add(donor.father.name)
                 father_of.setdefault(donor.father.name, set()).add(donor.name)
@@ -74,13 +76,13 @@ class GermlineSheetChecker:
 
         return ok
 
-    def _check_dangling_parents(self):
+    def _check_dangling_parents(self, sheet: shortcuts.GermlineCaseSheet):
         """Check whether there are any dangling parents."""
         logger.info("Checking for dangling parents...")
         ok = True
 
-        donor_names = {donor.name for donor in self.sheet.donors}
-        for donor in self.sheet.donors:
+        donor_names = {donor.name for donor in sheet.donors}
+        for donor in sheet.donors:
             if donor.father and donor.father.name not in donor_names:
                 logger.warn("Father of %s is not known: %s", donor.father.name, donor.name)
                 ok = False
@@ -90,19 +92,20 @@ class GermlineSheetChecker:
 
         return ok
 
-    def _check_family_id(self):
+    def _check_family_id(self, sheet: shortcuts.GermlineCaseSheet):
         """Check whether parents links point over family boundaries."""
         ok = True
 
-        seen_family_ids = {}
+        seen_family_ids: typing.Set[str] = set()
 
-        for pedigree in self.sheet.cohort.pedigrees:
+        for pedigree in sheet.cohort.pedigrees:
             if pedigree.index.extra_infos.get("familyId"):
                 if pedigree.index.extra_infos.get("familyId") in seen_family_ids:
                     # TODO: in the future this will be OK once we do not need linking fake entries for snappy any more.
                     logger.warn("Family seen for two unconnected pedigrees")
                     ok = False
             family_ids = {donor.extra_infos.get("familyId") for donor in pedigree.donors}
+            seen_family_ids |= family_ids
             if len(family_ids) != 1:
                 logger.warn(
                     "Seen multiple family IDs within one pedigree: %s",
@@ -111,7 +114,7 @@ class GermlineSheetChecker:
                 ok = False
 
         no_family_donors = {
-            donor for donor in self.sheet.donors if not donor.extra_infos.get("familyId")
+            donor for donor in sheet.donors if not donor.extra_infos.get("familyId")
         }
         if no_family_donors:
             logger.warn(
@@ -132,11 +135,15 @@ class FileCheckBase:
     def get_file_globs(self):
         return self.file_globs
 
-    def __init__(self, sheet: shortcuts.GermlineCaseSheet, base_dir: str):
+    def __init__(self, sheets: typing.Iterable[shortcuts.GermlineCaseSheet], base_dir: str):
         #: Germline shortcut sheet.
-        self.sheet = sheet
+        self.sheets = list(sheets)
         #: Base directory to search steps in.
         self.base_dir = base_dir
+        #: Merge dicts.
+        self.donor_ngs_library_to_pedigree: typing.Dict[str, shortcuts.Pedigree] = {}
+        for sheet in self.sheets:
+            self.donor_ngs_library_to_pedigree.update(sheet.donor_ngs_library_to_pedigree)
 
     def run_checks(self):
         """Execute checks, return True if all good else False."""
@@ -178,7 +185,7 @@ class PedFileCheck(FileCheckBase):
                 return False
             else:
                 ped_names = [donor.name for donor in donors]
-                pedigree = self.sheet.donor_ngs_library_to_pedigree.get(donors[0].name)
+                pedigree = self.donor_ngs_library_to_pedigree.get(donors[0].name)
                 if not pedigree:
                     logger.error("Could not find pedigree for %s (%s)", donors[0].name, ped_path)
                     results.append(False)
@@ -214,7 +221,7 @@ class PedFileCheck(FileCheckBase):
         return all(results)
 
     def _get_sheet_donor(self, ped_donor, ped_path):
-        sheet_pedigree = self.sheet.donor_ngs_library_to_pedigree.get(ped_donor.name)
+        sheet_pedigree = self.donor_ngs_library_to_pedigree.get(ped_donor.name)
         if not sheet_pedigree:
             logger.error(
                 "Could not find sheet pedigree for PED donor %s in %s", ped_donor.name, ped_path
@@ -300,7 +307,7 @@ class VcfFileCheck(FileCheckBase):
                 if not vcf_names:
                     logger.error("Found no samples in VCF path %s", vcf_path)
                     return False
-                pedigree = self.sheet.donor_ngs_library_to_pedigree.get(vcf_names[0])
+                pedigree = self.donor_ngs_library_to_pedigree.get(vcf_names[0])
                 if not pedigree:
                     logger.error("Could not find pedigree for %s (%s)", vcf_names[0], vcf_path)
                     return False
@@ -325,9 +332,9 @@ class SnappyCheckCommand:
         #: Command line arguments.
         self.args = args
         #: Raw sample sheet.
-        self.sheet = load_sheet_tsv(self.args)
+        self.sheets = load_sheets_tsv(self.args)
         #: Shortcut sample sheet.
-        self.shortcut_sheet = shortcuts.GermlineCaseSheet(self.sheet)
+        self.shortcut_sheets = [shortcuts.GermlineCaseSheet(sheet) for sheet in self.sheets]
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -351,6 +358,7 @@ class SnappyCheckCommand:
 
         parser.add_argument(
             "biomedsheet_tsv",
+            nargs="+",
             type=argparse.FileType("rt"),
             help="Path to biomedsheets TSV file to load.",
         )
@@ -382,9 +390,9 @@ class SnappyCheckCommand:
         logger.info("  args: %s", self.args)
 
         results = [
-            GermlineSheetChecker(self.shortcut_sheet).run_checks(),
-            PedFileCheck(self.shortcut_sheet, self.args.base_path).run_checks(),
-            VcfFileCheck(self.shortcut_sheet, self.args.base_path).run_checks(),
+            GermlineSheetChecker(self.shortcut_sheets).run_checks(),
+            PedFileCheck(self.shortcut_sheets, self.args.base_path).run_checks(),
+            VcfFileCheck(self.shortcut_sheets, self.args.base_path).run_checks(),
         ]
 
         logger.info("All done")
