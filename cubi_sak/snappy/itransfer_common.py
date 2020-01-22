@@ -82,9 +82,22 @@ def load_sheet_tsv(args):
     # shortcut_sheet = sheet_class(sheet)
 
 
-def all_ngs_library_names(sheet):
-    """Yield all NGS library names from sheet"""
+def all_ngs_library_names(sheet, min_batch=None, batch_key="batchNo"):
+    """Yield all NGS library names from sheet.
+
+    When ``min_batch`` is given then only the donors for which the ``extra_infos["batchNo"]`` is greater than
+    ``min_batch`` will be used.
+    """
     for donor in sheet.bio_entities.values():
+        if min_batch is not None and "batchNo" in donor.extra_infos:
+            if min_batch > donor.extra_infos["batchNo"]:
+                logger.debug(
+                    "Skipping donor %s because batchNo = %d < min_batch = %d",
+                    donor.name,
+                    donor.extra_infos["batchNo"],
+                    min_batch,
+                )
+                continue
         for bio_sample in donor.bio_samples.values():
             for test_sample in bio_sample.test_samples.values():
                 for library in test_sample.ngs_libraries.values():
@@ -273,7 +286,7 @@ class SnappyItransferCommandBase:
         logger.info("  args: %s", self.args)
 
         sheet = load_sheet_tsv(self.args)
-        library_names = list(all_ngs_library_names(sheet))
+        library_names = list(all_ngs_library_names(sheet, min_batch=self.args.start_batch))
         logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
 
         transfer_jobs = self.build_jobs(library_names)
