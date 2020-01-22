@@ -13,6 +13,7 @@ import argparse
 from uuid import UUID
 import re
 import sys
+import typing
 
 from logzero import logger
 import requests
@@ -132,7 +133,7 @@ def check_args(args) -> int:
 
     # Check UUID syntax.
     try:
-        val = str(UUID(args.project_uuid))
+        val: typing.Optional[str] = str(UUID(args.project_uuid))
     except ValueError:  # pragma: nocover
         val = None
     finally:
@@ -143,7 +144,9 @@ def check_args(args) -> int:
     return int(any_error)
 
 
-def run(args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser) -> None:
+def run(
+    args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
+) -> typing.Optional[int]:
     """Run ``cubi-sak snappy pull-sheet``."""
     res = check_args(args)
     if res:  # pragma: nocover
@@ -163,7 +166,7 @@ def run(args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentPar
     r.raise_for_status()
     all_data = r.json()
     if len(all_data["studies"]) > 1:  # pragma: nocover
-        raise exceptions.UnsupportedIsaTabFeaturException("More than one study found!")
+        raise exceptions.UnsupportedIsaTabFeatureException("More than one study found!")
 
     # Parse out study data.
     study = list(all_data["studies"].values())[0]
@@ -216,7 +219,7 @@ def run(args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentPar
             }
         )
         offset += colspan
-    assay_map = {}
+    assay_map: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
     for row in assay["table_data"]:
         offset = 0
         name = row[0]["value"].strip()
@@ -278,7 +281,11 @@ def run(args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentPar
             )
             continue
         # ENDOF HACK
-        batch = re.search(r"(\d+)", dict_source.get("Batch", "1")).group(1)
+        haystack = dict_source.get("Batch", "1")
+        m = re.search(r"(\d+)", haystack)
+        if not m:  # pragma: nocover
+            raise exceptions.InvalidIsaTabException("Could not find batch number in %s" % haystack)
+        batch = m.group(1)
         row = [
             dict_source["Family"],
             dict_source["Name"],
@@ -295,3 +302,5 @@ def run(args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentPar
             library_kit,
         ]
         print("\t".join(row), file=args.output_tsv)
+
+    return None

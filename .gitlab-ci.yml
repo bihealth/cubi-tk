@@ -13,5 +13,6 @@ all_tests:
     - black -l 100 --check .
     - flake8 .
     - python setup.py check
+    - mypy cubi_sak
     - cd docs_manual && make clean html
   when: on_success

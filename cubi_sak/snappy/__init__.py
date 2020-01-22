@@ -20,6 +20,7 @@ import argparse
 from ..common import run_nocmd
 from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
+from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -31,6 +32,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_itransfer_raw_data(
         subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")
+    )
+    setup_argparse_itransfer_ngs_mapping(
+        subparsers.add_parser(
+            "itransfer-ngs-mapping", help="Transfer ngs_mapping results into iRODS landing zone"
+        )
     )
 
 
