@@ -12,7 +12,7 @@ from subprocess import check_output, SubprocessError, check_call
 import sys
 
 import attr
-from biomedsheets import io_tsv
+from biomedsheets import io_tsv, shortcuts
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
 import tqdm
@@ -80,28 +80,6 @@ def load_sheet_tsv(args):
     return load_tsv(args.biomedsheet_tsv, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     # sheet_class = getattr(shortcuts, "%sCaseSheet" % args.tsv_shortcut.title())
     # shortcut_sheet = sheet_class(sheet)
-
-
-def all_ngs_library_names(sheet, min_batch=None, batch_key="batchNo"):
-    """Yield all NGS library names from sheet.
-
-    When ``min_batch`` is given then only the donors for which the ``extra_infos["batchNo"]`` is greater than
-    ``min_batch`` will be used.
-    """
-    for donor in sheet.bio_entities.values():
-        if min_batch is not None and "batchNo" in donor.extra_infos:
-            if min_batch > donor.extra_infos["batchNo"]:
-                logger.debug(
-                    "Skipping donor %s because batchNo = %d < min_batch = %d",
-                    donor.name,
-                    donor.extra_infos["batchNo"],
-                    min_batch,
-                )
-                continue
-        for bio_sample in donor.bio_samples.values():
-            for test_sample in bio_sample.test_samples.values():
-                for library in test_sample.ngs_libraries.values():
-                    yield library.name
 
 
 class SnappyItransferCommandBase:
@@ -187,6 +165,30 @@ class SnappyItransferCommandBase:
             res = 1
 
         return res
+
+    def yield_ngs_library_names(self, sheet, min_batch=None, batch_key="batchNo"):
+        """Yield all NGS library names from sheet.
+
+        When ``min_batch`` is given then only the donors for which the ``extra_infos[batch_key]`` is greater than
+        ``min_batch`` will be used.
+
+        This function can be overloaded, for example to only consider the indexes.
+        """
+        for donor in sheet.bio_entities.values():
+            if min_batch is not None and batch_key in donor.extra_infos:
+                if min_batch > donor.extra_infos[batch_key]:
+                    logger.debug(
+                        "Skipping donor %s because %s = %d < min_batch = %d",
+                        donor.name,
+                        donor.extra_infos[batch_key],
+                        batch_key,
+                        min_batch,
+                    )
+                    continue
+            for bio_sample in donor.bio_samples.values():
+                for test_sample in bio_sample.test_samples.values():
+                    for library in test_sample.ngs_libraries.values():
+                        yield library.name
 
     def build_base_dir_glob_pattern(
         self, library_name: str
@@ -286,7 +288,7 @@ class SnappyItransferCommandBase:
         logger.info("  args: %s", self.args)
 
         sheet = load_sheet_tsv(self.args)
-        library_names = list(all_ngs_library_names(sheet, min_batch=self.args.start_batch))
+        library_names = list(self.yield_ngs_library_names(sheet, min_batch=self.args.start_batch))
         logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
 
         transfer_jobs = self.build_jobs(library_names)
@@ -315,6 +317,26 @@ class SnappyItransferCommandBase:
 
         logger.info("All done")
         return None
+
+
+class IndexLibrariesOnlyMixin:
+    """Mixin for ``SnappyItransferCommandBase`` that only considers libraries of indexes."""
+
+    def yield_ngs_library_names(self, sheet, min_batch=None, batch_key="batchNo"):
+        shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
+        for pedigree in shortcut_sheet.cohort.pedigrees:
+            donor = pedigree.index
+            if min_batch is not None and batch_key in donor.extra_infos:
+                if min_batch > donor.extra_infos[batch_key]:
+                    logger.debug(
+                        "Skipping donor %s because %s = %d < min_batch = %d",
+                        donor.name,
+                        donor.extra_infos[batch_key],
+                        batch_key,
+                        min_batch,
+                    )
+                    continue
+            yield donor.dna_ngs_library.name
 
 
 @attr.s(frozen=True, auto_attribs=True)

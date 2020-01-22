@@ -7,11 +7,11 @@ import typing
 from .itransfer_common import SnappyItransferCommandBase
 
 #: Template string for ngs_mapping results files.
-TPL_INPUT_DIR = "ngs_mapping/work/%(mapper)s.%(library_name)s"
+TPL_INPUT_DIR = "ngs_mapping/output/%(mapper)s.%(library_name)s"
 
 
 class SnappyItransferNgsMappingCommand(SnappyItransferCommandBase):
-    """Implementation of snappy itransfer command for raw data."""
+    """Implementation of snappy itransfer command for ngs_mapping results."""
 
     fix_md5_files = True
     command_name = "itransfer-ngs-mapping"

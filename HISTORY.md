@@ -9,6 +9,7 @@
 - Converting `snappy-transfer_utils`, adding `cubi-sak snappy ...`
     - `itransfer-raw-data`
     - `itransfer-ngs-mapping`
+    - `itransfer-variant-calling`
 - Adding `mypy` checks to CI.
 
 ## v0.1.0

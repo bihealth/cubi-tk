@@ -5,6 +5,12 @@ Available Commands
 
 ``pull-sheet``
     Pull sample sheet from SODAR and write out to BiomedSheet format.
+``itransfer-raw-data``
+    Transfer raw data from ``work/input_links`` directory of ``ngs_mapping``.
+``itransfer-ngs-mapping``
+    Transfer results and logs from ``output`` directory of ``ngs_mapping``.
+``itransfer-variant-calling``
+    Transfer results and logs from ``output`` directory of ``variant_calling``.
 
 More Information
 ----------------
@@ -21,6 +27,7 @@ from ..common import run_nocmd
 from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
+from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -36,6 +43,12 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_itransfer_ngs_mapping(
         subparsers.add_parser(
             "itransfer-ngs-mapping", help="Transfer ngs_mapping results into iRODS landing zone"
+        )
+    )
+    setup_argparse_itransfer_variant_calling(
+        subparsers.add_parser(
+            "itransfer-variant-calling",
+            help="Transfer variant_calling results into iRODS landing zone",
         )
     )
 
