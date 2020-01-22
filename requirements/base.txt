@@ -26,3 +26,7 @@ icdiff
 
 # Terminal colors
 termcolor
+
+# VCF access.
+vcfpy
+pysam
