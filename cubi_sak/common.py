@@ -1,8 +1,11 @@
 """Common code."""
 
+import fcntl
 import glob
 import os
+import struct
 import sys
+import termios
 import warnings
 from subprocess import check_output, CalledProcessError
 from uuid import UUID
@@ -64,3 +67,20 @@ def sizeof_fmt(num, suffix="B"):  # pragma: nocover
             return "%3.1f%s%s" % (num, unit, suffix)
         num /= 1024.0
     return "%.1f%s%s" % (num, "Yi", suffix)
+
+
+def get_terminal_columns():
+    """Return number of columns."""
+
+    def ioctl_gwinz(fd):
+        try:
+            cr = struct.unpack("hh", fcntl.ioctl(fd, termios.TIOCGWINSZ, "1234"))
+        except Exception:  # noqa
+            return None
+        return cr
+
+    cr = ioctl_gwinz(0) or ioctl_gwinz(1) or ioctl_gwinz(2)
+    if cr and cr[1] > 0:
+        return cr[1]
+    else:
+        return 80

@@ -1,6 +1,6 @@
 .PHONY: default black flake8 mypy test test-v test-vv
 
-default: black flake8 mypy
+default: black flake8 mypy test
 
 black:
 	black -l 100 .

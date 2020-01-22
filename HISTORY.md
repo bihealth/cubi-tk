@@ -11,6 +11,7 @@
     - `itransfer-ngs-mapping`
     - `itransfer-variant-calling`
 - Adding `mypy` checks to CI.
+- Adding `--dry-run` and `--show-diff` arguments to `cubi-sak snappy pull-sheet`.
 
 ## v0.1.0
 
