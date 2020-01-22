@@ -3,6 +3,11 @@
 import glob
 import os
 import sys
+import warnings
+from subprocess import check_output, CalledProcessError
+from uuid import UUID
+
+from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
 
 
 def run_nocmd(_, parser, subparser=None):  # pragma: no cover
@@ -25,3 +30,37 @@ def yield_files_recursively(path, print_=False, file=sys.stderr):
         if print_:
             print(p, file=file)  # pragma: no cover
         yield p
+
+
+def is_uuid(x):
+    """Return True if ``x`` is a string and looks like a UUID."""
+    try:
+        return str(UUID(x)) == x
+    except:  # noqa: E722
+        return False
+
+
+def check_irods_icommands(warn_only=True):  # disabled when testing  # pragma: nocover
+    executables = ("iinit", "iput", "iget", "irsync")
+    missing = []
+    for prog in executables:
+        try:
+            check_output(["which", prog])
+        except CalledProcessError:
+            missing.append(prog)
+
+    if missing:
+        msg = "Could not find irods-icommands executables: %s", ", ".join(missing)
+        if warn_only:
+            warnings.warn(msg, IrodsIcommandsUnavailableWarning)
+        else:
+            raise IrodsIcommandsUnavailableException(msg)
+
+
+def sizeof_fmt(num, suffix="B"):  # pragma: nocover
+    """Source: https://stackoverflow.com/a/1094933/84349"""
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, "Yi", suffix)

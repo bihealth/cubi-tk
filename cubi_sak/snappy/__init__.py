@@ -19,6 +19,7 @@ import argparse
 
 from ..common import run_nocmd
 from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
+from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -27,6 +28,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_pull_sheet(
         subparsers.add_parser("pull-sheet", help="Pull SODAR sample sheet into biomedsheet")
+    )
+    setup_argparse_itransfer_raw_data(
+        subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")
     )
 
 

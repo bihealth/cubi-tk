@@ -1,4 +1,4 @@
-"""Tests for ``cubi_sak.snappy(.*)``.
+"""Tests for ``cubi_sak.snappy.pull_sheet``.
 
 We only run some smoke tests here.
 """

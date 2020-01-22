@@ -6,6 +6,8 @@
 - Fixing documentation bulding bug.
 - Documentation is now built during testing.
 - Adding `cubi-sak snappy pull-sheet`.
+- Converting `snappy-transfer_utils`, adding `cubi-sak snappy ...`
+    - `itransfer-raw-data`
 
 ## v0.1.0
 

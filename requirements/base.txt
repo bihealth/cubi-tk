@@ -14,3 +14,9 @@ toolz
 
 # HTTP requests for humans.
 requests
+
+# Biomedsheet access.
+biomedsheets
+
+# Useful progress display.
+tqdm

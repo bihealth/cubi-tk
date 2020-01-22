@@ -8,6 +8,10 @@ pytest >=3.6.0
 pytest-runner >=2.11.1
 pytest-cache >=1.0
 pytest-cov >=2.4.0
+pytest-mock >=2.0.0
+
+# Faking of file systems
+pyfakefs >=3.7.1
 
 # Easier testing of requests
 requests-mock >=1.7.0
