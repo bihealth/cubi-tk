@@ -18,6 +18,9 @@ requests
 # Biomedsheet access.
 biomedsheets
 
+# ISA-tab parsing.
+altamisa
+
 # Useful progress display.
 tqdm
 

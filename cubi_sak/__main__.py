@@ -9,6 +9,8 @@ from logzero import logger
 
 from cubi_sak import __version__
 from .common import run_nocmd
+from .isa_tab import run as run_isa_tab
+from .isa_tab import setup_argparse as setup_argparse_isa_tab
 from .isa_tpl import run as run_isa_tpl
 from .isa_tpl import setup_argparse as setup_argparse_isa_tpl
 from .snappy import run as run_snappy
@@ -38,6 +40,9 @@ def setup_argparse():
             "isa-tpl", help="Create of ISA-tab directories from predefined templates."
         )
     )
+    setup_argparse_isa_tab(
+        subparsers.add_parser("isa-tab", help="ISA-tab tools besides templating.")
+    )
     setup_argparse_snappy(
         subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline.")
     )
@@ -61,7 +66,7 @@ def main(argv=None):
     logzero.loglevel(level=level)
 
     # Handle the actual command line.
-    cmds = {None: run_nocmd, "isa-tpl": run_isa_tpl, "snappy": run_snappy}
+    cmds = {None: run_nocmd, "isa-tpl": run_isa_tpl, "isa-tab": run_isa_tab, "snappy": run_snappy}
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)
     if not res:
