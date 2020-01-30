@@ -1,6 +1,13 @@
 """``cubi-sak isa-tab``: ISA-tab tooling.
 
-TODO: more docs
+Sub Commands
+------------
+
+``validate``
+    Validate ISA-tab files for correctness and perform sanity checks.
+
+``resolve-hpo``
+    Resolve lists of HPO terms to TSV suitable for copy-and-paste into ISA-tab.
 
 More Information
 ----------------
@@ -13,6 +20,7 @@ import argparse
 
 from ..common import run_nocmd
 from .validate import setup_argparse as setup_argparse_validate
+from .resolve_hpo import setup_argparse as setup_argparse_resolve_hpo
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -20,6 +28,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="isa_tab_cmd")
 
     setup_argparse_validate(subparsers.add_parser("validate", help="Validate ISA-tab"))
+    setup_argparse_resolve_hpo(
+        subparsers.add_parser("resolve-hpo", help="Resolve HPO term lists to ISA-tab fragments")
+    )
 
 
 def run(args, parser, subparser):

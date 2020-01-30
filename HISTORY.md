@@ -13,7 +13,8 @@
 - Adding `mypy` checks to CI.
 - Adding `--dry-run` and `--show-diff` arguments to `cubi-sak snappy pull-sheet`.
 - Adding `cubi-sak snake check` command.
-- Adding `cubi-sak isa-tab-validate` command.
+- Adding `cubi-sak isa-tab validate` command.
+- Adding `cubi-sak isa-tab resolve-hpo` command.
 
 ## v0.1.0
 

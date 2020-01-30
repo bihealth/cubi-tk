@@ -27,3 +27,7 @@ class InvalidIsaTabException(CubiSakException):
 
 class MissingFileException(CubiSakException):
     """Raised on missing file for transfer."""
+
+
+class ResourceDownloadError(CubiSakException):
+    """Raised when something went wrong with a file download error."""
