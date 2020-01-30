@@ -74,9 +74,9 @@ def load_variables(template_name):
 _TEMPLATES = (
     IsaTabTemplate(
         name="germline",
-        path=os.path.join(_BASE_DIR, "isatab-generic"),
+        path=os.path.join(_BASE_DIR, "isatab-germline"),
         description="germline DNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-generic"),
+        configuration=load_variables("isatab-germline"),
     ),
     IsaTabTemplate(
         name="generic",
