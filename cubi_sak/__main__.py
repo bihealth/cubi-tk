@@ -62,6 +62,10 @@ def main(argv=None):
     if args.verbose:  # pragma: no cover
         level = logging.DEBUG
     else:
+        formatter = logzero.LogFormatter(
+            fmt="%(color)s[%(levelname)1.1s %(asctime)s]%(end_color)s %(message)s"
+        )
+        logzero.formatter(formatter)
         level = logging.INFO
     logzero.loglevel(level=level)
 

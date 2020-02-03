@@ -3,6 +3,7 @@
 import argparse
 import glob
 import os
+import pathlib
 import typing
 import warnings
 
@@ -184,21 +185,40 @@ class PedFileCheck(FileCheckBase):
                 results.append(False)
                 return False
             else:
-                ped_names = [donor.name for donor in donors]
+                ped_names = set([donor.name for donor in donors])
                 pedigree = self.donor_ngs_library_to_pedigree.get(donors[0].name)
                 if not pedigree:
-                    logger.error("Could not find pedigree for %s (%s)", donors[0].name, ped_path)
+                    logger.error(
+                        (
+                            "Found pedigree in PED file but not in sample sheet. \n\n"
+                            "index:    %s\n"
+                            "PED file: %s\n"
+                        ),
+                        donors[0].name,
+                        os.path.relpath(ped_path, self.base_dir),
+                    )
                     results.append(False)
                     return False
-                pedigree_names = [
-                    donor.dna_ngs_library.name for donor in pedigree.donors if donor.dna_ngs_library
-                ]
-                if set(ped_names) != set(pedigree_names):
+                pedigree_names = set(
+                    [
+                        donor.dna_ngs_library.name
+                        for donor in pedigree.donors
+                        if donor.dna_ngs_library
+                    ]
+                )
+                if ped_names != pedigree_names:
                     logger.error(
-                        "Inconsistency between PED members (%s) and pedigree members (%s) in PED file: %s",
-                        ", ".join(ped_names),
-                        ", ".join(pedigree_names),
-                        ped_path,
+                        (
+                            "Members in PED file differ from members in sample sheet.\n\n"
+                            "shared:     %s\n"
+                            "sheet only: %s\n"
+                            "PED only:   %s\n"
+                            "PED file:   %s\n"
+                        ),
+                        ",".join(sorted(pedigree_names & ped_names)) or "(none)",
+                        ",".join(sorted(pedigree_names - ped_names)) or "(none)",
+                        ",".join(sorted(ped_names - pedigree_names)) or "(none)",
+                        os.path.relpath(ped_path, self.base_dir),
                     )
                     results.append(False)
                     return False
@@ -224,7 +244,9 @@ class PedFileCheck(FileCheckBase):
         sheet_pedigree = self.donor_ngs_library_to_pedigree.get(ped_donor.name)
         if not sheet_pedigree:
             logger.error(
-                "Could not find sheet pedigree for PED donor %s in %s", ped_donor.name, ped_path
+                "Found no pedigree in sample sheet for PED donor.\n\nPED donor: %s\nPED file:  %s\n",
+                ped_donor.name,
+                os.path.relpath(ped_path, self.base_dir),
             )
             return None
         for tmp in sheet_pedigree.donors:
@@ -232,35 +254,46 @@ class PedFileCheck(FileCheckBase):
                 return tmp
         else:  # if not break-out
             logger.error(
-                "Could not find sheet donor for PED donor %s in %s", ped_donor.name, ped_path
+                "Member in PED not found in sample sheet.\n\nPED donor: %s\nPED file:  %s\n",
+                ped_donor.name,
+                os.path.relpath(ped_path, self.base_dir),
             )
             return None
 
     def _check_parent(self, ped_donor, sheet_donor, key, ped_path):
         if (getattr(sheet_donor, key) is None) != (getattr(ped_donor, "%s_name" % key) == "0"):
             logger.error(
-                "Inconsistency between key of sheet donor and PED donor: %s in %s",
+                "Inconsistent %s between PED and sample sheet.\n\ndonor:    %s\nPED file: %s\n",
                 key,
                 ped_donor.name,
-                ped_path,
+                os.path.relpath(ped_path, self.base_dir),
             )
             return False
         elif getattr(sheet_donor, key):
             if not getattr(sheet_donor, key).dna_ngs_library:
                 logger.error(
-                    "Sheet donor's %s does not have a library: %s", key, sheet_donor.name, ped_path
+                    "Sheet donor's %s does not have library.\n\ndonor:    %s\nPED file: %s\n",
+                    key,
+                    sheet_donor.name,
+                    os.path.relpath(ped_path, self.base_dir),
                 )
                 return False
             elif getattr(sheet_donor, key).dna_ngs_library.name != getattr(
                 ped_donor, "%s_name" % key
             ):
                 logger.error(
-                    "Inconsistent %s name %s vs %s for sheet vs. PED donor %s in %s",
+                    (
+                        "Inconsistent %s name between PED and sample sheet.\n\n"
+                        "donor:    %s\n"
+                        "in sheet: %s\n"
+                        "in PED:   %s\n"
+                        "PED file: %s\n"
+                    ),
                     key,
+                    ped_donor.name,
                     getattr(sheet_donor, key).dna_ngs_library.name,
                     getattr(ped_donor, "%s_name" % key),
-                    ped_donor.name,
-                    ped_path,
+                    os.path.relpath(ped_path, self.base_dir),
                 )
                 return False
         else:
@@ -270,12 +303,18 @@ class PedFileCheck(FileCheckBase):
         key2 = {"sex": "sex", "disease": "isAffected"}[key]
         if getattr(ped_donor, key) != sheet_donor.extra_infos.get(key2, "unknown"):
             logger.error(
-                "Inconsistent %s between PED and sheet donor %s: %s vs %s in %s",
+                (
+                    "Inconsistent %s between PED and sample sheet.\n\n"
+                    "donor:    %s\n"
+                    "in sheet: %s\n"
+                    "in PED:   %s\n"
+                    "PED file: %s\n"
+                ),
                 key,
                 ped_donor.name,
-                getattr(ped_donor, key),
                 sheet_donor.extra_infos.get(key, "unknown"),
-                ped_path,
+                getattr(ped_donor, key),
+                os.path.relpath(ped_path, self.base_dir),
             )
             return False
         else:
@@ -297,7 +336,9 @@ class VcfFileCheck(FileCheckBase):
         real_path = os.path.realpath(vcf_path)
         if not os.path.exists(real_path):
             logger.error(
-                "Symlink problem: %s points to %s but that does not exist", vcf_path, real_path
+                "Symlink problem, points to non-existing path\n\nlink: %s\ndest: %s\n",
+                os.path.relpath(vcf_path, self.base_dir),
+                os.path.relpath(real_path, self.base_dir),
             )
             return False
         with warnings.catch_warnings():  # suppress warnings
@@ -305,21 +346,40 @@ class VcfFileCheck(FileCheckBase):
             with vcfpy.Reader.from_path(vcf_path) as reader:
                 vcf_names = reader.header.samples.names
                 if not vcf_names:
-                    logger.error("Found no samples in VCF path %s", vcf_path)
+                    logger.error(
+                        "Found no samples in VCF path\n\nVCF path: %s",
+                        os.path.relpath(vcf_path, self.base_dir),
+                    )
                     return False
                 pedigree = self.donor_ngs_library_to_pedigree.get(vcf_names[0])
                 if not pedigree:
-                    logger.error("Could not find pedigree for %s (%s)", vcf_names[0], vcf_path)
-                    return False
-                pedigree_names = [
-                    donor.dna_ngs_library.name for donor in pedigree.donors if donor.dna_ngs_library
-                ]
-                if set(vcf_names) != set(pedigree_names):
                     logger.error(
-                        "Inconsistency between VCF members (%s) and pedigree members (%s) in VCF file: %s",
-                        ", ".join(vcf_names),
-                        ", ".join(pedigree_names),
-                        vcf_path,
+                        "Index from VCF not found in sample sheet.\n\nindex:    %s\nVCF path: %s\n",
+                        vcf_names[0],
+                        os.path.relpath(vcf_path, self.base_dir),
+                    )
+                    return False
+                vcf_names = set(vcf_names)
+                pedigree_names = set(
+                    [
+                        donor.dna_ngs_library.name
+                        for donor in pedigree.donors
+                        if donor.dna_ngs_library
+                    ]
+                )
+                if vcf_names != pedigree_names:
+                    logger.error(
+                        (
+                            "Inconsistent members between VCF and sample sheets.\n\n"
+                            "shared:     %s\n"
+                            "VCF only:   %s\n"
+                            "sheet only: %s\n"
+                            "VCF path:   %s\n"
+                        ),
+                        ", ".join(sorted(vcf_names & pedigree_names)) or "(none)",
+                        ", ".join(sorted(vcf_names - pedigree_names)) or "(none)",
+                        ", ".join(sorted(pedigree_names - vcf_names)) or "(none)",
+                        os.path.relpath(vcf_path, self.base_dir),
                     )
                     return False
         return True
@@ -351,9 +411,12 @@ class SnappyCheckCommand:
         )
         parser.add_argument(
             "--base-path",
-            default=os.getcwd(),
+            default=None,
             required=False,
-            help="Base path of project (contains 'ngs_mapping/' etc.), defaults to current path.",
+            help=(
+                "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
+                "back to current working directory by default."
+            ),
         )
 
         parser.add_argument(
@@ -373,6 +436,18 @@ class SnappyCheckCommand:
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
         res = 0
+
+        for tsv_file in args.biomedsheet_tsv:
+            if args.base_path:
+                break
+            base_path = pathlib.Path(tsv_file.name).parent
+            while base_path != base_path.root:
+                if (base_path / "ngs_mapping").exists():
+                    args.base_path = str(base_path)
+                    break
+                base_path = base_path.parent
+        if not args.base_path:
+            args.base_path = os.getcwd()
 
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path %s does not exist", args.base_path)
