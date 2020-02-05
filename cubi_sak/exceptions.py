@@ -29,5 +29,13 @@ class MissingFileException(CubiSakException):
     """Raised on missing file for transfer."""
 
 
+class OverwriteRefusedException(CubiSakException):
+    """Raised when refusing to overwrite a file."""
+
+
 class ResourceDownloadError(CubiSakException):
     """Raised when something went wrong with a file download error."""
+
+
+class ParameterException(CubiSakException):
+    """Raised in case of problems with parameterisation."""

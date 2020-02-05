@@ -15,6 +15,7 @@
 - Adding `cubi-sak snake check` command.
 - Adding `cubi-sak isa-tab validate` command.
 - Adding `cubi-sak isa-tab resolve-hpo` command.
+- Adding `cubi-sak sodar download-sheet` command.
 
 ## v0.1.0
 

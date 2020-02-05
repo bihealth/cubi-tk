@@ -1,14 +1,23 @@
 """Common code."""
 
+import difflib
 import fcntl
 import glob
 import os
+import pathlib
+import shutil
 import struct
 import sys
+import tempfile
 import termios
 import warnings
 from subprocess import check_output, CalledProcessError
 from uuid import UUID
+
+import icdiff
+from logzero import logger
+from sphinx.util import typing
+from termcolor import colored
 
 from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
 
@@ -84,3 +93,71 @@ def get_terminal_columns():
         return cr[1]
     else:
         return 80
+
+
+def overwrite_helper(
+    out_path: typing.Union[str, pathlib.Path],
+    contents: str,
+    *,
+    do_write: bool,
+    show_diff: bool,
+    show_diff_side_by_side: bool = False
+) -> None:
+    out_path = pathlib.Path(out_path)
+    with tempfile.NamedTemporaryFile(mode="w+t") as sheet_file:
+        # Write sheet to temporary file.
+        sheet_file.write(contents)
+
+        # Compare sheet with output if exists and --show-diff given.
+        if show_diff:
+            if out_path.exists():
+                with out_path.open("rt") as inputf:
+                    old_lines = inputf.read().splitlines(keepends=False)
+            else:
+                old_lines = []
+            sheet_file.seek(0)
+            new_lines = sheet_file.read().splitlines(keepends=False)
+
+            if not show_diff_side_by_side:
+                lines = difflib.unified_diff(
+                    old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path)
+                )
+                for line in lines:
+                    line = line[:-1]
+                    if line.startswith(("+++", "---")):
+                        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
+                    elif line.startswith("@@"):
+                        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
+                    elif line.startswith("+"):
+                        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
+                    elif line.startswith("-"):
+                        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
+                    else:
+                        print(line, file=sys.stdout)
+            else:
+                cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
+                lines = cd.make_table(
+                    old_lines,
+                    new_lines,
+                    fromdesc=str(out_path),
+                    todesc=str(out_path),
+                    context=True,
+                    numlines=3,
+                )
+                for line in lines:
+                    line = "%s\n" % line
+                    if hasattr(sys.stdout, "buffer"):
+                        sys.stdout.buffer.write(line.encode("utf-8"))
+                    else:
+                        sys.stdout.write(line)
+
+            sys.stdout.flush()
+            if not lines:
+                logger.info("File %s not changed, no diff...", out_path)
+
+        # Actually copy the file contents.
+        if do_write:
+            logger.debug("Writing file contents to %s", out_path)
+            sheet_file.seek(0)
+            with out_path.open("wt") as output_file:
+                shutil.copyfileobj(sheet_file, output_file)
