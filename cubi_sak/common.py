@@ -10,13 +10,13 @@ import struct
 import sys
 import tempfile
 import termios
+import typing
 import warnings
 from subprocess import check_output, CalledProcessError
 from uuid import UUID
 
 import icdiff
 from logzero import logger
-from sphinx.util import typing
 from termcolor import colored
 
 from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
