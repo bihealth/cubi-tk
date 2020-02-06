@@ -51,12 +51,14 @@ class DownloadSheetCommand:
 
         parser.add_argument(
             "--dry-run",
+            "-n",
             default=False,
             action="store_true",
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
         )
         parser.add_argument(
             "--show-diff",
+            "-D",
             default=False,
             action="store_true",
             help="Show change when creating/updating sample sheets.",

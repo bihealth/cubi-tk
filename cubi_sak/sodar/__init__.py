@@ -26,7 +26,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
-    setup_argparse_download_sheet(subparsers.add_parser("download", help="Download ISA-tab"))
+    setup_argparse_download_sheet(subparsers.add_parser("download-sheet", help="Download ISA-tab"))
 
 
 def run(args, parser, subparser):

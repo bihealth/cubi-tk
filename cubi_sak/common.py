@@ -110,7 +110,7 @@ def overwrite_helper(
 
         # Compare sheet with output if exists and --show-diff given.
         if show_diff:
-            if out_path.exists():
+            if out_path != "-" and out_path.exists():
                 with out_path.open("rt") as inputf:
                     old_lines = inputf.read().splitlines(keepends=False)
             else:
@@ -123,11 +123,12 @@ def overwrite_helper(
                     old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path)
                 )
                 for line in lines:
-                    line = line[:-1]
                     if line.startswith(("+++", "---")):
-                        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
+                        print(
+                            colored(line, color="white", attrs=("bold",)), end="", file=sys.stdout
+                        )
                     elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
+                        print(colored(line, color="cyan", attrs=("bold",)), end="", file=sys.stdout)
                     elif line.startswith("+"):
                         print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
                     elif line.startswith("-"):

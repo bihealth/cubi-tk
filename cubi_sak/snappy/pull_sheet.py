@@ -27,7 +27,7 @@ from .. import exceptions
 
 
 #: The URL template to use.
-from ..common import get_terminal_columns
+from ..common import get_terminal_columns, overwrite_helper
 
 URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s"
 
@@ -90,12 +90,14 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument(
         "--dry-run",
+        "-n",
         default=False,
         action="store_true",
         help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
     )
     parser.add_argument(
         "--show-diff",
+        "-D",
         default=False,
         action="store_true",
         help="Show change when creating/updating sample sheets.",
@@ -113,11 +115,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument("project_uuid", help="UUID of project to pull the sample sheet for.")
     parser.add_argument(
-        "output_tsv",
-        nargs="?",
-        default=sys.stdout,
-        help="Path to output TSV file, default is '-' for stdout.",
-        type=argparse.FileType("at+"),
+        "output_tsv", default="-", help="Path to output TSV file, default is '-' for stdout."
     )
 
 
@@ -143,15 +141,11 @@ def check_args(args) -> int:
         any_error = True
 
     # Check output file presence vs. overwrite allowed.
-    if (
-        hasattr(args.output_tsv, "name")
-        and args.output_tsv.name != "-"
-        and os.path.exists(args.output_tsv.name)
-    ):  # pragma: nocover
-        if not args.allow_overwrite:
+    if args.output_tsv != "-" and os.path.exists(args.output_tsv):  # pragma: nocover
+        if not args.allow_overwrite and not args.dry_run:
             logger.error(
                 "The output path %s already exists but --allow-overwrite not given.",
-                args.output_tsv.name,
+                args.output_tsv,
             )
             any_error = True
         else:
@@ -170,8 +164,10 @@ def check_args(args) -> int:
     return int(any_error)
 
 
-def write_sheet(args, sheet_file) -> typing.Optional[int]:
-    """Write sheet to ``sheet_file``."""
+def build_sheet(args) -> str:
+    """Build sheet TSV file."""
+
+    result = []
 
     # Query investigation JSON from API.
     url = URL_TPL % {
@@ -256,11 +252,7 @@ def write_sheet(args, sheet_file) -> typing.Optional[int]:
             offset += colspan
 
     # Generate the resulting sample sheet.
-    try:
-        sheet_file.truncate()
-    except OSError:  # pragma: nocover
-        logger.debug("Could not truncate output TSV (stdout/stderr)? Continuing...")
-    print("\n".join(HEADER_TPL) % vars(args), file=sheet_file)
+    result.append("\n".join(HEADER_TPL) % vars(args))
     for source, info in study_map.items():
         if source not in assay_map:  # pragma: nocover
             logger.info("source %s does not have an assay.", source)
@@ -319,10 +311,10 @@ def write_sheet(args, sheet_file) -> typing.Optional[int]:
             seq_platform,
             library_kit,
         ]
-        print("\t".join(row), file=sheet_file)
+        result.append("\t".join(row))
 
     logger.debug("Done writing temporary file.")
-    return None
+    return "\n".join(result)
 
 
 def run(
@@ -336,70 +328,12 @@ def run(
     logger.info("Starting to pull sheet...")
     logger.info("  Args: %s", args)
 
-    with tempfile.NamedTemporaryFile(mode="w+t") as sheet_file:
-        # Write sheet to temporary file.
-        res = write_sheet(args, sheet_file)
-        if res:  # pragma: nocover
-            return res
-
-        # Compare sheet with output if exists and --show-diff given.
-        if args.show_diff:
-            if os.path.exists(args.output_tsv.name):
-                with open(args.output_tsv.name, "rt") as inputf:
-                    old_lines = inputf.read().splitlines(keepends=False)
-            else:
-                old_lines = []
-            sheet_file.seek(0)
-            new_lines = sheet_file.read().splitlines(keepends=False)
-
-            if not args.show_diff_side_by_side:
-                lines = difflib.unified_diff(
-                    old_lines, new_lines, fromfile=args.output_tsv.name, tofile=args.output_tsv.name
-                )
-                for line in lines:
-                    line = line[:-1]
-                    if line.startswith(("+++", "---")):
-                        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("+"):
-                        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("-"):
-                        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
-                    else:
-                        print(line, file=sys.stdout)
-            else:
-                cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
-                lines = cd.make_table(
-                    old_lines,
-                    new_lines,
-                    fromdesc=args.output_tsv.name,
-                    todesc=args.output_tsv.name,
-                    context=True,
-                    numlines=3,
-                )
-                for line in lines:
-                    line = "%s\n" % line
-                    if hasattr(sys.stdout, "buffer"):
-                        sys.stdout.buffer.write(line.encode("utf-8"))
-                    else:
-                        sys.stdout.write(line)
-
-            sys.stdout.flush()
-            if not lines:
-                logger.info("File %s not changed, no diff...", args.output_tsv.name)
-
-        # Write to output file if not --dry-run is given
-        if hasattr(args.output_tsv, "name") and args.dry_run:
-            logger.warn("Not changing %s as we are in --dry-run mode", args.output_tsv.name)
-        else:
-            if hasattr(args.output_tsv, "name"):
-                action = "Overwriting" if os.path.exists(args.output_tsv.name) else "Creating"
-                logger.info("%s %s", action, args.output_tsv.name)
-            sheet_file.seek(0)
-            if hasattr(args.output_tsv, "name"):
-                args.output_tsv.seek(0)
-                args.output_tsv.truncate()
-            shutil.copyfileobj(sheet_file, args.output_tsv)
+    overwrite_helper(
+        args.output_tsv,
+        build_sheet(args),
+        do_write=not args.dry_run,
+        show_diff=args.show_diff,
+        show_diff_side_by_side=args.show_diff_side_by_side,
+    )
 
     return None
