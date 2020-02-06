@@ -121,6 +121,7 @@ class DownloadSheetCommand:
                 logger.exception("%e", e)
             logger.error("%s", e)
             return 1
+        return 0
 
     def _write_file(self, out_path, file_name, text):
         out_path = out_path / file_name

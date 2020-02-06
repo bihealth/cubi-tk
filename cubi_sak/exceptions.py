@@ -39,3 +39,7 @@ class ResourceDownloadError(CubiSakException):
 
 class ParameterException(CubiSakException):
     """Raised in case of problems with parameterisation."""
+
+
+class ParseOutputException(CubiSakException):
+    """Problem with parsing output of sub command."""

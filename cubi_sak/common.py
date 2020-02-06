@@ -103,15 +103,15 @@ def overwrite_helper(
     show_diff: bool,
     show_diff_side_by_side: bool = False
 ) -> None:
-    out_path = pathlib.Path(out_path)
+    out_path_obj = pathlib.Path(out_path)
     with tempfile.NamedTemporaryFile(mode="w+t") as sheet_file:
         # Write sheet to temporary file.
         sheet_file.write(contents)
 
         # Compare sheet with output if exists and --show-diff given.
         if show_diff:
-            if out_path != "-" and out_path.exists():
-                with out_path.open("rt") as inputf:
+            if out_path != "-" and out_path_obj.exists():
+                with out_path_obj.open("rt") as inputf:
                     old_lines = inputf.read().splitlines(keepends=False)
             else:
                 old_lines = []
@@ -160,5 +160,8 @@ def overwrite_helper(
         if do_write:
             logger.debug("Writing file contents to %s", out_path)
             sheet_file.seek(0)
-            with out_path.open("wt") as output_file:
-                shutil.copyfileobj(sheet_file, output_file)
+            if out_path == "-":
+                shutil.copyfileobj(sheet_file, sys.stdout)
+            else:
+                with out_path_obj.open("wt") as output_file:
+                    shutil.copyfileobj(sheet_file, output_file)

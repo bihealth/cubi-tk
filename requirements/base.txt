@@ -36,3 +36,6 @@ pysam
 
 # We use this for parsing the HPO.
 hpo-similarity
+
+# Topological sorting
+toposort

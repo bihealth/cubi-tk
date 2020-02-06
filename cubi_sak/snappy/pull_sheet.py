@@ -9,25 +9,19 @@ More Information
 """
 
 import argparse
-import difflib
 import os
-import shutil
-import tempfile
 from uuid import UUID
 import re
-import sys
 import typing
 
-import icdiff
 from logzero import logger
 import requests
-from termcolor import colored
 
 from .. import exceptions
 
 
 #: The URL template to use.
-from ..common import get_terminal_columns, overwrite_helper
+from ..common import overwrite_helper
 
 URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s"
 
@@ -115,7 +109,10 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument("project_uuid", help="UUID of project to pull the sample sheet for.")
     parser.add_argument(
-        "output_tsv", default="-", help="Path to output TSV file, default is '-' for stdout."
+        "output_tsv",
+        default="-",
+        nargs="?",
+        help="Path to output TSV file, default is '-' for stdout.",
     )
 
 
@@ -312,8 +309,8 @@ def build_sheet(args) -> str:
             library_kit,
         ]
         result.append("\t".join(row))
+    result.append("")
 
-    logger.debug("Done writing temporary file.")
     return "\n".join(result)
 
 
