@@ -9,8 +9,6 @@ Available Commands
     Transfer raw data from ``work/input_links`` directory of ``ngs_mapping``.
 ``itransfer-ngs-mapping``
     Transfer results and logs from ``output`` directory of ``ngs_mapping``.
-``itransfer-variant-calling``
-    Transfer results and logs from ``output`` directory of ``variant_calling``.
 ``pull-sheet``
     Pull sample sheet from SODAR and write out to BiomedSheet format.
 
@@ -28,10 +26,8 @@ import argparse
 from ..common import run_nocmd
 from .check import setup_argparse as setup_argparse_check
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
-from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
-from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
+from .itransfer_mapping_results import setup_argparse as setup_argparse_itransfer_mapping_results
 from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
-from .kickoff import setup_argparse as setup_argparse_kickoff
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -47,15 +43,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_itransfer_raw_data(
         subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")
     )
-    setup_argparse_itransfer_ngs_mapping(
+    setup_argparse_itransfer_mapping_results(
         subparsers.add_parser(
-            "itransfer-ngs-mapping", help="Transfer ngs_mapping results into iRODS landing zone"
-        )
-    )
-    setup_argparse_itransfer_variant_calling(
-        subparsers.add_parser(
-            "itransfer-variant-calling",
-            help="Transfer variant_calling results into iRODS landing zone",
+            "itransfer-mapping-results", help="Transfer mapping results into iRODS landing zone"
         )
     )
 
@@ -63,11 +53,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser("pull-sheet", help="Pull SODAR sample sheet into biomedsheet")
     )
 
-    setup_argparse_kickoff(subparsers.add_parser("kickoff", help="Kick-off SNAPPY pipeline steps."))
-
 
 def run(args, parser, subparser):
-    """Main entry point for snappy command."""
+    """Main entry point for isa-tpl command."""
     if not args.snappy_cmd:  # pragma: nocover
         return run_nocmd(args, parser, subparser)
     else:
