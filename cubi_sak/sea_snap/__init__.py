@@ -27,12 +27,13 @@ from ..common import run_nocmd
 from .check import setup_argparse as setup_argparse_check
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_mapping_results import setup_argparse as setup_argparse_itransfer_mapping_results
-from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
+from .pull_isa import setup_argparse as setup_argparse_pull_isa
+from .write_sample_info import setup_argparse as setup_argparse_write_sample_info
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
-    subparsers = parser.add_subparsers(dest="snappy_cmd")
+    subparsers = parser.add_subparsers(dest="sea_snap")
 
     setup_argparse_check(
         subparsers.add_parser(
@@ -49,14 +50,17 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         )
     )
 
-    setup_argparse_pull_sheet(
-        subparsers.add_parser("pull-sheet", help="Pull SODAR sample sheet into biomedsheet")
+    setup_argparse_pull_isa(
+        subparsers.add_parser("pull-isa", help="Pull ISA files from SODAR")
+    )
+    setup_argparse_write_sample_info(
+        subparsers.add_parser("write-sample-info", help="Write sample info file")
     )
 
 
 def run(args, parser, subparser):
-    """Main entry point for isa-tpl command."""
-    if not args.snappy_cmd:  # pragma: nocover
+    """Main entry point for sea-snap command."""
+    if not args.sea_snap_cmd:  # pragma: nocover
         return run_nocmd(args, parser, subparser)
     else:
-        return args.snappy_cmd(args, parser, subparser)
+        return args.sea_snap_cmd(args, parser, subparser)
