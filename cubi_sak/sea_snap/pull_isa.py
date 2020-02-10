@@ -11,7 +11,6 @@ More Information
 import argparse
 import os
 from uuid import UUID
-import re
 import typing
 from pathlib import Path
 
@@ -19,10 +18,8 @@ from logzero import logger
 import requests
 
 
-#: The URL template to use.
-from ..common import get_terminal_columns
-
 URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
+
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-sak sea-snap pull-isa``."""
@@ -48,12 +45,10 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--output_folder",
-        default="ISA_files/", 
-        help="Output folder path for ISA files."
+        "--output_folder", default="ISA_files/", help="Output folder path for ISA files."
     )
 
-    parser.add_argument("project_uuid",  help="UUID of project to pull the sample sheet for.")
+    parser.add_argument("project_uuid", help="UUID of project to pull the sample sheet for.")
 
 
 def check_args(args) -> int:
@@ -72,10 +67,7 @@ def check_args(args) -> int:
         any_error = True
 
     # Check output file presence vs. overwrite allowed.
-    if (
-        hasattr(args.output_folder, "name")
-        and Path(args.output_folder).exists()
-    ):  # pragma: nocover
+    if hasattr(args.output_folder, "name") and Path(args.output_folder).exists():  # pragma: nocover
         if not args.allow_overwrite:
             logger.error(
                 "The output folder %s already exists but --allow-overwrite not given.",
@@ -111,15 +103,14 @@ def pull_isa(args) -> typing.Optional[int]:
     r = requests.get(url)
     r.raise_for_status()
     all_data = r.json()
-    
+
     isa_dir = Path(args.output_folder)
 
-    investigation_data = all_data["investigation"]["tsv"]
     path = isa_dir / all_data["investigation"]["path"]
     path.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Writing ISA files to %s", str(path.parent))
-    
-    with open(str(path), "w") as f: 
+
+    with open(str(path), "w") as f:
         print(all_data["investigation"]["tsv"], file=f)
 
     for study in all_data["studies"]:
@@ -127,7 +118,7 @@ def pull_isa(args) -> typing.Optional[int]:
             print(all_data["studies"][study]["tsv"], file=f)
 
     for assay in all_data["assays"]:
-        with open(str(path.with_name(assay)), "w") as f: 
+        with open(str(path.with_name(assay)), "w") as f:
             print(all_data["assays"][assay]["tsv"], file=f)
 
     logger.debug("Done pulling ISA files.")
@@ -137,17 +128,10 @@ def pull_isa(args) -> typing.Optional[int]:
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
-    """Run ``cubi-sak snappy pull-sheet``."""
+    """Run ``cubi-sak sea-snap pull-isa``."""
     res: typing.Optional[int] = check_args(args)
     if res:  # pragma: nocover
         return res
-
-    # Query investigation JSON from API.
-    url = URL_TPL % {
-        "sodar_url": args.sodar_url,
-        "project_uuid": args.project_uuid,
-        "api_key": args.sodar_auth_token,
-    }
 
     logger.info("Starting to pull files...")
     logger.info("  Args: %s", args)

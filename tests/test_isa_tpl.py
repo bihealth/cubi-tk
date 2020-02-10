@@ -27,8 +27,8 @@ def test_run_cookiecutter_isatab_germline(tmp_path):
     parser, subparsers = setup_argparse()
     args = parser.parse_args(["isa-tpl", "germline", str(output_path)])
 
-    run_isatab_generic = run_cookiecutter(TEMPLATES["germline"], no_input=True)
-    run_isatab_generic(args, parser, subparsers.choices[args.cmd])
+    run_isatab_germline = run_cookiecutter(TEMPLATES["germline"], no_input=True)
+    run_isatab_germline(args, parser, subparsers.choices[args.cmd])
 
     assert output_path.exists()
     assert (output_path / "i_Investigation.txt").exists()

@@ -19,6 +19,9 @@
 - Adding `cubi-sak snappy kickoff` command.
 - Adding `cubi-sak org-raw {check,organize}` command.
 - `cubi-sak snappy pull-sheet` is a bit more interactive.
+- Adding `cubi-sak sea-snap pull-isa` command.
+- Adding `cubi-sak sea-snap write-sample-info` command.
+- Adding `cubi-sak sea-snap itransfer-mapping-results` command.
 
 ## v0.1.0
 

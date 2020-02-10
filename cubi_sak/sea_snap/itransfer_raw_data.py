@@ -1,4 +1,4 @@
-"""``cubi-sak snappy itransfer-raw-data``: transfer raw FASTQs into iRODS landing zone."""
+"""``cubi-sak sea-snap itransfer-raw-data``: transfer raw FASTQs into iRODS landing zone."""
 
 import argparse
 import os
@@ -11,7 +11,7 @@ TPL_INPUT_LINK_DIR = "ngs_mapping/work/input_links/%(library_name)s"
 
 
 class SnappyItransferRawDataCommand(SnappyItransferCommandBase):
-    """Implementation of snappy itransfer command for raw data."""
+    """Implementation of sea-snap itransfer command for raw data."""
 
     command_name = "itransfer-raw-data"
     step_name = "raw_data"
@@ -24,5 +24,5 @@ class SnappyItransferRawDataCommand(SnappyItransferCommandBase):
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-sak snappy itransfer-ngs-mapping``."""
+    """Setup argument parser for ``cubi-sak sea-snap itransfer-raw-data``."""
     return SnappyItransferRawDataCommand.setup_argparse(parser)

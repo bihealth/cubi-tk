@@ -7,10 +7,12 @@ Available Commands
     Check consistency within sample sheet but also between sample sheet and files.
 ``itransfer-raw-data``
     Transfer raw data from ``work/input_links`` directory of ``ngs_mapping``.
-``itransfer-ngs-mapping``
-    Transfer results and logs from ``output`` directory of ``ngs_mapping``.
-``pull-sheet``
-    Pull sample sheet from SODAR and write out to BiomedSheet format.
+``itransfer-results``
+    Transfer results and logs from ``output`` directory.
+``pull-isa``
+    Pull ISA-files from SODAR and write out.
+``write-sample-info``
+    Parse and write sample info.
 
 More Information
 ----------------
@@ -26,7 +28,7 @@ import argparse
 from ..common import run_nocmd
 from .check import setup_argparse as setup_argparse_check
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
-from .itransfer_mapping_results import setup_argparse as setup_argparse_itransfer_mapping_results
+from .itransfer_results import setup_argparse as setup_argparse_itransfer_mapping_results
 from .pull_isa import setup_argparse as setup_argparse_pull_isa
 from .write_sample_info import setup_argparse as setup_argparse_write_sample_info
 
@@ -46,13 +48,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_itransfer_mapping_results(
         subparsers.add_parser(
-            "itransfer-mapping-results", help="Transfer mapping results into iRODS landing zone"
+            "itransfer-results", help="Transfer mapping results into iRODS landing zone"
         )
     )
 
-    setup_argparse_pull_isa(
-        subparsers.add_parser("pull-isa", help="Pull ISA files from SODAR")
-    )
+    setup_argparse_pull_isa(subparsers.add_parser("pull-isa", help="Pull ISA files from SODAR"))
     setup_argparse_write_sample_info(
         subparsers.add_parser("write-sample-info", help="Write sample info file")
     )

@@ -21,6 +21,9 @@ biomedsheets
 # ISA-tab parsing.
 altamisa
 
+# Table access.
+pandas
+
 # Useful progress display.
 tqdm
 
@@ -42,3 +45,6 @@ toposort
 
 # Argument completion.
 argcomplete
+
+# Yaml parsing.
+pyyaml
