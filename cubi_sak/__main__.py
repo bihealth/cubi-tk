@@ -17,6 +17,8 @@ from .snappy import run as run_snappy
 from .snappy import setup_argparse as setup_argparse_snappy
 from .sodar import run as run_sodar
 from .sodar import setup_argparse as setup_argparse_sodar
+from .org_raw import run as run_org_raw
+from .org_raw import setup_argparse as setup_argparse_org_raw
 
 
 def setup_argparse_only():  # pragma: nocover
@@ -49,6 +51,7 @@ def setup_argparse():
         subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline.")
     )
     setup_argparse_sodar(subparsers.add_parser("sodar", help="SODAR command line interface."))
+    setup_argparse_org_raw(subparsers.add_parser("org-raw", help="org_raw command line interface."))
 
     return parser, subparsers
 
@@ -79,6 +82,7 @@ def main(argv=None):
         "isa-tab": run_isa_tab,
         "snappy": run_snappy,
         "sodar": run_sodar,
+        "org-raw": run_org_raw,
     }
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)

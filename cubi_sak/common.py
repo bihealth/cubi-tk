@@ -1,5 +1,5 @@
 """Common code."""
-
+import contextlib
 import difflib
 import fcntl
 import glob
@@ -165,3 +165,14 @@ def overwrite_helper(
             else:
                 with out_path_obj.open("wt") as output_file:
                     shutil.copyfileobj(sheet_file, output_file)
+
+
+@contextlib.contextmanager
+def working_directory(path):
+    """Changes working directory and returns to previous on exit."""
+    prev_cwd = pathlib.Path.cwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(prev_cwd)

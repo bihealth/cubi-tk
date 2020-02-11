@@ -17,6 +17,7 @@
 - Adding `cubi-sak isa-tab resolve-hpo` command.
 - Adding `cubi-sak sodar download-sheet` command.
 - Adding `cubi-sak snappy kickoff` command.
+- Adding `cubi-sak org-raw {check,organize}` command.
 
 ## v0.1.0
 
