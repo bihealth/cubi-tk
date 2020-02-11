@@ -11,7 +11,7 @@ import typing
 import tqdm
 from logzero import logger
 
-from cubi_sak.common import working_directory, sizeof_fmt
+from cubi_sak.common import sizeof_fmt
 
 
 def _recreate_md5_for(path: Path):
@@ -40,10 +40,10 @@ def _recreate_md5_for(path: Path):
         return True
 
 
-def _call(cmd: typing.List[str]):
+def _call(cmd: typing.List[str], cwd=None):
     logger.debug("Calling `%s`", " ".join(cmd))
     try:
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, cwd=cwd)
     except subprocess.CalledProcessError as e:
         tpl = (
             "md5sum --check call did not succeed: %s\n--- stdout BEGIN ---\n%s--- stdout END ---\n"
@@ -62,8 +62,7 @@ def _call(cmd: typing.List[str]):
 
 def _check_md5(path: Path):
     """Check MD5 file at ``path``."""
-    with working_directory(path.parent):
-        return _call(["md5sum", "--check", "%s.md5" % path.name])
+    return _call(["md5sum", "--check", "%s.md5" % path.name], cwd=str(path.parent))
 
 
 def _check_gz_integrity(path: Path):
