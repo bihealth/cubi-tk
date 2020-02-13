@@ -27,3 +27,11 @@ $ cd docs_manual
 $ make clean html
 $ ls _build/html/index.html
 ```
+
+## Argument Completion
+
+```bash
+$ cat >>~/.bashrc <<"EOF"
+eval "$(register-python-argcomplete cubi-sak)"
+EOF
+```

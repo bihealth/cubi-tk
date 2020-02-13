@@ -103,6 +103,7 @@ def overwrite_helper(
     show_diff: bool,
     show_diff_side_by_side: bool = False,
     answer_yes: bool = False,
+    out_file: typing.IO = sys.stderr,
 ) -> None:
     out_path_obj = pathlib.Path(out_path)
     with tempfile.NamedTemporaryFile(mode="w+t") as sheet_file:
@@ -126,16 +127,16 @@ def overwrite_helper(
                 for line in lines:
                     if line.startswith(("+++", "---")):
                         print(
-                            colored(line, color="white", attrs=("bold",)), end="", file=sys.stdout
+                            colored(line, color="white", attrs=("bold",)), end="", file=out_file
                         )
                     elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), end="", file=sys.stdout)
+                        print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
                     elif line.startswith("+"):
-                        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
+                        print(colored(line, color="green", attrs=("bold",)), file=out_file)
                     elif line.startswith("-"):
-                        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
+                        print(colored(line, color="red", attrs=("bold",)), file=out_file)
                     else:
-                        print(line, file=sys.stdout)
+                        print(line, file=out_file)
             else:
                 cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
                 lines = cd.make_table(
@@ -148,12 +149,12 @@ def overwrite_helper(
                 )
                 for line in lines:
                     line = "%s\n" % line
-                    if hasattr(sys.stdout, "buffer"):
-                        sys.stdout.buffer.write(line.encode("utf-8"))
+                    if hasattr(out_file, "buffer"):
+                        out_file.buffer.write(line.encode("utf-8"))
                     else:
-                        sys.stdout.write(line)
+                        out_file.write(line)
 
-            sys.stdout.flush()
+            out_file.flush()
             if not lines:
                 logger.info("File %s not changed, no diff...", out_path)
 

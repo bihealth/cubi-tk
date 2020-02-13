@@ -39,3 +39,6 @@ hpo-similarity
 
 # Topological sorting
 toposort
+
+# Argument completion.
+argcomplete

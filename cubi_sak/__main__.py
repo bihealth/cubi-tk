@@ -1,9 +1,11 @@
 """Main entry point for CUBI-SAK"""
+# PYTHON_ARGCOMPLETE_OK
 
 import argparse
 import logging
 import sys
 
+import argcomplete
 import logzero
 from logzero import logger
 
@@ -60,6 +62,7 @@ def main(argv=None):
     """Main entry point before parsing command line arguments."""
     # Setup command line parser.
     parser, subparsers = setup_argparse()
+    argcomplete.autocomplete(parser)
 
     # Actually parse command line arguments.
     args = parser.parse_args(argv)
