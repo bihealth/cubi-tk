@@ -17,6 +17,7 @@ import re
 import sys
 import typing
 from collections import namedtuple
+from pathlib import Path
 from glob import glob
 import yaml
 
@@ -82,12 +83,16 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "in-path-pattern",
+        "in_path_pattern",
         help="Path pattern to use for extracting input file information. See https://cubi-gitlab.bihealth.org/CUBI/Pipelines/sea-snap/blob/master/documentation/prepare_input.md#fastq-files-folder-structure.",
     )
 
     parser.add_argument(
-        "output-file", type=argparse.FileType("w"), help="Filename ending with .yaml or .tsv"
+        "output_file",
+        nargs="?",
+        default="sample_info.yaml",
+        type=lambda f: sys.stdout if f == "-" else argparse.FileType("at+")(f),
+        help="Filename ending with .yaml or .tsv; default: sample_info.yaml.",
     )
 
 
@@ -102,11 +107,11 @@ def check_args(args) -> int:
             logger.error("Both --isa-assay and --from_file are set, choose one.")
             any_error = True
 
-            # Check output file presence vs. overwrite allowed.
+    # Check output file presence vs. overwrite allowed.
     if (
         hasattr(args.output_file, "name")
-        and args.output_file.name != "-"
-        and os.path.exists(args.output_file.name)
+        and args.output_file.name != "<stdout>"
+        and Path(args.output_file.name).stat().st_size != 0
     ):  # pragma: nocover
         if not args.allow_overwrite:
             logger.error(
@@ -118,6 +123,11 @@ def check_args(args) -> int:
             logger.warn("Output path %s exists but --allow-overwrite given.", args.output_file)
 
     return int(any_error)
+
+
+class Bunch:
+    def __init__(self, **kw):
+        setattr(self, "__dict__", kw)
 
 
 class SampleInfoTool:
@@ -135,7 +145,7 @@ class SampleInfoTool:
 
         self.sample_info = {}
 
-        # ---------------------------------------------------- helper methods ----------------------------------------------------#
+    # ---------------------------------------------------- helper methods ----------------------------------------------------#
 
     def _prepare_in_path_pattern(self):
         """ read and remove wildcard constraints from in_path_pattern """
@@ -170,8 +180,8 @@ class SampleInfoTool:
             match_pattern = re.sub(r"\\\*\\\*", "[^{}]*", match_pattern)
             match_pattern = re.sub(r"(?<!\[\^{}\]\*)\\\*", "[^{}./]*", match_pattern)
 
-        print("\ninput files:\n{}".format("\n".join(input_files)))
-        print(f"\nmatch pattern:\n{match_pattern}")
+        logger.info("\ninput files:\n{}".format("\n".join(input_files)))
+        logger.info(f"\nmatch pattern:\n{match_pattern}")
 
         wildcard_values = {w: [] for w in wildcards}
         wildcard_values["read_extension"] = []
@@ -229,7 +239,7 @@ class SampleInfoTool:
                     if f_key not in s_info:
                         s_info[f_key] = f_val
 
-                # ---------------------------------------------------- access methods ----------------------------------------------------#
+    # ---------------------------------------------------- access methods ----------------------------------------------------#
 
     def update_sample_info(self, library_default="unstranded", add=False):
         """
@@ -244,7 +254,7 @@ class SampleInfoTool:
             for comb in self._get_wildcard_combinations(wildcard_values)
             if comb.read_extension in self.allowed_read_extensions
         ]
-        print(
+        logger.info(
             "\nextracted combinations:\n{}".format(
                 "\n".join("\t".join(i) for i in [wildcard_combs[0]._fields] + wildcard_combs)
             )
@@ -296,8 +306,11 @@ class SampleInfoTool:
         """
         write sample info to yaml
         """
-        with (open(filename, "w") if isinstance(filename, str) else filename) as f:
-            yaml.dump({"sample_info": self.sample_info}, f, default_flow_style=False)
+        if not isinstance(filename, str):
+            yaml.dump({"sample_info": self.sample_info}, filename, default_flow_style=False)
+        else:
+            with open(filename, "w") as f:
+                yaml.dump({"sample_info": self.sample_info}, f, default_flow_style=False)
 
     def read_yaml(self, filename):
         """
@@ -320,28 +333,39 @@ class SampleInfoTool:
         assay = AssayReader.from_stream("S1", "A1", self.args.isa_assay).read()
 
         # extract relevant fields
+        dummy = Bunch(type="", protocol_ref="")
         sample_info = {}
-        for a in assay.arcs:
-            if assay.materials[a.head].type == "Sample Name":
-                sample_name = assay.materials[a.head].type
+        arc_map = {a.tail: a.head for a in assay.arcs}
+        for m in assay.materials.values():
+            if m.type == "Sample Name":
+                sample_name = m.name
                 if sample_name not in sample_info:
                     sample_info[sample_name] = {}
-                if assay.processes[a.tail].protocol_ref == "Library construction RNA-Seq":
-                    for p in assay.processes[a.tail].parameter_values:
-                        if p.name == "Library layout":
-                            sample_info[sample_name]["paired"] = (
-                                True if p.value == "PAIRED" else False
-                            )
-                        elif p.name == "Library strand-specificity":
-                            sample_info[sample_name]["stranded"] = p.value.lower()
-                elif assay.processes[a.tail].protocol_ref == "Nucleic acid sequencing RNA-Seq":
-                    for p in assay.processes[a.tail].parameter_values:
-                        if p.name == "Platform":
-                            sample_info[sample_name]["instrument"] = p.value
-                        elif p.name == "Target read length":
-                            sample_info[sample_name]["read_length"] = p.value
+                key = m.unique_name
+                while key in arc_map:
+                    key = arc_map[key]
+                    if (
+                        assay.processes.get(key, dummy).protocol_ref
+                        == "Library construction RNA-Seq"
+                    ):
+                        for p in assay.processes[key].parameter_values:
+                            if p.name == "Library layout":
+                                sample_info[sample_name]["paired"] = (
+                                    True if p.value == "PAIRED" else False
+                                )
+                            elif p.name == "Library strand-specificity":
+                                sample_info[sample_name]["stranded"] = p.value.lower()
+                    elif (
+                        assay.processes.get(key, dummy).protocol_ref
+                        == "Nucleic acid sequencing RNA-Seq"
+                    ):
+                        for p in assay.processes[key].parameter_values:
+                            if p.name == "Platform":
+                                sample_info[sample_name]["instrument"] = ",".join(p.value)
+                            elif p.name == "Target read length":
+                                sample_info[sample_name]["read_length"] = p.value
 
-        logger.info("Samples: %s", ", ".join(sample_info))
+        logger.info("Samples in ISA assay:\n%s", ", ".join(sample_info))
 
         self.sample_info = sample_info
 
@@ -357,9 +381,11 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
         elif args.from_file.name.split(".")[-1] == "yaml":
             sit.read_yaml(args.from_file)
     else:
+        add = False
         if args.isa_assay:
             sit.parse_isatab()
-        sit.update_sample_info()
+            add = True
+        sit.update_sample_info(add=add)
 
     if args.output_file.name.split(".")[-1] == "tsv":
         sit.write_table(sample_info_file)
@@ -397,6 +423,7 @@ def run(
             sample_info_file.seek(0)
             new_lines = sample_info_file.read().splitlines(keepends=False)
 
+            is_diff = False
             if not args.show_diff_side_by_side:
                 lines = difflib.unified_diff(
                     old_lines,
@@ -405,6 +432,7 @@ def run(
                     tofile=args.output_file.name,
                 )
                 for line in lines:
+                    is_diff = True
                     line = line[:-1]
                     if line.startswith(("+++", "---")):
                         print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
@@ -426,28 +454,48 @@ def run(
                     context=True,
                     numlines=3,
                 )
-                for line in lines:
-                    line = "%s\n" % line
+                heading = next(lines)
+
+                def show_line(line):
                     if hasattr(sys.stdout, "buffer"):
                         sys.stdout.buffer.write(line.encode("utf-8"))
                     else:
                         sys.stdout.write(line)
 
+                for line in lines:
+                    if not is_diff:
+                        show_line("%s\n" % heading)
+                    is_diff = True
+                    show_line("%s\n" % line)
+
             sys.stdout.flush()
-            if not lines:
+            if not is_diff:
                 logger.info("File %s not changed, no diff...", args.output_file.name)
 
-                # Write to output file if not --dry-run is given
+        # Write to output file if not --dry-run is given
         if hasattr(args.output_file, "name") and args.dry_run:
             logger.warn("Not changing %s as we are in --dry-run mode", args.output_file.name)
         else:
             if hasattr(args.output_file, "name"):
-                action = "Overwriting" if os.path.exists(args.output_file.name) else "Creating"
+                action = (
+                    "Overwriting"
+                    if args.output_file.name != "<stdout>"
+                    and Path(args.output_file.name).stat().st_size != 0
+                    else "Creating"
+                )
                 logger.info("%s %s", action, args.output_file.name)
-            sample_info_file.seek(0)
-            if hasattr(args.output_file, "name"):
+            if args.output_file.name != "<stdout>":
+                sample_info_file.seek(0)
+            if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
                 args.output_file.seek(0)
                 args.output_file.truncate()
             shutil.copyfileobj(sample_info_file, args.output_file)
+            if args.output_file.name == "<stdout>":
+                logger.info(sample_info_file.read())
+
+        logger.warn(
+            "used in_path_pattern %s. Use the same in your mapping_config.yaml!",
+            args.in_path_pattern,
+        )
 
     return None

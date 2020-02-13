@@ -26,7 +26,6 @@ More Information
 import argparse
 
 from ..common import run_nocmd
-from .check import setup_argparse as setup_argparse_check
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_results import setup_argparse as setup_argparse_itransfer_mapping_results
 from .pull_isa import setup_argparse as setup_argparse_pull_isa
@@ -36,12 +35,6 @@ from .write_sample_info import setup_argparse as setup_argparse_write_sample_inf
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
     subparsers = parser.add_subparsers(dest="sea_snap")
-
-    setup_argparse_check(
-        subparsers.add_parser(
-            "check", help="Check consistency within sample sheet and between sheet and files"
-        )
-    )
 
     setup_argparse_itransfer_raw_data(
         subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")

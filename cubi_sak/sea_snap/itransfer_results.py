@@ -89,7 +89,9 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             for f_type, f in {"source": sources, "dest": dests}.items():
                 if len(set(f)) != 1:
                     raise ValueError(
-                        "Command block %s contains multiple or no %s files!" % (cmd_block, f_type)
+                        "Command block %s contains multiple or no %s files!\n"
+                        "src: %s\ndest: %s"
+                        % (cmd_block, f_type, ", ".join(sources), ", ".join(dests))
                     )
             source: str = sources[0]
             dest: str = dests[0]

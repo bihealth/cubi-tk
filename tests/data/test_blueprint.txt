@@ -1,0 +1,33 @@
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample1/out/star.sample1-N1-RNA1-RNA-Seq1.bam i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample1/out/star.sample1-N1-RNA1-RNA-Seq1.bam.md5 i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample2/out/star.sample2-N1-RNA1-RNA-Seq1.bam i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample2/out/star.sample2-N1-RNA1-RNA-Seq1.bam.md5 i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample3/out/star.sample3-N1-RNA1-RNA-Seq1.bam i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample3/out/star.sample3-N1-RNA1-RNA-Seq1.bam.md5 i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample1/report/star.sample1-N1-RNA1-RNA-Seq1.log i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample2/report/star.sample2-N1-RNA1-RNA-Seq1.log i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample2/report/star.sample2-N1-RNA1-RNA-Seq1.log.md5 i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample3/report/star.sample3-N1-RNA1-RNA-Seq1.log i:__SODAR__/fakedest
+
+imkdir -p $(dirname __SODAR__/fakedest )
+irsync -a -K /base/path/mapping/star/sample3/report/star.sample3-N1-RNA1-RNA-Seq1.log.md5 i:__SODAR__/fakedest
+
