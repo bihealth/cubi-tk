@@ -76,10 +76,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--allow-overwrite",
-        default=False,
-        action="store_true",
-        help="Allow to overwrite output file, default is not to allow overwriting output file.",
+        "--yes", default=False, action="store_true", help="Assume all answers are yes."
     )
 
     parser.add_argument(
@@ -90,11 +87,12 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
     )
     parser.add_argument(
-        "--show-diff",
+        "--no-show-diff",
         "-D",
-        default=False,
-        action="store_true",
-        help="Show change when creating/updating sample sheets.",
+        dest="show_diff",
+        default=True,
+        action="store_false",
+        help="Don't show change when creating/updating sample sheets.",
     )
     parser.add_argument(
         "--show-diff-side-by-side",
@@ -136,17 +134,6 @@ def check_args(args) -> int:
     if not args.sodar_url:  # pragma: nocover
         logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
         any_error = True
-
-    # Check output file presence vs. overwrite allowed.
-    if args.output_tsv != "-" and os.path.exists(args.output_tsv):  # pragma: nocover
-        if not args.allow_overwrite and not args.dry_run:
-            logger.error(
-                "The output path %s already exists but --allow-overwrite not given.",
-                args.output_tsv,
-            )
-            any_error = True
-        else:
-            logger.warn("Output path %s exists but --allow-overwrite given.", args.output_tsv)
 
     # Check UUID syntax.
     try:
@@ -329,8 +316,9 @@ def run(
         args.output_tsv,
         build_sheet(args),
         do_write=not args.dry_run,
-        show_diff=args.show_diff,
+        show_diff=True,
         show_diff_side_by_side=args.show_diff_side_by_side,
+        answer_yes=args.yes,
     )
 
     return None

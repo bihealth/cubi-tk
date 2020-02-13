@@ -18,6 +18,7 @@
 - Adding `cubi-sak sodar download-sheet` command.
 - Adding `cubi-sak snappy kickoff` command.
 - Adding `cubi-sak org-raw {check,organize}` command.
+- `cubi-sak snappy pull-sheet` is a bit more interactive.
 
 ## v0.1.0
 

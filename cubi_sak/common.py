@@ -101,7 +101,8 @@ def overwrite_helper(
     *,
     do_write: bool,
     show_diff: bool,
-    show_diff_side_by_side: bool = False
+    show_diff_side_by_side: bool = False,
+    answer_yes: bool = False,
 ) -> None:
     out_path_obj = pathlib.Path(out_path)
     with tempfile.NamedTemporaryFile(mode="w+t") as sheet_file:
@@ -158,13 +159,15 @@ def overwrite_helper(
 
         # Actually copy the file contents.
         if do_write:
-            logger.debug("Writing file contents to %s", out_path)
+            logger.info("About to write file contents to %s", out_path)
             sheet_file.seek(0)
             if out_path == "-":
                 shutil.copyfileobj(sheet_file, sys.stdout)
             else:
-                with out_path_obj.open("wt") as output_file:
-                    shutil.copyfileobj(sheet_file, output_file)
+                logger.info("See above for the diff that will be applied.")
+                if not answer_yes and input("Is this OK? [yN] ").lower().startswith("y"):
+                    with out_path_obj.open("wt") as output_file:
+                        shutil.copyfileobj(sheet_file, output_file)
 
 
 @contextlib.contextmanager
