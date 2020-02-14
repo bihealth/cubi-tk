@@ -1,0 +1,6 @@
+Source Name	Characteristics[UUID]	Characteristics[External links]	Characteristics[Batch]	Characteristics[Organism]	Term Source REF	Term Accession Number	Characteristics[Sex]	Characteristics[Disease status]	Characteristics[OMIM disease]	Term Source REF	Term Accession Number	Characteristics[Orphanet disease]	Term Source REF	Term Accession Number	Characteristics[HPO terms]	Term Source REF	Term Accession Number	Comment[Disease notes]	Protocol REF	Performer	Sample Name	Characteristics[External links]	Characteristics[Cell origin]	Term Source REF	Term Accession Number	Characteristics[Cell type]	Term Source REF	Term Accession Number
+alpha		x-charite-medgen-blood-book-id:alpha	1	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	UNKNOWN	UNKNOWN											Sample collection		alpha-N1							
+beta		x-charite-medgen-blood-book-id:beta	1	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	UNKNOWN	UNKNOWN											Sample collection		beta-N1							
+gamma		x-charite-medgen-blood-book-id:gamma	1	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	UNKNOWN	UNKNOWN											Sample collection		gamma-N1							
+
+

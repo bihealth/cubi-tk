@@ -98,6 +98,7 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs_reload_sut):
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_sak.sea_snap.itransfer_results.check_call", mock_check_call)
 
+    # necessary because independent test fail
     mock_value = mock.mock_open()
     mocker.patch("cubi_sak.sea_snap.itransfer_results.Value", mock_value)
 

@@ -17,7 +17,6 @@ from pathlib import Path
 from logzero import logger
 import requests
 
-
 URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 
