@@ -1,0 +1,1 @@
+../../isatab-tumor_normal_triplets/{{cookiecutter.i_dir_name}}/s_{{cookiecutter.s_file_name}}.txt

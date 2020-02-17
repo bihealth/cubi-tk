@@ -8,7 +8,11 @@ Available Templates
 The `Cookiecutter`_ directories are located in this module's directory.  Currently available templates are:
 
 - ``isatab-germline``
+- ``isatab-tumor_normal_dna``
+- ``isatab-tumor_normal_triplets``
 - ``isatab-generic``
+- ``tumor-normal-dna``
+- ``tumor-normal-triplets``
 
 Adding Templates
 ----------------
@@ -63,15 +67,30 @@ class IsaTabTemplate:
 _BASE_DIR = os.path.dirname(__file__)
 
 
-def load_variables(template_name):
+def load_variables(template_name, extra=None):
     """Load variables given the template name."""
+    extra = extra or {}
     config_path = os.path.join(_BASE_DIR, template_name, "cookiecutter.json")
     with open(config_path, "rt") as inputf:
-        return json.load(inputf)
+        result = json.load(inputf)
+    result.update(extra)
+    return result
 
 
 #: Known ISA-tab templates (internal, mapping generated below).
 _TEMPLATES = (
+    IsaTabTemplate(
+        name="tumor_normal_dna",
+        path=os.path.join(_BASE_DIR, "isatab-tumor_normal_dna"),
+        description="Tumor-Normal DNA sequencing ISA-tab template",
+        configuration=load_variables("isatab-tumor_normal_dna", {"is_triplet": False}),
+    ),
+    IsaTabTemplate(
+        name="tumor_normal_triplets",
+        path=os.path.join(_BASE_DIR, "isatab-tumor_normal_triplets"),
+        description="Tumor-Normal DNA+RNA sequencing ISA-tab template",
+        configuration=load_variables("isatab-tumor_normal_triplets", {"is_triplet": True}),
+    ),
     IsaTabTemplate(
         name="germline",
         path=os.path.join(_BASE_DIR, "isatab-germline"),
@@ -95,8 +114,11 @@ def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
     """Run cookiecutter, ``tpl`` will be bound with ``toolz.curry``."""
     extra_context = {}
     for name in tpl.configuration:  # pragma: nocover
-        if getattr(args, "var_%s", None) is not None:
+        if getattr(args, "var_%s" % name, None) is not None:
             extra_context[name] = getattr(args, "var_%s" % name)
+
+    logger.info(tpl.configuration)
+    logger.info(args)
 
     output_dir = os.path.realpath(args.output_dir)
     output_base = os.path.dirname(args.output_dir)
@@ -107,6 +129,10 @@ def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
         logger.error("Output path to output directory does not exist: %s", output_base)
         return 1
     extra_context["i_dir_name"] = os.path.basename(output_dir)
+
+    # FIXME: better solution? (added because args.var_is_triplet is None)
+    if "is_triplet" in tpl.configuration:
+        extra_context["is_triplet"] = tpl.configuration["is_triplet"]
 
     logger.info("Start running cookiecutter")
     logger.info("  template path: %s", tpl.path)

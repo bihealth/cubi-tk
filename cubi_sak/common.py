@@ -126,9 +126,7 @@ def overwrite_helper(
                 )
                 for line in lines:
                     if line.startswith(("+++", "---")):
-                        print(
-                            colored(line, color="white", attrs=("bold",)), end="", file=out_file
-                        )
+                        print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
                     elif line.startswith("@@"):
                         print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
                     elif line.startswith("+"):
@@ -150,7 +148,7 @@ def overwrite_helper(
                 for line in lines:
                     line = "%s\n" % line
                     if hasattr(out_file, "buffer"):
-                        out_file.buffer.write(line.encode("utf-8"))
+                        out_file.buffer.write(line.encode("utf-8"))  # type: ignore
                     else:
                         out_file.write(line)
 

@@ -1,0 +1,95 @@
+ONTOLOGY SOURCE REFERENCE
+Term Source Name	UO	OBI	NCBITAXON	OMIM	HP	ORPHA
+Term Source File	http://data.bioontology.org/ontologies/UO	http://data.bioontology.org/ontologies/OBI	http://data.bioontology.org/ontologies/NCBITAXON	http://data.bioontology.org/ontologies/OMIM	http://data.bioontology.org/ontologies/HP	http://data.bioontology.org/ontologies/ORDO
+Term Source Version	48	35	10	12	570	2.8
+Term Source Description	Units of Measurement Ontology	Ontology for Biomedical Investigations	National Center for Biotechnology Information (NCBI) Organismal Classification	Online Mendelian Inheritance in Man	Human Phenotype Ontology	Orphanet Rare Disease Ontology
+INVESTIGATION
+Investigation Identifier	""
+Investigation Title	{{cookiecutter.investigation_title}}
+Investigation Description	""
+Investigation Submission Date	""
+Investigation Public Release Date	""
+Comment[Created With Configuration]	/path/to/isa-configurations/bih_studies/bih_cancer
+Comment[Last Opened With Configuration]	bih_cancer
+INVESTIGATION PUBLICATIONS
+Investigation PubMed ID
+Investigation Publication DOI
+Investigation Publication Author List
+Investigation Publication Title
+Investigation Publication Status
+Investigation Publication Status Term Accession Number
+Investigation Publication Status Term Source REF
+INVESTIGATION CONTACTS
+Investigation Person Last Name
+Investigation Person First Name
+Investigation Person Mid Initials
+Investigation Person Email
+Investigation Person Phone
+Investigation Person Fax
+Investigation Person Address
+Investigation Person Affiliation
+Investigation Person Roles
+Investigation Person Roles Term Accession Number
+Investigation Person Roles Term Source REF
+STUDY
+Study Identifier	{{cookiecutter.i_dir_name}}
+Study Title	{{cookiecutter.investigation_title}}
+Study Description	""
+Comment[Study Grant Number]	""
+Comment[Study Funding Agency]	""
+Study Submission Date	""
+Study Public Release Date	""
+Study File Name	s_{{cookiecutter.s_file_name}}.txt
+STUDY DESIGN DESCRIPTORS
+Study Design Type
+Study Design Type Term Accession Number
+Study Design Type Term Source REF
+STUDY PUBLICATIONS
+Study PubMed ID
+Study Publication DOI
+Study Publication Author List
+Study Publication Title
+Study Publication Status
+Study Publication Status Term Accession Number
+Study Publication Status Term Source REF
+STUDY FACTORS
+Study Factor Name
+Study Factor Type
+Study Factor Type Term Accession Number
+Study Factor Type Term Source REF
+STUDY ASSAYS
+Study Assay File Name	a_{{cookiecutter.assay_prefix}}_{{cookiecutter.assay_name}}.txt{% if cookiecutter.is_triplet == True %}	a_{{cookiecutter.assay_prefix}}_transcriptome_profiling_nucleotide_sequencing.txt{% endif %}
+Study Assay Measurement Type	{{cookiecutter.a_measurement_type}}{% if cookiecutter.is_triplet == True %}	transcriptome profiling{% endif %}
+Study Assay Measurement Type Term Accession Number	""{% if cookiecutter.is_triplet == True %}	http://purl.obolibrary.org/obo/OBI_0000424{% endif %}
+Study Assay Measurement Type Term Source REF	""{% if cookiecutter.is_triplet == True %}	""{% endif %}
+Study Assay Technology Type	{{cookiecutter.a_technology_type}}{% if cookiecutter.is_triplet == True %}	nucleotide sequencing{% endif %}
+Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626{% if cookiecutter.is_triplet == True %}	http://purl.obolibrary.org/obo/OBI_0000626{% endif %}
+Study Assay Technology Type Term Source REF	OBI
+Study Assay Technology Platform	Illumina
+STUDY PROTOCOLS
+Study Protocol Name	Sample collection	Nucleic acid extraction {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}{% if cookiecutter.is_triplet == True %} Nucleic acid extraction RNA-Seq	Library construction RNA-Seq	Nucleic acid sequencing RNA-Seq{% endif %}
+Study Protocol Type	Sample collection	Nucleic acid extraction {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}{% if cookiecutter.is_triplet == True %} Nucleic acid extraction RNA-Seq	Library construction RNA-Seq	Nucleic acid sequencing RNA-Seq{% endif %}
+Study Protocol Type Term Accession Number	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Type Term Source REF	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Description	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol URI	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Version	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Parameters Name	""	Concentration measurement	"Provider project ID;Library source;Library selection;Library layout;Barcode sequence;Wet-lab insert size;Requestor contact;Library kit;Barcode name;Provider contact;Concentration measurement;Provider sample ID;Target insert size;Provider name;Requestor project;Requestor sample ID;Barcode kit;Barcode kit catalogue ID;Provider QC status;Library strategy"	"Base quality encoding;Platform;Center contact;Instrument model;Center name"{% if cookiecutter.is_triplet == True %}	"Concentration measurement"	"Provider project ID;Library source;Library selection;Library layout;Barcode sequence;Wet-lab insert size;Requestor contact;Library kit;Barcode name;Provider contact;Concentration measurement;Provider sample ID;Target insert size;Provider name;Requestor project;Requestor sample ID;Barcode kit;Barcode kit catalogue ID;Provider QC status;Library strategy"	"Base quality encoding;Platform;Center contact;Target read length;Target read length (mate 2);Instrument model;Center name"{% endif %}
+Study Protocol Parameters Name Term Accession Number	""	""	";;;;;;;;;;;;;;;;;;;"	";;;;"{% if cookiecutter.is_triplet == True %}	""	";;;;;;;;;;;;;;;;;;;"	";;;;;;"{% endif %}
+Study Protocol Parameters Name Term Source REF	""	""	";;;;;;;;;;;;;;;;;;;"	";;;;"{% if cookiecutter.is_triplet == True %}	""	";;;;;;;;;;;;;;;;;;;"	";;;;;;"{% endif %}
+Study Protocol Components Name	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Components Type	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Components Type Term Accession Number	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+Study Protocol Components Type Term Source REF	""	""	""	""{% if cookiecutter.is_triplet == True %}	""	""	""{% endif %}
+STUDY CONTACTS
+Study Person Last Name
+Study Person First Name
+Study Person Mid Initials
+Study Person Email
+Study Person Phone
+Study Person Fax
+Study Person Address
+Study Person Affiliation
+Study Person Roles
+Study Person Roles Term Accession Number
+Study Person Roles Term Source REF

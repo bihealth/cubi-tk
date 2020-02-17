@@ -1,0 +1,5 @@
+Source Name	Characteristics[Organism]	Term Source REF	Term Accession Number	Characteristics[Source type]	Characteristics[W number]	Characteristics[Date operation]	Characteristics[ICDO3 topografie]	Characteristics[ICDO3 morphologie]	Characteristics[TNM stage]	Characteristics[TNM grade]	Characteristics[Previous therapy]	Characteristics[Diagnosis free text]	Protocol REF	Parameter Value[Method]	Performer	Date	Sample Name	Characteristics[Origin]	Characteristics[Passage]	Characteristics[Run id]	Characteristics[Type age days]	Characteristics[Treat agent]	Characteristics[Treat hours]	Characteristics[Treat target]	Characteristics[Snap frozen]	Characteristics[FFPE]
+{% set sample_names = cookiecutter.sample_names.split(",") -%}																										
+{%- for sample_name in sample_names -%}																										
+{{sample_name|replace("-", "_")}}	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	primary	NA								Sample collection				{{sample_name|replace("-", "_")}}-N1								TRUE/FALSE	TRUE/FALSE
+{% endfor %}																										
