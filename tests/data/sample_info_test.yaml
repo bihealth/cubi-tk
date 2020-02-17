@@ -1,0 +1,22 @@
+sample_info:
+  alpha-N1:
+    instrument: Illumina NovaSeq 6000
+    paired: false
+    paired_end_extensions:
+    - R1
+    read_extension: .fastq
+    stranded: unstranded
+  beta-N1:
+    instrument: Illumina NovaSeq 6000
+    paired: false
+    paired_end_extensions:
+    - R1
+    read_extension: .fastq
+    stranded: unstranded
+  gamma-N1:
+    instrument: Illumina NovaSeq 6000
+    paired: false
+    paired_end_extensions:
+    - R1
+    read_extension: .fastq.gz
+    stranded: unstranded

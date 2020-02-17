@@ -342,11 +342,12 @@ class SampleInfoTool:
                 if sample_name not in sample_info:
                     sample_info[sample_name] = {}
                 key = m.unique_name
+                # breakpoint()
                 while key in arc_map:
                     key = arc_map[key]
-                    if (
-                        assay.processes.get(key, dummy).protocol_ref
-                        == "Library construction RNA-Seq"
+                    if re.match(
+                        "Library construction [a-z]*RNA[-_][Ss]eq",
+                        assay.processes.get(key, dummy).protocol_ref,
                     ):
                         for p in assay.processes[key].parameter_values:
                             if p.name == "Library layout":
@@ -355,17 +356,23 @@ class SampleInfoTool:
                                 )
                             elif p.name == "Library strand-specificity":
                                 sample_info[sample_name]["stranded"] = p.value.lower()
-                    elif (
-                        assay.processes.get(key, dummy).protocol_ref
-                        == "Nucleic acid sequencing RNA-Seq"
+                    elif re.match(
+                        "Nucleic acid sequencing [a-z]*RNA[-_][Ss]eq",
+                        assay.processes.get(key, dummy).protocol_ref,
                     ):
                         for p in assay.processes[key].parameter_values:
-                            if p.name == "Platform":
+                            if p.name == "Instrument model":
+                                sample_info[sample_name]["instrument"] = ",".join(p.value)
+                            elif (
+                                p.name == "Platform"
+                                and "instrument" not in sample_info[sample_name]
+                            ):
                                 sample_info[sample_name]["instrument"] = ",".join(p.value)
                             elif p.name == "Target read length":
                                 sample_info[sample_name]["read_length"] = p.value
 
         logger.info("Samples in ISA assay:\n%s", ", ".join(sample_info))
+        logger.debug(sample_info)
 
         self.sample_info = sample_info
 
@@ -387,9 +394,9 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
             add = True
         sit.update_sample_info(add=add)
 
-    if args.output_file.name.split(".")[-1] == "tsv":
+    if args.output_file != sys.stdout and args.output_file.name.split(".")[-1] == "tsv":
         sit.write_table(sample_info_file)
-    elif args.output_file.name.split(".")[-1] == "yaml":
+    else:
         sit.write_yaml(sample_info_file)
 
     logger.debug("Done writing temporary file.")
@@ -476,25 +483,20 @@ def run(
         if hasattr(args.output_file, "name") and args.dry_run:
             logger.warn("Not changing %s as we are in --dry-run mode", args.output_file.name)
         else:
-            if hasattr(args.output_file, "name"):
+            if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
                 action = (
-                    "Overwriting"
-                    if args.output_file.name != "<stdout>"
-                    and Path(args.output_file.name).stat().st_size != 0
-                    else "Creating"
+                    "Overwriting" if Path(args.output_file.name).stat().st_size != 0 else "Creating"
                 )
                 logger.info("%s %s", action, args.output_file.name)
-            if args.output_file.name != "<stdout>":
+            if args.output_file != "<stdout>":
                 sample_info_file.seek(0)
             if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
                 args.output_file.seek(0)
                 args.output_file.truncate()
             shutil.copyfileobj(sample_info_file, args.output_file)
-            if args.output_file.name == "<stdout>":
-                logger.info(sample_info_file.read())
 
         logger.warn(
-            "used in_path_pattern %s. Use the same in your mapping_config.yaml!",
+            "in_path_pattern: %s --> Use the same in your mapping_config.yaml!",
             args.in_path_pattern,
         )
 
