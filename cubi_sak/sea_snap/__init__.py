@@ -29,6 +29,7 @@ from ..common import run_nocmd
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_results import setup_argparse as setup_argparse_itransfer_mapping_results
 from .pull_isa import setup_argparse as setup_argparse_pull_isa
+from .working_dir import setup_argparse as setup_argparse_working_dir
 from .write_sample_info import setup_argparse as setup_argparse_write_sample_info
 
 
@@ -39,6 +40,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_itransfer_raw_data(
         subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")
     )
+
     setup_argparse_itransfer_mapping_results(
         subparsers.add_parser(
             "itransfer-results", help="Transfer mapping results into iRODS landing zone"
@@ -46,6 +48,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     setup_argparse_pull_isa(subparsers.add_parser("pull-isa", help="Pull ISA files from SODAR"))
+
+    setup_argparse_working_dir(
+        subparsers.add_parser("working-dir", help="Create working directory")
+    )
+
     setup_argparse_write_sample_info(
         subparsers.add_parser("write-sample-info", help="Write sample info file")
     )
