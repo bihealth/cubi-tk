@@ -91,7 +91,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         "output_file",
         nargs="?",
         default="sample_info.yaml",
-        type=lambda f: sys.stdout if f == "-" else argparse.FileType("at+")(f),
+        type=lambda f: sys.stdout if f == "-" else argparse.FileType("at+"),
         help="Filename ending with .yaml or .tsv; default: sample_info.yaml.",
     )
 
