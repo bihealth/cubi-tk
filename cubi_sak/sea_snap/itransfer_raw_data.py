@@ -7,10 +7,10 @@ import typing
 from ..snappy.itransfer_common import SnappyItransferCommandBase
 
 #: Template string for raw data / input links file.
-TPL_INPUT_LINK_DIR = "ngs_mapping/work/input_links/%(library_name)s"
+TPL_INPUT_LINK_DIR = "input_links/%(library_name)s"
 
 
-class SnappyItransferRawDataCommand(SnappyItransferCommandBase):
+class SeasnapItransferRawDataCommand(SnappyItransferCommandBase):
     """Implementation of sea-snap itransfer command for raw data."""
 
     command_name = "itransfer-raw-data"
@@ -25,4 +25,4 @@ class SnappyItransferRawDataCommand(SnappyItransferCommandBase):
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-sak sea-snap itransfer-raw-data``."""
-    return SnappyItransferRawDataCommand.setup_argparse(parser)
+    return SeasnapItransferRawDataCommand.setup_argparse(parser)
