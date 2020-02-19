@@ -82,25 +82,29 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs_reload_sut):
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
-    fake_os = fake_filesystem.FakeOsModule(fs)
 
     fake_pathl = fake_pathlib.FakePathlibModule(fs)
-
     mocker.patch("pathlib.Path", fake_pathl.Path)
+
+    fake_os = fake_filesystem.FakeOsModule(fs)
     mocker.patch("cubi_sak.sea_snap.itransfer_results.os", fake_os)
+    mocker.patch("cubi_sak.snappy.itransfer_common.os", fake_os)
 
     mock_check_output = mock.mock_open()
     mocker.patch("cubi_sak.sea_snap.itransfer_results.check_output", mock_check_output)
+    mocker.patch("cubi_sak.snappy.itransfer_common.check_output", mock_check_output)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_sak.sea_snap.itransfer_results.open", fake_open)
+    mocker.patch("cubi_sak.snappy.itransfer_common.open", fake_open)
 
     mock_check_call = mock.mock_open()
-    mocker.patch("cubi_sak.sea_snap.itransfer_results.check_call", mock_check_call)
+    mocker.patch("cubi_sak.snappy.itransfer_common.check_call", mock_check_call)
 
     # necessary because independent test fail
     mock_value = mock.mock_open()
     mocker.patch("cubi_sak.sea_snap.itransfer_results.Value", mock_value)
+    mocker.patch("cubi_sak.snappy.itransfer_common.Value", mock_value)
 
     # Actually exercise code and perform test.
     parser, subparsers = setup_argparse()

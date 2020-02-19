@@ -9,6 +9,7 @@ from ctypes import c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError, check_call
+from functools import total_ordering
 import sys
 
 import attr
@@ -25,7 +26,8 @@ from ..common import check_irods_icommands, sizeof_fmt
 DEFAULT_NUM_TRANSFERS = 8
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@total_ordering
+@attr.s(frozen=True, auto_attribs=True, order=False)
 class TransferJob:
     """Encodes a transfer job from the local file system to the remote iRODS collection."""
 
@@ -40,6 +42,10 @@ class TransferJob:
 
     def to_oneline(self):
         return "%s -> %s (%s)" % (self.path_src, self.path_dest, self.bytes)
+
+    def __lt__(self, other):
+        # attrs auto-generated methods prevent comparing subclasses
+        return self.path_src < other.path_src
 
 
 def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
@@ -291,7 +297,6 @@ class SnappyItransferCommandBase:
             )
             for j in todo_jobs
         ]
-
         return tuple(sorted(done_jobs + ok_jobs))
 
     def execute(self) -> typing.Optional[int]:

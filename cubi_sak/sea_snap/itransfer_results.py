@@ -8,38 +8,26 @@ import re
 from pathlib import Path
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
-from subprocess import check_output, SubprocessError, check_call
+from subprocess import check_output, SubprocessError
 from ctypes import c_ulonglong
 
 import attr
 import tqdm
 from logzero import logger
 
-from ..snappy.itransfer_common import SnappyItransferCommandBase
+from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob
 from ..common import check_irods_icommands, sizeof_fmt
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
 
 
-@attr.s(frozen=True, auto_attribs=True)
-class TransferJob:
+@attr.s(frozen=True, auto_attribs=True, order=False)
+class SeasnapTransferJob(TransferJob):
     """Encodes a transfer job from the local file system to the remote iRODS collection."""
 
-    #: Source path.
-    path_src: str
-
-    #: Destination path.
-    path_dest: str
-
     #: Commands for transfer.
-    command: str
-
-    #: Number of bytes to transfer.
-    bytes: int
-
-    def to_oneline(self):
-        return "%s -> %s (%s)" % (self.path_src, self.path_dest, self.bytes)
+    command: str = attr.ib(cmp=False)
 
 
 class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
@@ -78,7 +66,9 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         return 0
 
-    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
+    def build_transfer_jobs(
+        self, command_blocks, blueprint
+    ) -> typing.Tuple[SeasnapTransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
         bp_mod_time = Path(blueprint).stat().st_mtime
@@ -113,7 +103,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                 except OSError:  # pragma: nocover
                     size = 0
                 transfer_jobs.append(
-                    TransferJob(
+                    SeasnapTransferJob(
                         path_src=source + ext,
                         path_dest=dest + ext,
                         command=cmd_block.replace(source, source + ext).replace(dest, dest + ext),
@@ -136,7 +126,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
-            transfer_jobs = self._execute_md5_files_transfer_fix(transfer_jobs)
+            transfer_jobs = self._execute_seasnap_md5_files_fix(transfer_jobs)
 
         total_bytes = sum([job.bytes for job in transfer_jobs])
         logger.info(
@@ -159,50 +149,21 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.info("All done")
         return None
 
-    def _execute_md5_files_transfer_fix(
-        self, transfer_jobs: typing.Tuple[TransferJob, ...]
-    ) -> typing.Tuple[TransferJob, ...]:
-        """Create missing MD5 files."""
-        ok_jobs = []
-        todo_jobs = []
-        for job in transfer_jobs:
-            if not os.path.exists(job.path_src):
-                todo_jobs.append(job)
-            else:
-                ok_jobs.append(job)
+    def _execute_seasnap_md5_files_fix(
+        self, old_jobs: typing.Tuple[SeasnapTransferJob, ...]
+    ) -> typing.Tuple[SeasnapTransferJob, ...]:
 
-        total_bytes = sum([os.path.getsize(j.path_src[: -len(".md5")]) for j in todo_jobs])
-        logger.info(
-            "Computing MD5 sums for %s files of %s with up to %d processes",
-            len(todo_jobs),
-            sizeof_fmt(total_bytes),
-            self.args.num_parallel_transfers,
-        )
-        logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_src, todo_jobs)))
-        counter = Value(c_ulonglong, 0)
-        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if self.args.num_parallel_transfers == 0:  # pragma: nocover
-                for job in todo_jobs:
-                    compute_md5sum(job, counter, t)
-            else:
-                pool = ThreadPool(processes=self.args.num_parallel_transfers)
-                for job in todo_jobs:
-                    pool.apply_async(compute_md5sum, args=(job, counter, t))
-                pool.close()
-                pool.join()
-
-        # Finally, determine file sizes after done.
-        done_jobs = [
-            TransferJob(
-                path_src=j.path_src,
-                path_dest=j.path_dest,
-                bytes=os.path.getsize(j.path_src),
-                command=j.command,
+        fixed_jobs = self._execute_md5_files_fix(old_jobs)
+        tr_jobs = [
+            SeasnapTransferJob(
+                path_src=j_new.path_src,
+                path_dest=j_new.path_dest,
+                bytes=j_new.bytes,
+                command=j_old.command,
             )
-            for j in todo_jobs
+            for j_new, j_old in zip(fixed_jobs, old_jobs)
         ]
-
-        return tuple(sorted(done_jobs + ok_jobs))
+        return tuple(sorted(tr_jobs))
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -210,7 +171,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     return SeasnapItransferMappingResultsCommand.setup_argparse(parser)
 
 
-def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
+def irsync_transfer(job: SeasnapTransferJob, counter: Value, t: tqdm.tqdm):
     """Perform one piece of work and update the global counter."""
     commands = job.command.split(os.linesep)
 
@@ -225,29 +186,4 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 
     with counter.get_lock():
         counter.value += job.bytes
-        t.update(counter.value)
-
-
-def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
-    """Compute MD5 sum with ``md5sum`` command."""
-    dirname = os.path.dirname(job.path_src)
-    filename = os.path.basename(job.path_src)[: -len(".md5")]
-    path_md5 = job.path_src
-
-    md5sum_argv = ["md5sum", filename]
-    logger.debug("Computing MD5sum %s > %s", " ".join(md5sum_argv), filename + ".md5")
-    try:
-        with open(path_md5, "wt") as md5f:
-            check_call(md5sum_argv, cwd=dirname, stdout=md5f)
-    except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: %e", e)
-        logger.info("Removing file after error: %s", path_md5)
-        try:
-            os.remove(path_md5)
-        except OSError as e_rm:  # pragma: nocover
-            logger.error("Could not remove file: %e", e_rm)
-        raise e
-
-    with counter.get_lock():
-        counter.value += os.path.getsize(job.path_src[: -len(".md5")])
         t.update(counter.value)
