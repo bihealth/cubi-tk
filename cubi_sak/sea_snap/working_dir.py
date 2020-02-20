@@ -2,11 +2,11 @@
 
 import argparse
 import os
-import pathlib
 import shutil
 import time
 import typing
 
+from pathlib import Path
 from logzero import logger
 
 #: config files
@@ -21,7 +21,7 @@ def run(
 
     # find Sea-snap directory
     logger.info("Try to find RNA-SeA-SnaP pipeline directory...")
-    start_path = pathlib.Path(args.sea_snap_path)
+    start_path = Path(args.sea_snap_path)
     for path in [start_path] + list(start_path.parents):
         logger.debug("Trying %s", path)
         if (path / "mapping_pipeline.snake").exists():
@@ -32,7 +32,7 @@ def run(
         return 1
 
     # create working directory
-    working_dir = pathlib.Path(time.strftime(args.dirname))
+    working_dir = Path(time.strftime(args.dirname))
     try:
         working_dir.mkdir(parents=True)
         logger.info("Working directory {} created...".format(str(working_dir)))
