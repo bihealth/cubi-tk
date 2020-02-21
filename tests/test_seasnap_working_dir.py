@@ -6,11 +6,8 @@ We only run some smoke tests here.
 import os
 
 import pytest
-import linecache
-import tokenize
 import time
-from pyfakefs import fake_pathlib, fake_filesystem_shutil
-from pyfakefs.fake_filesystem_unittest import Patcher
+from pathlib import Path
 
 from cubi_sak.__main__ import setup_argparse, main
 
@@ -27,17 +24,7 @@ def test_run_seasnap_working_dir_help(capsys):
     assert not res.err
 
 
-@pytest.fixture
-def fs_reload_sut():
-    patcher = Patcher(modules_to_reload=[setup_argparse, main])
-    patcher.setUp()
-    linecache.open = patcher.original_open
-    tokenize._builtin_open = patcher.original_open
-    yield patcher.fs
-    patcher.tearDown()
-
-
-def test_run_seasnap_working_dir_smoke_test(tmp_path, requests_mock, capsys, mocker, fs_reload_sut):
+def test_run_seasnap_working_dir_smoke_test(capsys, fs):
     # --- setup arguments
     seasnap_dir = "fake_seasnap"
     seasnap_files = [
@@ -54,18 +41,9 @@ def test_run_seasnap_working_dir_smoke_test(tmp_path, requests_mock, capsys, moc
     args = parser.parse_args(argv)
 
     # --- add test files
-    fs = fs_reload_sut
-
     fs.create_dir(seasnap_dir)
     for f in seasnap_files:
         fs.create_file(os.path.join(seasnap_dir, f))
-
-    # --- setup mocks
-    fake_pathl = fake_pathlib.FakePathlibModule(fs)
-    mocker.patch("pathlib.Path", fake_pathl.Path)
-
-    fake_shutil = fake_filesystem_shutil.FakeShutilModule(fs)
-    mocker.patch("cubi_sak.sea_snap.working_dir.shutil", fake_shutil)
 
     # --- run tests
     res = main(argv)
@@ -73,17 +51,17 @@ def test_run_seasnap_working_dir_smoke_test(tmp_path, requests_mock, capsys, moc
 
     # test dir created
     wd = time.strftime(args.dirname)
-    assert fake_pathl.Path(wd).is_dir()
+    assert Path(wd).is_dir()
 
     # test files copied
     seasnap_files = seasnap_files[:3]
     for f in seasnap_files:
         p = os.path.join(wd, f)
-        assert fake_pathl.Path(p).is_file()
+        assert Path(p).is_file()
 
     # test symlink created
     p = os.path.join(wd, "sea-snap")
-    assert fake_pathl.Path(p).is_symlink()
+    assert Path(p).is_symlink()
 
     res = capsys.readouterr()
     assert not res.err

@@ -6,10 +6,6 @@ We only run some smoke tests here.
 import os
 
 import pytest
-import linecache
-import tokenize
-from pyfakefs import fake_filesystem, fake_pathlib
-from pyfakefs.fake_filesystem_unittest import Patcher
 
 from cubi_sak.__main__ import setup_argparse, main
 
@@ -39,19 +35,7 @@ def test_run_seasnap_write_sample_info_nothing(capsys):
     assert res.err
 
 
-@pytest.fixture
-def fs_reload_sut():
-    patcher = Patcher(modules_to_reload=[setup_argparse, main])
-    patcher.setUp()
-    linecache.open = patcher.original_open
-    tokenize._builtin_open = patcher.original_open
-    yield patcher.fs
-    patcher.tearDown()
-
-
-def test_run_seasnap_write_sample_info_smoke_test(
-    tmp_path, requests_mock, capsys, mocker, fs_reload_sut
-):
+def test_run_seasnap_write_sample_info_smoke_test(capsys, mocker, fs):
     # --- setup arguments
     in_path_pattern = os.path.join(
         os.path.dirname(__file__), "data", "fastq_test", "{sample}_{mate,R1|R2}"
@@ -68,8 +52,6 @@ def test_run_seasnap_write_sample_info_smoke_test(
     parser, subparsers = setup_argparse()
 
     # --- add test files
-    fs = fs_reload_sut
-
     fs.add_real_file(path_isa_test)
 
     path_fastq_test = os.path.join(os.path.dirname(__file__), "data", "fastq_test")
@@ -77,17 +59,6 @@ def test_run_seasnap_write_sample_info_smoke_test(
 
     target_file = os.path.join(os.path.dirname(__file__), "data", "sample_info_test.yaml")
     fs.add_real_file(target_file)
-
-    # --- setup mocks
-    fake_open = fake_filesystem.FakeFileOpen(fs)
-    mocker.patch("cubi_sak.sea_snap.write_sample_info.open", fake_open)
-    mocker.patch("filecmp.open", fake_open)
-
-    fake_pathl = fake_pathlib.FakePathlibModule(fs)
-    mocker.patch("pathlib.Path", fake_pathl.Path)
-
-    fake_os = fake_filesystem.FakeOsModule(fs)
-    mocker.patch("filecmp.os", fake_os)
 
     # --- run as end-to-end test
     res = main(argv)

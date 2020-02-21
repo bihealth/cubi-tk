@@ -8,10 +8,6 @@ from unittest import mock
 from pathlib import Path
 
 import pytest
-import linecache
-import tokenize
-from pyfakefs import fake_filesystem, fake_pathlib
-from pyfakefs.fake_filesystem_unittest import Patcher
 
 from cubi_sak.__main__ import setup_argparse, main
 
@@ -41,28 +37,17 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
-@pytest.fixture
-def fs_reload_sut():
-    patcher = Patcher(modules_to_reload=[setup_argparse, main])
-    patcher.setUp()
-    linecache.open = patcher.original_open
-    tokenize._builtin_open = patcher.original_open
-    yield patcher.fs
-    patcher.tearDown()
-
-
-def test_run_seasnap_itransfer_results_smoke_test(mocker, fs_reload_sut):
+def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
+    # --- setup arguments
     dest_path = "/irods/dest"
     fake_base_path = "/base/path"
     blueprint_path = os.path.join(os.path.dirname(__file__), "data", "test_blueprint.txt")
+
     argv = ["--verbose", "sea-snap", "itransfer-results", blueprint_path, dest_path]
 
-    # Setup fake file system but only patch selected modules.
-    # We cannot use the Patcher approach here as this would
-    # break both biomedsheets and multiprocessing.
-    # fs = fake_filesystem.FakeFilesystem()
-    fs = fs_reload_sut
+    parser, subparsers = setup_argparse()
 
+    # --- add test files
     fake_file_paths = []
     for member in ("sample1", "sample2", "sample3"):
         for ext in ("", ".md5"):
@@ -83,20 +68,10 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs_reload_sut):
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
 
-    fake_pathl = fake_pathlib.FakePathlibModule(fs)
-    mocker.patch("pathlib.Path", fake_pathl.Path)
-
-    fake_os = fake_filesystem.FakeOsModule(fs)
-    mocker.patch("cubi_sak.sea_snap.itransfer_results.os", fake_os)
-    mocker.patch("cubi_sak.snappy.itransfer_common.os", fake_os)
-
+    # --- mock modules
     mock_check_output = mock.mock_open()
     mocker.patch("cubi_sak.sea_snap.itransfer_results.check_output", mock_check_output)
     mocker.patch("cubi_sak.snappy.itransfer_common.check_output", mock_check_output)
-
-    fake_open = fake_filesystem.FakeFileOpen(fs)
-    mocker.patch("cubi_sak.sea_snap.itransfer_results.open", fake_open)
-    mocker.patch("cubi_sak.snappy.itransfer_common.open", fake_open)
 
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_sak.snappy.itransfer_common.check_call", mock_check_call)
@@ -106,15 +81,10 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs_reload_sut):
     mocker.patch("cubi_sak.sea_snap.itransfer_results.Value", mock_value)
     mocker.patch("cubi_sak.snappy.itransfer_common.Value", mock_value)
 
-    # Actually exercise code and perform test.
-    parser, subparsers = setup_argparse()
+    # --- run tests
     res = main(argv)
 
     assert not res
-
-    # We do not care about call order but simply test call count
-    # and then assert that all files are there which would
-    # be equivalent of comparing sets of files.
 
     assert fs.exists(fake_file_paths[3])
 
