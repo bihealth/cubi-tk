@@ -11,7 +11,6 @@ from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError
 from ctypes import c_ulonglong
 
-import attr
 import tqdm
 from logzero import logger
 
@@ -20,14 +19,6 @@ from ..common import check_irods_icommands, sizeof_fmt
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
-
-
-@attr.s(frozen=True, auto_attribs=True, order=False)
-class SeasnapTransferJob(TransferJob):
-    """Encodes a transfer job from the local file system to the remote iRODS collection."""
-
-    #: Commands for transfer.
-    command: str = attr.ib(cmp=False)
 
 
 class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
@@ -66,15 +57,13 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         return 0
 
-    def build_transfer_jobs(
-        self, command_blocks, blueprint
-    ) -> typing.Tuple[SeasnapTransferJob, ...]:
+    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
         bp_mod_time = Path(blueprint).stat().st_mtime
 
         for cmd_block in (cb for cb in command_blocks if cb):
-            sources = [word for word in re.split("\n| ", cmd_block) if Path(word).exists()]
+            sources = [word for word in re.split("[\n ]", cmd_block) if Path(word).exists()]
             dests = re.findall("i:(__SODAR__/\S+)", cmd_block)  # noqa: W605
             for f_type, f in {"source": sources, "dest": dests}.items():
                 if len(set(f)) != 1:
@@ -103,7 +92,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                 except OSError:  # pragma: nocover
                     size = 0
                 transfer_jobs.append(
-                    SeasnapTransferJob(
+                    TransferJob(
                         path_src=source + ext,
                         path_dest=dest + ext,
                         command=cmd_block.replace(source, source + ext).replace(dest, dest + ext),
@@ -126,7 +115,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
-            transfer_jobs = self._execute_seasnap_md5_files_fix(transfer_jobs)
+            transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
 
         total_bytes = sum([job.bytes for job in transfer_jobs])
         logger.info(
@@ -149,31 +138,20 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.info("All done")
         return None
 
-    def _execute_seasnap_md5_files_fix(
-        self, old_jobs: typing.Tuple[SeasnapTransferJob, ...]
-    ) -> typing.Tuple[SeasnapTransferJob, ...]:
-
-        fixed_jobs = self._execute_md5_files_fix(old_jobs)
-        tr_jobs = [
-            SeasnapTransferJob(
-                path_src=j_new.path_src,
-                path_dest=j_new.path_dest,
-                bytes=j_new.bytes,
-                command=j_old.command,
-            )
-            for j_new, j_old in zip(fixed_jobs, old_jobs)
-        ]
-        return tuple(sorted(tr_jobs))
-
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-sak sea-snap itransfer-results``."""
     return SeasnapItransferMappingResultsCommand.setup_argparse(parser)
 
 
-def irsync_transfer(job: SeasnapTransferJob, counter: Value, t: tqdm.tqdm):
+def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     """Perform one piece of work and update the global counter."""
-    commands = job.command.split(os.linesep)
+    if job.command:
+        commands = job.command.split(os.linesep)
+    else:
+        msg = "Command attribute of TransferJob not set."
+        logger.error(msg)
+        raise ValueError(msg)
 
     for cmd in commands:
         cmd_argv = re.split(" +", cmd)

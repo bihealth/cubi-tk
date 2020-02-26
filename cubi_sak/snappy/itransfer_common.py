@@ -9,7 +9,6 @@ from ctypes import c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError, check_call
-from functools import total_ordering
 import sys
 
 import attr
@@ -26,8 +25,7 @@ from ..common import check_irods_icommands, sizeof_fmt
 DEFAULT_NUM_TRANSFERS = 8
 
 
-@total_ordering
-@attr.s(frozen=True, auto_attribs=True, order=False)
+@attr.s(frozen=True, auto_attribs=True)
 class TransferJob:
     """Encodes a transfer job from the local file system to the remote iRODS collection."""
 
@@ -40,12 +38,10 @@ class TransferJob:
     #: Number of bytes to transfer.
     bytes: int
 
-    def to_oneline(self):
-        return "%s -> %s (%s)" % (self.path_src, self.path_dest, self.bytes)
+    command: typing.Optional[str] = None
 
-    def __lt__(self, other):
-        # attrs auto-generated methods prevent comparing subclasses
-        return self.path_src < other.path_src
+    def to_oneline(self):
+        return "%s -> %s (%s) [%s]" % (self.path_src, self.path_dest, self.bytes, self.command)
 
 
 def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
@@ -293,7 +289,10 @@ class SnappyItransferCommandBase:
         # Finally, determine file sizes after done.
         done_jobs = [
             TransferJob(
-                path_src=j.path_src, path_dest=j.path_dest, bytes=os.path.getsize(j.path_src)
+                path_src=j.path_src,
+                path_dest=j.path_dest,
+                bytes=os.path.getsize(j.path_src),
+                command=j.command,
             )
             for j in todo_jobs
         ]
