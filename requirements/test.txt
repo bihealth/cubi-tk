@@ -27,7 +27,7 @@ flake8 >=3.5.0
 sphinx >=1.7.0
 sphinx-rtd-theme >=0.4.3
 sphinx-argparse >=0.2.5
-m2r
+m2r @ git+https://github.com/crossnox/m2r@dev#egg=m2r
 
 # Type checking.
 mypy
