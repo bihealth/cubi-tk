@@ -3,6 +3,7 @@
 import argparse
 import glob
 import os
+import pathlib
 import typing
 
 from biomedsheets import io_tsv, shortcuts
@@ -73,6 +74,23 @@ class SnappyVarFishUploadCommand:
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--hidden-cmd", dest="snappy_cmd", default=run, help=argparse.SUPPRESS)
 
+        group = parser.add_argument_group("VarFish Configuration")
+        group.add_argument(
+            "--varfish-config",
+            default=os.environ.get("VARFISH_CONFIG_PATH", None),
+            help="Path to configuration file.",
+        )
+        group.add_argument(
+            "--varfish-server-url",
+            default=os.environ.get("VARFISH_SERVER_URL", None),
+            help="SODAR server URL key to use, defaults to env VARFISH_SERVER_URL.",
+        )
+        group.add_argument(
+            "--varfish-api-token",
+            default=os.environ.get("VARFISH_API_TOKEN", None),
+            help="SODAR API token to use, defaults to env VARFISH_API_TOKEN.",
+        )
+
         parser.add_argument(
             "--base-path",
             default=os.getcwd(),
@@ -119,7 +137,7 @@ class SnappyVarFishUploadCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        args.base_path = find_base_path(args.base_path)
+        args.base_path = pathlib.Path(find_base_path(args.base_path))
 
         steps = set(DEFAULT_STEPS)
         for s in args.steps:
