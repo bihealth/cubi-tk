@@ -80,8 +80,6 @@ def load_sheet_tsv(args):
     )
     load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % args.tsv_shortcut)
     return load_tsv(args.biomedsheet_tsv, naming_scheme=NAMING_ONLY_SECONDARY_ID)
-    # sheet_class = getattr(shortcuts, "%sCaseSheet" % args.tsv_shortcut.title())
-    # shortcut_sheet = sheet_class(sheet)
 
 
 def load_sheets_tsv(args):

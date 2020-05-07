@@ -2,6 +2,7 @@
 
 # Attrs, helpful for removing boilerplate.
 attrs
+cattrs
 
 # Cookiecutter for templating ISA-tab directories.
 cookiecutter
@@ -48,3 +49,6 @@ argcomplete
 
 # Yaml parsing.
 pyyaml
+
+# VarFish REST API client.
+varfish-cli

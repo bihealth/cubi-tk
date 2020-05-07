@@ -13,6 +13,8 @@ Available Commands
     Transfer results and logs from ``output`` directory of ``variant_calling``.
 ``pull-sheet``
     Pull sample sheet from SODAR and write out to BiomedSheet format.
+``varfish-upload``
+    Upload data into VarFish.
 
 More Information
 ----------------
@@ -32,6 +34,7 @@ from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ng
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
 from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
 from .kickoff import setup_argparse as setup_argparse_kickoff
+from .varfish_upload import setup_argparse as setup_argparse_varfish_upload
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -61,6 +64,10 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_pull_sheet(
         subparsers.add_parser("pull-sheet", help="Pull SODAR sample sheet into biomedsheet")
+    )
+
+    setup_argparse_varfish_upload(
+        subparsers.add_parser("varfish-upload", help="Upload variant analysis results into VarFish")
     )
 
     setup_argparse_kickoff(subparsers.add_parser("kickoff", help="Kick-off SNAPPY pipeline steps."))
