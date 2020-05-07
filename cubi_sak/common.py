@@ -15,11 +15,52 @@ import warnings
 from subprocess import check_output, CalledProcessError
 from uuid import UUID
 
+import attr
 import icdiff
 from logzero import logger
 from termcolor import colored
 
 from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class CommonConfig:
+    """Common configuration for all commands."""
+
+    #: Verbose mode activated
+    verbose: bool
+
+    #: API token to use for SODAR.
+    sodar_api_token: str = attr.ib(repr=lambda value: repr(value[:4] + (len(value) - 4) * "*"))
+
+    #: Base URL to SODAR server.
+    sodar_server_url: typing.Optional[str]
+
+    #: Legacy SODAR API key
+    sodar_api_key: typing.Optional[str]
+
+    @staticmethod
+    def create(args, toml_config=None):
+        toml_config = toml_config or {}
+        return CommonConfig(
+            verbose=args.verbose,
+            sodar_api_token=(
+                args.sodar_api_token or toml_config.get("global", {})["sodar_api_token"]
+            ),
+            sodar_server_url=(
+                args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
+            ),
+            sodar_api_key=(toml_config.get("global", {})["sodar_api_key"]),
+        )
+
+
+def find_base_path(base_path):
+    base_path = pathlib.Path(base_path)
+    while base_path != base_path.root:
+        if (base_path / ".snappy_pipeline").exists():
+            return str(base_path)
+        base_path = base_path.parent
+    return base_path
 
 
 def run_nocmd(_, parser, subparser=None):  # pragma: no cover

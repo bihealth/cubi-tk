@@ -52,3 +52,6 @@ pyyaml
 
 # VarFish REST API client.
 varfish-cli
+
+# Compact, round-tripable configuration format.
+toml

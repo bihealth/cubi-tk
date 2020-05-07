@@ -10,19 +10,25 @@ More Information
 
 import argparse
 import os
+import pathlib
 from uuid import UUID
 import re
 import typing
 
+import attr
 from logzero import logger
 import requests
+import toml
 
 from .. import exceptions
 
+from ..common import CommonConfig, find_base_path, overwrite_helper
+from .models import load_datasets
+
+#: Paths to search the global configuration in.
+GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
 
 #: The URL template to use.
-from ..common import overwrite_helper
-
 URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s"
 
 #: Template for the to-be-generated file.
@@ -52,6 +58,34 @@ MAPPING_SEX = {"female": "F", "male": "M", "unknown": "U", None: "."}
 MAPPING_STATUS = {"affected": "Y", "carrier": "Y", "unaffected": "N", "unknown": ".", None: "."}
 
 
+@attr.s(frozen=True, auto_attribs=True)
+class PullSheetsConfig:
+    """Configuration for the ``cubi-sak snappy pull-sheets`` command."""
+
+    #: Global configuration.
+    global_config: CommonConfig
+
+    base_path: typing.Optional[pathlib.Path]
+    yes: bool
+    dry_run: bool
+    show_diff: bool
+    show_diff_side_by_side: bool
+    library_types: typing.Tuple[str]
+
+    @staticmethod
+    def create(args, global_config, toml_config=None):
+        # toml_config = toml_config or {}
+        return PullSheetsConfig(
+            global_config=global_config,
+            base_path=pathlib.Path(args.base_path),
+            yes=args.yes,
+            dry_run=args.dry_run,
+            show_diff=args.show_diff,
+            show_diff_side_by_side=args.show_diff_side_by_side,
+            library_types=tuple(args.library_types),
+        )
+
+
 def strip(x):
     if hasattr(x, "strip"):
         return x.strip()
@@ -63,16 +97,14 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-sak snappy pull-sheet``."""
     parser.add_argument("--hidden-cmd", dest="snappy_cmd", default=run, help=argparse.SUPPRESS)
 
-    group_sodar = parser.add_argument_group("SODAR-related")
-    group_sodar.add_argument(
-        "--sodar-url",
-        default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-        help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-    )
-    group_sodar.add_argument(
-        "--sodar-auth-token",
-        default=os.environ.get("SODAR_AUTH_TOKEN", None),
-        help="Authentication token when talking to SODAR.  Defaults to SODAR_AUTH_TOKEN environment variable.",
+    parser.add_argument(
+        "--base-path",
+        default=os.getcwd(),
+        required=False,
+        help=(
+            "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
+            "work directory and falls back to current working directory by default."
+        ),
     )
 
     parser.add_argument(
@@ -105,13 +137,21 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         "--library-types", help="Library type(s) to use, comma-separated, default is to use all."
     )
 
-    parser.add_argument("project_uuid", help="UUID of project to pull the sample sheet for.")
-    parser.add_argument(
-        "output_tsv",
-        default="-",
-        nargs="?",
-        help="Path to output TSV file, default is '-' for stdout.",
-    )
+
+def load_toml_config(args):
+    # Load configuration from TOML cubitkrc file, if any.
+    if args.config:
+        config_paths = (args.config,)
+    else:
+        config_paths = GLOBAL_CONFIG_PATHS
+    for config_path in config_paths:
+        config_path = os.path.expanduser(os.path.expandvars(config_path))
+        if os.path.exists(config_path):
+            with open(config_path, "rt") as tomlf:
+                return toml.load(tomlf)
+    else:
+        logger.info("Could not find any of the global configuration files %s.", config_paths)
+        return None
 
 
 def check_args(args) -> int:
@@ -124,40 +164,19 @@ def check_args(args) -> int:
     else:
         args.library_types = []
 
-    # Check presence of SODAR URL and auth token.
-    if not args.sodar_auth_token:  # pragma: nocover
-        logger.error(
-            "SODAR authentication token is empty.  Either specify --sodar-auth-token, or set "
-            "SODAR_AUTH_TOKEN environment variable"
-        )
-        any_error = True
-    if not args.sodar_url:  # pragma: nocover
-        logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
-        any_error = True
-
-    # Check UUID syntax.
-    try:
-        val: typing.Optional[str] = str(UUID(args.project_uuid))
-    except ValueError:  # pragma: nocover
-        val = None
-    finally:
-        if args.project_uuid != val:  # pragma: nocover
-            logger.error("Project UUID %s is not a valid UUID", args.project_uuid)
-            any_error = True
-
     return int(any_error)
 
 
-def build_sheet(args) -> str:
+def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID]) -> str:
     """Build sheet TSV file."""
 
     result = []
 
     # Query investigation JSON from API.
     url = URL_TPL % {
-        "sodar_url": args.sodar_url,
-        "project_uuid": args.project_uuid,
-        "api_key": args.sodar_auth_token,
+        "sodar_url": config.global_config.sodar_server_url,
+        "project_uuid": project_uuid,
+        "api_key": config.global_config.sodar_api_key,
     }
     logger.info("Fetching %s", url)
     r = requests.get(url)
@@ -236,7 +255,7 @@ def build_sheet(args) -> str:
             offset += colspan
 
     # Generate the resulting sample sheet.
-    result.append("\n".join(HEADER_TPL) % vars(args))
+    result.append("\n".join(HEADER_TPL))
     for source, info in study_map.items():
         if source not in assay_map:  # pragma: nocover
             logger.info("source %s does not have an assay.", source)
@@ -268,10 +287,12 @@ def build_sheet(args) -> str:
                 seq_platform = "PacBio"
         library_kit = proc_lib.get("Library Kit") or "."
         if (
-            args.library_types and library_type != "." and library_type not in args.library_types
+            config.library_types
+            and library_type != "."
+            and library_type not in config.library_types
         ):  # pragma: nocover
             logger.info(
-                "Skipping %s not in library types %s", dict_source["Name"], args.library_types
+                "Skipping %s not in library types %s", dict_source["Name"], config.library_types
             )
             continue
         # ENDOF HACK
@@ -291,7 +312,7 @@ def build_sheet(args) -> str:
             folder,
             batch,
             ".",
-            args.project_uuid,
+            project_uuid,
             seq_platform,
             library_kit,
         ]
@@ -312,13 +333,22 @@ def run(
     logger.info("Starting to pull sheet...")
     logger.info("  Args: %s", args)
 
-    overwrite_helper(
-        args.output_tsv,
-        build_sheet(args),
-        do_write=not args.dry_run,
-        show_diff=True,
-        show_diff_side_by_side=args.show_diff_side_by_side,
-        answer_yes=args.yes,
-    )
+    toml_config = load_toml_config(args)
+    global_config = CommonConfig.create(args, toml_config)
+    args.base_path = find_base_path(args.base_path)
+    config = PullSheetsConfig.create(args, global_config, toml_config)
+
+    config_path = config.base_path / ".snappy_pipeline"
+    datasets = load_datasets(config_path / "config.yaml")
+    for dataset in datasets.values():
+        if dataset.sodar_uuid:
+            overwrite_helper(
+                config_path / dataset.sheet_file,
+                build_sheet(config, dataset.sodar_uuid),
+                do_write=not args.dry_run,
+                show_diff=True,
+                show_diff_side_by_side=args.show_diff_side_by_side,
+                answer_yes=args.yes,
+            )
 
     return None

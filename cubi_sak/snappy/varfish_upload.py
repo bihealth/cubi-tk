@@ -3,18 +3,15 @@
 import argparse
 import glob
 import os
-import pathlib
 import typing
 
 from biomedsheets import io_tsv, shortcuts
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
-import cattr
 from logzero import logger
 from varfish_cli.__main__ import main as varfish_cli_main
-import yaml
 
-from .models import DataSet
-from .itransfer_common import SnappyItransferCommandBase, IndexLibrariesOnlyMixin
+from ..common import find_base_path
+from .models import DataSet, load_datasets
 
 
 #: Default pipeline steps to use.
@@ -39,38 +36,6 @@ PREFIXES = (
     "bwa.xhmm",
     "write_pedigree",
 )
-
-
-def load_config_yaml(path: pathlib.Path) -> typing.Any:
-    with path.open("r") as f:
-        try:
-            return yaml.safe_load(f)
-        except yaml.YAMLError as e:
-            logger.error("error: %s", e)
-
-
-def trans_load(ds):
-    """Transmogrify DataSet when loading."""
-
-    def f(k):
-        return {"type": "sheet_type", "file": "sheet_file"}.get(k, k)
-
-    return {f(k): v for k, v in ds.items()}
-
-
-def load_datasets(path: pathlib.Path) -> typing.List[DataSet]:
-    """Load data sets and filter to those with SODAR UUID."""
-    logger.info("Loading data sets from %s", path)
-    raw_ds = load_config_yaml(path)["data_sets"]
-    transmogrified = {key: trans_load(value) for key, value in raw_ds.items()}
-    data_sets = cattr.structure(transmogrified, typing.Dict[str, DataSet])
-    filtered = {key: ds for key, ds in data_sets.items() if ds.sodar_uuid}
-    logger.info("Loaded %d data sets, %d with SODAR UUID", len(data_sets), len(filtered))
-
-    for key, ds in sorted(filtered.items()):
-        logger.debug("  - %s%s", ds.sodar_uuid, ": %s" % ds.sodar_title if ds.sodar_title else "")
-
-    return filtered
 
 
 def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
@@ -108,11 +73,9 @@ class SnappyVarFishUploadCommand:
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--hidden-cmd", dest="snappy_cmd", default=run, help=argparse.SUPPRESS)
 
-        group_sodar = parser.add_argument_group("SODAR-related")
-
         parser.add_argument(
             "--base-path",
-            default=None,
+            default=os.getcwd(),
             required=False,
             help=(
                 "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
@@ -156,16 +119,7 @@ class SnappyVarFishUploadCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        base_path = pathlib.Path(os.getcwd())
-        while base_path != base_path.root:
-            if (base_path / ".snappy_pipeline").exists():
-                args.base_path = str(base_path)
-                break
-            base_path = base_path.parent
-        args.base_path = base_path
-
-        if not args.base_path:
-            args.base_path = os.getcwd()
+        args.base_path = find_base_path(args.base_path)
 
         steps = set(DEFAULT_STEPS)
         for s in args.steps:
@@ -200,9 +154,13 @@ class SnappyVarFishUploadCommand:
                 self._process_dataset(dataset)
 
         logger.info("All done")
+        return None
 
     def _process_dataset(self, ds: DataSet):
-        name = "%s (%s)" % (ds.sodar_title, ds.sodar_uuid) if ds.sodar_title else sodar_uuid
+        if ds.sodar_uuid is None:
+            raise TypeError("ds.sodar_uuid must not be null")
+        sodar_uuid: str = ds.sodar_uuid
+        name = "%s (%s)" % (ds.sodar_title, sodar_uuid) if ds.sodar_title else sodar_uuid
         logger.info("Processing Dataset %s", name)
         logger.info("  loading from %s", self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
         sheet = load_sheet_tsv(self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
@@ -241,17 +199,17 @@ class SnappyVarFishUploadCommand:
                 "--verbose",
                 "case",
                 "create-import-info",
-                ds.sodar_uuid,
+                sodar_uuid,
                 *sorted(found.values()),
             ]
             if self.args.answer_yes:
                 answer = True
             else:
                 while True:
-                    answer = input("Submit to VarFish? [yN] ").lower()
-                    if answer.startswith("y") or answer.startswith("n"):
+                    answer_str = input("Submit to VarFish? [yN] ").lower()
+                    if answer_str.startswith("y") or answer_str.startswith("n"):
                         break
-                answer = answer == "y"
+                answer = answer_str == "y"
             if answer:
                 logger.info("Executing '%s'", " ".join(args))
                 varfish_cli_main(args[1:])

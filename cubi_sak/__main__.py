@@ -7,6 +7,7 @@ import sys
 
 import argcomplete
 import logzero
+import os
 from logzero import logger
 
 from cubi_sak import __version__
@@ -39,6 +40,23 @@ def setup_argparse():
     parser = argparse.ArgumentParser(prog="cubi-sak")
     parser.add_argument("--verbose", action="store_true", default=False, help="Increase verbosity.")
     parser.add_argument("--version", action="version", version="%%(prog)s %s" % __version__)
+
+    group = parser.add_argument_group("Basic Configuration")
+    group.add_argument(
+        "--config",
+        default=os.environ.get("SODAR_CONFIG_PATH", None),
+        help="Path to configuration file.",
+    )
+    group.add_argument(
+        "--sodar-server-url",
+        default=os.environ.get("SODAR_SERVER_URL", None),
+        help="SODAR server URL key to use, defaults to env SODAR_SERVER_URL.",
+    )
+    group.add_argument(
+        "--sodar-api-token",
+        default=os.environ.get("SODAR_API_TOKEN", None),
+        help="SODAR API token to use, defaults to env SODAR_API_TOKEN.",
+    )
 
     # Add sub parsers for each argument.
     subparsers = parser.add_subparsers(dest="cmd")

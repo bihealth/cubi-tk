@@ -32,7 +32,7 @@ from .check import setup_argparse as setup_argparse_check
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
-from .pull_sheet import setup_argparse as setup_argparse_pull_sheet
+from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
 from .kickoff import setup_argparse as setup_argparse_kickoff
 from .varfish_upload import setup_argparse as setup_argparse_varfish_upload
 
@@ -62,8 +62,8 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         )
     )
 
-    setup_argparse_pull_sheet(
-        subparsers.add_parser("pull-sheet", help="Pull SODAR sample sheet into biomedsheet")
+    setup_argparse_pull_sheets(
+        subparsers.add_parser("pull-sheets", help="Pull SODAR sample sheets into biomedsheet")
     )
 
     setup_argparse_varfish_upload(
