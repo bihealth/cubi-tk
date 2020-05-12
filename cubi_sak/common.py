@@ -23,6 +23,10 @@ from termcolor import colored
 from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
 
 
+def mask_password(value: str) -> str:
+    return repr(value[:4] + (len(value) - 4) * "*")
+
+
 @attr.s(frozen=True, auto_attribs=True)
 class CommonConfig:
     """Common configuration for all commands."""
@@ -31,13 +35,10 @@ class CommonConfig:
     verbose: bool
 
     #: API token to use for SODAR.
-    sodar_api_token: str = attr.ib(repr=lambda value: repr(value[:4] + (len(value) - 4) * "*"))
+    sodar_api_token: str = attr.ib(repr=mask_password)  # type: ignore
 
     #: Base URL to SODAR server.
     sodar_server_url: typing.Optional[str]
-
-    #: Legacy SODAR API key
-    sodar_api_key: typing.Optional[str]
 
     @staticmethod
     def create(args, toml_config=None):
@@ -50,7 +51,6 @@ class CommonConfig:
             sodar_server_url=(
                 args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
             ),
-            sodar_api_key=(toml_config.get("global", {})["sodar_api_key"]),
         )
 
 
@@ -162,8 +162,10 @@ def overwrite_helper(
             new_lines = sheet_file.read().splitlines(keepends=False)
 
             if not show_diff_side_by_side:
-                lines = difflib.unified_diff(
-                    old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path)
+                lines = list(
+                    difflib.unified_diff(
+                        old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path)
+                    )
                 )
                 for line in lines:
                     if line.startswith(("+++", "---")):
@@ -178,13 +180,15 @@ def overwrite_helper(
                         print(line, file=out_file)
             else:
                 cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
-                lines = cd.make_table(
-                    old_lines,
-                    new_lines,
-                    fromdesc=str(out_path),
-                    todesc=str(out_path),
-                    context=True,
-                    numlines=3,
+                lines = list(
+                    cd.make_table(
+                        old_lines,
+                        new_lines,
+                        fromdesc=str(out_path),
+                        todesc=str(out_path),
+                        context=True,
+                        numlines=3,
+                    )
                 )
                 for line in lines:
                     line = "%s\n" % line
@@ -198,7 +202,7 @@ def overwrite_helper(
                 logger.info("File %s not changed, no diff...", out_path)
 
         # Actually copy the file contents.
-        if do_write:
+        if lines and do_write:
             logger.info("About to write file contents to %s", out_path)
             sheet_file.seek(0)
             if out_path == "-":
@@ -219,3 +223,49 @@ def working_directory(path):
         yield
     finally:
         os.chdir(prev_cwd)
+
+
+class UnionFind:
+    """Union-Find (disjoint set) data structure allowing to address by vertex name"""
+
+    def __init__(self, vertex_names):
+        #: Node name to id mapping
+        self._name_to_id = {v: i for i, v in enumerate(vertex_names)}
+        #: Pointer to the containing sets
+        self._id = list(range(len(vertex_names)))
+        #: Size of the set (_sz[_id[v]] is the size of the set that contains v)
+        self._sz = [1] * len(vertex_names)
+
+    def find(self, v):
+        assert type(v) is int
+        j = v
+
+        while j != self._id[j]:
+            self._id[j] = self._id[self._id[j]]
+            j = self._id[j]
+
+        return j
+
+    def find_by_name(self, v_name):
+        return self.find(self._name_to_id[v_name])
+
+    def union_by_name(self, v_name, w_name):
+        self.union(self.find_by_name(v_name), self.find_by_name(w_name))
+
+    def union(self, v, w):
+        assert type(v) is int
+        assert type(w) is int
+        i = self.find(v)
+        j = self.find(w)
+
+        if i == j:
+            return
+
+        if self._sz[i] < self._sz[j]:
+            self._id[i] = j
+            self._sz[j] += self._sz[i]
+
+        else:
+            self._id[j] = i
+
+        self._sz[i] += self._sz[j]

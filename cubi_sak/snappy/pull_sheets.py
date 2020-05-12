@@ -12,24 +12,19 @@ import argparse
 import os
 import pathlib
 from uuid import UUID
-import re
 import typing
 
 import attr
 from logzero import logger
-import requests
 import toml
 
-from .. import exceptions
-
 from ..common import CommonConfig, find_base_path, overwrite_helper
+from ..sodar.api import Client
 from .models import load_datasets
+from .isa_support import InvestigationTraversal, IsaNodeVisitor
 
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
-
-#: The URL template to use.
-URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s"
 
 #: Template for the to-be-generated file.
 HEADER_TPL = (
@@ -84,6 +79,28 @@ class PullSheetsConfig:
             show_diff_side_by_side=args.show_diff_side_by_side,
             library_types=tuple(args.library_types),
         )
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class Source:
+    family: typing.Optional[str]
+    source_name: str
+    batch_no: int
+    father: str
+    mother: str
+    sex: str
+    affected: str
+    sample_name: str
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class Sample:
+    source: Source
+    library_name: str
+    library_type: str
+    folder_name: str
+    seq_platform: str
+    library_kit: str
 
 
 def strip(x):
@@ -167,154 +184,94 @@ def check_args(args) -> int:
     return int(any_error)
 
 
+def first_value(key, node_path, default=None, ignore_case=True):
+    for node in node_path:
+        for attr_type in ("characteristics", "parameter_values"):
+            for x in getattr(node, attr_type, ()):
+                if (ignore_case and x.name.lower() == key.lower()) or (
+                    not ignore_case and x.name == key
+                ):
+                    return ";".join(x.value)
+    return default
+
+
+class SampleSheetBuilder(IsaNodeVisitor):
+    def __init__(self):
+        #: Source by sample name.
+        self.sources = {}
+        #: Sample by sample name.
+        self.samples = {}
+
+    def on_visit_material(self, material, node_path, study=None, assay=None):
+        super().on_visit_material(material, node_path, study, assay)
+        material_path = [x for x in node_path if hasattr(x, "type")]
+        source = material_path[0]
+        if material.type == "Sample Name" and assay is None:
+            sample = material
+            characteristics = {c.name: c for c in source.characteristics}
+            self.sources[material.name] = Source(
+                family=characteristics["Family"].value[0],
+                source_name=source.name,
+                batch_no=characteristics["Batch"].value[0],
+                father=characteristics["Father"].value[0],
+                mother=characteristics["Mother"].value[0],
+                sex=characteristics["Sex"].value[0],
+                affected=characteristics["Disease status"].value[0],
+                sample_name=sample.name,
+            )
+        elif material.type == "Library Name":
+            library = material
+            sample = material_path[0]
+            if library.name.split("-")[-1].startswith("WGS"):
+                library_type = "WGS"
+            elif library.name.split("-")[-1].startswith("WES"):
+                library_type = "WES"
+            elif library.name.split("-")[-1].startswith("Panel_seq"):
+                library_type = "Panel_seq"
+            else:
+                raise Exception("Cannot infer library type from %s" % library.name)
+
+            self.samples[sample.name] = Sample(
+                source=self.sources[sample.name],
+                library_name=library.name,
+                library_type=library_type,
+                folder_name=first_value("Folder Name", node_path),
+                seq_platform=first_value("Instrument Model", node_path),
+                library_kit=first_value("Library Kit", node_path),
+            )
+
+
 def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID]) -> str:
     """Build sheet TSV file."""
 
     result = []
 
-    # Query investigation JSON from API.
-    url = URL_TPL % {
-        "sodar_url": config.global_config.sodar_server_url,
-        "project_uuid": project_uuid,
-        "api_key": config.global_config.sodar_api_key,
-    }
-    logger.info("Fetching %s", url)
-    r = requests.get(url)
-    r.raise_for_status()
-    all_data = r.json()
-    if len(all_data["studies"]) > 1:  # pragma: nocover
-        raise exceptions.UnsupportedIsaTabFeatureException("More than one study found!")
+    # Obtain ISA-tab from SODAR REST API.
+    client = Client(config.global_config.sodar_server_url, config.global_config.sodar_api_token)
+    isa = client.samplesheets.get(project_uuid)
 
-    # Parse out study data.
-    study = list(all_data["studies"].values())[0]
-    study_infos = study["study"]
-    study_top = study_infos["top_header"]
-    n_source = study_top[0]["colspan"]
-    n_extraction = study_top[1]["colspan"]
-    # n_sample = study_top[2]["colspan"]
-    cols_source = study_infos["field_header"][:n_source]
-    cols_extraction = study_infos["field_header"][n_source : n_source + n_extraction]
-    cols_sample = study_infos["field_header"][n_source + n_extraction :]
-    names_source = [x["value"] for x in cols_source]
-    names_extraction = [x["value"] for x in cols_extraction]
-    names_sample = [x["value"] for x in cols_sample]
-    table = study_infos["table_data"]
-
-    # Build study info map.
-    study_map = {}
-    for row in table:
-        # Assign fields to table.
-        dict_source = dict(zip(names_source, [strip(x["value"]) for x in row[:n_source]]))
-        dict_extraction = dict(
-            zip(names_extraction, [x["value"] for x in row[n_source : n_source + n_extraction]])
-        )
-        dict_sample = dict(
-            zip(names_sample, [strip(x["value"]) for x in row[n_source + n_extraction :]])
-        )
-        # Extend study_map.
-        study_map[dict_source["Name"]] = {
-            "Source": dict_source,
-            "Extraction": dict_extraction,
-            "Sample": dict_sample,
-        }
-
-    # Parse out the assay data.
-    #
-    # NB: We're not completely cleanly decomposing the information and, e.g., overwrite
-    # the "Extract name" keys here...
-    if len(study["assays"]) > 1:  # pragma: nocover
-        raise exceptions.UnsupportedIsaTabFeatureException("More than one assay found!")
-    assay = list(study["assays"].values())[0]
-    top_columns = [(x["value"], x["colspan"]) for x in assay["top_header"]]
-    columns = []
-    offset = 0
-    for type_, colspan in top_columns:
-        columns.append(
-            {
-                "type": type_,
-                "columns": [x["value"] for x in assay["field_header"][offset : offset + colspan]],
-            }
-        )
-        offset += colspan
-    assay_map: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
-    for row in assay["table_data"]:
-        offset = 0
-        name = row[0]["value"].strip()
-        for column in columns:
-            colspan = len(column["columns"])
-            values = {
-                "type": column["type"],
-                **dict(
-                    zip(column["columns"], [x["value"] for x in row[offset : offset + colspan]])
-                ),
-            }
-            type_ = column["type"]
-            if type_ == "Process":
-                type_ = values["Protocol"]
-            assay_map.setdefault(name, {})[type_] = values
-            offset += colspan
+    builder = SampleSheetBuilder()
+    iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
+    iwalker.run(builder)
 
     # Generate the resulting sample sheet.
     result.append("\n".join(HEADER_TPL))
-    for source, info in study_map.items():
-        if source not in assay_map:  # pragma: nocover
-            logger.info("source %s does not have an assay.", source)
-            dict_lib = {"Name": "-.1", "Folder Name": ".", "Batch": "."}  # HAAACKY
-            proc_lib = {}
-        else:
-            for outer_key in ("Extract Name", "Library Name"):
-                if outer_key in assay_map[source]:
-                    dict_lib = assay_map[source][outer_key]
-                    for key in assay_map[source]:
-                        if key.startswith("Library construction"):
-                            proc_lib = assay_map[source][key]
-                            break
-                    else:  # pragma: nocover
-                        proc_lib = {}
-        dict_source = info["Source"]
-        # FIXME: remove hack
-        # HACK: ignore if looks like artifact
-        if "Folder Name" in dict_lib:
-            library_type = dict_lib["Name"].split("-")[-1][:-1]  # hack to get library type
-            folder = dict_lib["Folder Name"]
-        else:  # pragma: nocover
-            library_type = "."
-            folder = "."
-        # TODO: find better way of accessing sequencing process
-        seq_platform = "Illumina"
-        for the_dict in assay_map.get(source, {}).values():
-            if the_dict.get("Platform") == "PACBIO_SMRT":  # pragma: nocover
-                seq_platform = "PacBio"
-        library_kit = proc_lib.get("Library Kit") or "."
-        if (
-            config.library_types
-            and library_type != "."
-            and library_type not in config.library_types
-        ):  # pragma: nocover
-            logger.info(
-                "Skipping %s not in library types %s", dict_source["Name"], config.library_types
-            )
-            continue
-        # ENDOF HACK
-        haystack = dict_source.get("Batch", "1")
-        m = re.search(r"(\d+)", haystack)
-        if not m:  # pragma: nocover
-            raise exceptions.InvalidIsaTabException("Could not find batch number in %s" % haystack)
-        batch = m.group(1)
+    for sample_name, source in builder.sources.items():
+        sample = builder.samples.get(sample_name, None)
         row = [
-            dict_source["Family"],
-            dict_source["Name"],
-            dict_source["Father"],
-            dict_source["Mother"],
-            MAPPING_SEX[dict_source["Sex"].lower()],
-            MAPPING_STATUS[dict_source["Disease Status"].lower()],
-            library_type,
-            folder,
-            batch,
+            source.family or "FAM",
+            source.source_name or ".",
+            source.father or "0",
+            source.mother or "0",
+            MAPPING_SEX[source.sex.lower()],
+            MAPPING_STATUS[source.affected.lower()],
+            sample.library_type or "." if sample else ".",
+            sample.folder_name or "." if sample else ".",
+            "0" if source.batch_no is None else source.batch_no,
             ".",
-            project_uuid,
-            seq_platform,
-            library_kit,
+            str(project_uuid),
+            "Illumina",
+            sample.library_kit or "." if source else ".",
         ]
         result.append("\t".join(row))
     result.append("")
@@ -333,6 +290,7 @@ def run(
     logger.info("Starting to pull sheet...")
     logger.info("  Args: %s", args)
 
+    logger.debug("Load config...")
     toml_config = load_toml_config(args)
     global_config = CommonConfig.create(args, toml_config)
     args.base_path = find_base_path(args.base_path)
@@ -340,6 +298,7 @@ def run(
 
     config_path = config.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
+    logger.info("Pulling for %d datasets", len(datasets))
     for dataset in datasets.values():
         if dataset.sodar_uuid:
             overwrite_helper(

@@ -193,7 +193,7 @@ class SnappyVarFishUploadCommand:
                 EXTENSIONS,
                 PREFIXES,
             )
-            found = {}
+            found: typing.Dict[str, str] = {}
             for step in self.args.steps:
                 for ext in EXTENSIONS:
                     pattern = "%s/*.%s/**/*.%s" % (
