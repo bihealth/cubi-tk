@@ -50,13 +50,13 @@ def run(
         steps += [name for name in names if name in step_set]
     logger.info("Will run the steps: %s", ", ".join(steps))
 
-    logger.info("Submitting with qsub...")
+    logger.info("Submitting with sbatch...")
     jids: typing.Dict[str, str] = {}
     for step in steps:
         dep_jids = [jids[dep] for dep in DEPENDENCIES[step] if dep in jids]
-        cmd = ["qsub"]
+        cmd = ["sbatch"]
         if dep_jids:
-            cmd += ["-hold_jid", ",".join(map(str, dep_jids))]
+            cmd += ["--dependency", "afterok:%s" % ":".join(map(str, dep_jids))]
         cmd += ["pipeline_job.sh"]
         logger.info("Submitting step %s: %s", step, " ".join(cmd))
         if args.dry_run:
@@ -64,9 +64,9 @@ def run(
         else:
             stdout_raw = subprocess.check_output(cmd, cwd=str(path / step), timeout=TIMEOUT)
             stdout = stdout_raw.decode("utf-8")
-            if not stdout.startswith("Your job "):
-                raise ParseOutputException("Did not understand qsub output: %s" % stdout)
-            jid = stdout.split()[2]
+            if not stdout.startswith("Submitted batch job "):
+                raise ParseOutputException("Did not understand sbatch output: %s" % stdout)
+            jid = stdout.split()[-1]
         logger.info(" => JID: %s", jid)
         jids[step] = jid
 
