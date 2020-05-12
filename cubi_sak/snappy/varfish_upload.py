@@ -130,7 +130,7 @@ class SnappyVarFishUploadCommand:
         )
 
         parser.add_argument(
-            "--samples", help="The samples to limit the submission for, if any", default=[]
+            "--samples", help="The samples to limit the submission for, if any", default=""
         )
 
         parser.add_argument(
@@ -187,7 +187,7 @@ class SnappyVarFishUploadCommand:
         logger.info("  loading from %s", self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
         sheet = load_sheet_tsv(self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
         for library in yield_ngs_library_names(sheet, self.args.min_batch):
-            if self.args.samples.split(",") and not library.split("-")[0] in self.args.samples:
+            if self.args.samples and not library.split("-")[0] in self.args.samples.split(","):
                 logger.info("Skipping library %s as it is not included in --samples", library)
                 continue
 
