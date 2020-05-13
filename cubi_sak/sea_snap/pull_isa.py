@@ -31,9 +31,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
     )
     group_sodar.add_argument(
-        "--sodar-auth-token",
-        default=os.environ.get("SODAR_AUTH_TOKEN", None),
-        help="Authentication token when talking to SODAR.  Defaults to SODAR_AUTH_TOKEN environment variable.",
+        "--sodar-api-token",
+        default=os.environ.get("SODAR_API_TOKEN", None),
+        help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
     )
 
     parser.add_argument(
@@ -55,10 +55,10 @@ def check_args(args) -> int:
     any_error = False
 
     # Check presence of SODAR URL and auth token.
-    if not args.sodar_auth_token:  # pragma: nocover
+    if not args.sodar_api_token:  # pragma: nocover
         logger.error(
-            "SODAR authentication token is empty.  Either specify --sodar-auth-token, or set "
-            "SODAR_AUTH_TOKEN environment variable"
+            "SODAR authentication token is empty.  Either specify --sodar-api-token, or set "
+            "SODAR_API_TOKEN environment variable"
         )
         any_error = True
     if not args.sodar_url:  # pragma: nocover
@@ -96,7 +96,7 @@ def pull_isa(args) -> typing.Optional[int]:
     url = URL_TPL % {
         "sodar_url": args.sodar_url,
         "project_uuid": args.project_uuid,
-        "api_key": args.sodar_auth_token,
+        "api_key": args.sodar_api_token,
     }
     logger.info("Fetching %s", url)
     r = requests.get(url)

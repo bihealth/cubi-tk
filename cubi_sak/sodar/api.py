@@ -19,13 +19,13 @@ import requests
 from ..exceptions import ParameterException, UnsupportedIsaTabFeatureException
 
 
-def _samplesheets_get(*, sodar_url, sodar_auth_token, project_uuid):
+def _samplesheets_get(*, sodar_url, sodar_api_token, project_uuid):
     """Get ISA-tab sample sheet from SODAR."""
     url_tpl = "%(sodar_url)s/samplesheets/api/export/json/%(project_uuid)s"
     url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
 
     logger.debug("HTTP GET request to %s", url)
-    headers = {"Authorization": "Token %s" % sodar_auth_token}
+    headers = {"Authorization": "Token %s" % sodar_api_token}
     r = requests.get(url, headers=headers)
     r.raise_for_status()
     return r.json()
@@ -41,6 +41,8 @@ class IsaData:
 
     #: Investigation.
     investigation: InvestigationInfo
+    #: Investigation file name.
+    investigation_filename: str
     #: Tuple of studies.
     studies: typing.Dict[str, Study]
     #: Tuple of assays.
@@ -60,7 +62,7 @@ class _SheetClient:
             raise ParameterException("Both Client and method's project_uuid argument missing.")
         return _samplesheets_get(
             sodar_url=self.owner.sodar_url,
-            sodar_auth_token=self.owner.sodar_auth_token,
+            sodar_api_token=self.owner.sodar_api_token,
             project_uuid=project_uuid or self.owner.project_uuid,
         )
 
@@ -88,17 +90,17 @@ class _SheetClient:
             ).read()
             for path, details in raw_data["assays"].items()
         }
-        return IsaData(investigation, studies, assays)
+        return IsaData(investigation, raw_data["investigation"]["path"], studies, assays)
 
 
 class Client:
     """The API client."""
 
-    def __init__(self, sodar_url, sodar_auth_token, project_uuid=None):
+    def __init__(self, sodar_url, sodar_api_token, project_uuid=None):
         #: URL to SODAR.
         self.sodar_url = sodar_url
         #: SODAR auth token.
-        self.sodar_auth_token = sodar_auth_token
+        self.sodar_api_token = sodar_api_token
         #: Project UUID to use by default.
         self.project_uuid = project_uuid
         #: Client for accessing sample sheets.

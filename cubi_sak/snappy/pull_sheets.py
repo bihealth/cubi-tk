@@ -16,15 +16,17 @@ import typing
 
 import attr
 from logzero import logger
-import toml
 
-from ..common import CommonConfig, find_base_path, overwrite_helper
+from ..common import (
+    CommonConfig,
+    find_base_path,
+    overwrite_helper,
+    GLOBAL_CONFIG_PATHS,
+    load_toml_config,
+)
 from ..sodar.api import Client
 from .models import load_datasets
 from .isa_support import InvestigationTraversal, IsaNodeVisitor
-
-#: Paths to search the global configuration in.
-GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
 
 #: Template for the to-be-generated file.
 HEADER_TPL = (
@@ -153,22 +155,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--library-types", help="Library type(s) to use, comma-separated, default is to use all."
     )
-
-
-def load_toml_config(args):
-    # Load configuration from TOML cubitkrc file, if any.
-    if args.config:
-        config_paths = (args.config,)
-    else:
-        config_paths = GLOBAL_CONFIG_PATHS
-    for config_path in config_paths:
-        config_path = os.path.expanduser(os.path.expandvars(config_path))
-        if os.path.exists(config_path):
-            with open(config_path, "rt") as tomlf:
-                return toml.load(tomlf)
-    else:
-        logger.info("Could not find any of the global configuration files %s.", config_paths)
-        return None
 
 
 def check_args(args) -> int:

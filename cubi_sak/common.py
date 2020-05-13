@@ -17,10 +17,14 @@ from uuid import UUID
 
 import attr
 import icdiff
+import toml
 from logzero import logger
 from termcolor import colored
 
 from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
+
+#: Paths to search the global configuration in.
+GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
 
 
 def mask_password(value: str) -> str:
@@ -148,6 +152,8 @@ def overwrite_helper(
 ) -> None:
     out_path_obj = pathlib.Path(out_path)
     with tempfile.NamedTemporaryFile(mode="w+t") as sheet_file:
+        lines = []
+
         # Write sheet to temporary file.
         sheet_file.write(contents)
 
@@ -269,3 +275,19 @@ class UnionFind:
             self._id[j] = i
 
         self._sz[i] += self._sz[j]
+
+
+def load_toml_config(args):
+    # Load configuration from TOML cubitkrc file, if any.
+    if args.config:
+        config_paths = (args.config,)
+    else:
+        config_paths = GLOBAL_CONFIG_PATHS
+    for config_path in config_paths:
+        config_path = os.path.expanduser(os.path.expandvars(config_path))
+        if os.path.exists(config_path):
+            with open(config_path, "rt") as tomlf:
+                return toml.load(tomlf)
+    else:
+        logger.info("Could not find any of the global configuration files %s.", config_paths)
+        return None

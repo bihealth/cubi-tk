@@ -41,7 +41,7 @@ def test_run_seasnap_pull_isa_nothing(capsys):
 def test_run_seasnap_pull_isa_smoke_test(requests_mock, capsys, fs):
     # --- setup arguments
     project_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
-    argv = ["sea-snap", "pull-isa", "--sodar-auth-token", "XXX", project_uuid]
+    argv = ["sea-snap", "pull-isa", "--sodar-api-token", "XXX", project_uuid]
 
     parser, subparsers = setup_argparse()
     args = parser.parse_args(argv)

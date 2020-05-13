@@ -8,7 +8,7 @@ from pathlib import Path
 from logzero import logger
 
 from . import api
-from ..common import overwrite_helper
+from ..common import overwrite_helper, GLOBAL_CONFIG_PATHS, load_toml_config
 from ..exceptions import OverwriteRefusedException
 
 
@@ -33,9 +33,9 @@ class DownloadSheetCommand:
             help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
         )
         group_sodar.add_argument(
-            "--sodar-auth-token",
-            default=os.environ.get("SODAR_AUTH_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_AUTH_TOKEN environment variable.",
+            "--sodar-api-token",
+            default=os.environ.get("SODAR_API_TOKEN", None),
+            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -84,6 +84,12 @@ class DownloadSheetCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
+        toml_config = load_toml_config(args)
+        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
+        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
+            "sodar_api_token"
+        )
+
         # if os.path.exists(args.output_dir) and not args.overwrite:
         #     logger.error(
         #         "Output directory %s already exists. Use --overwrite to allow overwriting.",
@@ -106,8 +112,8 @@ class DownloadSheetCommand:
         if not out_path.exists() and self.args.makedirs:
             out_path.mkdir(parents=True)
 
-        client = api.Client(self.args.sodar_url, self.args.sodar_auth_token, self.args.project_uuid)
-        isa_dict = client.samplesheets.get()
+        client = api.Client(self.args.sodar_url, self.args.sodar_api_token, self.args.project_uuid)
+        isa_dict = client.samplesheets.get_raw()
         try:
             self._write_file(
                 out_path, isa_dict["investigation"]["path"], isa_dict["investigation"]["tsv"]
