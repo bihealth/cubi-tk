@@ -195,10 +195,11 @@ class SampleSheetBuilder(IsaNodeVisitor):
         if material.type == "Sample Name" and assay is None:
             sample = material
             characteristics = {c.name: c for c in source.characteristics}
+            comments = {c.name: c for c in source.comments}
             self.sources[material.name] = Source(
                 family=characteristics["Family"].value[0],
                 source_name=source.name,
-                batch_no=characteristics["Batch"].value[0],
+                batch_no=characteristics.get("Batch", comments.get("Batch")).value[0],
                 father=characteristics["Father"].value[0],
                 mother=characteristics["Mother"].value[0],
                 sex=characteristics["Sex"].value[0],
@@ -221,9 +222,18 @@ class SampleSheetBuilder(IsaNodeVisitor):
                 source=self.sources[sample.name],
                 library_name=library.name,
                 library_type=library_type,
-                folder_name=first_value("Folder Name", node_path),
-                seq_platform=first_value("Instrument Model", node_path),
+                folder_name=first_value("Folder name", node_path),
+                seq_platform=None,
                 library_kit=first_value("Library Kit", node_path),
+            )
+
+    def on_visit_process(self, process, node_path, study=None, assay=None):
+        super().on_visit_node(process, study, assay)
+        material_path = [x for x in node_path if hasattr(x, "type")]
+        sample = material_path[0]
+        if process.protocol_ref == "Nucleic acid sequencing WGS":
+            self.samples[sample.name] = attr.evolve(
+                self.samples[sample.name], seq_platform=first_value("Platform", node_path),
             )
 
 
@@ -256,8 +266,8 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
             "0" if source.batch_no is None else source.batch_no,
             ".",
             str(project_uuid),
-            "Illumina",
-            sample.library_kit or "." if source else ".",
+            sample.seq_platform or ".",
+            sample.library_kit or "." if sample else ".",
         ]
         result.append("\t".join(row))
     result.append("")

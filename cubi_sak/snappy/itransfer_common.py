@@ -51,7 +51,7 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     try:
         check_output(mkdir_argv)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing imkdir: %e", e)
+        logger.error("Problem executing imkdir: %s", e)
         raise
 
     irsync_argv = ["irsync", "-a", "-K", job.path_src, "i:%s" % job.path_dest]
@@ -59,7 +59,7 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     try:
         check_output(irsync_argv)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing irsync: %e", e)
+        logger.error("Problem executing irsync: %s", e)
         raise
 
     with counter.get_lock():
@@ -107,6 +107,8 @@ class SnappyItransferCommandBase:
     step_name: typing.Optional[str] = None
     #: Whether or not to fix .md5 files on the fly.
     fix_md5_files: bool = False
+    #: Whether to look into largest start batch in family.
+    start_batch_in_family: bool = False
 
     def __init__(self, args):
         #: Command line arguments.
@@ -182,7 +184,28 @@ class SnappyItransferCommandBase:
 
         return res
 
-    def yield_ngs_library_names(self, sheet, min_batch=None, batch_key="batchNo"):
+    def _build_family_max_batch(self, sheet, batch_key, family_key):
+        family_max_batch = {}
+        for donor in sheet.bio_entities.values():
+            if batch_key in donor.extra_infos and family_key in donor.extra_infos:
+                family_id = donor.extra_infos[family_key]
+                batch_no = donor.extra_infos[batch_key]
+                family_max_batch[family_id] = max(family_max_batch.get(family_id, 0), batch_no)
+        return family_max_batch
+
+    def _batch_of(self, donor, family_max_batch, batch_key, family_key):
+        if batch_key in donor.extra_infos:
+            batch = donor.extra_infos[batch_key]
+        else:
+            batch = 0
+        if self.start_batch_in_family and family_key in donor.extra_infos:
+            family_id = donor.extra_infos[family_key]
+            batch = max(batch, family_max_batch[family_id])
+        return batch
+
+    def yield_ngs_library_names(
+        self, sheet, min_batch=None, batch_key="batchNo", family_key="familyId"
+    ):
         """Yield all NGS library names from sheet.
 
         When ``min_batch`` is given then only the donors for which the ``extra_infos[batch_key]`` is greater than
@@ -190,14 +213,18 @@ class SnappyItransferCommandBase:
 
         This function can be overloaded, for example to only consider the indexes.
         """
+        family_max_batch = self._build_family_max_batch(sheet, batch_key, family_key)
+
+        # Process all libraries and filter by family batch ID.
         for donor in sheet.bio_entities.values():
-            if min_batch is not None and batch_key in donor.extra_infos:
-                if min_batch > donor.extra_infos[batch_key]:
+            if min_batch is not None:
+                batch = self._batch_of(donor, family_max_batch, batch_key, family_key)
+                if batch < min_batch:
                     logger.debug(
                         "Skipping donor %s because %s = %d < min_batch = %d",
                         donor.name,
-                        donor.extra_infos[batch_key],
                         batch_key,
+                        batch,
                         min_batch,
                     )
                     continue
@@ -340,17 +367,22 @@ class SnappyItransferCommandBase:
 class IndexLibrariesOnlyMixin:
     """Mixin for ``SnappyItransferCommandBase`` that only considers libraries of indexes."""
 
-    def yield_ngs_library_names(self, sheet, min_batch=None, batch_key="batchNo"):
+    def yield_ngs_library_names(
+        self, sheet, min_batch=None, batch_key="batchNo", family_key="familyId"
+    ):
+        family_max_batch = self._build_family_max_batch(sheet, batch_key, family_key)
+
         shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
         for pedigree in shortcut_sheet.cohort.pedigrees:
             donor = pedigree.index
-            if min_batch is not None and batch_key in donor.extra_infos:
-                if min_batch > donor.extra_infos[batch_key]:
+            if min_batch is not None:
+                batch = self._batch_of(donor, family_max_batch, batch_key, family_key)
+                if batch < min_batch:
                     logger.debug(
                         "Skipping donor %s because %s = %d < min_batch = %d",
                         donor.name,
-                        donor.extra_infos[batch_key],
                         batch_key,
+                        donor.extra_infos[batch_key],
                         min_batch,
                     )
                     continue
@@ -379,12 +411,12 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
         with open(path_md5, "wt") as md5f:
             check_call(md5sum_argv, cwd=dirname, stdout=md5f)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: %e", e)
+        logger.error("Problem executing md5sum: %s", e)
         logger.info("Removing file after error: %s", path_md5)
         try:
             os.remove(path_md5)
         except OSError as e_rm:  # pragma: nocover
-            logger.error("Could not remove file: %e", e_rm)
+            logger.error("Could not remove file: %s", e_rm)
         raise e
 
     with counter.get_lock():

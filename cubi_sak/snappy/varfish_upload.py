@@ -171,7 +171,9 @@ class SnappyVarFishUploadCommand:
         logger.info("  args: %s", self.args)
 
         datasets = load_datasets(self.args.base_path / ".snappy_pipeline/config.yaml")
+        logger.debug("projects = %s", self.args.project)
         for dataset in datasets.values():
+            logger.debug("Considering %s", dataset.sodar_uuid)
             if dataset.sodar_uuid in self.args.project:
                 self._process_dataset(dataset)
 
@@ -218,7 +220,11 @@ class SnappyVarFishUploadCommand:
                         ):
                             found[b] = x
             logger.info("  found %d files for %s", len(found), library)
-            logger.debug("    files:\n%s", "\n".join(sorted(found)))
+            if self.args.verbose:
+                found_s = "\n".join("%s (%s)" % (k, v) for k, v in sorted(found.items()))
+            else:
+                found_s = "\n".join(sorted(found))
+            logger.info("    files:\n%s", found_s)
             # Perform call to varfish import.
             args = [
                 "varfish-cli",

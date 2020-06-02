@@ -16,6 +16,7 @@ class SnappyItransferVariantCallingCommand(IndexLibrariesOnlyMixin, SnappyItrans
     fix_md5_files = True
     command_name = "itransfer-variant-calling"
     step_name = "variant_calling"
+    start_batch_in_family = True
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
