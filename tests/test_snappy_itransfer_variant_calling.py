@@ -1,4 +1,4 @@
-"""Tests for ``cubi_sak.snappy.itransfer_variant_calling``.
+"""Tests for ``cubi_tk.snappy.itransfer_variant_calling``.
 
 We only run some smoke tests here.
 """
@@ -10,7 +10,7 @@ from unittest.mock import ANY
 import pytest
 from pyfakefs import fake_filesystem
 
-from cubi_sak.__main__ import setup_argparse, main
+from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_snappy_itransfer_variant_calling_help(capsys):
@@ -82,17 +82,17 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
 
     fake_os = fake_filesystem.FakeOsModule(fs)
     mocker.patch("glob.os", fake_os)
-    mocker.patch("cubi_sak.snappy.itransfer_common.os", fake_os)
-    mocker.patch("cubi_sak.snappy.itransfer_variant_calling.os", fake_os)
+    mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
+    mocker.patch("cubi_tk.snappy.itransfer_variant_calling.os", fake_os)
 
     mock_check_output = mock.mock_open()
-    mocker.patch("cubi_sak.snappy.itransfer_common.check_output", mock_check_output)
+    mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
-    mocker.patch("cubi_sak.snappy.itransfer_common.open", fake_open)
+    mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
 
     mock_check_call = mock.mock_open()
-    mocker.patch("cubi_sak.snappy.itransfer_common.check_call", mock_check_call)
+    mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
 
     # Actually exercise code and perform test.
     parser, subparsers = setup_argparse()

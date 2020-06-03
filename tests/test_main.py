@@ -2,7 +2,7 @@
 
 import pytest
 
-from cubi_sak.__main__ import main
+from cubi_tk.__main__ import main
 
 
 def test_main_prints_help_to_stdout(capsys):

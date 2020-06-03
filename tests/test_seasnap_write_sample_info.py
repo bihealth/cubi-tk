@@ -1,4 +1,4 @@
-"""Tests for ``cubi_sak.sea_snap.write_sample_info``.
+"""Tests for ``cubi_tk.sea_snap.write_sample_info``.
 
 We only run some smoke tests here.
 """
@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from cubi_sak.__main__ import setup_argparse, main
+from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_seasnap_write_sample_info_help(capsys):

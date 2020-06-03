@@ -7,6 +7,6 @@ Command Line Interface
 .. _cli_main:
 
 .. argparse::
-   :module: cubi_sak.__main__
+   :module: cubi_tk.__main__
    :func: setup_argparse_only
-   :prog: cubi-sak
+   :prog: cubi-tk

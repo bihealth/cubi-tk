@@ -1,11 +1,11 @@
-"""Tests for ``cubi_sak.isa_tpl``.
+"""Tests for ``cubi_tk.isa_tpl``.
 
 We run cookiecutter for each template once for smoke-testing but don't actually validate the results behind the
 output directory being created.
 """
 
-from cubi_sak.isa_tpl import run_cookiecutter, TEMPLATES
-from cubi_sak.__main__ import setup_argparse
+from cubi_tk.isa_tpl import run_cookiecutter, TEMPLATES
+from cubi_tk.__main__ import setup_argparse
 
 
 def test_run_cookiecutter_isatab_generic(tmp_path):

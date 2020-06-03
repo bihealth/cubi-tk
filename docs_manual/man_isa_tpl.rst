@@ -4,4 +4,4 @@
 ``isa-tpl`` Manual
 ==================
 
-.. automodule:: cubi_sak.isa_tpl
+.. automodule:: cubi_tk.isa_tpl

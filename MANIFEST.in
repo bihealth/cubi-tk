@@ -11,7 +11,7 @@ recursive-exclude * *.py[co]
 recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
 
 include versioneer.py
-include cubi_sak/_version.py
-recursive-include cubi_sak/isa_tpl *.json *.txt
+include cubi_tk/_version.py
+recursive-include cubi_tk/isa_tpl *.json *.txt
 
 include requirements.txt requirements/*.txt

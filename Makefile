@@ -12,7 +12,7 @@ flake8:
 	flake8 .
 
 mypy:
-	mypy cubi_sak
+	mypy cubi_tk
 
 test:
 	pytest --disable-pytest-warnings

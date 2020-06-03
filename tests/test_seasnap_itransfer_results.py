@@ -1,4 +1,4 @@
-"""Tests for ``cubi_sak.sea_snap.itransfer_results``.
+"""Tests for ``cubi_tk.sea_snap.itransfer_results``.
 
 We only run some smoke tests here.
 """
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from cubi_sak.__main__ import setup_argparse, main
+from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_seasnap_itransfer_results_help(capsys):
@@ -70,16 +70,16 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
 
     # --- mock modules
     mock_check_output = mock.mock_open()
-    mocker.patch("cubi_sak.sea_snap.itransfer_results.check_output", mock_check_output)
-    mocker.patch("cubi_sak.snappy.itransfer_common.check_output", mock_check_output)
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.check_output", mock_check_output)
+    mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
 
     mock_check_call = mock.mock_open()
-    mocker.patch("cubi_sak.snappy.itransfer_common.check_call", mock_check_call)
+    mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
 
     # necessary because independent test fail
     mock_value = mock.mock_open()
-    mocker.patch("cubi_sak.sea_snap.itransfer_results.Value", mock_value)
-    mocker.patch("cubi_sak.snappy.itransfer_common.Value", mock_value)
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.Value", mock_value)
+    mocker.patch("cubi_tk.snappy.itransfer_common.Value", mock_value)
 
     # --- run tests
     res = main(argv)

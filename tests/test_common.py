@@ -1,6 +1,6 @@
 """Tests for common code."""
 
-from cubi_sak import common
+from cubi_tk import common
 
 
 def test_is_uuid():

@@ -1,4 +1,4 @@
-"""Tests for ``cubi_sak.sea_snap.pull_isa``.
+"""Tests for ``cubi_tk.sea_snap.pull_isa``.
 
 We only run some smoke tests here.
 """
@@ -9,8 +9,8 @@ import pytest
 import filecmp
 import glob
 
-from cubi_sak.sea_snap.pull_isa import URL_TPL
-from cubi_sak.__main__ import setup_argparse, main
+from cubi_tk.sea_snap.pull_isa import URL_TPL
+from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_seasnap_pull_isa_help(capsys):
