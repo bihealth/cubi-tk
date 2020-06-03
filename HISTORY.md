@@ -1,6 +1,6 @@
 # History
 
-## HEAD (unreleased)
+## v0.2.0
 
 - Adjusting package meta data in `setup.py`.
 - Fixing documentation bulding bug.
