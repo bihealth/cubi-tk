@@ -57,6 +57,20 @@ def _samplesheets_get(*, sodar_url, sodar_api_token, project_uuid):
 samplesheets = SimpleNamespace(get=_samplesheets_get)
 
 
+def _landingzones_get(*, sodar_url, sodar_api_token, landing_zone_uuid):
+    """Return landing zones in project."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
+    url_tpl = "%(sodar_url)s/landingzones/api/retrieve/%(landing_zone_uuid)s"
+    url = url_tpl % {"sodar_url": sodar_url, "landing_zone_uuid": landing_zone_uuid}
+
+    logger.debug("HTTP GET request to %s", url)
+    headers = {"Authorization": "Token %s" % sodar_api_token}
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    return cattr.structure(r.json(), models.LandingZone)
+
+
 def _landingzones_list(*, sodar_url, sodar_api_token, project_uuid):
     """Return landing zones in project."""
     while sodar_url.endswith("/"):
@@ -107,6 +121,19 @@ def _landingzones_move(*, sodar_url, sodar_api_token, landing_zone_uuid):
     """Move landing zone with the given UUID."""
     while sodar_url.endswith("/"):
         sodar_url = sodar_url[:-1]
+
+    # Move landing zone through API.
+    url_tpl = "%(sodar_url)s/landingzones/api/submit/move/%(landing_zone_uuid)s"
+    url = url_tpl % {"sodar_url": sodar_url, "landing_zone_uuid": landing_zone_uuid}
+    logger.debug("HTTP POST request to %s", url)
+    headers = {"Authorization": "Token %s" % sodar_api_token}
+    r = requests.post(url, headers=headers)
+    r.raise_for_status()
+    return _landingzones_get(
+        sodar_url=sodar_url,
+        sodar_api_token=sodar_api_token,
+        landing_zone_uuid=r.json()["sodar_uuid"],
+    )
 
 
 #: Landing zone-related API.

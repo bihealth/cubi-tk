@@ -40,8 +40,7 @@ from ..common import run_nocmd
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
 from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
-
-# from .lz_move import setup_argparse as setup_argparse_lz_move
+from .lz_move import setup_argparse as setup_argparse_lz_move
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -53,7 +52,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser("landing-zone-create", help="Creating landing zone")
     )
     setup_argparse_lz_list(subparsers.add_parser("landing-zone-list", help="List landing zones"))
-    # setup_argparse_lz_move(subparsers.add_parser("landing-zone-move", help="Submit landing zone for moving"))
+    setup_argparse_lz_move(
+        subparsers.add_parser("landing-zone-move", help="Submit landing zone for moving")
+    )
 
 
 def run(args, parser, subparser):

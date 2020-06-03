@@ -1,4 +1,4 @@
-"""``cubi-tk sodar landing-zone-create`` command line program
+"""``cubi-tk sodar landing-zone-move`` command line program
 """
 
 import argparse
@@ -13,8 +13,8 @@ from . import api
 from ..common import load_toml_config
 
 
-class CreateLandingZoneCommand:
-    """Implementation of the ``landing-zone-create`` command."""
+class MoveLandingZoneCommand:
+    """Implementation of the ``landing-zone-move`` command."""
 
     def __init__(self, args):
         #: Command line arguments.
@@ -40,23 +40,11 @@ class CreateLandingZoneCommand:
         )
 
         parser.add_argument(
-            "--unless-exists",
-            default=False,
-            dest="unless_exists",
-            action="store_true",
-            help="If there already is a landing zone in the current project then use this one",
-        )
-
-        parser.add_argument(
             "--dry-run",
             "-n",
             default=False,
             action="store_true",
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
-        )
-
-        parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
         )
 
         parser.add_argument(
@@ -66,7 +54,7 @@ class CreateLandingZoneCommand:
             help="Format string for printing, e.g. %%(uuid)s",
         )
 
-        parser.add_argument("project_uuid", help="UUID of project to create the landing zone in.")
+        parser.add_argument("landing_zone_uuid", help="UUID of landing zone to move.")
 
     @classmethod
     def run(
@@ -88,34 +76,20 @@ class CreateLandingZoneCommand:
         return res
 
     def execute(self) -> typing.Optional[int]:
-        """Execute the landing zone creation."""
+        """Execute the landing zone moving."""
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk sodar landing-zone-create")
+        logger.info("Starting cubi-tk sodar landing-zone-move")
         logger.info("  args: %s", self.args)
 
-        existing_lzs = sorted(
-            api.landing_zones.list(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-            ),
-            key=lambda lz: lz.date_modified,
+        landing_zone = api.landing_zones.move(
+            sodar_url=self.args.sodar_url,
+            sodar_api_token=self.args.sodar_api_token,
+            landing_zone_uuid=self.args.landing_zone_uuid,
         )
-        existing_lzs = list(filter(lambda lz: lz.status == "ACTIVE", existing_lzs))
-        if existing_lzs and self.args.unless_exists:
-            lz = existing_lzs[-1]
-        else:
-            lz = api.landing_zones.create(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-                assay_uuid=self.args.assay,
-            )
-
-        values = cattr.unstructure(lz)
+        values = cattr.unstructure(landing_zone)
         if self.args.format_string:
             print(self.args.format_string.replace(r"\t", "\t") % values)
         else:
@@ -125,5 +99,5 @@ class CreateLandingZoneCommand:
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk sodar landing-zone-create``."""
-    return CreateLandingZoneCommand.setup_argparse(parser)
+    """Setup argument parser for ``cubi-tk sodar landing-zone-move``."""
+    return MoveLandingZoneCommand.setup_argparse(parser)

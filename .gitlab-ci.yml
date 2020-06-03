@@ -1,4 +1,4 @@
-image: python:3.6
+/mage: python:3.6
 
 variables:
   DEBIAN_FRONTEND: noninteractive
@@ -13,6 +13,6 @@ all_tests:
     - black -l 100 --check . --exclude src
     - flake8 .
     - python setup.py check
-    - mypy cubi_sak
+    - mypy cubi_tk
     - cd docs_manual && make clean html
   when: on_success

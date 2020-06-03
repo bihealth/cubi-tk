@@ -101,9 +101,11 @@ class ListLandingZoneCommand:
             key=lambda lz: lz.date_modified,
         )
         for lz in existing_lzs:
+            if lz.status != "ACTIVE":
+                continue
             values = cattr.unstructure(lz)
             if self.args.format_string:
-                print(self.args.format_string % values)
+                print(self.args.format_string.replace(r"\t", "\t") % values)
             else:
                 print(json.dumps(values))
 
