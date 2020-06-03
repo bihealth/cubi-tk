@@ -1,3 +1,7 @@
 .. _history:
 
-.. mdinclude:: ../HISTORY.md
+=======
+HISTORY
+=======
+
+.. include:: ../HISTORY.md
