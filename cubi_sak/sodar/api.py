@@ -13,14 +13,36 @@ from altamisa.isatab import (
     AssayReader,
 )
 import attr
+import cattr
 from logzero import logger
 import requests
 
 from ..exceptions import ParameterException, UnsupportedIsaTabFeatureException
+from . import models
+
+
+def _investigations_get(*, sodar_url, sodar_api_token, project_uuid):
+    """Get investigation information."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
+    url_tpl = "%(sodar_url)s/samplesheets/api/investigation/retrieve/%(project_uuid)s"
+    url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
+
+    logger.debug("HTTP GET request to %s", url)
+    headers = {"Authorization": "Token %s" % sodar_api_token}
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    return cattr.structure(r.json(), models.Investigation)
+
+
+#: Investigation-related API.
+investigations = SimpleNamespace(get=_investigations_get)
 
 
 def _samplesheets_get(*, sodar_url, sodar_api_token, project_uuid):
     """Get ISA-tab sample sheet from SODAR."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
     url_tpl = "%(sodar_url)s/samplesheets/api/export/json/%(project_uuid)s"
     url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
 
@@ -33,6 +55,64 @@ def _samplesheets_get(*, sodar_url, sodar_api_token, project_uuid):
 
 #: Samplesheets-related API.
 samplesheets = SimpleNamespace(get=_samplesheets_get)
+
+
+def _landingzones_list(*, sodar_url, sodar_api_token, project_uuid):
+    """Return landing zones in project."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
+    url_tpl = "%(sodar_url)s/landingzones/api/list/%(project_uuid)s"
+    url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
+
+    logger.debug("HTTP GET request to %s", url)
+    headers = {"Authorization": "Token %s" % sodar_api_token}
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    return cattr.structure(r.json(), typing.List[models.LandingZone])
+
+
+def _landingzones_create(*, sodar_url, sodar_api_token, project_uuid, assay_uuid=None):
+    """Create landing zone in project."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
+
+    # Retrieve sample sheet for assay if not given.
+    if not assay_uuid:
+        investigation = investigations.get(
+            sodar_url=sodar_url, sodar_api_token=sodar_api_token, project_uuid=project_uuid
+        )
+        if len(investigation.studies) != 1:
+            logger.error("Expected one study, found %d", len(investigation.studies))
+            logger.info("Try specifying an explicit --assay parameter")
+            raise Exception("Invalid number of studies in investigation!")
+        study = list(investigation.studies.values())[0]
+        if len(study.assays) != 1:
+            logger.error("Expected one assay, found %d", len(study.assays))
+            logger.info("Try specifying an explicit --assay parameter")
+            raise Exception("Invalid number of assays in investigation!")
+        assay_uuid = list(study.assays.keys())[0]
+
+    # Create landing zone through API.
+    url_tpl = "%(sodar_url)s/landingzones/api/create/%(project_uuid)s"
+    url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
+    logger.debug("HTTP POST request to %s", url)
+    headers = {"Authorization": "Token %s" % sodar_api_token}
+    data = {"assay": assay_uuid}
+    r = requests.post(url, data=data, headers=headers)
+    r.raise_for_status()
+    return cattr.structure(r.json(), models.LandingZone)
+
+
+def _landingzones_move(*, sodar_url, sodar_api_token, landing_zone_uuid):
+    """Move landing zone with the given UUID."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
+
+
+#: Landing zone-related API.
+landing_zones = SimpleNamespace(
+    list=_landingzones_list, create=_landingzones_create, move=_landingzones_move
+)
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -91,17 +171,3 @@ class _SheetClient:
             for path, details in raw_data["assays"].items()
         }
         return IsaData(investigation, raw_data["investigation"]["path"], studies, assays)
-
-
-class Client:
-    """The API client."""
-
-    def __init__(self, sodar_url, sodar_api_token, project_uuid=None):
-        #: URL to SODAR.
-        self.sodar_url = sodar_url
-        #: SODAR auth token.
-        self.sodar_api_token = sodar_api_token
-        #: Project UUID to use by default.
-        self.project_uuid = project_uuid
-        #: Client for accessing sample sheets.
-        self.samplesheets = _SheetClient(self)

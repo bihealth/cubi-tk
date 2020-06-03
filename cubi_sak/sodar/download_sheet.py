@@ -8,7 +8,7 @@ from pathlib import Path
 from logzero import logger
 
 from . import api
-from ..common import overwrite_helper, GLOBAL_CONFIG_PATHS, load_toml_config
+from ..common import overwrite_helper, load_toml_config
 from ..exceptions import OverwriteRefusedException
 
 
@@ -112,8 +112,11 @@ class DownloadSheetCommand:
         if not out_path.exists() and self.args.makedirs:
             out_path.mkdir(parents=True)
 
-        client = api.Client(self.args.sodar_url, self.args.sodar_api_token, self.args.project_uuid)
-        isa_dict = client.samplesheets.get_raw()
+        isa_dict = api.samplesheets.get(
+            sodar_url=self.args.sodar_url,
+            sodar_api_token=self.args.sodar_api_token,
+            project_uuid=self.args.project_uuid,
+        )
         try:
             self._write_file(
                 out_path, isa_dict["investigation"]["path"], isa_dict["investigation"]["tsv"]

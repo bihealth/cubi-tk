@@ -17,14 +17,8 @@ import typing
 import attr
 from logzero import logger
 
-from ..common import (
-    CommonConfig,
-    find_base_path,
-    overwrite_helper,
-    GLOBAL_CONFIG_PATHS,
-    load_toml_config,
-)
-from ..sodar.api import Client
+from ..common import CommonConfig, find_base_path, overwrite_helper, load_toml_config
+from ..sodar import api
 from .models import load_datasets
 from .isa_support import InvestigationTraversal, IsaNodeVisitor
 
@@ -233,7 +227,7 @@ class SampleSheetBuilder(IsaNodeVisitor):
         sample = material_path[0]
         if process.protocol_ref == "Nucleic acid sequencing WGS":
             self.samples[sample.name] = attr.evolve(
-                self.samples[sample.name], seq_platform=first_value("Platform", node_path),
+                self.samples[sample.name], seq_platform=first_value("Platform", node_path)
             )
 
 
@@ -243,8 +237,11 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
     result = []
 
     # Obtain ISA-tab from SODAR REST API.
-    client = Client(config.global_config.sodar_server_url, config.global_config.sodar_api_token)
-    isa = client.samplesheets.get(project_uuid)
+    isa = api.samplesheets.get(
+        sodar_url=config.global_config.sodar_server_url,
+        sodar_api_token=config.global_config.sodar_api_token,
+        project_uuid=project_uuid,
+    )
 
     builder = SampleSheetBuilder()
     iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
