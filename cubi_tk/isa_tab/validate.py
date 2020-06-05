@@ -63,5 +63,5 @@ class ValidateIsaTabCommand:
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk snappy itransfer-raw-data``."""
+    """Setup argument parser for ``cubi-tk isa-tab itransfer-raw-data``."""
     return ValidateIsaTabCommand.setup_argparse(parser)

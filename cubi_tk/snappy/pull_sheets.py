@@ -18,9 +18,9 @@ import attr
 from logzero import logger
 
 from ..common import CommonConfig, find_base_path, overwrite_helper, load_toml_config
+from ..isa_support import InvestigationTraversal, IsaNodeVisitor
 from ..sodar import api
 from .models import load_datasets
-from .isa_support import InvestigationTraversal, IsaNodeVisitor
 
 #: Template for the to-be-generated file.
 HEADER_TPL = (

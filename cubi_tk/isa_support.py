@@ -1,9 +1,66 @@
 """Helper code for working with altamisa objects."""
 
 from itertools import chain
+from pathlib import Path
 import typing
 
+import attr
+from altamisa.isatab import (
+    InvestigationInfo,
+    Study,
+    Assay,
+    InvestigationReader,
+    StudyReader,
+    AssayReader,
+)
 from logzero import logger
+import typing
+
+from .exceptions import UnsupportedIsaTabFeatureException
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class IsaData:
+    """Bundle together investigation, studies, assays from one project."""
+
+    #: Investigation.
+    investigation: InvestigationInfo
+    #: Investigation file name.
+    investigation_filename: str
+    #: Tuple of studies.
+    studies: typing.Dict[str, Study]
+    #: Tuple of assays.
+    assays: typing.Dict[str, Assay]
+
+
+def load_investigation(i_path: typing.Union[str, Path]) -> IsaData:
+    """Load investigation information from investigation files.
+
+    Study and assay files are expected to be next to the investigation file.
+    """
+    i_path = Path(i_path)
+    with i_path.open("rt") as i_file:
+        investigation = InvestigationReader.from_stream(
+            input_file=i_file, filename=i_path.name
+        ).read()
+
+    studies = {}
+    assays = {}
+    for study in investigation.studies:
+        with (i_path.parent / study.info.path).open() as s_file:
+            studies[study.info.path.name] = StudyReader.from_stream(
+                study_id=study.info.path.name, input_file=s_file
+            ).read()
+            for assay in study.assays:
+                with (i_path.parent / assay.path).open() as a_file:
+                    assays[assay.path.name] = AssayReader.from_stream(
+                        study_id=studies[study.info.path.name].file.name,
+                        assay_id=assay.path.name,
+                        input_file=a_file,
+                    ).read()
+
+    return IsaData(investigation, str(i_path), studies, assays)
+
 
 #: Constant representing materials.
 TYPE_MATERIAL = "MATERIAL"
@@ -143,23 +200,31 @@ class IsaNodeVisitor:
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
         logger.debug("visiting material %s", material)
-        self.on_visit_node(material, study, assay)
 
     def on_visit_process(self, process, node_path, study=None, assay=None):
         logger.debug("visiting process %s", process)
-        self.on_visit_node(process, study, assay)
 
 
 class InvestigationTraversal:
-    """Allow for easy traversal of an investigation."""
+    """Allow for easy traversal of an investigation.
+
+    If node visitors return a value that is not None, it is expected to a new node that
+    replaces the old (the internal unique ID must not be changed such that arcs remain).
+    """
 
     def __init__(self, investigation, studies, assays):
         #: Investigation object.
         self.investigation = investigation
         #: Mapping from study name (file name) to Study
         self.studies = dict(studies)
+        if len(self.studies) > 1:
+            raise Exception("Only one study supported")
         #: Mapping from assay name (file name) to Assay
         self.assays = assays
+        if len(self.assays) > 1:
+            raise Exception("Only one assay supported")
+        # Study traversal objects.
+        self._study_traversals = {}
 
     def gen(self, visitor: IsaNodeVisitor):
         logger.debug("start investigation traversal")
@@ -167,6 +232,7 @@ class InvestigationTraversal:
         for file_name, study in self.studies.items():
             logger.debug("create study traversal %s", file_name)
             st = StudyTraversal(self, study, self.assays)
+            self._study_traversals[file_name] = st
             yield from st.gen(visitor)
             logger.debug("finalize study traversal %s", file_name)
         visitor.on_end_investigation(self.investigation)
@@ -174,6 +240,17 @@ class InvestigationTraversal:
 
     def run(self, visitor: IsaNodeVisitor):
         return tuple(self.gen(visitor))
+
+    def build_evolved(
+        self
+    ) -> typing.Tuple[InvestigationInfo, typing.Dict[str, Study], typing.Dict[str, Assay]]:
+        """Return study with updated materials and processes."""
+        studies = {}
+        assays = {}
+        for key, st in self._study_traversals.items():
+            studies[key] = st.build_evolved_study()
+            assays.update(st.build_evolved_assays())
+        return self.investigation, studies, assays
 
 
 class StudyTraversal:
@@ -184,9 +261,11 @@ class StudyTraversal:
         self.study = study
         self.assays = assays
         self.isa_graph = IsaGraph(self.study.materials, self.study.processes, self.study.arcs)
-        self.assay_traversals = [
-            AssayTraversal(investigation, study, assay) for assay in assays.values()
-        ]
+        self.assay_traversals = {
+            key: AssayTraversal(investigation, study, assay) for key, assay in assays.items()
+        }
+        self._materials = {}
+        self._processes = {}
 
     def gen(self, visitor: IsaNodeVisitor, start_name=None):
         logger.debug("start study traversal %s", self.study.file)
@@ -204,12 +283,18 @@ class StudyTraversal:
         # information to caller, and potentially start DFS through all assays containing the
         # sample.
         for node_id, obj_type, obj, node_path in self.isa_graph.dfs(dfs_start):
+            new_obj = obj
             for func in func_mapping[obj_type]:
-                func(obj, node_path=node_path, study=self.study)
+                tmp_obj = func(obj, node_path=node_path, study=self.study)
+                new_obj = tmp_obj or new_obj
+            if obj_type == TYPE_MATERIAL:
+                self._materials[obj.unique_name] = new_obj
+            elif obj_type == TYPE_PROCESS:
+                self._processes[obj.unique_name] = new_obj
             yield "study", self.study, obj_type, obj
             if node_id in self.isa_graph.ends:
                 assert obj_type == TYPE_MATERIAL
-                for assay_traversal in self.assay_traversals:
+                for assay_traversal in self.assay_traversals.values():
                     if obj.name in assay_traversal.isa_graph.mat_node_by_name:
                         logger.debug(
                             "jumping into assay %s, starting from %s",
@@ -223,6 +308,14 @@ class StudyTraversal:
     def run(self, visitor: IsaNodeVisitor, start_name=None):
         return tuple(self.gen(visitor, start_name))
 
+    def build_evolved_study(self) -> Study:
+        """Return study with updated materials and processes."""
+        return attr.evolve(self.study, materials=self._materials, processes=self._processes)
+
+    def build_evolved_assays(self) -> typing.Dict[str, Assay]:
+        """Return tuple of evolved assays."""
+        return {key: value.build_evolved_assay() for key, value in self.assay_traversals.items()}
+
 
 class AssayTraversal:
     """Allow for easy traversal of assay."""
@@ -232,6 +325,8 @@ class AssayTraversal:
         self.study = study
         self.assay = assay
         self.isa_graph = IsaGraph(self.assay.materials, self.assay.processes, self.assay.arcs)
+        self._materials = {}
+        self._processes = {}
 
     def gen(self, visitor: IsaNodeVisitor, start_name=None):
         logger.debug("start assay traversal %s", self.assay.file)
@@ -248,11 +343,21 @@ class AssayTraversal:
         # Visit all ISA nodes in DFS fashion.  For each node, register it in visitor, and yield
         # information to caller.
         for node_id, obj_type, obj, node_path in self.isa_graph.dfs(dfs_start):
+            new_obj = obj
             for func in func_mapping[obj_type]:
-                func(obj, node_path=node_path, study=self.study, assay=self.assay)
+                tmp_obj = func(obj, node_path=node_path, study=self.study, assay=self.assay)
+                new_obj = tmp_obj or new_obj
+            if obj_type == TYPE_MATERIAL:
+                self._materials[obj.unique_name] = new_obj
+            elif obj_type == TYPE_PROCESS:
+                self._processes[obj.unique_name] = new_obj
             yield "assay", self.assay, obj_type, obj
         visitor.on_end_assay(self.investigation, self.study, self.assay)
         logger.debug("end assay traversal %s", self.assay.file)
 
     def run(self, visitor: IsaNodeVisitor, start_name=None):
         return tuple(self.gen(visitor, start_name))
+
+    def build_evolved_assay(self) -> Assay:
+        """Return assay with updated materials and processes."""
+        return attr.evolve(self.assay, materials=self._materials, processes=self._processes)

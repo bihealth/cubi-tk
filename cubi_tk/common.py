@@ -156,6 +156,7 @@ def overwrite_helper(
 
         # Write sheet to temporary file.
         sheet_file.write(contents)
+        sheet_file.flush()
 
         # Compare sheet with output if exists and --show-diff given.
         if show_diff:
@@ -208,13 +209,14 @@ def overwrite_helper(
                 logger.info("File %s not changed, no diff...", out_path)
 
         # Actually copy the file contents.
-        if lines and do_write:
+        if (not show_diff or lines) and do_write:
             logger.info("About to write file contents to %s", out_path)
             sheet_file.seek(0)
             if out_path == "-":
                 shutil.copyfileobj(sheet_file, sys.stdout)
             else:
-                logger.info("See above for the diff that will be applied.")
+                if show_diff:
+                    logger.info("See above for the diff that will be applied.")
                 if not answer_yes and input("Is this OK? [yN] ").lower().startswith("y"):
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)

@@ -4,20 +4,13 @@ import io
 from types import SimpleNamespace
 import typing
 
-from altamisa.isatab import (
-    InvestigationInfo,
-    Study,
-    Assay,
-    InvestigationReader,
-    StudyReader,
-    AssayReader,
-)
 import attr
 import cattr
 from logzero import logger
 import requests
 
 from ..exceptions import ParameterException, UnsupportedIsaTabFeatureException
+from ..isa_support import IsaData, load_investigation
 from . import models
 
 
@@ -140,20 +133,6 @@ def _landingzones_move(*, sodar_url, sodar_api_token, landing_zone_uuid):
 landing_zones = SimpleNamespace(
     list=_landingzones_list, create=_landingzones_create, move=_landingzones_move
 )
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class IsaData:
-    """Bundle together investigation, studies, assays from one project."""
-
-    #: Investigation.
-    investigation: InvestigationInfo
-    #: Investigation file name.
-    investigation_filename: str
-    #: Tuple of studies.
-    studies: typing.Dict[str, Study]
-    #: Tuple of assays.
-    assays: typing.Dict[str, Assay]
 
 
 class _SheetClient:
