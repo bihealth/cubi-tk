@@ -1,6 +1,8 @@
 """Client API code for SODAR."""
 
+import contextlib
 import io
+import pathlib
 from types import SimpleNamespace
 import typing
 
@@ -46,8 +48,30 @@ def _samplesheets_get(*, sodar_url, sodar_api_token, project_uuid):
     return r.json()
 
 
+def _samplesheets_upload(*, sodar_url, sodar_api_token, project_uuid, file_paths):
+    """Upload and replace ISA-tab sample sheet to SODAR."""
+    while sodar_url.endswith("/"):
+        sodar_url = sodar_url[:-1]
+    url_tpl = "%(sodar_url)s/samplesheets/api/import/%(project_uuid)s"
+    url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
+
+    logger.debug("HTTP POST request to %s", url)
+    headers = {
+        "Authorization": "Token %s" % sodar_api_token,
+    }
+    with contextlib.ExitStack() as stack:
+        files = []
+        for no, path in enumerate(file_paths):
+            p = pathlib.Path(path)
+            files.append(("file_%d" % no, (path.name, stack.enter_context(p.open("rt")), "text/plain")))
+        r = requests.post(url, headers=headers, files=files)
+    print(vars(r))
+    r.raise_for_status()
+    return r.json()
+
+
 #: Samplesheets-related API.
-samplesheets = SimpleNamespace(get=_samplesheets_get)
+samplesheets = SimpleNamespace(get=_samplesheets_get, upload=_samplesheets_upload)
 
 
 def _landingzones_get(*, sodar_url, sodar_api_token, landing_zone_uuid):

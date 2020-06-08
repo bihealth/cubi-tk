@@ -131,7 +131,7 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                 return attr.evolve(material, characteristics=tuple(characteristics))
 
 
-def _append_study_line(study, donor, materials, processes, arcs, batch_no):
+def _append_study_line(study, donor, materials, processes, arcs, config):
     """Create extra materials/processes/arcs for extra line in study table."""
     counter = 0  # used for creating unique names
     prev = None  # previous node
@@ -203,7 +203,7 @@ def _append_study_line(study, donor, materials, processes, arcs, batch_no):
                     # TODO: hacky, would need original donor ID here
                     value = "x-charite-medgen-blood-book-id:%s" % donor.name.replace("_", "-")
                 elif col.label.lower() == "batch":
-                    value = str(batch_no)
+                    value = str(config.batch_no)
                 elif col.label.lower() == "family":
                     value = donor.family_id
                 elif col.label.lower() == "organism":

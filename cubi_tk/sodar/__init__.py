@@ -38,6 +38,7 @@ import argparse
 
 from ..common import run_nocmd
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
+from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move
@@ -48,6 +49,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
     setup_argparse_download_sheet(subparsers.add_parser("download-sheet", help="Download ISA-tab"))
+    setup_argparse_upload_sheet(
+        subparsers.add_parser("upload-sheet", help="Upload and replace ISA-tab")
+    )
     setup_argparse_lz_create(
         subparsers.add_parser("landing-zone-create", help="Creating landing zone")
     )
