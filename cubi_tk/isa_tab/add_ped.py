@@ -138,6 +138,9 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
     curr = None  # current node, determines type
     prev_label = ""
     for col in study.header:
+        klass = COLUMN_TO_CLASS[col.column_type]
+        attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
+
         if col.column_type in MATERIAL_NAME_HEADERS:
             # New material.
             prev = curr
@@ -194,8 +197,6 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
                         ],
                     )
                 continue
-            klass = COLUMN_TO_CLASS[col.column_type]
-            attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
 
             value = ""
             if hasattr(col, "label"):
@@ -242,6 +243,9 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
     prev_attr_name = None
     prev_unit_container = None
     for col in assay.header:
+        klass = COLUMN_TO_CLASS[col.column_type]
+        attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
+
         if col.column_type in MATERIAL_NAME_HEADERS:
             prev = curr
             if col.column_type == SAMPLE_NAME:
@@ -396,7 +400,9 @@ def isa_germline_append_donors(
 
     # Add additional lines to the study.
     study = list(studies.values())[0]
-    sms, sps, sas = [], [], []
+    sms: typing.List[typing.Dict[str, typing.Any]] = []
+    sps: typing.List[typing.Dict[str, typing.Any]] = []
+    sas: typing.List[Arc] = []
     for donor in ped_donors:
         _append_study_line(study, donor, sms, sps, sas, config)
     study = attr.evolve(
@@ -408,7 +414,9 @@ def isa_germline_append_donors(
 
     # Add additional lines to the assay.
     assay = list(assays.values())[0]
-    ams, aps, aas = [], [], []
+    ams: typing.List[typing.Dict[str, typing.Any]] = []
+    aps: typing.List[typing.Dict[str, typing.Any]] = []
+    aas: typing.List[Arc] = []
     for donor in ped_donors:
         _append_assay_line(assay, donor, ams, aps, aas, config)
     assay = attr.evolve(
@@ -539,6 +547,7 @@ class AddPedIsaTabCommand:
             return 1
 
         self._perform_update(isa_data, ped_donors)
+        return 0
 
     def _perform_update(self, isa, ped_donors):
         # Traverse investigation, studies, assays, potentially updating the nodes.

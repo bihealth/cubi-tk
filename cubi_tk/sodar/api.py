@@ -6,13 +6,13 @@ import pathlib
 from types import SimpleNamespace
 import typing
 
-import attr
+from altamisa.isatab import InvestigationReader, StudyReader, AssayReader
 import cattr
 from logzero import logger
 import requests
 
 from ..exceptions import ParameterException, UnsupportedIsaTabFeatureException
-from ..isa_support import IsaData, load_investigation
+from ..isa_support import IsaData
 from . import models
 
 
@@ -56,14 +56,14 @@ def _samplesheets_upload(*, sodar_url, sodar_api_token, project_uuid, file_paths
     url = url_tpl % {"sodar_url": sodar_url, "project_uuid": project_uuid}
 
     logger.debug("HTTP POST request to %s", url)
-    headers = {
-        "Authorization": "Token %s" % sodar_api_token,
-    }
+    headers = {"Authorization": "Token %s" % sodar_api_token}
     with contextlib.ExitStack() as stack:
         files = []
         for no, path in enumerate(file_paths):
             p = pathlib.Path(path)
-            files.append(("file_%d" % no, (path.name, stack.enter_context(p.open("rt")), "text/plain")))
+            files.append(
+                ("file_%d" % no, (path.name, stack.enter_context(p.open("rt")), "text/plain"))
+            )
         r = requests.post(url, headers=headers, files=files)
     print(vars(r))
     r.raise_for_status()

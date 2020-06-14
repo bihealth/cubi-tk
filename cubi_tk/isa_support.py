@@ -14,9 +14,6 @@ from altamisa.isatab import (
     AssayReader,
 )
 from logzero import logger
-import typing
-
-from .exceptions import UnsupportedIsaTabFeatureException
 
 
 @attr.s(frozen=True, auto_attribs=True)
