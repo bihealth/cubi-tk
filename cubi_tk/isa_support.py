@@ -255,7 +255,7 @@ class InvestigationTraversal:
         return tuple(self.gen(visitor))
 
     def build_evolved(
-        self
+        self,
     ) -> typing.Tuple[InvestigationInfo, typing.Dict[str, Study], typing.Dict[str, Assay]]:
         """Return study with updated materials and processes."""
         studies = {}
