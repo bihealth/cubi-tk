@@ -27,11 +27,17 @@ Sub Commands
 ``landing-zone-delete`` (planned)
     Delete a landing zone.
 
+<<<<<<< HEAD
 ``add-ped``
     Download sample sheet, add rows from PED file, and re-upload.
 
 ``pull-raw-data``
     Download raw data from iRODS for samples from the sample sheet.
+=======
+``ingest-fastq``
+    Upload external files to SODAR
+    (defaults for fastq files).
+>>>>>>> add ingest-fastq command
 
 More Information
 ----------------
@@ -50,6 +56,7 @@ from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
+from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -72,6 +79,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_lz_list(subparsers.add_parser("landing-zone-list", help="List landing zones"))
     setup_argparse_lz_move(
         subparsers.add_parser("landing-zone-move", help="Submit landing zone for moving")
+    )
+    setup_argparse_ingest_fastq(
+        subparsers.add_parser(
+            "ingest-fastq", help="Upload external files to SODAR (defaults for fastq)"
+        )
     )
 
 

@@ -57,6 +57,9 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         return 0
 
+    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+        pass
+
     def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
@@ -154,10 +157,9 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
         raise ValueError(msg)
 
     for cmd in commands:
-        cmd_argv = re.split(" +", cmd)
-        logger.debug("Running command: %s", " ".join(cmd_argv))
+        logger.debug("Running command: %s", cmd)
         try:
-            check_output(cmd_argv)
+            check_output(cmd, shell=True)
         except SubprocessError as e:  # pragma: nocover
             logger.error("Problem executing irsync: %e", e)
             raise

@@ -9,6 +9,7 @@ import pytest
 import filecmp
 import glob
 
+from cubi_tk.sea_snap.pull_isa import URL_TPL
 from cubi_tk.__main__ import setup_argparse, main
 from cubi_tk.sea_snap.pull_isa import URL_TPL
 

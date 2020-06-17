@@ -84,6 +84,8 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     # --- run tests
     res = main(argv)
 
+    print(mock_check_output.call_args_list)
+
     assert not res
 
     assert fs.exists(fake_file_paths[3])
@@ -94,11 +96,11 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     assert mock_check_output.call_count == len(fake_file_paths) * 3
     remote_path = os.path.join(dest_path, "fakedest")
     for path in fake_file_paths:
-        expected_mkdir_argv = ["imkdir", "-p", "$(dirname", remote_path, ")"]
+        expected_mkdir_argv = f"imkdir -p $(dirname {remote_path} )"
         ext = ".md5" if path.split(".")[-1] == "md5" else ""
-        expected_irsync_argv = ["irsync", "-a", "-K", path, ("i:%s" + ext) % remote_path]
-        expected_ils_argv = ["ils", "$(dirname", remote_path, ")"]
+        expected_irsync_argv = f"irsync -a -K {path} {('i:%s' + ext) % remote_path}"
+        expected_ils_argv = f"ils $(dirname {remote_path})"
 
-        mock_check_output.assert_any_call(expected_mkdir_argv)
-        mock_check_output.assert_any_call(expected_irsync_argv)
-        mock_check_output.assert_any_call(expected_ils_argv, stderr=-2)
+        assert ((expected_mkdir_argv,), {"shell": True}) in mock_check_output.call_args_list
+        assert ((expected_irsync_argv,), {"shell": True}) in mock_check_output.call_args_list
+        assert ((expected_ils_argv,), {"shell": True, "stderr": -2}) in mock_check_output.call_args_list
