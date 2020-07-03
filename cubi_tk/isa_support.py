@@ -243,7 +243,7 @@ class InvestigationTraversal:
     ) -> typing.Tuple[InvestigationInfo, typing.Dict[str, Study], typing.Dict[str, Assay]]:
         """Return study with updated materials and processes."""
         studies = {}
-        assays = {}
+        assays: typing.Dict[typing.Any, typing.Any] = {}
         for key, st in self._study_traversals.items():
             studies[key] = st.build_evolved_study()
             assays.update(st.build_evolved_assays())

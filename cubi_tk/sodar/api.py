@@ -12,7 +12,7 @@ from logzero import logger
 import requests
 
 from ..exceptions import ParameterException, UnsupportedIsaTabFeatureException
-from ..isa_support import IsaData
+from ..isa_support import IsaData, InvestigationReader, StudyReader, AssayReader
 from . import models
 
 

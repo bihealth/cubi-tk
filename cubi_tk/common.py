@@ -279,10 +279,10 @@ class UnionFind:
         self._sz[i] += self._sz[j]
 
 
-def load_toml_config(args):
+def load_toml_config(config):
     # Load configuration from TOML cubitkrc file, if any.
-    if args.config:
-        config_paths = (args.config,)
+    if config.config:
+        config_paths = (config.config,)
     else:
         config_paths = GLOBAL_CONFIG_PATHS
     for config_path in config_paths:

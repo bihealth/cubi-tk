@@ -49,6 +49,16 @@ from ..common import overwrite_helper
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config:
+    verbose: bool
+    config: str
+    sodar_server_url: str
+    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
+    no_warnings: bool
+    sample_name_normalization: str
+    yes: bool
+    dry_run: bool
+    show_diff: bool
+    show_diff_side_by_side: bool
     batch_no: str
     library_layout: str
     library_type: str
@@ -56,6 +66,8 @@ class Config:
     library_kit_catalogue_id: str
     platform: str
     instrument_model: str
+    input_investigation_file: str
+    input_ped_file: str
 
 
 def normalize_snappy(s):
@@ -136,6 +148,7 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
     counter = 0  # used for creating unique names
     prev = None  # previous node
     curr = None  # current node, determines type
+    attr_name = None
     prev_label = ""
     for col in study.header:
         klass = COLUMN_TO_CLASS[col.column_type]
@@ -237,6 +250,7 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
     counter = 0  # used for creating unique names
     prev = None  # previous node
     curr = None  # current node, determines type
+    attr_name = None
     prev_label = ""
     seen_extract_name = False
     protocol_refs = 0
@@ -433,9 +447,9 @@ def isa_germline_append_donors(
 class AddPedIsaTabCommand:
     """Implementation of the ``add-ped`` command."""
 
-    def __init__(self, args):
+    def __init__(self, config: Config):
         #: Command line arguments.
-        self.args = args
+        self.config = config
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -505,13 +519,11 @@ class AddPedIsaTabCommand:
         parser.add_argument(
             "input_investigation_file",
             metavar="investigation.tsv",
-            type=argparse.FileType("rt"),
             help="Path to ISA-tab investigation file.",
         )
         parser.add_argument(
             "input_ped_file",
             metavar="pedigree.ped",
-            type=argparse.FileType("rt"),
             help="Path to PLINK PED file with records to add.",
         )
 
@@ -520,28 +532,21 @@ class AddPedIsaTabCommand:
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        return cls(args).execute()
-
-    def check_args(self, args):
-        """Called for checking arguments, override to change behaviour."""
-        res = 0
-
-        return res
+        args = vars(args)
+        args.pop("cmd", None)
+        args.pop("isa_tab_cmd", None)
+        return cls(Config(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        res = self.check_args(self.args)
-        if res:  # pragma: nocover
-            return res
-
         logger.info("Starting cubi-tk isa-tab add-ped")
-        logger.info("  args: %s", self.args)
+        logger.info("  config: %s", self.config)
 
-        isa_data = isa_support.load_investigation(self.args.input_investigation_file.name)
+        isa_data = isa_support.load_investigation(self.config.input_investigation_file)
         if len(isa_data.studies) > 1 or len(isa_data.assays) > 1:
             logger.error("Only one study and assay per ISA-tab supported at the moment.")
             return 1
-        ped_donors = list(parse_ped.parse_ped(self.args.input_ped_file))
+        ped_donors = list(parse_ped.parse_ped(self.config.input_ped_file))
         if not ped_donors:
             logger.error("No donor in pedigree")
             return 1
@@ -561,17 +566,8 @@ class AddPedIsaTabCommand:
         todo_ped_donors = [
             donor for donor in donor_map.values() if donor.name not in visitor.seen_source_names
         ]
-        config = Config(
-            batch_no=self.args.batch_no,
-            library_type=self.args.library_type,
-            library_layout=self.args.library_layout,
-            library_kit=self.args.library_kit,
-            library_kit_catalogue_id=self.args.library_kit_catalogue_id,
-            platform=self.args.platform,
-            instrument_model=self.args.instrument_model,
-        )
         studies, assays = isa_germline_append_donors(
-            studies, assays, tuple(todo_ped_donors), config
+            studies, assays, tuple(todo_ped_donors), self.config
         )
         new_isa = attr.evolve(isa, investigation=investigation, studies=studies, assays=assays)
 
@@ -588,32 +584,32 @@ class AddPedIsaTabCommand:
             AssayWriter.from_stream(assay, ios_assays[name]).write()
 
         # Write out updated ISA-tab files using the diff helper.
-        i_path = pathlib.Path(self.args.input_investigation_file.name)
+        i_path = pathlib.Path(self.config.input_investigation_file)
         overwrite_helper(
             i_path,
             io_investigation.getvalue(),
-            do_write=not self.args.dry_run,
+            do_write=not self.config.dry_run,
             show_diff=True,
-            show_diff_side_by_side=self.args.show_diff_side_by_side,
-            answer_yes=self.args.yes,
+            show_diff_side_by_side=self.config.show_diff_side_by_side,
+            answer_yes=self.config.yes,
         )
         for filename, ios_study in ios_studies.items():
             overwrite_helper(
                 i_path.parent / filename,
                 ios_study.getvalue(),
-                do_write=not self.args.dry_run,
+                do_write=not self.config.dry_run,
                 show_diff=True,
-                show_diff_side_by_side=self.args.show_diff_side_by_side,
-                answer_yes=self.args.yes,
+                show_diff_side_by_side=self.config.show_diff_side_by_side,
+                answer_yes=self.config.yes,
             )
         for filename, ios_assay in ios_assays.items():
             overwrite_helper(
                 i_path.parent / filename,
                 ios_assay.getvalue(),
-                do_write=not self.args.dry_run,
+                do_write=not self.config.dry_run,
                 show_diff=True,
-                show_diff_side_by_side=self.args.show_diff_side_by_side,
-                answer_yes=self.args.yes,
+                show_diff_side_by_side=self.config.show_diff_side_by_side,
+                answer_yes=self.config.yes,
             )
 
     def _build_donor_map(self, ped_donors):
@@ -633,7 +629,7 @@ class AddPedIsaTabCommand:
                 indexes[ped_donor.family_id] = ped_donor
 
         # Build donor from normalized name do Donor.
-        normalize = NORMALIZE[self.args.sample_name_normalization]
+        normalize = NORMALIZE[self.config.sample_name_normalization]
         return {
             normalize(donor.name): parse_ped.Donor(
                 family_id="FAM_%s" % normalize(indexes[donor.family_id].name),

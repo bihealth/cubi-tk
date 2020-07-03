@@ -27,6 +27,9 @@ Sub Commands
 ``landing-zone-delete`` (planned)
     Delete a landing zone.
 
+``add-ped``
+    Download sample sheet, add rows from PED file, and re-upload.
+
 More Information
 ----------------
 
@@ -37,6 +40,7 @@ information.
 import argparse
 
 from ..common import run_nocmd
+from .add_ped import setup_argparse as setup_argparse_add_ped
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
 from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 from .lz_create import setup_argparse as setup_argparse_lz_create
@@ -48,6 +52,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
+    setup_argparse_add_ped(
+        subparsers.add_parser("add-ped", help="Augment sample sheet from PED file")
+    )
     setup_argparse_download_sheet(subparsers.add_parser("download-sheet", help="Download ISA-tab"))
     setup_argparse_upload_sheet(
         subparsers.add_parser("upload-sheet", help="Upload and replace ISA-tab")
