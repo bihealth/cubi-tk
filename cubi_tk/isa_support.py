@@ -2,6 +2,7 @@
 
 from itertools import chain
 from pathlib import Path
+import tempfile
 import typing
 
 import attr
@@ -57,6 +58,20 @@ def load_investigation(i_path: typing.Union[str, Path]) -> IsaData:
                     ).read()
 
     return IsaData(investigation, str(i_path), studies, assays)
+
+
+def isa_dict_to_isa_data(isa_dict):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        with (tmp_path / isa_dict["investigation"]["path"]).open("wt") as out_f:
+            out_f.write(isa_dict["investigation"]["tsv"])
+        for path, tsv in isa_dict["studies"].items():
+            with (tmp_path / path).open("wt") as out_f:
+                out_f.write(tsv["tsv"])
+        for path, tsv in isa_dict["assays"].items():
+            with (tmp_path / path).open("wt") as out_f:
+                out_f.write(tsv["tsv"])
+        return load_investigation(tmp_path / isa_dict["investigation"]["path"])
 
 
 #: Constant representing materials.

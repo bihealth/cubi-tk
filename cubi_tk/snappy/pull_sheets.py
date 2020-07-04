@@ -18,7 +18,7 @@ import attr
 from logzero import logger
 
 from ..common import CommonConfig, find_base_path, overwrite_helper, load_toml_config
-from ..isa_support import InvestigationTraversal, IsaNodeVisitor
+from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data
 from ..sodar import api
 from .models import load_datasets
 
@@ -217,7 +217,7 @@ class SampleSheetBuilder(IsaNodeVisitor):
                 library_name=library.name,
                 library_type=library_type,
                 folder_name=first_value("Folder name", node_path),
-                seq_platform=None,
+                seq_platform=first_value("Platform", node_path),
                 library_kit=first_value("Library Kit", node_path),
             )
 
@@ -225,7 +225,7 @@ class SampleSheetBuilder(IsaNodeVisitor):
         super().on_visit_node(process, study, assay)
         material_path = [x for x in node_path if hasattr(x, "type")]
         sample = material_path[0]
-        if process.protocol_ref == "Nucleic acid sequencing WGS":
+        if process.protocol_ref.startswith("Nucleic acid sequencing"):
             self.samples[sample.name] = attr.evolve(
                 self.samples[sample.name], seq_platform=first_value("Platform", node_path)
             )
@@ -237,11 +237,12 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
     result = []
 
     # Obtain ISA-tab from SODAR REST API.
-    isa = api.samplesheets.get(
+    isa_dict = api.samplesheets.get(
         sodar_url=config.global_config.sodar_server_url,
         sodar_api_token=config.global_config.sodar_api_token,
         project_uuid=project_uuid,
     )
+    isa = isa_dict_to_isa_data(isa_dict)
 
     builder = SampleSheetBuilder()
     iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
@@ -263,7 +264,7 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
             "0" if source.batch_no is None else source.batch_no,
             ".",
             str(project_uuid),
-            sample.seq_platform or ".",
+            sample.seq_platform or "." if sample else ".",
             sample.library_kit or "." if sample else ".",
         ]
         result.append("\t".join(row))
