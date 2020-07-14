@@ -151,9 +151,6 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
     attr_name = None
     prev_label = ""
     for col in study.header:
-        klass = COLUMN_TO_CLASS[col.column_type]
-        attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
-
         if col.column_type in MATERIAL_NAME_HEADERS:
             # New material.
             prev = curr
@@ -196,7 +193,7 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
             processes.append(curr)
             if prev:
                 arcs.append(Arc(prev["unique_name"], curr["unique_name"]))
-        else:
+        else:  # is annotating column
             handled_term_ref_attrs = ("organism",)
             curr["headers"] += col.get_simple_string()
             if col.column_type == "Term Source REF":
@@ -237,12 +234,15 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
 
             if col.column_type in (DATE, LABEL, MATERIAL_TYPE, PERFORMER):
                 pass  # do nothing
-            elif col.column_type == "Comment":
-                curr[attr_name].append(klass(name=col.label, value=[value]))
-                prev_label = col.label.lower()
             else:
-                curr[attr_name].append(klass(name=col.label, value=[value], unit=None))
-                prev_label = col.label.lower()
+                klass = COLUMN_TO_CLASS[col.column_type]
+                attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
+                if col.column_type == "Comment":
+                    curr[attr_name].append(klass(name=col.label, value=[value]))
+                    prev_label = col.label.lower()
+                else:
+                    curr[attr_name].append(klass(name=col.label, value=[value], unit=None))
+                    prev_label = col.label.lower()
 
 
 def _append_assay_line(assay, donor, materials, processes, arcs, config):
@@ -257,9 +257,6 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
     prev_attr_name = None
     prev_unit_container = None
     for col in assay.header:
-        klass = COLUMN_TO_CLASS[col.column_type]
-        attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
-
         if col.column_type in MATERIAL_NAME_HEADERS:
             prev = curr
             if col.column_type == SAMPLE_NAME:
@@ -347,8 +344,6 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
                             ],
                         )
                 continue
-            klass = COLUMN_TO_CLASS[col.column_type]
-            attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
 
             value = ""
             if hasattr(col, "label"):
@@ -393,14 +388,17 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
             elif col.column_type == UNIT:
                 curr[prev_attr_name][-1] = attr.evolve(curr[prev_attr_name][-1], unit=value)
                 prev_unit_container = curr[prev_attr_name][-1]
-            elif col.column_type == COMMENT:
-                curr[attr_name].append(klass(name=col.label, value=[value]))
-                prev_label = col.label.lower()
-                prev_attr_name = attr_name
             else:
-                curr[attr_name].append(klass(name=col.label, value=[value], unit=None))
-                prev_label = col.label.lower()
-                prev_attr_name = attr_name
+                klass = COLUMN_TO_CLASS[col.column_type]
+                attr_name = COLUMN_TO_ATTR_NAME[col.column_type]
+                if col.column_type == COMMENT:
+                    curr[attr_name].append(klass(name=col.label, value=[value]))
+                    prev_label = col.label.lower()
+                    prev_attr_name = attr_name
+                else:
+                    curr[attr_name].append(klass(name=col.label, value=[value], unit=None))
+                    prev_label = col.label.lower()
+                    prev_attr_name = attr_name
 
 
 def isa_germline_append_donors(
