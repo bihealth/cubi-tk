@@ -18,7 +18,7 @@ import attr
 from logzero import logger
 
 from ..common import CommonConfig, find_base_path, overwrite_helper, load_toml_config
-from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data
+from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
 from ..sodar import api
 from .models import load_datasets
 
@@ -162,17 +162,6 @@ def check_args(args) -> int:
         args.library_types = []
 
     return int(any_error)
-
-
-def first_value(key, node_path, default=None, ignore_case=True):
-    for node in node_path:
-        for attr_type in ("characteristics", "parameter_values"):
-            for x in getattr(node, attr_type, ()):
-                if (ignore_case and x.name.lower() == key.lower()) or (
-                    not ignore_case and x.name == key
-                ):
-                    return ";".join(x.value)
-    return default
 
 
 class SampleSheetBuilder(IsaNodeVisitor):

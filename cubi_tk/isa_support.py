@@ -373,3 +373,14 @@ class AssayTraversal:
     def build_evolved_assay(self) -> Assay:
         """Return assay with updated materials and processes."""
         return attr.evolve(self.assay, materials=self._materials, processes=self._processes)
+
+
+def first_value(key, node_path, default=None, ignore_case=True):
+    for node in node_path:
+        for attr_type in ("characteristics", "parameter_values"):
+            for x in getattr(node, attr_type, ()):
+                if (ignore_case and x.name.lower() == key.lower()) or (
+                    not ignore_case and x.name == key
+                ):
+                    return ";".join(x.value)
+    return default

@@ -45,6 +45,7 @@ class TransferJob:
     def to_oneline(self):
         return "%s -> %s (%s) [%s]" % (self.path_src, self.path_dest, self.bytes, self.command)
 
+
 @retry(wait_fixed=1000, stop_max_attempt_number=5)
 def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     """Perform one piece of work and update the global counter."""
