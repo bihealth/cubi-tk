@@ -8,6 +8,7 @@ import re
 import typing
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
+from subprocess import check_output, SubprocessError
 from pathlib import Path
 from glob import iglob
 
@@ -85,6 +86,16 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             default=DEFAULT_DEST_PATTERN,
             help=f"Pattern to use for constructing remote pattern, default: {DEFAULT_DEST_PATTERN}",
         )
+        parser.add_argument(
+            "--add-suffix",
+            default="",
+            help="Suffix to add to all file names (e.g. '-N1-DNA1-WES1').",
+        )
+        parser.add_argument(
+            "--tmp",
+            default="temp/",
+            help="Folder to save files from WebDAV temporarily, if set as source.",
+        )
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
         parser.add_argument("irods_dest", help="path to iRODS collection to write to.")
 
@@ -93,8 +104,42 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "build_base_dir_glob_pattern() not implemented in SodarIngestFastq!"
         )
 
-    def download_webdav(self, folder):
-        return folder
+    def download_webdav(self, sources):
+        download_jobs = []
+        folders = []
+        for src in sources:
+            if re.match("davs://", src):
+                download_jobs.append(
+                    TransferJob(path_src="i:" + src, path_dest=self.args.tmp, bytes=1,)
+                )
+                tmp_folder = f"tmp_folder_{len(download_jobs)}"
+                Path(tmp_folder).mkdir(parents=True, exist_ok=True)
+            else:
+                folders.append(src)
+
+        logger.info("Planning to download folders...")
+        for job in download_jobs:
+            logger.info(
+                "  %s => %s", job.path_src, job.path_dest,
+            )
+        if not self.args.yes and not input("Is this OK? [yN] ").lower().startswith("y"):
+            logger.error("OK, breaking at your request")
+            return []
+
+        counter = Value(c_ulonglong, 0)
+        total_bytes = sum([job.bytes for job in download_jobs])
+        with tqdm.tqdm(total=total_bytes) as t:
+            if self.args.num_parallel_transfers == 0:  # pragma: nocover
+                for job in download_jobs:
+                    download_folder(job, counter, t)
+            else:
+                pool = ThreadPool(processes=self.args.num_parallel_transfers)
+                for job in download_jobs:
+                    pool.apply_async(download_folder, args=(job, counter, t))
+                pool.close()
+                pool.join()
+
+        return folders
 
     def build_jobs(self, library_names=None) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
@@ -105,10 +150,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         transfer_jobs = []
 
-        for folder in self.args.sources:
-            logger.info("Searching for fastq files in folder: %s", folder)
+        folders = self.download_webdav(self.args.sources)
 
-            folder = self.download_webdav(folder)
+        for folder in folders:
+            logger.info("Searching for fastq files in folder: %s", folder)
 
             # assuming folder is local directory
             if not Path(folder).is_dir():
@@ -141,7 +186,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         if item[0] in self.dest_pattern_fields
                     )
                     remote_file = Path(self.args.irods_dest) / self.args.remote_dir_pattern.format(
-                        filename=Path(path).name, date=self.args.remote_dir_date, **match_wildcards
+                        filename=Path(path).name + self.args.add_suffix,
+                        date=self.args.remote_dir_date,
+                        **match_wildcards,
                     )
 
                     for ext in ("", ".md5"):
@@ -201,6 +248,22 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         logger.info("All done")
         return None
+
+
+def download_folder(job: TransferJob, counter: Value, t: tqdm.tqdm):
+    """Perform one piece of work and update the global counter."""
+
+    irsync_argv = ["irsync", "-r", "-a", "-K", "i:%s" % job.path_src, job.path_dest]
+    logger.debug("Transferring file: %s", " ".join(irsync_argv))
+    try:
+        check_output(irsync_argv)
+    except SubprocessError as e:  # pragma: nocover
+        logger.error("Problem executing irsync: %s", e)
+        raise
+
+    with counter.get_lock():
+        counter.value += job.bytes
+        t.update(counter.value)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
