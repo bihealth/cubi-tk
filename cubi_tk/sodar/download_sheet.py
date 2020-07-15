@@ -25,6 +25,7 @@ class Config:
     makedirs: bool
     overwrite: bool
     dry_run: bool
+    yes: bool
     show_diff: bool
     show_diff_side_by_side: bool
     project_uuid: str
@@ -68,6 +69,9 @@ class DownloadSheetCommand:
             "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
         )
 
+        parser.add_argument(
+            "--yes", default=False, action="store_true", help="Assume all answers are yes."
+        )
         parser.add_argument(
             "--dry-run",
             "-n",
@@ -154,6 +158,7 @@ class DownloadSheetCommand:
             out_path,
             text,
             do_write=not self.config.dry_run,
+            answer_yes=self.config.yes,
             show_diff=self.config.show_diff,
             show_diff_side_by_side=self.config.show_diff_side_by_side,
         )
