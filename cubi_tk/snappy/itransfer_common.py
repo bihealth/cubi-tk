@@ -10,11 +10,13 @@ from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError, check_call
 import sys
+import time
 
 import attr
 from biomedsheets import io_tsv, shortcuts
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
+from retrying import retry
 import tqdm
 
 from ..exceptions import MissingFileException
@@ -43,7 +45,7 @@ class TransferJob:
     def to_oneline(self):
         return "%s -> %s (%s) [%s]" % (self.path_src, self.path_dest, self.bytes, self.command)
 
-
+@retry(wait_fixed=1000, stop_max_attempt_number=5)
 def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     """Perform one piece of work and update the global counter."""
     mkdir_argv = ["imkdir", "-p", os.path.dirname(job.path_dest)]
@@ -51,15 +53,17 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     try:
         check_output(mkdir_argv)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing imkdir: %s", e)
+        logger.error("Problem executing imkdir: %s (probably retrying)", e)
         raise
+
+    time.sleep(1)  # give iRODS some slack...
 
     irsync_argv = ["irsync", "-a", "-K", job.path_src, "i:%s" % job.path_dest]
     logger.debug("Transferring file: %s", " ".join(irsync_argv))
     try:
         check_output(irsync_argv)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing irsync: %s", e)
+        logger.error("Problem executing irsync: %s (probably retrying)", e)
         raise
 
     with counter.get_lock():

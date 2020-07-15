@@ -268,9 +268,7 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
                     name = "%s-N1-DNA1" % donor.name
                     seen_extract_name = True
             elif col.column_type == LIBRARY_NAME:
-                name = "%s-N1-DNA1-%s" % (donor.name, config.library_type)
-            elif col.column_type == LIBRARY_NAME:
-                name = "%s-N1-DNA1-%s" % (donor.name, config.library_type)
+                name = "%s-N1-DNA1-%s1" % (donor.name, config.library_type)
             elif col.column_type == RAW_DATA_FILE:
                 name = ""
             else:

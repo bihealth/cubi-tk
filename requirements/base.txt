@@ -55,3 +55,6 @@ varfish-cli
 
 # Compact, round-tripable configuration format.
 toml
+
+# Retrying
+retrying
