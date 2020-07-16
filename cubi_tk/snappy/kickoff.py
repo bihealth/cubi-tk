@@ -29,16 +29,16 @@ def run(
 
     # TODO: this assumes standard naming which is a limitation...
     logger.info("Looking for pipeline directories (assuming standard naming)...")
-    step_set = {name for name in DEPENDENCIES if (path / name).exists()}
+    step_set = {name for name in common.DEPENDENCIES if (path / name).exists()}
     steps: typing.List[str] = []
-    for names in toposort({k: set(v) for k, v in DEPENDENCIES.items()}):
+    for names in toposort({k: set(v) for k, v in common.DEPENDENCIES.items()}):
         steps += [name for name in names if name in step_set]
     logger.info("Will run the steps: %s", ", ".join(steps))
 
     logger.info("Submitting with sbatch...")
     jids: typing.Dict[str, str] = {}
     for step in steps:
-        dep_jids = [jids[dep] for dep in DEPENDENCIES[step] if dep in jids]
+        dep_jids = [jids[dep] for dep in common.DEPENDENCIES[step] if dep in jids]
         cmd = ["sbatch"]
         if dep_jids:
             cmd += ["--dependency", "afterok:%s" % ":".join(map(str, dep_jids))]
