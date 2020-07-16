@@ -17,10 +17,11 @@ import typing
 import attr
 from logzero import logger
 
-from ..common import CommonConfig, find_base_path, overwrite_helper, load_toml_config
+from ..common import CommonConfig, overwrite_helper, load_toml_config
 from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
 from ..sodar import api
 from .models import load_datasets
+from .common import find_snappy_root_dir
 
 #: Template for the to-be-generated file.
 HEADER_TPL = (
@@ -276,7 +277,7 @@ def run(
     logger.debug("Load config...")
     toml_config = load_toml_config(args)
     global_config = CommonConfig.create(args, toml_config)
-    args.base_path = find_base_path(args.base_path)
+    args.base_path = find_snappy_root_dir(args.base_path)
     config = PullSheetsConfig.create(args, global_config, toml_config)
 
     config_path = config.base_path / ".snappy_pipeline"

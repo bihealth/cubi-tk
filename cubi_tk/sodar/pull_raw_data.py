@@ -31,7 +31,6 @@ class Config:
     irsync_threads: int
     yes: bool
     project_uuid: str
-    irods_path: str
     output_dir: str
 
 
@@ -48,8 +47,6 @@ class LibraryInfoCollector(IsaNodeVisitor):
         self.sources = {}
         #: Sample by sample name.
         self.samples = {}
-        #: The collected libraries
-        self.libraries = {}
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
         super().on_visit_material(material, node_path, study, assay)
@@ -118,7 +115,6 @@ class PullRawDataCommand:
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
 
         parser.add_argument("project_uuid", help="UUID of project to download data for.")
-        parser.add_argument("irods_path", help="Path in iRODS to the data.")
         parser.add_argument("output_dir", help="Path to output directory to write the raw data to.")
 
     @classmethod
@@ -129,9 +125,8 @@ class PullRawDataCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        for key in ("output_dir", "irods_path"):
-            while args[key].endswith("/"):
-                args[key] = args[key][:-1]
+        while args["output_dir"].endswith("/"):
+            args["output_dir"] = args["output_dir"][:-1]
         return cls(Config(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
@@ -153,18 +148,38 @@ class PullRawDataCommand:
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
+        investigation = api.investigations.get(
+            sodar_url=self.config.sodar_url,
+            sodar_api_token=self.config.sodar_api_token,
+            project_uuid=self.config.project_uuid,
+        )
+        assay = None
+        for study in investigation.studies.values():
+            for assay in study.assays.values():
+                break
+            if assay:
+                break
+        else:  # no assay found
+            logger.info("Found no assay")
+            return 1
+        logger.info("Using irods path of first assay: %s", assay.irods_path)
+
         library_to_folder = self._get_library_to_folder()
         commands = []
         for k, v in library_to_folder.items():
-            if "12_3456" in k:
+            if "12_3456" in k:  # TODO: remove this if block
                 continue  # skip sample line for now
             commands.append(["irsync", "-r"])
             if self.config.irsync_threads:
                 commands[-1] += ["-N", str(self.config.irsync_threads)]
             commands[-1] += [
-                "i:%s/%s" % (self.config.irods_path, k),
+                "i:%s/%s" % (assay.irods_path, k),
                 "%s/%s" % (self.config.output_dir, v),
             ]
+        if not commands:
+            logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
+            return 0
+
         cmds_txt = "\n".join(["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands])
         logger.info("Pull data using the following commands?\n\n%s\n" % cmds_txt)
         if self.config.yes:
@@ -202,7 +217,10 @@ class PullRawDataCommand:
         iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
         iwalker.run(collector)
         return {
-            sample["library_name"]: sample["folder_name"] for sample in collector.samples.values()
+            sample["library_name"]: sample["folder_name"]
+            for sample in collector.samples.values()
+            if sample["source"]["batch_no"]
+            and int(sample["source"]["batch_no"]) >= self.config.min_batch
         }
 
 

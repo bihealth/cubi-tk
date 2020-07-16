@@ -13,6 +13,8 @@ Available Commands
     Transfer results and logs from ``output`` directory of ``variant_calling``.
 ``pull-sheet``
     Pull sample sheet from SODAR and write out to BiomedSheet format.
+``pull-raw-data``
+    Download raw data from SODAR.
 ``varfish-upload``
     Upload data into VarFish.
 
@@ -33,6 +35,7 @@ from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_d
 from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
 from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
+from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .kickoff import setup_argparse as setup_argparse_kickoff
 from .varfish_upload import setup_argparse as setup_argparse_varfish_upload
 
@@ -64,6 +67,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_pull_sheets(
         subparsers.add_parser("pull-sheets", help="Pull SODAR sample sheets into biomedsheet")
+    )
+    setup_argparse_pull_raw_data(
+        subparsers.add_parser(
+            "pull-raw-data", help="Pull raw data from SODAR to SNAPPY dataset raw data directory"
+        )
     )
 
     setup_argparse_varfish_upload(

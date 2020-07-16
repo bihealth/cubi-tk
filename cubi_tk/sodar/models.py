@@ -15,6 +15,7 @@ class OntologyTermRef:
 @attr.s(frozen=True, auto_attribs=True)
 class Assay:
     file_name: str
+    irods_path: str
     technology_platform: str
     technology_type: OntologyTermRef
     measurement_type: OntologyTermRef
@@ -25,6 +26,7 @@ class Assay:
 class Study:
     identifier: str
     file_name: str
+    irods_path: str
     title: str
     description: str
     comments: typing.Dict[str, str]

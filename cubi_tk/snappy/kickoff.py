@@ -9,18 +9,10 @@ import typing
 from logzero import logger
 from toposort import toposort
 
+from . import common
 
-#: Dependencies between the SNAPPY steps.
 from cubi_tk.exceptions import ParseOutputException
 
-DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
-    "ngs_mapping": (),
-    "variant_calling": ("ngs_mapping",),
-    "variant_export": ("variant_calling",),
-    "targeted_cnv_calling": ("ngs_mapping",),
-    "targeted_cnv_annotation": ("targeted_cnv_calling",),
-    "targeted_cnv_export": ("targeted_cnv_annotation",),
-}
 
 #: Timeout
 TIMEOUT = 5
@@ -30,16 +22,9 @@ def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
     logger.info("Try to find SNAPPY pipeline directory...")
-    start_path = pathlib.Path(args.path or os.getcwd())
-    for path in [start_path] + list(start_path.parents):
-        logger.debug("Trying %s", path)
-        if (path / ".snappy_pipeline").exists() or any(
-            (path / name).exists() for name in DEPENDENCIES.keys()
-        ):
-            logger.info("Will start at %s", path)
-            break
-    else:
-        logger.error("Could not find SNAPPY pipeline directories below %s", start_path)
+    try:
+        path = common.find_snappy_root_dir(args.path or os.getcwd(), common.DEPENDENCIES.keys())
+    except common.CouldNotFindPipelineRoot:
         return 1
 
     # TODO: this assumes standard naming which is a limitation...
