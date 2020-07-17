@@ -29,6 +29,7 @@ def run(
 
     # TODO: this assumes standard naming which is a limitation...
     logger.info("Looking for pipeline directories (assuming standard naming)...")
+    logger.debug("Looking in %s", path)
     step_set = {name for name in common.DEPENDENCIES if (path / name).exists()}
     steps: typing.List[str] = []
     for names in toposort({k: set(v) for k, v in common.DEPENDENCIES.items()}):
