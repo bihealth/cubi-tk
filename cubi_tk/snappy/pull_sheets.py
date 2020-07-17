@@ -257,7 +257,7 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
             sample.seq_platform or "." if sample else ".",
             sample.library_kit or "." if sample else ".",
         ]
-        result.append("\t".join(row))
+        result.append("\t".join([c.strip() for c in row]))
     result.append("")
 
     return "\n".join(result)
