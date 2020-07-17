@@ -32,6 +32,14 @@ Project Info
     man_isa_tpl
 
 .. toctree::
+    :caption: Use Cases
+    :name: use_cases
+    :hidden:
+    :maxdepth: 1
+
+    usecase_exomes
+
+.. toctree::
     :caption: Project Info
     :name: project-info
     :hidden:
