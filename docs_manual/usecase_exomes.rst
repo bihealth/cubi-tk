@@ -138,3 +138,80 @@ You have to adjust the configuration of the SNAPPY data set as follows:
 
 Note that you will need the `**/*` in the pattern.
 
+-------------------
+Processing Commands
+-------------------
+
+The setup up to here only has to be done only once for each project/dataset.
+The following step will (a) fetch the meta data and raw data from SODAR/iRODS, (b) start the processing with SNAPPY, and (c) submit the results back to SODAR once SNAPPY is done.
+
+.. info:
+
+    Most of the following commands will try to automatically find the configuration and sample sheet files to use.
+    They will walk up the directory tree from the current working directory and look for a directory called ``.snappy_pipeline`` and use the configuration/sample sheets in there.
+
+    For the ``itransfer`` commands this is not true yet but will be implemented in the near future.
+
+First, you pull the meta data from SODAR with the command:
+
+.. code-block:: bash
+
+    $ cubi-tk snappy pull-sheets
+
+This will show the changes that are to be applied in unified patch format and you have to confirm by files.
+You can also add ``--yes --dry-run`` to see all pending changes at once without actually applying them or ``--yes`` to apply all changes.
+
+The next step is to fetch the raw data from SODAR/iRODS.
+You first have to authenticate with iRODS using ``init``.
+You then fetch the raw data, optionally only the data starting at batch number ``$BATCH``.
+You also have to provide the project UUID ``$PROJECT``.
+Internally, cubi-tk will use the iRODS icommands and you will be shown the commands it is about to execute.
+
+.. code-block:: bash
+
+    $ iinit
+    $ cubitk snappy pull-raw-data --min-batch $BATCH $PROJECT
+
+Now you could start the processing.
+However, it is advisable to ensure that the input FASTQ files can be linked in the ``ngs_mapping`` step.
+
+.. code-block:: bash
+
+    $ cd ngs_mapping
+    $ snappy-snake -p $(snappy-snake -S | grep -v 'no update' | grep input_links | cut -f 1)
+
+If this fails, a good starting point is removing ``ngs_mapping/.snappy_path_cache``.
+
+You can kick off the current pipeline using
+
+.. code-block:: bash
+
+    $ cubi-tk snappy kickoff
+
+After the pipeline has finished, you can create a new landing zone with the following command.
+This will print the landing zone properties as JSON.
+You will neded both the landing zone UUID (``ZONE``) and iRODS path (``$IRODS_PATH``) for now (in the future this will be simplified).
+
+.. code-block:: bash
+
+    $ cubi-tk sodar landing-zone-create $PROJECT
+
+You can then transfer the data using the following commands.
+You will have to specify the path to the SNAPPY sample sheet TSV as ``$TSV`` and the landing zone iRODS path ``$IRODS_PATH``.
+
+.. code-block:: bash
+
+    $ cubi-tk snappy itransfer-ngs-mapping --start-batch $BATCH $TSV $IRODS_PATH
+    $ cubi-tk snappy itransfer-variant-calling --start-batch $BATCH $TSV $IRODS_PATH
+
+Finally, you can validate and move the landing zone to get the data into SODAR:
+
+.. code-block:: bash
+
+    $ cubi-tk sodar landing-zone-move $ZONE
+
+And last but not least, here is how to transfer the data into VarFish (starting at ``$BATCH``).
+
+.. code-block:: bash
+
+    $ cubi-tk snappy varfish-upload --min-batch $BATCH $PROJECT
