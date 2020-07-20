@@ -164,6 +164,7 @@ class AddPedCommand:
                     show_diff_side_by_side=self.config.show_diff_side_by_side,
                     project_uuid=self.config.project_uuid,
                     output_dir=str(tmp_path),
+                    yes=True,
                 )
             ).execute()
             if dl_res != 0:

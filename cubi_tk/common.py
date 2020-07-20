@@ -157,6 +157,8 @@ def overwrite_helper(
         # Write sheet to temporary file.
         sheet_file.write(contents)
         sheet_file.flush()
+        sheet_file.seek(0)
+        new_lines = sheet_file.read().splitlines(keepends=False)
 
         # Compare sheet with output if exists and --show-diff given.
         if show_diff:
@@ -165,8 +167,6 @@ def overwrite_helper(
                     old_lines = inputf.read().splitlines(keepends=False)
             else:
                 old_lines = []
-            sheet_file.seek(0)
-            new_lines = sheet_file.read().splitlines(keepends=False)
 
             if not show_diff_side_by_side:
                 lines = list(
@@ -217,7 +217,7 @@ def overwrite_helper(
             else:
                 if show_diff:
                     logger.info("See above for the diff that will be applied.")
-                if not answer_yes and input("Is this OK? [yN] ").lower().startswith("y"):
+                if answer_yes or input("Is this OK? [yN] ").lower().startswith("y"):
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
 

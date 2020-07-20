@@ -617,7 +617,7 @@ class AddPedIsaTabCommand:
                 indexes[ped_donor.family_id] = ped_donor
         # Second case, first affected in each family.
         for ped_donor in ped_donors:
-            if ped_donor.disease in ("2", "Y") and ped_donor.family_id not in indexes:
+            if ped_donor.disease == "affected" and ped_donor.family_id not in indexes:
                 indexes[ped_donor.family_id] = ped_donor
         # Third case, first in each family.
         for ped_donor in ped_donors:
