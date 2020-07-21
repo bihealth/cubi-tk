@@ -12,8 +12,8 @@ DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
     "variant_calling": ("ngs_mapping",),
     "variant_export": ("variant_calling",),
     "targeted_seq_cnv_calling": ("ngs_mapping",),
-    "targeted_seq_cnv_annotation": ("targeted_cnv_calling",),
-    "targeted_seq_cnv_export": ("targeted_cnv_annotation",),
+    "targeted_seq_cnv_annotation": ("targeted_seq_cnv_calling",),
+    "targeted_seq_cnv_export": ("targeted_seq_cnv_annotation",),
 }
 
 

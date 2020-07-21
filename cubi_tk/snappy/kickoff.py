@@ -14,10 +14,6 @@ from . import common
 from cubi_tk.exceptions import ParseOutputException
 
 
-#: Timeout
-TIMEOUT = 5
-
-
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
@@ -48,7 +44,7 @@ def run(
         if args.dry_run:
             jid = "<%s>" % step
         else:
-            stdout_raw = subprocess.check_output(cmd, cwd=str(path / step), timeout=TIMEOUT)
+            stdout_raw = subprocess.check_output(cmd, cwd=str(path / step), timeout=args.timeout)
             stdout = stdout_raw.decode("utf-8")
             if not stdout.startswith("Submitted batch job "):
                 raise ParseOutputException("Did not understand sbatch output: %s" % stdout)
@@ -69,6 +65,10 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         default=False,
         action="store_true",
         help="Perform dry-run, do not do anything.",
+    )
+
+    parser.add_argument(
+        "--timeout", default=10, type=int, help="Number of seconds to wait for commands."
     )
 
     parser.add_argument(

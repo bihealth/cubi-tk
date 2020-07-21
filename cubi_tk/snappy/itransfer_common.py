@@ -8,7 +8,7 @@ import typing
 from ctypes import c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
-from subprocess import check_output, SubprocessError, check_call
+from subprocess import check_output, SubprocessError, check_call, STDOUT
 import sys
 import time
 
@@ -47,6 +47,11 @@ class TransferJob:
 
 
 @retry(wait_fixed=1000, stop_max_attempt_number=5)
+def _wait_until_ils_succeeds(path):
+    check_output(["ils", path], stderr=STDOUT)
+
+
+@retry(wait_fixed=1000, stop_max_attempt_number=5)
 def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
     """Perform one piece of work and update the global counter."""
     mkdir_argv = ["imkdir", "-p", os.path.dirname(job.path_dest)]
@@ -57,7 +62,7 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
         logger.error("Problem executing imkdir: %s (probably retrying)", e)
         raise
 
-    time.sleep(1)  # give iRODS some slack...
+    _wait_until_ils_succeeds(os.path.dirname(job.path_dest))
 
     irsync_argv = ["irsync", "-a", "-K", job.path_src, "i:%s" % job.path_dest]
     logger.debug("Transferring file: %s", " ".join(irsync_argv))
