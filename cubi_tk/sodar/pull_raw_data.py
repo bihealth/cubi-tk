@@ -11,8 +11,7 @@ import attr
 from logzero import logger
 
 from . import api
-from ..common import overwrite_helper, load_toml_config
-from ..exceptions import OverwriteRefusedException
+from ..common import load_toml_config
 from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
 
 
@@ -203,7 +202,7 @@ class PullRawDataCommand:
                 except SubprocessError as e:  # pragma: nocover
                     logger.error("Problem executing irsync: %s", e)
                     return 1
-            return 0
+        return 0
 
     def _get_library_to_folder(self):
         isa_dict = api.samplesheets.get(

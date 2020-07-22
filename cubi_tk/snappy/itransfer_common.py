@@ -10,7 +10,6 @@ from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError, check_call, STDOUT
 import sys
-import time
 
 import attr
 from biomedsheets import io_tsv, shortcuts
