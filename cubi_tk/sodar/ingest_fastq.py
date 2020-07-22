@@ -45,7 +45,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     def __init__(self, args):
         super().__init__(args)
-        self.dest_pattern_fields = set(re.findall(r"(?<={).+?(?=})", self.args.remote_dir_pattern,))
+        self.dest_pattern_fields = set(re.findall(r"(?<={).+?(?=})", self.args.remote_dir_pattern))
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -110,7 +110,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         for src in sources:
             if re.match("davs://", src):
                 download_jobs.append(
-                    TransferJob(path_src="i:" + src, path_dest=self.args.tmp, bytes=1,)
+                    TransferJob(path_src="i:" + src, path_dest=self.args.tmp, bytes=1)
                 )
                 tmp_folder = f"tmp_folder_{len(download_jobs)}"
                 Path(tmp_folder).mkdir(parents=True, exist_ok=True)
@@ -119,9 +119,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         logger.info("Planning to download folders...")
         for job in download_jobs:
-            logger.info(
-                "  %s => %s", job.path_src, job.path_dest,
-            )
+            logger.info("  %s => %s", job.path_src, job.path_dest)
         if not self.args.yes and not input("Is this OK? [yN] ").lower().startswith("y"):
             logger.error("OK, breaking at your request")
             return []
@@ -222,16 +220,14 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         logger.info("Planning to transfer the files as follows...")
         for job in jobs:
-            logger.info(
-                "  %s => %s", job.path_src, job.path_dest,
-            )
+            logger.info("  %s => %s", job.path_src, job.path_dest)
         if not self.args.yes and not input("Is this OK? [yN] ").lower().startswith("y"):
             logger.error("OK, breaking at your request")
             return 1
 
         total_bytes = sum([job.bytes for job in jobs])
         logger.info(
-            "Transferring %d files with a total size of %s", len(jobs), sizeof_fmt(total_bytes),
+            "Transferring %d files with a total size of %s", len(jobs), sizeof_fmt(total_bytes)
         )
 
         counter = Value(c_ulonglong, 0)

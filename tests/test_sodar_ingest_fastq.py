@@ -93,12 +93,14 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, fs):
     assert mock_check_call.call_count == 1
     assert mock_check_call.call_args[0] == (["md5sum", "sample1-N1-DNA1-WES1.fq.gz"],)
 
-    assert mock_check_output.call_count == len(fake_file_paths) * 2
+    assert mock_check_output.call_count == len(fake_file_paths) * 3 * 5
     remote_path = os.path.join(irods_path, dest_path)
     for path in fake_file_paths:
         expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
         ext = ".md5" if path.split(".")[-1] == "md5" else ""
-        expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s%s" % (remote_path, ext)]
+        expected_irsync_argv = ["irsync", "-a", "-K", path, ("i:%s" + ext) % remote_path]
+        expected_ils_argv = ["ils", os.path.dirname(remote_path)]
 
-        mock_check_output.assert_any_call(expected_mkdir_argv)
-        mock_check_output.assert_any_call(expected_irsync_argv)
+        assert ((expected_mkdir_argv,),) in mock_check_output.call_args_list
+        assert ((expected_irsync_argv,),) in mock_check_output.call_args_list
+        assert ((expected_ils_argv,), {"stderr": -2}) in mock_check_output.call_args_list
