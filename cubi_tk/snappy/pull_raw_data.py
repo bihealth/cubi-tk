@@ -18,7 +18,7 @@ from subprocess import SubprocessError, check_call
 
 import attr
 from logzero import logger
-import ruamel_yaml
+import ruamel.yaml as ruamel_yaml
 
 from .common import find_snappy_root_dir
 from ..common import overwrite_helper, load_toml_config

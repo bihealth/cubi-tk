@@ -91,12 +91,14 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     assert mock_check_call.call_count == 1
     assert mock_check_call.call_args[0] == (["md5sum", "star.sample1-N1-RNA1-RNA-Seq1.log"],)
 
-    assert mock_check_output.call_count == len(fake_file_paths) * 2
+    assert mock_check_output.call_count == len(fake_file_paths) * 3
     remote_path = os.path.join(dest_path, "fakedest")
     for path in fake_file_paths:
         expected_mkdir_argv = ["imkdir", "-p", "$(dirname", remote_path, ")"]
         ext = ".md5" if path.split(".")[-1] == "md5" else ""
         expected_irsync_argv = ["irsync", "-a", "-K", path, ("i:%s" + ext) % remote_path]
+        expected_ils_argv = ["ils", "$(dirname", remote_path, ")"]
 
         mock_check_output.assert_any_call(expected_mkdir_argv)
         mock_check_output.assert_any_call(expected_irsync_argv)
+        mock_check_output.assert_any_call(expected_ils_argv, stderr=-2)

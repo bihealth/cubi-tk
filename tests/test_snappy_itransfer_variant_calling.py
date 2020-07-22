@@ -113,7 +113,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
         stdout=ANY,
     )
 
-    assert mock_check_output.call_count == len(fake_file_paths) * 2
+    assert mock_check_output.call_count == len(fake_file_paths) * 3
     for path in fake_file_paths:
         mapper_index, rel_path = os.path.relpath(
             path, os.path.join(fake_base_path, "variant_calling/output")
@@ -124,5 +124,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
         )
         expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
         expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
+        expected_ils_argv = ["ils", os.path.dirname(remote_path)]
         mock_check_output.assert_any_call(expected_mkdir_argv)
         mock_check_output.assert_any_call(expected_irsync_argv)
+        mock_check_output.assert_any_call(expected_ils_argv, stderr=-2)

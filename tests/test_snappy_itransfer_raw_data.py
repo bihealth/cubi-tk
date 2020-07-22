@@ -81,7 +81,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(mocker):
     assert not res
     # We do not care about call order but simply test call count and then assert that all files are there which would
     # be equivalent of comparing sets of files.
-    assert mock_check_output.call_count == len(fake_file_paths) * 2
+    assert mock_check_output.call_count == len(fake_file_paths) * 3
     for path in fake_file_paths:
         index, rel_path = os.path.relpath(
             path, os.path.join(fake_base_path, "ngs_mapping/work/input_links")
@@ -89,5 +89,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(mocker):
         remote_path = os.path.join(dest_path, index, "raw_data", args.remote_dir_date, rel_path)
         expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
         expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
+        expected_ils_argv = ["ils", os.path.dirname(remote_path)]
         mock_check_output.assert_any_call(expected_mkdir_argv)
         mock_check_output.assert_any_call(expected_irsync_argv)
+        mock_check_output.assert_any_call(expected_ils_argv, stderr=-2)
