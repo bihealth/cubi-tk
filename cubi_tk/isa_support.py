@@ -63,7 +63,8 @@ def load_investigation(i_path: typing.Union[str, Path]) -> IsaData:
 def isa_dict_to_isa_data(isa_dict):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
-        with (tmp_path / isa_dict["investigation"]["path"]).open("wt") as out_f:
+        i_path = Path(isa_dict["investigation"]["path"])
+        with (tmp_path / i_path.name).open("wt") as out_f:
             out_f.write(isa_dict["investigation"]["tsv"])
         for path, tsv in isa_dict["studies"].items():
             with (tmp_path / path).open("wt") as out_f:
@@ -71,7 +72,7 @@ def isa_dict_to_isa_data(isa_dict):
         for path, tsv in isa_dict["assays"].items():
             with (tmp_path / path).open("wt") as out_f:
                 out_f.write(tsv["tsv"])
-        return load_investigation(tmp_path / isa_dict["investigation"]["path"])
+        return load_investigation(tmp_path / i_path.name)
 
 
 #: Constant representing materials.
