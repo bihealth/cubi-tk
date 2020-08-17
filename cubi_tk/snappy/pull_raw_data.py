@@ -15,7 +15,7 @@ import typing
 
 import attr
 from logzero import logger
-import ruamel.yaml as ruamel_yaml
+import yaml
 
 from .common import find_snappy_root_dir
 from ..sodar import pull_raw_data as sodar_pull_raw_data
@@ -112,7 +112,7 @@ class PullRawDataCommand:
         with (pathlib.Path(self.config.base_path) / ".snappy_pipeline" / "config.yaml").open(
             "rt"
         ) as inputf:
-            config = ruamel_yaml.safe_load(inputf)
+            config = yaml.safe_load(inputf)
         if "data_sets" not in config:
             logger.error(
                 "Could not find configuration key %s in %s", repr("data_sets"), inputf.name

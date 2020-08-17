@@ -49,7 +49,6 @@ argcomplete
 
 # Yaml parsing.
 pyyaml
-ruamel_yaml
 
 # VarFish REST API client.
 varfish-cli
