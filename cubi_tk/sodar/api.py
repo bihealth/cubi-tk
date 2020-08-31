@@ -155,7 +155,10 @@ def _landingzones_move(*, sodar_url, sodar_api_token, landing_zone_uuid):
 
 #: Landing zone-related API.
 landing_zones = SimpleNamespace(
-    list=_landingzones_list, create=_landingzones_create, move=_landingzones_move
+    list=_landingzones_list,
+    create=_landingzones_create,
+    move=_landingzones_move,
+    get=_landingzones_get,
 )
 
 

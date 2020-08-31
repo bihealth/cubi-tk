@@ -48,6 +48,8 @@ def test_run_snappy_itransfer_raw_data_smoke_test(mocker):
         "1",
         "--base-path",
         fake_base_path,
+        "--sodar-api-token",
+        "XXXX",
         tsv_path,
         dest_path,
     ]

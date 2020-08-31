@@ -100,7 +100,7 @@ _TEMPLATES = (
     IsaTabTemplate(
         name="generic",
         path=os.path.join(_BASE_DIR, "isatab-generic"),
-        description="generic DNA sequencing ISA-tab template",
+        description="generic RNA sequencing ISA-tab template",
         configuration=load_variables("isatab-generic"),
     ),
 )

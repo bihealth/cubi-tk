@@ -19,8 +19,7 @@ from retrying import retry
 import tqdm
 
 from ..exceptions import MissingFileException
-from ..common import check_irods_icommands, sizeof_fmt
-
+from ..common import check_irods_icommands, sizeof_fmt, load_toml_config
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -126,6 +125,19 @@ class SnappyItransferCommandBase:
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup common arguments for itransfer commands."""
+
+        group_sodar = parser.add_argument_group("SODAR-related")
+        group_sodar.add_argument(
+            "--sodar-url",
+            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
+            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
+        )
+        group_sodar.add_argument(
+            "--sodar-api-token",
+            default=os.environ.get("SODAR_API_TOKEN", None),
+            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
+        )
+
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -170,7 +182,8 @@ class SnappyItransferCommandBase:
             type=argparse.FileType("rt"),
             help="Path to biomedsheets TSV file to load.",
         )
-        parser.add_argument("irods_dest", help="path to iRODS collection to write to.")
+
+        parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     @classmethod
     def run(
@@ -184,8 +197,23 @@ class SnappyItransferCommandBase:
         # Check presence of icommands when not testing.
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
-
         res = 0
+
+        toml_config = load_toml_config(args)
+        if not args.sodar_url:
+            if toml_config:
+                args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+            else:
+                logger.error("SODAR URL not found in config files. Please specify on command line.")
+                res = 1
+        if not args.sodar_api_token:
+            if toml_config:
+                args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+            else:
+                logger.error(
+                    "SODAR API token not found in config files. Please specify on command line."
+                )
+                res = 1
 
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path %s does not exist", args.base_path)
@@ -250,6 +278,18 @@ class SnappyItransferCommandBase:
 
     def build_jobs(self, library_names) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
+        if "/" in self.args.destination:
+            lz_irods_path = self.args.destination
+        else:
+            from ..sodar.api import landing_zones
+
+            lz_irods_path = landing_zones.get(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                landing_zone_uuid=self.args.destination,
+            ).irods_path
+            logger.info(f"Target iRods path: {lz_irods_path}")
+
         transfer_jobs = []
         for library_name in library_names:
             base_dir, glob_pattern = self.build_base_dir_glob_pattern(library_name)
@@ -263,7 +303,7 @@ class SnappyItransferCommandBase:
                 elif not os.path.isfile(real_result):
                     continue  # skip if did not resolve to file
                 remote_dir = os.path.join(
-                    self.args.irods_dest,
+                    lz_irods_path,
                     self.args.remote_dir_pattern.format(
                         library_name=library_name, date=self.args.remote_dir_date
                     ),

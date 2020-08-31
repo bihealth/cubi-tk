@@ -48,6 +48,8 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
         "itransfer-variant-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-api-token",
+        "XXXX",
         tsv_path,
         dest_path,
     ]

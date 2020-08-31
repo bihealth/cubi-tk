@@ -41,7 +41,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     fix_md5_files = True
     command_name = "ingest-fastq"
-    step_name = "ngs_mapping"
 
     def __init__(self, args):
         super().__init__(args)
@@ -49,6 +48,18 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
+        group_sodar = parser.add_argument_group("SODAR-related")
+        group_sodar.add_argument(
+            "--sodar-url",
+            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
+            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
+        )
+        group_sodar.add_argument(
+            "--sodar-api-token",
+            default=os.environ.get("SODAR_API_TOKEN", None),
+            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
+        )
+
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -96,8 +107,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             default="temp/",
             help="Folder to save files from WebDAV temporarily, if set as source.",
         )
+
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
-        parser.add_argument("irods_dest", help="path to iRODS collection to write to.")
+
+        parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
         raise NotImplementedError(
@@ -146,6 +159,18 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 "will ignore parameter 'library_names' = %s in build_jobs()", str(library_names)
             )
 
+        if "/" in self.args.destination:
+            lz_irods_path = self.args.destination
+        else:
+            from ..sodar.api import landing_zones
+
+            lz_irods_path = landing_zones.get(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                landing_zone_uuid=self.args.destination,
+            ).irods_path
+            logger.info(f"Target iRods path: {lz_irods_path}")
+
         transfer_jobs = []
 
         folders = self.download_webdav(self.args.sources)
@@ -183,7 +208,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         for item in m.groupdict(default="").items()
                         if item[0] in self.dest_pattern_fields
                     )
-                    remote_file = Path(self.args.irods_dest) / self.args.remote_dir_pattern.format(
+                    remote_file = Path(lz_irods_path) / self.args.remote_dir_pattern.format(
                         filename=Path(path).name + self.args.add_suffix,
                         date=self.args.remote_dir_date,
                         **match_wildcards,

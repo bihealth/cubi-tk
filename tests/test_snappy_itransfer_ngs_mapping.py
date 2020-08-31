@@ -7,6 +7,7 @@ import os
 from unittest import mock
 from unittest.mock import ANY
 
+# import json
 import pytest
 from pyfakefs import fake_filesystem
 
@@ -40,7 +41,8 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
 
 def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
     fake_base_path = "/base/path"
-    dest_path = "/irods/dest"
+    # landing_zone_uuid = "landing_zone_uuid"
+    sodar_path = "sodar/path/to/landing/zone/landing_zone_uuid"
     tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
     argv = [
         "--verbose",
@@ -48,9 +50,14 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
         "itransfer-ngs-mapping",
         "--base-path",
         fake_base_path,
+        "--sodar-api-token",
+        "XXXX",
         tsv_path,
-        dest_path,
+        sodar_path,
     ]
+
+    parser, subparsers = setup_argparse()
+    args = parser.parse_args(argv)
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
     # break both biomedsheets and multiprocessing.
@@ -87,9 +94,15 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
 
+    # # requests mock
+    # return_value = dict(assay="", config_data="", configuration="", date_modified="", description="", irods_path=sodar_path, project="", sodar_uuid="", status="", status_info="", title="", user="")
+    # url_tpl = "%(sodar_url)s/landingzones/api/retrieve/%(landing_zone_uuid)s"
+    # url = url_tpl % {"sodar_url": args.sodar_url, "landing_zone_uuid": args.landing_zone_uuid}
+    # requests_mock.get(url, text=json.dumps(return_value))
+    # #requests_mock.get("resource://biomedsheets//data/std_fields.json", text="dummy")
+    # #requests_mock.get("resource://biomedsheets/data/std_fields.json#/extraInfoDefs/template/ncbiTaxon", text="dummy")
+
     # Actually exercise code and perform test.
-    parser, subparsers = setup_argparse()
-    args = parser.parse_args(argv)
     res = main(argv)
 
     assert not res
@@ -112,7 +125,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
             path, os.path.join(fake_base_path, "ngs_mapping/output")
         ).split("/", 1)
         _mapper, index = mapper_index.rsplit(".", 1)
-        remote_path = os.path.join(dest_path, index, "ngs_mapping", args.remote_dir_date, rel_path)
+        remote_path = os.path.join(sodar_path, index, "ngs_mapping", args.remote_dir_date, rel_path)
         expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
         expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
         expected_ils_argv = ["ils", os.path.dirname(remote_path)]

@@ -25,11 +25,24 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     """Implementation of sea-snap itransfer command for ngs_mapping results."""
 
     fix_md5_files = True
-    command_name = "itransfer-mapping-results"
-    step_name = "ngs_mapping"
+    command_name = "itransfer-results"
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
+        """Setup arguments"""
+
+        group_sodar = parser.add_argument_group("SODAR-related")
+        group_sodar.add_argument(
+            "--sodar-url",
+            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
+            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
+        )
+        group_sodar.add_argument(
+            "--sodar-api-token",
+            default=os.environ.get("SODAR_API_TOKEN", None),
+            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
+        )
+
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -47,7 +60,8 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             "files with iRODS. Blocks of commands separated by an empty line will be "
             "executed together in one thread.",
         )
-        parser.add_argument("irods_dest", help="path to iRODS collection to write to.")
+
+        parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
@@ -65,8 +79,22 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         transfer_jobs = []
         bp_mod_time = Path(blueprint).stat().st_mtime
 
+        if "/" in self.args.destination:
+            lz_irods_path = self.args.destination
+        else:
+            from ..sodar.api import landing_zones
+
+            lz_irods_path = landing_zones.get(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                landing_zone_uuid=self.args.destination,
+            ).irods_path
+            logger.info(f"Target iRods path: {lz_irods_path}")
+
         for cmd_block in (cb for cb in command_blocks if cb):
-            sources = [word for word in re.split("[\n ]", cmd_block) if Path(word).exists()]
+            sources = [
+                word for word in re.split("[\n ]", cmd_block) if Path(word).exists() and word != ""
+            ]
             dests = re.findall("i:(__SODAR__/\S+)", cmd_block)  # noqa: W605
             for f_type, f in {"source": sources, "dest": dests}.items():
                 if len(set(f)) != 1:
@@ -77,8 +105,8 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                     )
             source: str = sources[0]
             dest: str = dests[0]
-            dest = dest.replace("__SODAR__", self.args.irods_dest)
-            cmd_block = cmd_block.replace("__SODAR__", self.args.irods_dest)
+            dest = dest.replace("__SODAR__", lz_irods_path)
+            cmd_block = cmd_block.replace("__SODAR__", lz_irods_path)
 
             if Path(source).suffix == ".md5":
                 continue  # skip, will be added automatically
