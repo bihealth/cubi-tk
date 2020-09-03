@@ -49,18 +49,9 @@ def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
 def yield_ngs_library_names(sheet, min_batch=None, batch_key="batchNo"):
     shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
     for pedigree in shortcut_sheet.cohort.pedigrees:
-        donor = pedigree.index
-        if min_batch is not None and batch_key in donor.extra_infos:
-            if min_batch > donor.extra_infos[batch_key]:
-                logger.debug(
-                    "Skipping donor %s because %s = %d < min_batch = %d",
-                    donor.name,
-                    donor.extra_infos[batch_key],
-                    batch_key,
-                    min_batch,
-                )
-                continue
-        yield donor.dna_ngs_library.name
+        max_batch = max(donor.extra_infos.get(batch_key, 0) for donor in pedigree.donors)
+        if min_batch is not None and min_batch >= max_batch:
+            yield donor.dna_ngs_library.name
 
 
 class SnappyVarFishUploadCommand:
