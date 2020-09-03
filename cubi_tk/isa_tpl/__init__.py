@@ -20,12 +20,13 @@ Available Templates
 
 The `Cookiecutter`_ directories are located in this module's directory.  Currently available templates are:
 
-- ``generic``
-- ``germline``
-- ``tumor_normal_dna``
-- ``tumor_normal_triplets``
-- ``single_cell_rnaseq``
-- ``microarray``
+- ``isatab-generic``
+- ``isatab-germline``
+- ``isatab-microarray``
+- ``isatab-ms_meta_biocrates``
+- ``isatab-single_cell_rnaseq``
+- ``isatab-tumor_normal_dna``
+- ``isatab-tumor_normal_triplets``
 
 Adding Templates
 ----------------
@@ -128,6 +129,12 @@ _TEMPLATES = (
         path=os.path.join(_BASE_DIR, "isatab-microarray"),
         description="microarray ISA-tab template",
         configuration=load_variables("isatab-microarray"),
+    ),
+    IsaTabTemplate(
+        name="ms_meta_biocrates",
+        path=os.path.join(_BASE_DIR, "isatab-ms_meta_biocrates"),
+        description="MS Metabolomics Biocrates kit ISA-tab template",
+        configuration=load_variables("isatab-ms_meta_biocrates"),
     ),
 )
 
