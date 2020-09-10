@@ -53,9 +53,13 @@ class IrodsCheckCommand:
 
     def get_files(self):
         """get files on iRods."""
-        ils_out = check_output(f"ils -r {self.args.irods_path}", shell=True).decode(
-            sys.stdout.encoding
-        )
+        try:
+            ils_out = check_output(f"ils -r {self.args.irods_path}", shell=True).decode(
+                sys.stdout.encoding
+            )
+        except SubprocessError as e:  # pragma: nocover
+            logger.error(f"Something went wrong: {e}\nAre you logged in? try 'iinit'")
+            raise
         files = dict(files=[], md5=[])
         base_path = None
         for line in ils_out.split("\n"):
@@ -70,7 +74,7 @@ class IrodsCheckCommand:
         return files
 
     def check_args(self, args):
-        return 0
+        return None
 
     @classmethod
     def run(
@@ -88,39 +92,41 @@ class IrodsCheckCommand:
         logger.info("Starting cubi-tk irods %s", self.command_name)
         logger.info("  args: %s", self.args)
 
-        files = self.get_files()
-
-        num_files = len(files["files"])
-        lst_files = "\n".join(files['files'])
-        logger.info(f"Checking {num_files} files:\n{lst_files}")
-
-        counter = Value(c_ulonglong, 0)
-        with tqdm.tqdm(total=num_files, unit="files", unit_scale=True) as t:
-            if self.args.num_parallel_tests == 0:  # pragma: nocover
-                for file in files["files"]:
-                    check_file(file, files["md5"], self.args.num_replicas, counter, t)
-            else:
-                pool = ThreadPool(processes=self.args.num_parallel_tests)
-                for file in files["files"]:
-                    pool.apply_async(
-                        check_file, args=(file, files["md5"], self.args.num_replicas, counter, t)
-                    )
-                pool.close()
-                pool.join()
+        self.run_tests(self.get_files())
 
         logger.info("All done")
         return None
 
+    def run_tests(self, files):
+        """Run tests in parallel."""
+        num_files = len(files["files"])
+        lst_files = "\n".join(files["files"][:19])
+        logger.info(f"Checking {num_files} files (first 20 shown):\n{lst_files}")
+
+        # counter = Value(c_ulonglong, 0)
+        with tqdm.tqdm(total=num_files, unit="files", unit_scale=False) as t:
+            if self.args.num_parallel_tests == 0:  # pragma: nocover
+                for file in files["files"]:
+                    check_file(file, files["md5"], self.args.num_replicas, t)
+            else:
+                pool = ThreadPool(processes=self.args.num_parallel_tests)
+                for file in files["files"]:
+                    pool.apply_async(
+                        check_file, args=(file, files["md5"], self.args.num_replicas, t)
+                    )
+                pool.close()
+                pool.join()
+
 
 @retry(wait_fixed=1000, stop_max_attempt_number=3)
-def check_file(file, md5s, req_num_reps, counter, t):
+def check_file(file, md5s, req_num_reps, t):
     """Perform checks for a single file."""
 
     # 1) md5 sum file exists?
     if file + ".md5" not in md5s:
         e_msg = f"No md5 sum file for: {file}"
         logger.error(e_msg)
-        raise FileNotFoundError(e_msg)
+        # raise FileNotFoundError(e_msg)
 
     # 2) enough replicas?
     try:
@@ -141,7 +147,7 @@ def check_file(file, md5s, req_num_reps, counter, t):
     if len(meta_info) < req_num_reps:
         e_msg = f"Not enough ({req_num_reps}) replicates for file: {file}"
         logger.error(e_msg)
-        raise FileNotFoundError(e_msg)
+        # raise FileNotFoundError(e_msg)
 
     # 3) checksum consistent with .md5 file?
     try:
@@ -156,13 +162,17 @@ def check_file(file, md5s, req_num_reps, counter, t):
     os.remove(temp_file)
 
     if not all(repl["data_checksum"][0] == md5sum for repl in meta_info):
-        e_msg = f"File checksum not consistent with md5 file...\nfile: {file}\n.md5-file checksum: {md5sum}\nmetadata checksum: {meta_info[0]['data_checksum']}"
+        e_msg = (
+            "File checksum not consistent with md5 file...\n"
+            f"file: {file}\n.md5-file checksum: {md5sum}\n"
+            f"metadata checksum: {meta_info[0]['data_checksum']}"
+        )
         logger.error(e_msg)
-        raise ValueError(e_msg)
+        # raise ValueError(e_msg)
 
-    with counter.get_lock():
-        counter.value += 1
-        t.update(counter.value)
+    # with counter.get_lock():
+    #    counter.value += 1
+    t.update()
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

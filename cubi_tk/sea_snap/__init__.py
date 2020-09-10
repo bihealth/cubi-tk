@@ -1,10 +1,10 @@
-"""``cubi-tk snappy``: tools for supporting the SNAPPY pipeline.
+"""``cubi-tk sea-snap``: tools for supporting the Sea-snap pipeline.
 
 Available Commands
 ------------------
 
-``check``
-    Check consistency within sample sheet but also between sample sheet and files.
+``check-irods``
+    Check consistency of sample info, blueprint and files on SODAR.
 ``itransfer-raw-data``
     Transfer raw data from ``work/input_links`` directory of ``ngs_mapping``.
 ``itransfer-results``
@@ -15,9 +15,7 @@ Available Commands
 More Information
 ----------------
 
-- Also see ``cubi-tk snappy`` :ref:`cli_main <CLI documentation>` and ``cubi-tk snappy --help`` for more information.
-- `SNAPPY Pipeline GitLab Project <https://cubi-gitlab.bihealth.org/CUBI/Pipelines/snappy>`__.
-- `BiomedSheet Documentation <https://biomedsheets.readthedocs.io/en/master/>`__.
+- Also see ``cubi-tk sea-snap`` :ref:`cli_main <CLI documentation>` and ``cubi-tk sea-snap --help`` for more information.
 
 """
 
@@ -30,6 +28,7 @@ from .itransfer_results import setup_argparse as setup_argparse_itransfer_mappin
 # from .pull_isa import setup_argparse as setup_argparse_pull_isa
 from .working_dir import setup_argparse as setup_argparse_working_dir
 from .write_sample_info import setup_argparse as setup_argparse_write_sample_info
+from .check_irods import setup_argparse as setup_argparse_check_irods
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -51,6 +50,12 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_write_sample_info(
         subparsers.add_parser("write-sample-info", help="Generate sample info file")
+    )
+
+    setup_argparse_check_irods(
+        subparsers.add_parser(
+            "check-irods", help="Check consistency of sample info, blueprint and files on SODAR"
+        )
     )
 
 
