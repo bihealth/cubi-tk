@@ -27,17 +27,15 @@ Sub Commands
 ``landing-zone-delete`` (planned)
     Delete a landing zone.
 
-<<<<<<< HEAD
 ``add-ped``
     Download sample sheet, add rows from PED file, and re-upload.
 
 ``pull-raw-data``
     Download raw data from iRODS for samples from the sample sheet.
-=======
+
 ``ingest-fastq``
     Upload external files to SODAR
     (defaults for fastq files).
->>>>>>> add ingest-fastq command
 
 More Information
 ----------------
@@ -60,7 +58,7 @@ from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Main entry point for isa-tpl command."""
+    """Main entry point for sodar command."""
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
     setup_argparse_add_ped(

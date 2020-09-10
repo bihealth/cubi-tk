@@ -20,6 +20,8 @@ from .snappy import run as run_snappy
 from .snappy import setup_argparse as setup_argparse_snappy
 from .sodar import run as run_sodar
 from .sodar import setup_argparse as setup_argparse_sodar
+from .irods import run as run_irods
+from .irods import setup_argparse as setup_argparse_irods
 from .org_raw import run as run_org_raw
 from .org_raw import setup_argparse as setup_argparse_org_raw
 from .sea_snap import run as run_sea_snap
@@ -73,6 +75,7 @@ def setup_argparse():
         subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline.")
     )
     setup_argparse_sodar(subparsers.add_parser("sodar", help="SODAR command line interface."))
+    setup_argparse_irods(subparsers.add_parser("irods", help="iRods command line interface."))
     setup_argparse_org_raw(subparsers.add_parser("org-raw", help="org_raw command line interface."))
     setup_argparse_sea_snap(
         subparsers.add_parser("sea-snap", help="Tools for supporting the RNA-SeASnaP pipeline.")
@@ -109,6 +112,7 @@ def main(argv=None):
         "snappy": run_snappy,
         "sea-snap": run_sea_snap,
         "sodar": run_sodar,
+        "irods": run_irods,
         "org-raw": run_org_raw,
     }
 
