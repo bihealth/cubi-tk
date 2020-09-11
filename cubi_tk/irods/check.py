@@ -3,11 +3,9 @@
 import os
 import sys
 import argparse
-from ctypes import c_ulonglong
 import re
 import typing
 import uuid
-from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError
 from retrying import retry
