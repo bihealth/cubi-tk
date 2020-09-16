@@ -435,6 +435,7 @@ class IndexLibrariesOnlyMixin:
                         min_batch,
                     )
                     continue
+            logger.debug("Processing NGS library for donor %s", donor.name)
             yield donor.dna_ngs_library.name
 
 

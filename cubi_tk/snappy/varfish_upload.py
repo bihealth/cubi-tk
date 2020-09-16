@@ -50,8 +50,8 @@ def yield_ngs_library_names(sheet, min_batch=None, batch_key="batchNo"):
     shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
     for pedigree in shortcut_sheet.cohort.pedigrees:
         max_batch = max(donor.extra_infos.get(batch_key, 0) for donor in pedigree.donors)
-        if min_batch is not None and min_batch >= max_batch:
-            yield donor.dna_ngs_library.name
+        if min_batch is None or min_batch <= max_batch:
+            yield pedigree.index.dna_ngs_library.name
 
 
 class SnappyVarFishUploadCommand:
