@@ -38,6 +38,7 @@ Project Info
     :maxdepth: 1
 
     usecase_exomes
+    usecase_single_cell
 
 .. toctree::
     :caption: Project Info

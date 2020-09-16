@@ -2,17 +2,29 @@
 
 You can use this command to quickly bootstrap an ISA-tab investigation.  The functionality is built on `Cookiecutter`_.
 
+To create a directory with ISA-tab files, run:
+
+.. code-block:: bash
+
+  $ cubi-tk isa-tpl <template name> <output directory>
+
+This will prompt a number of questions interactively on the command line to collect information about the files that are going to be created.
+The requested information will depend on the chosen ISA-tab template.
+It is also possible to pass this information non-interactively together with other command line arguments (see ``cubi-tk isa-tpl <template name> --help``).
+
+The completed information will then be used to create a directory with ISA-tab files.
+It will be necessary to edit and extend the automatically generated files, e.g. to add additional rows to the assays.
+
 Available Templates
 -------------------
 
 The `Cookiecutter`_ directories are located in this module's directory.  Currently available templates are:
 
-- ``isatab-germline``
-- ``isatab-tumor_normal_dna``
-- ``isatab-tumor_normal_triplets``
-- ``isatab-generic``
-- ``tumor-normal-dna``
-- ``tumor-normal-triplets``
+- ``generic``
+- ``germline``
+- ``tumor_normal_dna``
+- ``tumor_normal_triplets``
+- ``single_cell_rnaseq``
 
 Adding Templates
 ----------------
