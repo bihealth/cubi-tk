@@ -103,17 +103,18 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             help="Suffix to add to all file names (e.g. '-N1-DNA1-WES1').",
         )
         parser.add_argument(
-            "-m", "--remote-dir-mapping",
+            "-m",
+            "--remote-dir-mapping",
             nargs=2,
             action="append",
             metavar=("MATCH", "REPL"),
             default=[],
             type=str,
             help="Substitutions applied to the filled remote dir paths. "
-                 "Can for example be used to modify sample names. " 
-                 "Use pythons regex syntax of 're.sub' package. " 
-                 "This argument can be used multiple times "
-                 "(i.e. '-m <regex1> <repl1> -m <regex2> <repl2>' ...).",
+            "Can for example be used to modify sample names. "
+            "Use pythons regex syntax of 're.sub' package. "
+            "This argument can be used multiple times "
+            "(i.e. '-m <regex1> <repl1> -m <regex2> <repl2>' ...).",
         )
         parser.add_argument(
             "--tmp",
@@ -227,7 +228,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         **match_wildcards,
                     )
                     remote_file = str(remote_file)
-                    for m_pat, r_pat in self.args.remote_dir_mappings:
+                    for m_pat, r_pat in self.args.remote_dir_mapping:
                         remote_file = re.sub(m_pat, r_pat, remote_file)
 
                     for ext in ("", ".md5"):
@@ -237,9 +238,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                             size = 0
                         transfer_jobs.append(
                             TransferJob(
-                                path_src=real_path + ext,
-                                path_dest=remote_file + ext,
-                                bytes=size,
+                                path_src=real_path + ext, path_dest=remote_file + ext, bytes=size
                             )
                         )
         return tuple(sorted(transfer_jobs))
