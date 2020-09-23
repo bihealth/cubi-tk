@@ -205,7 +205,7 @@ class Bunch:
 class SampleInfoTool:
     """ Tool to generate a sample info file before running sea-snap mapping """
 
-    allowed_read_extensions = [".fastq", ".fastq.gz"]
+    allowed_read_extensions = [".fastq", ".fastq.gz", ".fq", ".fq.gz"]
 
     def __init__(self, args):
 
@@ -418,7 +418,7 @@ class SampleInfoTool:
                 while key in arc_map:
                     key = arc_map[key]
                     if re.match(
-                        "Library construction [a-z]*RNA[-_][Ss]eq",
+                        "Library construction [a-z]*RNA[-_]?[Ss]eq",
                         assay.processes.get(key, dummy).protocol_ref,
                     ):
                         for p in assay.processes[key].parameter_values:
@@ -428,13 +428,28 @@ class SampleInfoTool:
                                 )
                             elif p.name == "Library strand-specificity":
                                 sample_info[sample_name]["stranded"] = p.value.lower()
+                            elif p.name == "Library name mRNA" and p.value[0]:
+                                if "lib_types" not in sample_info[sample_name]:
+                                    sample_info[sample_name]["lib_types"] = []
+                                sample_info[sample_name]["lib_types"].append(
+                                    (",".join(p.value), "Gene Expression")
+                                )
+                            elif p.name == "Library name sample tag" and p.value[0]:
+                                if "lib_types" not in sample_info[sample_name]:
+                                    sample_info[sample_name]["lib_types"] = []
+                                sample_info[sample_name]["lib_types"].append(
+                                    (",".join(p.value), "Antibody Capture")
+                                )
+
                     elif re.match(
-                        "Nucleic acid sequencing [a-z]*RNA[-_][Ss]eq",
+                        "Nucleic acid sequencing [a-z]*RNA[-_]?[Ss]eq",
                         assay.processes.get(key, dummy).protocol_ref,
                     ):
                         for p in assay.processes[key].parameter_values:
                             if p.name == "Instrument model":
                                 sample_info[sample_name]["instrument"] = ",".join(p.value)
+                            if p.name == "Sequencing kit":
+                                sample_info[sample_name]["sequencing_kit"] = ",".join(p.value)
                             elif (
                                 p.name == "Platform"
                                 and "instrument" not in sample_info[sample_name]
