@@ -92,6 +92,12 @@ def load_variables(template_name, extra=None):
 #: Known ISA-tab templates (internal, mapping generated below).
 _TEMPLATES = (
     IsaTabTemplate(
+        name="single_cell_rnaseq",
+        path=os.path.join(_BASE_DIR, "isatab-single_cell_rnaseq"),
+        description="single cell RNA sequencing ISA-tab template",
+        configuration=load_variables("isatab-generic"),
+    ),
+    IsaTabTemplate(
         name="tumor_normal_dna",
         path=os.path.join(_BASE_DIR, "isatab-tumor_normal_dna"),
         description="Tumor-Normal DNA sequencing ISA-tab template",
