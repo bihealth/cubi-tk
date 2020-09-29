@@ -139,6 +139,12 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                         c = attr.evolve(c, value=[donor.father_name])
                     elif c.name.lower() == "mother":
                         c = attr.evolve(c, value=[donor.mother_name])
+                    elif c.name.lower() == "family":
+                        c = attr.evolve(c, value=[donor.family_id])
+                    elif c.name.lower() == "sex":
+                        c = attr.evolve(c, value=[donor.sex])
+                    elif c.name.lower() == "disease status":
+                        c = attr.evolve(c, value=[donor.disease])
                     characteristics.append(c)
                 return attr.evolve(material, characteristics=tuple(characteristics))
 
