@@ -74,6 +74,8 @@ For token management for SODAR, the following docs can be used:
 Processing Commands
 -------------------
 
+**Hint:** Also see the Seasnap single cell pipeline documentation `here <https://cubi-gitlab.bihealth.org/CUBI/Pipelines/sea-snap/-/blob/sc_pipeline/documentation/run_sc.md>`_.
+
 First, you can pull the meta data from SODAR with the command:
 
 .. code-block:: bash

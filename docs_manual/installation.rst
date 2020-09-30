@@ -25,13 +25,15 @@ For building the manual or running tests you will need some more packages.
 
   $ pip install -r requirements/develop.txt
 
-Run tests:
+Run tests
+---------
 
 .. code-block:: bash
 
   $ make test
 
 Build manual
+------------
 
 .. code-block:: bash
 

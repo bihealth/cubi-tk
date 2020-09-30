@@ -3,16 +3,29 @@
 Welcome to CUBI-SAK's documentation!
 ====================================
 
-[TODO]
-
 Installation & Getting Started
     Instructions for the installation of the module and some examples to get you started.
 
-API Documentation
-    This section contains the API documentation for the module
+    | :ref:`Installation <installation>`
+    | :ref:`API documentation <cli>`
+
+Manual
+    This section contains manuals for specific commands.
+
+    | :ref:`Creating ISA-tab folders <man_isa_tpl>`
+
+Use cases
+    Use cases for common processing tasks.
+
+    | :ref:`Exome sequencing <usecase_exomes>`
+    | :ref:`Clinical single cell pipeline <usecase_single_cell>`
 
 Project Info
     More information on the project, including the changelog, list of contributing authors, and contribution instructions.
+
+    | :ref:`Authors <authors>`
+    | :ref:`History <history>`
+    | :ref:`License <license>`
 
 .. toctree::
     :caption: Installation & Getting Started

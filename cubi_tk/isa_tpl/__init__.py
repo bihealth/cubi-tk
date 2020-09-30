@@ -25,7 +25,7 @@ The `Cookiecutter`_ directories are located in this module's directory.  Current
 - ``tumor_normal_dna``
 - ``tumor_normal_triplets``
 - ``single_cell_rnaseq``
-- ``isatab-microarray``
+- ``microarray``
 
 Adding Templates
 ----------------
