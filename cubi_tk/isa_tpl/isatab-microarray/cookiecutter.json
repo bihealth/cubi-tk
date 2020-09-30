@@ -1,0 +1,41 @@
+{
+  "investigation_title": "Investigation Title",
+  "sample_names": "alpha,beta,gamma",
+  "a_measurement_type": [
+      "transcription profiling"
+  ],
+  "organism": [
+    "Homo sapiens",
+    "Mus musculus"
+  ],
+  "organisms": {
+    "Homo sapiens": {
+      "name": "Homo sapiens",
+      "taxon": "9606"
+    },
+    "Mus musculus": {
+      "name": "Mus musculus",
+      "taxon": "10090"
+    }
+  },
+  "technology_platform": "Illumina BeadChip",
+  "array_design_ref": "",
+
+  "study_title": "{{cookiecutter.investigation_title}}",
+  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
+  "s_file_name": "{{cookiecutter.i_dir_name}}",
+  "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
+  "a_technology_type": "microarray",
+  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}",
+  
+  "terms": {
+    "transcription profiling": {
+      "accession_number": "http://purl.obolibrary.org/obo/OBI_0000424",
+      "source_ref": "OBI"
+    },
+    "microarray": {
+      "accession_number": "http://purl.obolibrary.org/obo/OBI_0400148",
+      "source_ref": "OBI"
+    }
+  }
+}

@@ -25,6 +25,7 @@ The `Cookiecutter`_ directories are located in this module's directory.  Current
 - ``tumor_normal_dna``
 - ``tumor_normal_triplets``
 - ``single_cell_rnaseq``
+- ``isatab-microarray``
 
 Adding Templates
 ----------------
@@ -120,6 +121,12 @@ _TEMPLATES = (
         path=os.path.join(_BASE_DIR, "isatab-generic"),
         description="generic RNA sequencing ISA-tab template",
         configuration=load_variables("isatab-generic"),
+    ),
+    IsaTabTemplate(
+        name="microarray",
+        path=os.path.join(_BASE_DIR, "isatab-microarray"),
+        description="microarray ISA-tab template",
+        configuration=load_variables("isatab-microarray"),
     ),
 )
 

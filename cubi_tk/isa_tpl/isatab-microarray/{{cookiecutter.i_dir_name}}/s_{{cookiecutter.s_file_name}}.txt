@@ -1,0 +1,5 @@
+Source Name	Characteristics[Organism]	Term Source REF	Term Accession Number	Protocol REF	Performer	Date	Sample Name	Factor Value[time of differentiation]	Unit	Term Source REF	Term Accession Number
+{% set sample_names = cookiecutter.sample_names.split(",") -%}											
+{%- for sample_name in sample_names -%}											
+{{sample_name|replace("-", "_")}}	{{cookiecutter.organisms[cookiecutter.organism].name}}	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/{{cookiecutter.organisms[cookiecutter.organism].taxon}}	Sample collection			{{sample_name|replace("-", "_")}}-S1		day	OBI	http://purl.obolibrary.org/obo/UO_0000033
+{% endfor %}											
