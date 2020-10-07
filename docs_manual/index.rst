@@ -13,6 +13,7 @@ Manual
     This section contains manuals for specific commands.
 
     | :ref:`Creating ISA-tab folders <man_isa_tpl>`
+    | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
 
 Use cases
     Use cases for common processing tasks.
@@ -43,6 +44,7 @@ Project Info
     :maxdepth: 1
 
     man_isa_tpl
+    man_ingest_fastq
 
 .. toctree::
     :caption: Use Cases

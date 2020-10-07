@@ -57,7 +57,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         group_sodar.add_argument(
             "--sodar-api-token",
             default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
+            help="Authentication token when talking to SODAR. Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
