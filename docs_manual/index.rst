@@ -14,6 +14,7 @@ Manual
 
     | :ref:`Creating ISA-tab folders <man_isa_tpl>`
     | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
+    | :ref:`Upload raw data to SODAR <man_seasnap_itransfer_results>`
 
 Use cases
     Use cases for common processing tasks.
@@ -45,6 +46,7 @@ Project Info
 
     man_isa_tpl
     man_ingest_fastq
+    man_itransfer_results
 
 .. toctree::
     :caption: Use Cases
