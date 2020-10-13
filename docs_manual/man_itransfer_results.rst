@@ -1,8 +1,8 @@
 .. _man_seasnap_itransfer_results:
 
-=====================================
-``sea-snap itransfer-results`` Manual
-=====================================
+=========================================
+Manual for ``sea-snap itransfer-results``
+=========================================
 
 The ``cubi-tk sea-snap itransfer-results`` command lets you upload results of the Seasnap pipeline to SODAR.
 It relies on running the ``export`` function of Seasnap first.

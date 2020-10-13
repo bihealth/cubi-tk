@@ -1,8 +1,8 @@
 .. _man_ingest_fastq:
 
-=======================
-``ingest-fastq`` Manual
-=======================
+===========================
+Manual for ``ingest-fastq``
+===========================
 
 The ``cubi-tk sodar ingest-fastq`` command lets you upload raw data files to SODAR.
 It is configured for uploading FASTQ files by default, but the parameters can be adjusted to upload any files.
@@ -35,7 +35,7 @@ For example, the default ``--src-regex`` is
 It can capture a variety of different FASTQ file names and has the named groups ``sample``, ``lane``, ``mate`` and ``batch``.
 The default ``--remote-dir-pattern`` is
 
-.. code-block::
+.. code-block:: bash
 
     {sample}/{date}/{filename}
 

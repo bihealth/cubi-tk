@@ -125,7 +125,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         "output_file",
         nargs="?",
         default="sample_info.yaml",
-        type=lambda f: sys.stdout if f == "-" else argparse.FileType("at+"),
+        type=lambda f: sys.stdout if f == "-" else argparse.FileType("at+")(f),
         help="Filename ending with '.yaml' or '.tsv'. default: sample_info.yaml.",
     )
 
@@ -174,7 +174,7 @@ def check_args(args) -> int:
 
     # Check options --isa-assay vs. --from_file
     if args.from_file:
-        logger.info("Option --from_file is set, in-path-pattern will be ignored.")
+        logger.warn("Option --from_file is set, in-path-pattern will be ignored.")
         if args.isa_assay:
             logger.error("Both --isa-assay and --from_file are set, choose one.")
             any_error = True
