@@ -3,6 +3,7 @@
 import argparse
 import os
 import subprocess
+import time
 import typing
 
 from logzero import logger
@@ -34,6 +35,13 @@ def run(
     logger.info("Submitting with sbatch...")
     jids: typing.Dict[str, str] = {}
     for step in steps:
+        path_cache = path / step / ".snappy_path_cache"
+        if step == "ngs_mapping" and path_cache.exists():
+            age_cache = time.time() - path_cache.stat().st_mtime
+            max_age = 24 * 60 * 60  # 1d
+            if age_cache > max_age:
+                logger.info("Cache older than %d - purging", max_age)
+                path_cache.unlink()
         dep_jids = [jids[dep] for dep in common.DEPENDENCIES[step] if dep in jids]
         cmd = ["sbatch"]
         if dep_jids:

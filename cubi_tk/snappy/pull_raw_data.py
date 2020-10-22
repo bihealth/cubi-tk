@@ -37,6 +37,7 @@ class Config:
     irsync_threads: int
     yes: bool
     project_uuid: str
+    samples: typing.List[str]
 
 
 class PullRawDataCommand:
@@ -79,6 +80,7 @@ class PullRawDataCommand:
             "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
         )
         parser.add_argument("--min-batch", default=0, type=int, help="Minimal batch number to pull")
+        parser.add_argument("--samples", help="Optional list of samples to pull")
 
         parser.add_argument(
             "--yes", default=False, action="store_true", help="Assume all answers are yes."
