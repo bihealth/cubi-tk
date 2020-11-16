@@ -1,5 +1,5 @@
 Sample Name	Protocol REF	Parameter Value[Dissociation method]	Parameter Value[Dissociation freetext]	Parameter Value[Removal debris]	Parameter Value[Removal dead cell]	Parameter Value[Removal ab cell]	Parameter Value[Cell fixation]	Parameter Value[Cell count]	Parameter Value[Cell viability]	Performer	Date	Protocol REF	Parameter Value[Library kit]	Parameter Value[QC cell load recovery]	Parameter Value[QC tape fragment size bp]	Parameter Value[QC kapa size corrected nM]	Parameter Value[Multiplex source]	Parameter Value[Multiplex sample]	Parameter Value[Multiplex sample tag]	Parameter Value[Library name mRNA]	Parameter Value[Library name sample tag]	Parameter Value[Sclib freetext]	Performer	Date	Library Name	Protocol REF	Parameter Value[Platform]	Parameter Value[Instrument model]	Parameter Value[Sequencing kit]	Parameter Value[RNA amount pg]	Performer	Date
-{% set sample_names = cookiecutter.sample_names.split(",") -%}																																
-{%- for sample_name in sample_names -%}																																
+{% set sample_names = cookiecutter.sample_names.split(",") -%}
+{% for sample_name in sample_names -%}
 {{sample_name|replace("-", "_")}}	Dissociation {{cookiecutter.a_measurement_abbreviation}}											Library construction {{cookiecutter.a_measurement_abbreviation}}	{{cookiecutter.lib_kit}}							{{sample_name}}					{{sample_name}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}						
-{% endfor %}																																
+{% endfor -%}
