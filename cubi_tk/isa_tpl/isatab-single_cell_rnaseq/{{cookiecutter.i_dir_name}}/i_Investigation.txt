@@ -61,22 +61,22 @@ STUDY ASSAYS
 Study Assay File Name	a_{{cookiecutter.assay_prefix}}_{{cookiecutter.assay_name}}.txt
 Study Assay Measurement Type	{{cookiecutter.a_measurement_type}}
 Study Assay Measurement Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000424
-Study Assay Measurement Type Term Source REF	""
+Study Assay Measurement Type Term Source REF	OBI
 Study Assay Technology Type	{{cookiecutter.a_technology_type}}
 Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626
 Study Assay Technology Type Term Source REF	OBI
 Study Assay Technology Platform	Illumina
 STUDY PROTOCOLS
-Study Protocol Name	Sample collection	Dissociation {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}	Preprocessing {{cookiecutter.a_measurement_abbreviation}}
-Study Protocol Type	Sample collection	Dissociation {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}	Preprocessing {{cookiecutter.a_measurement_abbreviation}}
+Study Protocol Name	Sample collection	Dissociation {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}
+Study Protocol Type	Sample collection	Dissociation {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}
 Study Protocol Type Term Accession Number	""	""	""	""
 Study Protocol Type Term Source REF	""	""	""	""
 Study Protocol Description	""	""	""	""
 Study Protocol URI	""	""	""	""
 Study Protocol Version	""	""	""	""
-Study Protocol Parameters Name	"Method"	"Cell fixation;Dissociation method;Removal dead cell;Removal debris;Dissociation date;Removal ab cell;Cell viability;Cell count;Dissociation freetext"	"Library source;Run chemistry sclib;QC tape fragment size bp;Library selection;Library layout;Multiplex source tag;Multiplex i7 mRNA;Library kit;Cell count;Multiplex sample tag;Multiplex i7 sample tag;QC kapa size corrected nM;Multiplex source;Multiplex sample;Shipping;QC cell load recovery;Library strategy;Sclib freetext;Library name mRNA;Library name sample tag"	"Run id scseq;Platform;Cluster kit;Bcl dir scseq;Instrument model;Sequencing kit;Fastq dir scseq"	"Target genome;Genome file;Cellranger version;Target genome version;Cellranger dir;Velocyto dir;Annotation file;QC file"
-Study Protocol Parameters Name Term Accession Number	""	";;;;;;;;"	";;;;;;;;;;;;;;;;;;;"	";;;;;;"	";;;;;;;"
-Study Protocol Parameters Name Term Source REF	""	";;;;;;;;"	";;;;;;;;;;;;;;;;;;;"	";;;;;;"	";;;;;;;"
+Study Protocol Parameters Name	Method	Dissociation method;Dissociation freetext;Removal debris;Removal dead cell;Removal ab cell;Cell fixation;Cell count;Cell viability	Library kit;QC cell load recovery;QC tape fragment size bp;QC kapa size corrected nM;Multiplex source;Multiplex sample;Multiplex sample tag;Library name mRNA;Library name sample tag;Sclib freetext	Platform;Instrument model;Sequencing kit;RNA amount pg
+Study Protocol Parameters Name Term Accession Number	""	";;;;;;;"	";;;;;;;;;"	";;;"
+Study Protocol Parameters Name Term Source REF	""	";;;;;;;"	";;;;;;;;;"	";;;"
 Study Protocol Components Name	""	""	""	""
 Study Protocol Components Type	""	""	""	""
 Study Protocol Components Type Term Accession Number	""	""	""	""
