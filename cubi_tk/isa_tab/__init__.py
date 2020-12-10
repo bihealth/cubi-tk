@@ -13,6 +13,9 @@ Sub Commands
     Given a germline DNA sequencing ISA-tab file and a PED file, add new lines to the ISA-tab
     file and update existing ones, e.g., for newly added parents.
 
+``annotate``
+    Add annotation to an ISA-tab file, given a CSV
+
 More Information
 ----------------
 
@@ -26,6 +29,7 @@ from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
 from .resolve_hpo import setup_argparse as setup_argparse_resolve_hpo
 from .validate import setup_argparse as setup_argparse_validate
+from .annotate import setup_argparse as setup_argparse_annotate
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -37,6 +41,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_resolve_hpo(
         subparsers.add_parser("resolve-hpo", help="Resolve HPO term lists to ISA-tab fragments")
+    )
+    setup_argparse_annotate(
+        subparsers.add_parser("annotate", help="Add annotation from CSV file to ISA-tab")
     )
     setup_argparse_validate(subparsers.add_parser("validate", help="Validate ISA-tab"))
 
