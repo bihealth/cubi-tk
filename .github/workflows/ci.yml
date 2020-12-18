@@ -1,0 +1,29 @@
+name: continuous integration
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install pipenv
+        uses: dschep/install-pipenv-action@v1
+      - name: Install dependencies
+        run: pip install -r requirements/test_black.txt
+      - name: Test with pytest
+        run: pytest --cov-report=term .
+      - name: Check style with black
+        run: black --check --line-length 100 .
+      - name: Check style with flake8
+        run: flake8 .
