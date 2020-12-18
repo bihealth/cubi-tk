@@ -7,7 +7,6 @@ import os
 from unittest import mock
 from unittest.mock import ANY
 
-# import json
 import pytest
 from pyfakefs import fake_filesystem
 
