@@ -5,9 +5,9 @@ We only run some smoke tests here.
 
 import os
 from unittest import mock
-from pathlib import Path
 
 import pytest
+from pyfakefs import fake_filesystem, fake_pathlib
 
 from cubi_tk.__main__ import setup_argparse, main
 
@@ -37,15 +37,29 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
-def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
+def test_run_seasnap_itransfer_results_smoke_test(mocker):
     # --- setup arguments
     dest_path = "/irods/dest"
     fake_base_path = "/base/path"
     blueprint_path = os.path.join(os.path.dirname(__file__), "data", "test_blueprint.txt")
 
-    argv = ["--verbose", "sea-snap", "itransfer-results", blueprint_path, dest_path]
+    argv = [
+        "--verbose",
+        "sea-snap",
+        "itransfer-results",
+        blueprint_path,
+        dest_path,
+        "--num-parallel-transfers",
+        "0",
+    ]
 
     parser, subparsers = setup_argparse()
+
+    # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
+    # break biomedsheets.
+    fs = fake_filesystem.FakeFilesystem()
+    fake_os = fake_filesystem.FakeOsModule(fs)
+    fake_pl = fake_pathlib.FakePathlibModule(fs)
 
     # --- add test files
     fake_file_paths = []
@@ -63,12 +77,17 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
             fs.create_file(fake_file_paths[-1])
 
     fs.add_real_file(blueprint_path)
-    Path(blueprint_path).touch()
+    fake_pl.Path(blueprint_path).touch()
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
 
     # --- mock modules
+    mocker.patch("glob.os", fake_os)
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.pathlib", fake_pl)
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.os", fake_os)
+    mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
+
     mock_check_output = mock.mock_open()
     mocker.patch("cubi_tk.sea_snap.itransfer_results.check_output", mock_check_output)
     mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
@@ -76,8 +95,11 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
 
+    fake_open = fake_filesystem.FakeFileOpen(fs)
+    mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
+
     # necessary because independent test fail
-    mock_value = mock.mock_open()
+    mock_value = mock.MagicMock()
     mocker.patch("cubi_tk.sea_snap.itransfer_results.Value", mock_value)
     mocker.patch("cubi_tk.snappy.itransfer_common.Value", mock_value)
 

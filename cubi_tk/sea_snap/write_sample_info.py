@@ -158,7 +158,7 @@ def check_args(args) -> int:
                 )
                 any_error = True
             else:
-                logger.warn(
+                logger.warning(
                     "Output folder %s exists but --allow-overwrite given.", args.output_folder
                 )
 
@@ -174,7 +174,7 @@ def check_args(args) -> int:
 
     # Check options --isa-assay vs. --from_file
     if args.from_file:
-        logger.warn("Option --from_file is set, in-path-pattern will be ignored.")
+        logger.warning("Option --from_file is set, in-path-pattern will be ignored.")
         if args.isa_assay:
             logger.error("Both --isa-assay and --from_file are set, choose one.")
             any_error = True
@@ -192,7 +192,7 @@ def check_args(args) -> int:
             )
             any_error = True
         else:
-            logger.warn("Output path %s exists but --allow-overwrite given.", args.output_file)
+            logger.warning("Output path %s exists but --allow-overwrite given.", args.output_file)
 
     return int(any_error)
 
@@ -299,7 +299,7 @@ class SampleInfoTool:
         for smpl_info in self.sample_info.values():
             smpl_info[key] = [
                 s.replace("'", "").replace('"', "")
-                for s in re.findall("[^\[\]\s,]+", smpl_info[key])  # noqa: W605
+                for s in re.findall(r"[^\[\]\s,]+", smpl_info[key])  # noqa: W605
             ]
 
     def _add_info_fields(self, add_dict):
@@ -624,7 +624,7 @@ def run(
 
         # Write to output file if not --dry-run is given
         if hasattr(args.output_file, "name") and args.dry_run:
-            logger.warn("Not changing %s as we are in --dry-run mode", args.output_file.name)
+            logger.warning("Not changing %s as we are in --dry-run mode", args.output_file.name)
         else:
             if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
                 action = (
@@ -638,7 +638,7 @@ def run(
                 args.output_file.truncate()
             shutil.copyfileobj(sample_info_file, args.output_file)
 
-        logger.warn(
+        logger.warning(
             "in_path_pattern: %s --> Use the same in your mapping_config.yaml!",
             args.in_path_pattern,
         )

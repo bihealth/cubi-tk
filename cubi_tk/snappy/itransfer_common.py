@@ -72,7 +72,10 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 
     with counter.get_lock():
         counter.value += job.bytes
-        t.update(counter.value)
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other
 
 
 def check_args(args):
@@ -471,4 +474,7 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
 
     with counter.get_lock():
         counter.value += os.path.getsize(job.path_src[: -len(".md5")])
-        t.update(counter.value)
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other

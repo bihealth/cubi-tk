@@ -1,4 +1,4 @@
-# CUBI Swiss Army Knife
+# CUBI Toolkit
 
 Tooling for connecting GitLab, pipelines, and SODAR at CUBI.
 
