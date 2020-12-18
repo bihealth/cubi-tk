@@ -55,11 +55,11 @@ class LibraryInfoCollector(IsaNodeVisitor):
             sample = material
             characteristics = {c.name: c for c in source.characteristics}
             comments = {c.name: c for c in source.comments}
-            self.sources[material.name] = {
-                "source_name": source.name,
-                "sample_name": sample.name,
-                "batch_no": characteristics.get("Batch", comments.get("Batch")).value[0],
-            }
+            self.sources[material.name] = {"source_name": source.name, "sample_name": sample.name}
+            batch = characteristics.get("Batch", comments.get("Batch"))
+            self.sources[material.name]["batch_no"] = batch.value[0] if batch else None
+            family = characteristics.get("Family", comments.get("Family"))
+            self.sources[material.name]["family"] = family.value[0] if family else None
         elif material.type == "Library Name":
             library = material
             sample = material_path[0]
@@ -218,8 +218,11 @@ class PullRawDataCommand:
         return {
             sample["library_name"]: sample["folder_name"]
             for sample in collector.samples.values()
-            if sample["source"]["batch_no"]
-            and int(sample["source"]["batch_no"]) >= self.config.min_batch
+            if (
+                sample["source"].get("batch_no")
+                and int(sample["source"]["batch_no"]) >= self.config.min_batch
+            )
+            and (not sample["source"]["family"] or not sample["source"]["family"].startswith("#"))
         }
 
 
