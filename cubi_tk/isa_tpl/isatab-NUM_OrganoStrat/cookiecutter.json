@@ -1,24 +1,13 @@
 {
   "investigation_title": "Investigation Title",
   "sample_names": "sample1,sample2",
-  "a_measurement_type": [
-      "transcription_profiling"
-  ],
   "lib_kit": [
     "SC3Pv3",
     "SC3Pv2",
     "SC5P-PE",
     "SC5P-R2"
   ],
-  "instrument": "Illumina NextSeq 500",
-  "center_name": "",
-  "center_contact": "",
-
   "study_title": "{{cookiecutter.investigation_title}}",
   "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
-  "s_file_name": "{{cookiecutter.i_dir_name}}",
-  "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
-  "a_technology_type": "nucleotide sequencing",
-  "a_measurement_abbreviation": "scRNAseq",
-  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}"
+  "s_file_name": "{{cookiecutter.i_dir_name}}"
 }

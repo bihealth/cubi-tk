@@ -58,29 +58,29 @@ Study Factor Type
 Study Factor Type Term Accession Number
 Study Factor Type Term Source REF
 STUDY ASSAYS
-Study Assay File Name	a_{{cookiecutter.assay_prefix}}_{{cookiecutter.assay_name}}.txt
-Study Assay Measurement Type	{{cookiecutter.a_measurement_type}}
-Study Assay Measurement Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000424
-Study Assay Measurement Type Term Source REF	OBI
-Study Assay Technology Type	{{cookiecutter.a_technology_type}}
-Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626
-Study Assay Technology Type Term Source REF	OBI
-Study Assay Technology Platform	Illumina
+Study Assay File Name	a_{{cookiecutter.s_file_name}}_RNA.txt	a_{{cookiecutter.s_file_name}}_PLA.txt	a_{{cookiecutter.s_file_name}}_WBL.txt	a_{{cookiecutter.s_file_name}}_PCR.txt	a_{{cookiecutter.s_file_name}}_AQA.txt	a_{{cookiecutter.s_file_name}}_IHC.txt	a_{{cookiecutter.s_file_name}}_ISH.txt
+Study Assay Measurement Type	transcription profiling	transcription profiling	transcription profiling	transcription profiling	transcription profiling	transcription profiling	transcription profiling
+Study Assay Measurement Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000424	http://purl.obolibrary.org/obo/OBI_0000424	http://purl.obolibrary.org/obo/OBI_0000424	http://purl.obolibrary.org/obo/OBI_0000424	http://purl.obolibrary.org/obo/OBI_0000424	http://purl.obolibrary.org/obo/OBI_0000424	http://purl.obolibrary.org/obo/OBI_0000424
+Study Assay Measurement Type Term Source REF	OBI	OBI	OBI	OBI	OBI	OBI	OBI
+Study Assay Technology Type	nucleotide_sequencing	nucleotide_sequencing	nucleotide_sequencing	nucleotide_sequencing	nucleotide_sequencing	nucleotide_sequencing	nucleotide_sequencing
+Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626
+Study Assay Technology Type Term Source REF	OBI	OBI	OBI	OBI	OBI	OBI	OBI
+Study Assay Technology Platform	Illumina	Illumina	Illumina	Illumina	Illumina	Illumina	Illumina
 STUDY PROTOCOLS
-Study Protocol Name	Sample preparation	Sample treatment	Sample characterization	Dissociation {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}
-Study Protocol Type	Sample preparation	Sample treatment	Sample characterization	Dissociation {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}
-Study Protocol Type Term Accession Number	""	""	""	""	""	""
-Study Protocol Type Term Source REF	""	""	""	""	""	""
-Study Protocol Description	""	""	""	""	""	""
-Study Protocol URI	""	""	""	""	""	""
-Study Protocol Version	""	""	""	""	""	""
-Study Protocol Parameters Name	Protocol version;Origin;Material;Passage	Protocol version;Treatment agent;Treatment dose;Treatment stock;Treatment duration	Protocol version;Replication 0h;Replication 16h;Replication 24h;Replication 48h;Replication 72h;qPCR ACE2;qPCR CD147/BSG;qPCR TMPRSS2;qPCR FURIN;Western ACE2;Western CD147/BSG;Western TMPRSS2;Western FURIN;AQUA ACE2;AQUA CD147/BSG;AQUA TMPRSS2;AQUA FURIN	Dissociation method;Dissociation freetext;Removal debris;Removal dead cell;Removal ab cell;Cell fixation;Cell count;Cell viability	Library kit;QC cell load recovery;QC tape fragment size bp;QC kapa size corrected nM;Multiplex source;Multiplex sample;Multiplex sample tag;Library name mRNA;Library name sample tag;Sclib freetext	Platform;Instrument model;Sequencing kit;RNA amount pg
-Study Protocol Parameters Name Term Accession Number	";;;"	";;;;"	";;;;;;;;;;;;;;;;;"	";;;;;;;"	";;;;;;;;;"	";;;"
-Study Protocol Parameters Name Term Source REF	";;;"	";;;;"	";;;;;;;;;;;;;;;;;"	";;;;;;;"	";;;;;;;;;"	";;;"
-Study Protocol Components Name	""	""	""	""	""	""
-Study Protocol Components Type	""	""	""	""	""	""
-Study Protocol Components Type Term Accession Number	""	""	""	""	""	""
-Study Protocol Components Type Term Source REF	""	""	""	""	""	""
+Study Protocol Name	Sample collection	Dissociation scRNAseq	Library construction scRNAseq	Nucleic acid sequencing scRNAseq	Plaque Assay	Western Blot	qPCR	AQUA	Immunohistochemistry	In situ hybridization
+Study Protocol Type	Sample collection	Dissociation scRNAseq	Library construction scRNAseq	Nucleic acid sequencing scRNAseq	Plaque Assay	Western Blot	qPCR	AQUA	Immunohistochemistry	In situ hybridization
+Study Protocol Type Term Accession Number	""	""	""	""	""	""	""	""	""	""
+Study Protocol Type Term Source REF	""	""	""	""	""	""	""	""	""	""
+Study Protocol Description	""	""	""	""	""	""	""	""	""	""
+Study Protocol URI	""	""	""	""	""	""	""	""	""	""
+Study Protocol Version	""	""	""	""	""	""	""	""	""	""
+Study Protocol Parameters Name	Protocol version;Origin;Material;Passage;Treatment agent;Treatment dose;Treatment stock;Treatment duration	Dissociation method;Dissociation freetext;Removal debris;Removal dead cell;Removal ab cell;Cell fixation;Cell count;Cell viability	Library kit;QC cell load recovery;QC tape fragment size bp;QC kapa size corrected nM;Multiplex source;Multiplex sample;Multiplex sample tag;Library name mRNA;Library name sample tag;Sclib freetext	Platform;Instrument model;Sequencing kit;RNA amount pg	Protocol version	Protocol version	Protocol version	Protocol version	Protocol version	Protocol version
+Study Protocol Parameters Name Term Accession Number	";;;;;;;"	";;;;;;;"	";;;;;;;;;"	";;;"	""	""	""	""	""	""
+Study Protocol Parameters Name Term Source REF	";;;;;;;"	";;;;;;;"	";;;;;;;;;"	";;;"	""	""	""	""	""	""
+Study Protocol Components Name	""	""	""	""	""	""	""	""	""	""
+Study Protocol Components Type	""	""	""	""	""	""	""	""	""	""
+Study Protocol Components Type Term Accession Number	""	""	""	""	""	""	""	""	""	""
+Study Protocol Components Type Term Source REF	""	""	""	""	""	""	""	""	""	""
 STUDY CONTACTS
 Study Person Last Name
 Study Person First Name
