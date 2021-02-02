@@ -281,17 +281,9 @@ class SnappyItransferCommandBase:
 
     def build_jobs(self, library_names) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
-        if "/" in self.args.destination:
-            lz_irods_path = self.args.destination
-        else:
-            from ..sodar.api import landing_zones
 
-            lz_irods_path = landing_zones.get(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                landing_zone_uuid=self.args.destination,
-            ).irods_path
-            logger.info(f"Target iRods path: {lz_irods_path}")
+        # Get path to iRODS directory
+        lz_irods_path = self.get_irods_path()
 
         transfer_jobs = []
         for library_name in library_names:
@@ -330,6 +322,26 @@ class SnappyItransferCommandBase:
                         )
                     )
         return tuple(sorted(transfer_jobs))
+
+    def get_irods_path(self):
+        """
+        :return: Return path to iRODS directory.
+        """
+        # iRODS path provided by user
+        if "/" in self.args.destination:
+            lz_irods_path = self.args.destination
+        # Project UUID provided by user
+        else:
+            from ..sodar.api import landing_zones
+            lz_irods_path = landing_zones.get(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                landing_zone_uuid=self.args.destination,
+            ).irods_path
+        # Log
+        logger.info(f"Target iRods path: {lz_irods_path}")
+        # Return
+        return lz_irods_path
 
     def _execute_md5_files_fix(
         self, transfer_jobs: typing.Tuple[TransferJob, ...]
