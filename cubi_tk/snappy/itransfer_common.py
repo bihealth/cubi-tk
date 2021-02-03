@@ -403,8 +403,6 @@ class SnappyItransferCommandBase:
         logger.info(f"Target iRods path: {lz_irods_path}")
 
         # Return
-        # TODO: remove exit
-        exit(1)
         return lz_irods_path
 
     def get_landing_zone_by_uuid(self, lz_uuid):
