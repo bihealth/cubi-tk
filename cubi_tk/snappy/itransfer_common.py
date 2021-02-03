@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import glob
+import json
 import os
 import typing
 from ctypes import c_ulonglong
@@ -11,10 +12,13 @@ from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError, check_call, STDOUT
 import sys
 
+
 import attr
+import cattr
 from biomedsheets import io_tsv, shortcuts
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
+import requests
 from retrying import retry
 import tqdm
 
@@ -325,29 +329,101 @@ class SnappyItransferCommandBase:
 
     def get_irods_path(self):
         """
-        :return: Return path to iRODS directory.
+        Method evaluates user input to extract or create iRODS path. Use cases:
+        1. iRODS path provided by user. Nothing to do, just return it.
+        2.
+        X. Data provided by user is neither an iRODS path nor a valid UUID. Report error and exit.
+        :return: Returns path to iRODS directory.
         """
         # Initialise variables
+        lz_irods_path = None
+        is_project_uuid = True
+        is_lz_uuid = True
         in_destination = self.args.destination
 
         # iRODS path provided by user
         if "/" in in_destination:
             lz_irods_path = in_destination
+
         # Project UUID provided by user
         elif is_uuid(in_destination):
-            from ..sodar.api import landing_zones
-            lz_irods_path = landing_zones.get(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                landing_zone_uuid=self.args.destination,
-            ).irods_path
-        # Not able to process
-        else:
-            # Probably exit
-            logger.error("Destination provided by user is neither an iRODS path nor a valid UUID."
-                         "Please review input: {dest}".format(dest=in_destination))
+
+            # Assume that provided UUID is associated with a Project.
+            # Behaviour: list all available lz and fetch the latest active one.
+            try:
+                lz_irods_path = self.get_latest_landing_zone(in_destination)
+            except requests.exceptions.HTTPError as e:
+                logger.info("Provided UUID may not associated with a project." + str(e))
+                is_project_uuid = False
+
+            # Assume that provided UUID is associated with a LZ
+            # Behaviour: get iRODS path.
+            if not is_project_uuid:
+                try:
+                    lz_irods_path = self.get_landing_zone_by_uuid(in_destination)
+                except requests.exceptions.HTTPError as e:
+                    logger.info("Provided UUID may not associated with a Landing Zone." + str(e))
+                    is_lz_uuid = False
+
+            logger.info(lz_irods_path)
+
+        # Not able to process - exit.
+        # UUID provided is not associated with project nor lz.
+        if lz_irods_path is None and not (is_project_uuid or is_lz_uuid):
+            logger.error("Data provided by user is neither an iRODS path nor a valid UUID."
+                         "Please review input: '{dest}'".format(dest=in_destination))
+            exit(os.EX_DATAERR)
+
         # Log
         logger.info(f"Target iRods path: {lz_irods_path}")
+
+        # Return
+        return lz_irods_path
+
+    def get_landing_zone_by_uuid(self, lz_uuid):
+        """
+        :param lz_uuid: Landing zone UUID.
+        :type lz_uuid: str
+
+        :return: Returns iRODS path.
+        """
+        from ..sodar.api import landing_zones
+        lz_irods_path = landing_zones.get(
+            sodar_url=self.args.sodar_url,
+            sodar_api_token=self.args.sodar_api_token,
+            landing_zone_uuid=lz_uuid,
+        ).irods_path
+        return lz_irods_path
+
+    def get_latest_landing_zone(self, project_uuid):
+        """
+        :param project_uuid: Project UUID.
+        :type project_uuid: str
+
+        :return: Returns iRODS path in latest active landing zone available.
+        If none available, it returns None.
+        """
+        #
+        from ..sodar.api import landing_zones
+
+        # Initialise variables
+        lz_irods_path = None
+
+        # List existing lzs
+        existing_lzs = sorted(
+            landing_zones.list(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                project_uuid=project_uuid,
+            ),
+            key=lambda x: x.date_modified, reverse=True
+        )
+        # Fetch the latest active lz
+        for lz in existing_lzs:
+            if lz.status == "ACTIVE":
+                lz_irods_path = lz.irods_path
+                break
+
         # Return
         return lz_irods_path
 
