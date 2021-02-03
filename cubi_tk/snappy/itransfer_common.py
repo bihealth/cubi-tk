@@ -19,7 +19,7 @@ from retrying import retry
 import tqdm
 
 from ..exceptions import MissingFileException
-from ..common import check_irods_icommands, sizeof_fmt, load_toml_config
+from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -327,17 +327,25 @@ class SnappyItransferCommandBase:
         """
         :return: Return path to iRODS directory.
         """
+        # Initialise variables
+        in_destination = self.args.destination
+
         # iRODS path provided by user
-        if "/" in self.args.destination:
-            lz_irods_path = self.args.destination
+        if "/" in in_destination:
+            lz_irods_path = in_destination
         # Project UUID provided by user
-        else:
+        elif is_uuid(in_destination):
             from ..sodar.api import landing_zones
             lz_irods_path = landing_zones.get(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 landing_zone_uuid=self.args.destination,
             ).irods_path
+        # Not able to process
+        else:
+            # Probably exit
+            logger.error("Destination provided by user is neither an iRODS path nor a valid UUID."
+                         "Please review input: {dest}".format(dest=in_destination))
         # Log
         logger.info(f"Target iRods path: {lz_irods_path}")
         # Return
