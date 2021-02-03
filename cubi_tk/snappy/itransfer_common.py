@@ -346,7 +346,7 @@ class SnappyItransferCommandBase:
         elif is_uuid(in_destination):
 
             # Assume that provided UUID is associated with a Project.
-            # Behaviour: list all available lz and fetch the latest active one.
+            # Behaviour: get iRODS path from latest active Landing Zone.
             try:
                 lz_irods_path = self.get_latest_landing_zone(in_destination)
             except requests.exceptions.HTTPError as e:
@@ -354,7 +354,7 @@ class SnappyItransferCommandBase:
                 is_project_uuid = False
 
             # Assume that provided UUID is associated with a LZ
-            # Behaviour: get iRODS path.
+            # Behaviour: get iRODS path from it.
             if not is_project_uuid:
                 try:
                     lz_irods_path = self.get_landing_zone_by_uuid(in_destination)
