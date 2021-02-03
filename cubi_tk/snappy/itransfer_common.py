@@ -240,7 +240,7 @@ class SnappyItransferCommandBase:
             batch = 0
         if self.start_batch_in_family and family_key in donor.extra_infos:
             family_id = donor.extra_infos[family_key]
-            batch = max(batch, family_max_batch[family_id])
+            batch = max(batch, family_max_batch.get(family_id, 0))
         return batch
 
     def yield_ngs_library_names(
