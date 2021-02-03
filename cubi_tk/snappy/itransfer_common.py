@@ -187,6 +187,11 @@ class SnappyItransferCommandBase:
             help="Path to biomedsheets TSV file to load.",
         )
 
+        parser.add_argument(
+            "--yes", default=False, action="store_true", help="Assume all answers are yes, e.g., will create or use "
+                                                              "existing available landing zones without asking."
+        )
+
         parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     @classmethod
@@ -336,6 +341,7 @@ class SnappyItransferCommandBase:
         lz_irods_path = None
         is_project_uuid = True
         is_lz_uuid = True
+        create_lz_bool = self.args.yes
         in_destination = self.args.destination
 
         # iRODS path provided by user
