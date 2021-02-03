@@ -3,7 +3,6 @@
 import argparse
 import datetime
 import glob
-import json
 import os
 import typing
 from ctypes import c_ulonglong
@@ -12,9 +11,7 @@ from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError, check_call, STDOUT
 import sys
 
-
 import attr
-import cattr
 from biomedsheets import io_tsv, shortcuts
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
@@ -353,7 +350,7 @@ class SnappyItransferCommandBase:
             try:
                 lz_irods_path = self.get_latest_landing_zone(in_destination)
             except requests.exceptions.HTTPError as e:
-                logger.info("Provided UUID may not associated with a project." + str(e))
+                logger.info("Provided UUID may not associated with a Project. HTTP error " + str(e))
                 is_project_uuid = False
 
             # Assume that provided UUID is associated with a LZ
@@ -362,7 +359,7 @@ class SnappyItransferCommandBase:
                 try:
                     lz_irods_path = self.get_landing_zone_by_uuid(in_destination)
                 except requests.exceptions.HTTPError as e:
-                    logger.info("Provided UUID may not associated with a Landing Zone." + str(e))
+                    logger.info("Provided UUID may not associated with a Landing Zone. HTTP error " + str(e))
                     is_lz_uuid = False
 
             logger.info(lz_irods_path)
