@@ -394,6 +394,15 @@ class SnappyItransferCommandBase:
                                 logger.info("Not possible to continue the process without a "
                                             "landing zone path. Breaking...")
                                 exit(os.EX_OK)
+                    # No active lz available
+                    else:
+                        logger.info("No active Landing Zone available for UUID {uuid}".format(uuid=in_destination))
+                        if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
+                            lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
+                        else:
+                            logger.info("Not possible to continue the process without a "
+                                        "landing zone path. Breaking...")
+                            exit(os.EX_OK)
 
         # Not able to process - exit.
         # UUID provided is not associated with project nor lz.
