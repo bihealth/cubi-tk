@@ -381,6 +381,7 @@ class SnappyItransferCommandBase:
                 # Behaviour: depends on user reply to questions.
                 if is_project_uuid:
                     # Active lz available
+                    # Ask user if should use latest available or create new one.
                     if lz_irods_path:
                         logger.info("Found active Landing Zone: {lz}".format(lz=lz_irods_path))
                         if input("Can the process use this path? [yN] ").lower().startswith("y"):
@@ -395,6 +396,7 @@ class SnappyItransferCommandBase:
                                             "landing zone path. Breaking...")
                                 exit(os.EX_OK)
                     # No active lz available
+                    # As user if should create new new.
                     else:
                         logger.info("No active Landing Zone available for UUID {uuid}".format(uuid=in_destination))
                         if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
