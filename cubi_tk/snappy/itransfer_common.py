@@ -365,7 +365,7 @@ class SnappyItransferCommandBase:
                 try:
                     lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
                 except requests.exceptions.HTTPError as e:
-                    logger.warning("Provided UUID may not be associated with a Project. HTTP error " + str(e))
+                    logger.debug("Provided UUID may not be associated with a Project. HTTP error " + str(e))
                     is_project_uuid = False
 
                 # Assume that provided UUID is associated with a LZ
@@ -374,7 +374,7 @@ class SnappyItransferCommandBase:
                     try:
                         lz_irods_path = self.get_landing_zone_by_uuid(lz_uuid=in_destination)
                     except requests.exceptions.HTTPError as e:
-                        logger.warning("Provided UUID may not be associated with a Landing Zone. HTTP error " + str(e))
+                        logger.debug("Provided UUID may not be associated with a Landing Zone. HTTP error " + str(e))
                         is_lz_uuid = False
 
                 # Request input from user.
