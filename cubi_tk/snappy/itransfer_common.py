@@ -289,7 +289,7 @@ class SnappyItransferCommandBase:
         """Build file transfer jobs."""
 
         # Get path to iRODS directory
-        lz_irods_path = self.get_irods_path()
+        lz_uuid, lz_irods_path = self.get_sodar_info()
 
         transfer_jobs = []
         for library_name in library_names:
@@ -327,9 +327,9 @@ class SnappyItransferCommandBase:
                             bytes=size,
                         )
                     )
-        return tuple(sorted(transfer_jobs))
+        return lz_uuid, tuple(sorted(transfer_jobs))
 
-    def get_irods_path(self):
+    def get_sodar_info(self):
         """
         Method evaluates user input to extract or create iRODS path. Use cases:
         1. User provides iRODS path. Same as before, use it.
@@ -338,16 +338,19 @@ class SnappyItransferCommandBase:
            i. If there are LZ associated with project, select the latest active and use it.
           ii. If there are no LZ associated with project, create a new one and use it.
         4. Data provided by user is neither an iRODS path nor a valid UUID. Report error and exit.
-        :return: Returns path to iRODS directory.
+
+        :return: Returns landing zone UUID and path to iRODS directory.
         """
         # Initialise variables
         lz_irods_path = None
+        lz_uuid = None
         is_project_uuid = True
         is_lz_uuid = True
         create_lz_bool = self.args.yes
         in_destination = self.args.destination
 
         # iRODS path provided by user
+        # Not possible to retrieve lz uuid from path. Returns None for lz_uuid.
         if "/" in in_destination:
             lz_irods_path = in_destination
 
@@ -357,13 +360,13 @@ class SnappyItransferCommandBase:
             if create_lz_bool:
                 # Assume that provided UUID is associated with a Project and user wants a new LZ.
                 # Behavior: create new LZ.
-                lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
+                lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
 
             else:
                 # Assume that provided UUID is associated with a Project.
                 # Behaviour: get iRODS path from latest active Landing Zone.
                 try:
-                    lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
+                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
                 except requests.exceptions.HTTPError as e:
                     logger.debug("Provided UUID may not be associated with a Project. HTTP error " + str(e))
                     is_project_uuid = False
@@ -372,7 +375,8 @@ class SnappyItransferCommandBase:
                 # Behaviour: get iRODS path from it.
                 if not is_project_uuid:
                     try:
-                        lz_irods_path = self.get_landing_zone_by_uuid(lz_uuid=in_destination)
+                        lz_uuid = in_destination
+                        lz_irods_path = self.get_landing_zone_by_uuid(lz_uuid=lz_uuid)
                     except requests.exceptions.HTTPError as e:
                         logger.debug("Provided UUID may not be associated with a Landing Zone. HTTP error " + str(e))
                         is_lz_uuid = False
@@ -390,7 +394,7 @@ class SnappyItransferCommandBase:
                             logger.info("...an alternative is to create another Landing Zone "
                                         "using the UUID {uuid}".format(uuid=in_destination))
                             if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
-                                lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
+                                lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
                             else:
                                 logger.info("Not possible to continue the process without a "
                                             "landing zone path. Breaking...")
@@ -400,7 +404,7 @@ class SnappyItransferCommandBase:
                     else:
                         logger.info("No active Landing Zone available for UUID {uuid}".format(uuid=in_destination))
                         if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
-                            lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
+                            lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
                         else:
                             logger.info("Not possible to continue the process without a "
                                         "landing zone path. Breaking...")
@@ -414,10 +418,10 @@ class SnappyItransferCommandBase:
             exit(os.EX_DATAERR)
 
         # Log
-        logger.info(f"Target iRods path: {lz_irods_path}")
+        logger.info(f"Target iRODS path: {lz_irods_path}")
 
         # Return
-        return lz_irods_path
+        return lz_uuid, lz_irods_path
 
     def get_landing_zone_by_uuid(self, lz_uuid):
         """
@@ -439,7 +443,7 @@ class SnappyItransferCommandBase:
         :param project_uuid: Project UUID.
         :type project_uuid: str
 
-        :return: Returns iRODS path to newly created landing zone.
+        :return: Returns landing zone UUID and iRODS path to newly created landing zone.
         """
         logger.info("Creating new Landing Zone...")
         from ..sodar.api import landing_zones
@@ -449,21 +453,22 @@ class SnappyItransferCommandBase:
             project_uuid=project_uuid,
         )
         logger.info("done!")
-        return lz.irods_path
+        return lz.sodar_uuid, lz.irods_path
 
     def get_latest_landing_zone(self, project_uuid):
         """
         :param project_uuid: Project UUID.
         :type project_uuid: str
 
-        :return: Returns iRODS path in latest active landing zone available.
-        If none available, it returns None.
+        :return: Returns landing zone UUID and iRODS path in latest active landing zone available.
+        If none available, it returns None for both.
         """
         #
         from ..sodar.api import landing_zones
 
         # Initialise variables
         lz_irods_path = None
+        lz_uuid = None
 
         # List existing lzs
         existing_lzs = sorted(
@@ -480,9 +485,10 @@ class SnappyItransferCommandBase:
         if existing_lzs:
             lz = existing_lzs[-1]
             lz_irods_path = lz.irods_path
+            lz_uuid = lz.sodar_uuid
 
         # Return
-        return lz_irods_path
+        return lz_uuid, lz_irods_path
 
     def _execute_md5_files_fix(
         self, transfer_jobs: typing.Tuple[TransferJob, ...]
@@ -541,7 +547,7 @@ class SnappyItransferCommandBase:
         library_names = list(self.yield_ngs_library_names(sheet, min_batch=self.args.start_batch))
         logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
 
-        transfer_jobs = self.build_jobs(library_names)
+        lz_uuid, transfer_jobs = self.build_jobs(library_names)
         logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
