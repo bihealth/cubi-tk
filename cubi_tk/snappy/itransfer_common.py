@@ -332,9 +332,12 @@ class SnappyItransferCommandBase:
     def get_irods_path(self):
         """
         Method evaluates user input to extract or create iRODS path. Use cases:
-        1. iRODS path provided by user. Nothing to do, just return it.
-        2.
-        X. Data provided by user is neither an iRODS path nor a valid UUID. Report error and exit.
+        1. User provides iRODS path. Same as before, use it.
+        2. User provides Landing Zone UUID. Same as before, fetch path and use it.
+        3. User provides Project UUID:
+           i. If there are LZ associated with project, select the latest active and use it.
+          ii. If there are no LZ associated with project, create a new one and use it.
+        4. Data provided by user is neither an iRODS path nor a valid UUID. Report error and exit.
         :return: Returns path to iRODS directory.
         """
         # Initialise variables
