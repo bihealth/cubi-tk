@@ -192,6 +192,11 @@ class SnappyItransferCommandBase:
                                                               "existing available landing zones without asking."
         )
 
+        parser.add_argument(
+            "--move-and-validate", default=False, action="store_true",
+            help="After files are transferred to SODAR, it will proceed with validation and move."
+        )
+
         parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     @classmethod
@@ -423,6 +428,23 @@ class SnappyItransferCommandBase:
         # Return
         return lz_uuid, lz_irods_path
 
+    def move_landing_zone(self, lz_uuid):
+        """
+        Method calls SODAR API to validate and move transferred files.
+
+        :param lz_uuid: Landing zone UUID.
+        :type lz_uuid: str
+        """
+        from ..sodar.api import landing_zones
+        logger.info("Transferred files move to Landing Zone {uuid} will "
+                    "be validated and moved in SODAR...".format(uuid=lz_uuid))
+        _ = landing_zones.move(
+            sodar_url=self.args.sodar_url,
+            sodar_api_token=self.args.sodar_api_token,
+            landing_zone_uuid=lz_uuid,
+        )
+        logger.info("done.")
+
     def get_landing_zone_by_uuid(self, lz_uuid):
         """
         :param lz_uuid: Landing zone UUID.
@@ -570,6 +592,13 @@ class SnappyItransferCommandBase:
                     pool.apply_async(irsync_transfer, args=(job, counter, t))
                 pool.close()
                 pool.join()
+
+        # Validate and move transferred files
+        # Behaviour: If flag is True, it will ask SODAR to validate and move transferred files.
+        if self.args.move_and_validate:
+            self.move_landing_zone(lz_uuid=lz_uuid)
+        else:
+            logger.info("Transferred files will \033[1mnot\033[0m be automatically moved in SODAR.")
 
         logger.info("All done")
         return None
