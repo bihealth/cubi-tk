@@ -382,7 +382,7 @@ class SnappyItransferCommandBase:
                 if is_project_uuid:
                     # Active lz available
                     if lz_irods_path:
-                        logger.info("Found active Landing Zone: {lz}")
+                        logger.info("Found active Landing Zone: {lz}".format(lz=lz_irods_path))
                         if input("Can the process use this path? [yN] ").lower().startswith("y"):
                             pass
                         else:
