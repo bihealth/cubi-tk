@@ -193,7 +193,7 @@ class SnappyItransferCommandBase:
         )
 
         parser.add_argument(
-            "--move-and-validate", default=False, action="store_true",
+            "--validate-and-move", default=False, action="store_true",
             help="After files are transferred to SODAR, it will proceed with validation and move."
         )
 
@@ -600,7 +600,7 @@ class SnappyItransferCommandBase:
 
         # Validate and move transferred files
         # Behaviour: If flag is True, it will ask SODAR to validate and move transferred files.
-        if self.args.move_and_validate:
+        if self.args.validate_and_move:
             self.move_landing_zone(lz_uuid=lz_uuid)
         else:
             logger.info("Transferred files will \033[1mnot\033[0m be automatically moved in SODAR.")
