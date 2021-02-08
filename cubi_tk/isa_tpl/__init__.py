@@ -47,6 +47,7 @@ Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` fo
 """
 
 import argparse
+from functools import partial
 import json
 import os
 import typing
@@ -135,7 +136,7 @@ TEMPLATES = {tpl.name: tpl for tpl in _TEMPLATES}
 
 
 @curry
-def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
+def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     """Run cookiecutter, ``tpl`` will be bound with ``toolz.curry``."""
     extra_context = {}
     for name in tpl.configuration:  # pragma: nocover
@@ -169,6 +170,7 @@ def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
         "- %s" % path for path in yield_files_recursively(args.output_dir)
     ]
     logger.info("Resulting structure is:\n%s", "\n".join(listing))
+    return 0
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -188,7 +190,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--hidden-cmd",
             dest="isa_tpl_cmd",
-            default=run_cookiecutter(tpl),
+            default=partial(run_cookiecutter, tpl),
             help=argparse.SUPPRESS,
         )
         parser.add_argument("output_dir", help="Path to output directory")

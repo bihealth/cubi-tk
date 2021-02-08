@@ -147,13 +147,14 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                         c = attr.evolve(c, value=[donor.disease])
                     characteristics.append(c)
                 return attr.evolve(material, characteristics=tuple(characteristics))
+        return None
 
 
 def _append_study_line(study, donor, materials, processes, arcs, config):
     """Create extra materials/processes/arcs for extra line in study table."""
     counter = 0  # used for creating unique names
-    prev = None  # previous node
-    curr = None  # current node, determines type
+    prev = {}  # previous node
+    curr = {}  # current node, determines type
     attr_name = None
     prev_label = ""
     for col in study.header:
@@ -254,8 +255,8 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
 def _append_assay_line(assay, donor, materials, processes, arcs, config):
     """Create extra materials/processes/arcs for extra line in assay table."""
     counter = 0  # used for creating unique names
-    prev = None  # previous node
-    curr = None  # current node, determines type
+    prev = {}  # previous node
+    curr = {}  # current node, determines type
     attr_name = None
     prev_label = ""
     seen_extract_name = False
@@ -270,9 +271,8 @@ def _append_assay_line(assay, donor, materials, processes, arcs, config):
             elif col.column_type == EXTRACT_NAME:
                 if seen_extract_name:
                     raise Exception("Seen column Extract Name twice!")
-                else:
-                    name = "%s-N1-DNA1" % donor.name
-                    seen_extract_name = True
+                name = "%s-N1-DNA1" % donor.name
+                seen_extract_name = True
             elif col.column_type == LIBRARY_NAME:
                 name = "%s-N1-DNA1-%s1" % (donor.name, config.library_type)
             elif col.column_type == RAW_DATA_FILE:

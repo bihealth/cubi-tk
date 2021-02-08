@@ -66,7 +66,7 @@ class PullSheetsConfig:
 
     @staticmethod
     def create(args, global_config, toml_config=None):
-        # toml_config = toml_config or {}
+        _ = toml_config or {}
         return PullSheetsConfig(
             global_config=global_config,
             base_path=pathlib.Path(args.base_path),
@@ -242,22 +242,23 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
     result.append("\n".join(HEADER_TPL))
     for sample_name, source in builder.sources.items():
         sample = builder.samples.get(sample_name, None)
-        row = [
-            source.family or "FAM",
-            source.source_name or ".",
-            source.father or "0",
-            source.mother or "0",
-            MAPPING_SEX[source.sex.lower()],
-            MAPPING_STATUS[source.affected.lower()],
-            sample.library_type or "." if sample else ".",
-            sample.folder_name or "." if sample else ".",
-            "0" if source.batch_no is None else source.batch_no,
-            ".",
-            str(project_uuid),
-            sample.seq_platform or "." if sample else ".",
-            sample.library_kit or "." if sample else ".",
-        ]
-        result.append("\t".join([c.strip() for c in row]))
+        if not config.library_types or not sample or sample.library_type in config.library_types:
+            row = [
+                source.family or "FAM",
+                source.source_name or ".",
+                source.father or "0",
+                source.mother or "0",
+                MAPPING_SEX[source.sex.lower()],
+                MAPPING_STATUS[source.affected.lower()],
+                sample.library_type or "." if sample else ".",
+                sample.folder_name or "." if sample else ".",
+                "0" if source.batch_no is None else source.batch_no,
+                ".",
+                str(project_uuid),
+                sample.seq_platform or "." if sample else ".",
+                sample.library_kit or "." if sample else ".",
+            ]
+            result.append("\t".join([c.strip() for c in row]))
     result.append("")
 
     return "\n".join(result)

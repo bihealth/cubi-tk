@@ -56,7 +56,7 @@ class IrodsCheckCommand:
                 sys.stdout.encoding
             )
         except SubprocessError as e:  # pragma: nocover
-            logger.error(f"Something went wrong: {e}\nAre you logged in? try 'iinit'")
+            logger.error("Something went wrong: %s\nAre you logged in? try 'iinit'", e)
             raise
         files = dict(files=[], md5=[])
         base_path = None
@@ -71,7 +71,7 @@ class IrodsCheckCommand:
                     files[ftype].append(os.path.join(base_path, g[2]))
         return files
 
-    def check_args(self, args):
+    def check_args(self, _args):
         return None
 
     @classmethod
@@ -99,11 +99,11 @@ class IrodsCheckCommand:
         """Run tests in parallel."""
         num_files = len(files["files"])
         lst_files = "\n".join(files["files"][:19])
-        logger.info(f"Checking {num_files} files (first 20 shown):\n{lst_files}")
+        logger.info("Checking %s files (first 20 shown):\n%s", num_files, lst_files)
 
         # counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=num_files, unit="files", unit_scale=False) as t:
-            if self.args.num_parallel_tests == 0:  # pragma: nocover
+            if self.args.num_parallel_tests == 0:
                 for file in files["files"]:
                     check_file(file, files["md5"], self.args.num_replicas, t)
             else:
@@ -152,7 +152,7 @@ def check_file(file, md5s, req_num_reps, t):
         temp_file = f"./temp_{str(uuid.uuid4())}.md5"
         check_output(f"irsync -aK i:{file}.md5 {temp_file}", shell=True)
     except SubprocessError as e:  # pragma: nocover
-        logger.error(f"Could not fetch file for md5 sum check: {file}.md5", e)
+        logger.error("Could not fetch file for md5 sum check: %s.md5: %s", temp_file, e)
         raise
 
     with open(temp_file, "r") as f:
@@ -160,12 +160,14 @@ def check_file(file, md5s, req_num_reps, t):
     os.remove(temp_file)
 
     if not all(repl["data_checksum"][0] == md5sum for repl in meta_info):
-        e_msg = (
+        logger.error(
             "File checksum not consistent with md5 file...\n"
-            f"file: {file}\n.md5-file checksum: {md5sum}\n"
-            f"metadata checksum: {meta_info[0]['data_checksum']}"
+            "file: %s\n.md5-file checksum: %s\n"
+            "metadata checksum: %s",
+            file,
+            md5sum,
+            meta_info[0]["data_checksum"],
         )
-        logger.error(e_msg)
         # raise ValueError(e_msg)
 
     # with counter.get_lock():

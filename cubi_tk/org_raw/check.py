@@ -182,11 +182,9 @@ class CheckCommand:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args):
+    def check_args(self, _args):
         """Called for checking arguments, override to change behaviour."""
-        res = 0
-
-        return res
+        return 0
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""

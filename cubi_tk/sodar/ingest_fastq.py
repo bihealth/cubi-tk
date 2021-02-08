@@ -16,6 +16,7 @@ from logzero import logger
 import tqdm
 
 from ..exceptions import MissingFileException
+from ..sodar.api import landing_zones
 from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob, irsync_transfer
 
 #: Default value for --src-regex.
@@ -169,21 +170,19 @@ class SodarIngestFastq(SnappyItransferCommandBase):
     def build_jobs(self, library_names=None) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         if library_names:
-            logger.warn(
+            logger.warning(
                 "will ignore parameter 'library_names' = %s in build_jobs()", str(library_names)
             )
 
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            from ..sodar.api import landing_zones
-
             lz_irods_path = landing_zones.get(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 landing_zone_uuid=self.args.destination,
             ).irods_path
-            logger.info(f"Target iRods path: {lz_irods_path}")
+            logger.info("Target iRods path: %s", lz_irods_path)
 
         transfer_jobs = []
 
@@ -202,7 +201,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
-                elif real_path.endswith(".md5"):
+                if real_path.endswith(".md5"):
                     continue  # skip, will be added automatically
 
                 if not os.path.exists(real_path):  # pragma: nocover

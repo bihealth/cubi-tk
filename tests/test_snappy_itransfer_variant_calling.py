@@ -14,7 +14,7 @@ from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_snappy_itransfer_variant_calling_help(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["snappy", "itransfer-variant-calling", "--help"])
 
@@ -26,7 +26,7 @@ def test_run_snappy_itransfer_variant_calling_help(capsys):
 
 
 def test_run_snappy_itransfer_variant_calling_nothing(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["snappy", "itransfer-variant-calling"])
@@ -97,7 +97,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
 
     # Actually exercise code and perform test.
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     res = main(argv)
 

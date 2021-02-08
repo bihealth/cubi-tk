@@ -14,7 +14,7 @@ from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_seasnap_pull_isa_help(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sea-snap", "pull-isa", "--help"])
 
@@ -26,7 +26,7 @@ def test_run_seasnap_pull_isa_help(capsys):
 
 
 def test_run_seasnap_pull_isa_nothing(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sea-snap", "pull-isa"])

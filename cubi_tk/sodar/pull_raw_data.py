@@ -180,7 +180,7 @@ class PullRawDataCommand:
             return 0
 
         cmds_txt = "\n".join(["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands])
-        logger.info("Pull data using the following commands?\n\n%s\n" % cmds_txt)
+        logger.info("Pull data using the following commands?\n\n%s\n", cmds_txt)
         if self.config.yes:
             answer = True
         else:
