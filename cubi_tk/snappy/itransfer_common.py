@@ -599,8 +599,10 @@ class SnappyItransferCommandBase:
                 pool.join()
 
         # Validate and move transferred files
-        # Behaviour: If flag is True, it will ask SODAR to validate and move transferred files.
-        if self.args.validate_and_move:
+        # Behaviour: If flag is True and lz uuid is not None*,
+        # it will ask SODAR to validate and move transferred files.
+        # (*) It can be None if user provided path
+        if lz_uuid and self.args.validate_and_move:
             self.move_landing_zone(lz_uuid=lz_uuid)
         else:
             logger.info("Transferred files will \033[1mnot\033[0m be automatically moved in SODAR.")
