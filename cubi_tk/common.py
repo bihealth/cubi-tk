@@ -162,51 +162,9 @@ def overwrite_helper(
 
         # Compare sheet with output if exists and --show-diff given.
         if show_diff:
-            if out_path != "-" and out_path_obj.exists():
-                with out_path_obj.open("rt") as inputf:
-                    old_lines = inputf.read().splitlines(keepends=False)
-            else:
-                old_lines = []
-
-            if not show_diff_side_by_side:
-                lines = list(
-                    difflib.unified_diff(
-                        old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path)
-                    )
-                )
-                for line in lines:
-                    if line.startswith(("+++", "---")):
-                        print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
-                    elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
-                    elif line.startswith("+"):
-                        print(colored(line, color="green", attrs=("bold",)), file=out_file)
-                    elif line.startswith("-"):
-                        print(colored(line, color="red", attrs=("bold",)), file=out_file)
-                    else:
-                        print(line, file=out_file)
-            else:
-                cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
-                lines = list(
-                    cd.make_table(
-                        old_lines,
-                        new_lines,
-                        fromdesc=str(out_path),
-                        todesc=str(out_path),
-                        context=True,
-                        numlines=3,
-                    )
-                )
-                for line in lines:
-                    line = "%s\n" % line
-                    if hasattr(out_file, "buffer"):
-                        out_file.buffer.write(line.encode("utf-8"))  # type: ignore
-                    else:
-                        out_file.write(line)
-
-            out_file.flush()
-            if not lines:
-                logger.info("File %s not changed, no diff...", out_path)
+            lines = _overwrite_helper_show_diff(
+                lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
+            )
 
         # Actually copy the file contents.
         if (not show_diff or lines) and do_write:
@@ -220,6 +178,53 @@ def overwrite_helper(
                 if answer_yes or input("Is this OK? [yN] ").lower().startswith("y"):
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
+
+
+def _overwrite_helper_show_diff(
+    lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
+):
+    if out_path != "-" and out_path_obj.exists():
+        with out_path_obj.open("rt") as inputf:
+            old_lines = inputf.read().splitlines(keepends=False)
+    else:
+        old_lines = []
+    if not show_diff_side_by_side:
+        lines = list(
+            difflib.unified_diff(old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path))
+        )
+        for line in lines:
+            if line.startswith(("+++", "---")):
+                print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
+            elif line.startswith("@@"):
+                print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
+            elif line.startswith("+"):
+                print(colored(line, color="green", attrs=("bold",)), file=out_file)
+            elif line.startswith("-"):
+                print(colored(line, color="red", attrs=("bold",)), file=out_file)
+            else:
+                print(line, file=out_file)
+    else:
+        cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
+        lines = list(
+            cd.make_table(
+                old_lines,
+                new_lines,
+                fromdesc=str(out_path),
+                todesc=str(out_path),
+                context=True,
+                numlines=3,
+            )
+        )
+        for line in lines:
+            line = "%s\n" % line
+            if hasattr(out_file, "buffer"):
+                out_file.buffer.write(line.encode("utf-8"))  # type: ignore
+            else:
+                out_file.write(line)
+    out_file.flush()
+    if not lines:
+        logger.info("File %s not changed, no diff...", out_path)
+    return lines
 
 
 @contextlib.contextmanager
@@ -245,7 +250,7 @@ class UnionFind:
         self._sz = [1] * len(vertex_names)
 
     def find(self, v):
-        assert type(v) is int
+        assert isinstance(v, int)
         j = v
 
         while j != self._id[j]:
@@ -261,8 +266,8 @@ class UnionFind:
         self.union(self.find_by_name(v_name), self.find_by_name(w_name))
 
     def union(self, v, w):
-        assert type(v) is int
-        assert type(w) is int
+        assert isinstance(v, int)
+        assert isinstance(w, int)
         i = self.find(v)
         j = self.find(w)
 
@@ -290,6 +295,5 @@ def load_toml_config(config):
         if os.path.exists(config_path):
             with open(config_path, "rt") as tomlf:
                 return toml.load(tomlf)
-    else:
-        logger.info("Could not find any of the global configuration files %s.", config_paths)
-        return None
+    logger.info("Could not find any of the global configuration files %s.", config_paths)
+    return None

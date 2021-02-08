@@ -148,11 +148,9 @@ class OrganizeCommand:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args):
+    def check_args(self, _args):
         """Called for checking arguments, override to change behaviour."""
-        res = 0
-
-        return res
+        return 0
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
@@ -180,7 +178,7 @@ class OrganizeCommand:
                     sample_name=m.group("sample"), file_name=Path(path).name
                 )
                 if dest.exists():
-                    logger.warn("Output path %s already exists, skipping." % dest)
+                    logger.warning("Output path %s already exists, skipping.", dest)
                 jobs.append(OrganizeJob(src=Path(path), dest=dest))
 
         if not ok:

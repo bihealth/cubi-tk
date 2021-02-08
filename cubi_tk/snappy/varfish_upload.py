@@ -143,7 +143,7 @@ class SnappyVarFishUploadCommand:
                 elif x.startswith("-"):
                     steps.discard(x[1:])
                 else:
-                    logger.warn("Does not start with +/-: %s", x)
+                    logger.warning("Does not start with +/-: %s", x)
         args.steps = tuple(sorted(steps))
 
         if not os.path.exists(args.base_path):  # pragma: nocover

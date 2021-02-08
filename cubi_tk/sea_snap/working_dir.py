@@ -22,6 +22,7 @@ def run(
     # find Sea-snap directory
     logger.info("Try to find RNA-SeA-SnaP pipeline directory...")
     start_path = Path(args.sea_snap_path)
+    path = None
     for path in [start_path] + list(start_path.parents):
         logger.debug("Trying %s", path)
         if (path / "mapping_pipeline.snake").exists():
@@ -35,9 +36,9 @@ def run(
     working_dir = Path(time.strftime(args.dirname))
     try:
         working_dir.mkdir(parents=True)
-        logger.info("Working directory {} created...".format(str(working_dir)))
+        logger.info("Working directory %s created...", str(working_dir))
     except FileExistsError:
-        logger.error("Error: directory {} already exists!".format(str(working_dir)))
+        logger.error("Error: directory %s already exists!", str(working_dir))
         return 1
 
     logger.info("Copy config files...")

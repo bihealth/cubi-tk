@@ -57,7 +57,7 @@ master_doc = "index"
 
 # General information about the project.
 project = u"CUBI-SAK"
-copyright = u"2018-2019, Berlin Institute of Health"
+copyright = u"2018-2019, Berlin Institute of Health"  # pylint:disable=redefined-builtin
 author = u"Mathias Kuhring, Manuel Holtgrewe"
 
 # The version info for the project you're documenting, acts as replacement

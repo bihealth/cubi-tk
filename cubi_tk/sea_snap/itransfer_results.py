@@ -89,7 +89,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                 sodar_api_token=self.args.sodar_api_token,
                 landing_zone_uuid=self.args.destination,
             ).irods_path
-            logger.info(f"Target iRods path: {lz_irods_path}")
+            logger.info("Target iRods path: %s", lz_irods_path)
 
         for cmd_block in (cb for cb in command_blocks if cb):
             sources = [

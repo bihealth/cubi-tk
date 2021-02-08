@@ -74,7 +74,9 @@ def check_args(args) -> int:
             )
             any_error = True
         else:
-            logger.warn("Output folder %s exists but --allow-overwrite given.", args.output_folder)
+            logger.warning(
+                "Output folder %s exists but --allow-overwrite given.", args.output_folder
+            )
 
     # Check UUID syntax.
     try:
@@ -121,7 +123,6 @@ def pull_isa(args) -> typing.Optional[int]:
             print(all_data["assays"][assay]["tsv"], file=f)
 
     logger.debug("Done pulling ISA files.")
-    return None
 
 
 def run(

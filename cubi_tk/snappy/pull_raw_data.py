@@ -120,6 +120,7 @@ class PullRawDataCommand:
                 "Could not find configuration key %s in %s", repr("data_sets"), inputf.name
             )
             return 1
+        data_set = {}
         for key, data_set in config["data_sets"].items():
             if (
                 key == self.config.project_uuid
