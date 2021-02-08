@@ -20,9 +20,6 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
 
     command_name = "check-irods"
 
-    def __init__(self, args):
-        super().__init__(args)
-
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -82,12 +79,12 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
         # files on SODAR
         files = self.get_files()
         files_rel = [f.replace(self.args.irods_path + "/", "") for f in files["files"]]
-        logger.info("Files on SODAR (first 20): " + ", ".join(files_rel[:19]))
+        logger.info("Files on SODAR (first 20): %s", ", ".join(files_rel[:19]))
 
         # samples in project
         with open(os.path.join(self.args.results_folder, "sample_info.yaml"), "r") as stream:
             samples = list(yaml.load(stream)["sample_info"])
-        logger.info("Samples in sample_info.yaml: " + ", ".join(samples))
+        logger.info("Samples in sample_info.yaml: %s", ", ".join(samples))
 
         # destinations from blueprint file
         blueprint = Path(self.args.results_folder) / self.args.transfer_blueprint
@@ -111,9 +108,9 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
         # samples covered?
         non_covered_samples = [s for s in samples if not any(s in f for f in files_rel)]
         if non_covered_samples:
-            logger.warn(
-                "These samples are in the sample sheet, but have no corresponding files on SODAR: "
-                + ", ".join(non_covered_samples)
+            logger.warning(
+                "These samples are in the sample sheet, but have no corresponding files on SODAR: %s",
+                ", ".join(non_covered_samples),
             )
             if not self.args.yes and not input("Continue? [yN] ").lower().startswith("y"):
                 logger.error("OK, breaking at your request")

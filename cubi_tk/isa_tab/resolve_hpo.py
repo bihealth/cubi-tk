@@ -99,11 +99,9 @@ class ResolveHpoCommand:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args):
+    def check_args(self, _args):
         """Called for checking arguments, override to change behaviour."""
-        res = 0
-
-        return res
+        return 0
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
@@ -132,7 +130,11 @@ class ResolveHpoCommand:
                 arr = [fixup(x.strip()) for x in re.split("[;,]", line.strip())]
                 arr = [x for x in arr if x]
                 names = [
-                    escape(graph._node.get(term, {}).get("name", missing(term)))
+                    escape(
+                        graph._node.get(term, {}).get(  # pylint: disable=protected-access
+                            "name", missing(term)
+                        )
+                    )
                     for term in arr
                     if term
                 ]

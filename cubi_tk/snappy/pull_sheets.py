@@ -66,7 +66,7 @@ class PullSheetsConfig:
 
     @staticmethod
     def create(args, global_config, toml_config=None):
-        # toml_config = toml_config or {}
+        _ = toml_config or {}
         return PullSheetsConfig(
             global_config=global_config,
             base_path=pathlib.Path(args.base_path),
