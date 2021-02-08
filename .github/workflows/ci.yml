@@ -1,4 +1,4 @@
-name: continuous integration
+name: CI
 
 on: [push]
 
@@ -8,21 +8,33 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version:
+          - 3.6
+          - 3.7
+          - 3.8
 
     steps:
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+      - name: Install Python via conda.
+        uses: s-weigand/setup-conda@v1
         with:
           python-version: ${{ matrix.python-version }}
+          conda-channels: defaults,bioconda,conda-forge
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Install pipenv
-        uses: dschep/install-pipenv-action@v1
-      - name: Install dependencies
+        with:
+          lfs: true
+      - name: Install mamba.
+        run: conda install -y mamba
+      - name: Install test dependencies via pip
         run: pip install -r requirements/test_black.txt
-      - name: Test with pytest
-        run: pytest --cov-report=term .
+      - name: Run tests
+        run: pytest .
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@master
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: coverage.xml
+        if: ${{ matrix.python-version == '3.8' }}
       - name: Check style with black
         run: black --check --line-length 100 .
       - name: Check style with flake8
