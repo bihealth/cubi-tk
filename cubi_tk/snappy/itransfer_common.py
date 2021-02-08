@@ -19,7 +19,7 @@ import requests
 from retrying import retry
 import tqdm
 
-from ..exceptions import MissingFileException, ParameterException
+from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
 
 #: Default number of parallel transfers.
@@ -400,9 +400,7 @@ class SnappyItransferCommandBase:
                     # Ask user if should use latest available or create new one.
                     if lz_irods_path:
                         logger.info(f"Found active Landing Zone: {lz_irods_path}")
-                        if input("Can the process use this path? [yN] ").lower().startswith("y"):
-                            pass
-                        else:
+                        if not input("Can the process use this path? [yN] ").lower().startswith("y"):
                             logger.info(f"...an alternative is to create another Landing Zone "
                                         f"using the UUID {in_destination}")
                             if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
@@ -410,7 +408,8 @@ class SnappyItransferCommandBase:
                             else:
                                 logger.info("Not possible to continue the process without a "
                                             "landing zone path. Breaking...")
-                                pass
+                                raise UserCanceledException
+
                     # No active lz available
                     # As user if should create new new.
                     else:
@@ -420,7 +419,7 @@ class SnappyItransferCommandBase:
                         else:
                             logger.info("Not possible to continue the process without a "
                                         "landing zone path. Breaking...")
-                            pass
+                            raise UserCanceledException
 
         # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz.
