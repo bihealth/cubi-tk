@@ -290,7 +290,7 @@ class SnappyItransferCommandBase:
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names) -> typing.Tuple[TransferJob, ...]:
+    def build_jobs(self, library_names):
         """Build file transfer jobs."""
 
         # Get path to iRODS directory
