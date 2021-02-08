@@ -13,7 +13,7 @@ from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_seasnap_itransfer_results_help(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sea-snap", "itransfer-results", "--help"])
 
@@ -25,7 +25,7 @@ def test_run_seasnap_itransfer_results_help(capsys):
 
 
 def test_run_seasnap_itransfer_results_nothing(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sea-snap", "itransfer-results"])

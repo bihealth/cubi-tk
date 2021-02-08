@@ -24,7 +24,7 @@ def test_run_cookiecutter_isatab_generic(tmp_path):
 
 def test_run_cookiecutter_isatab_germline(tmp_path):
     output_path = tmp_path / "output_dir"
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     args = parser.parse_args(["isa-tpl", "germline", str(output_path)])
 
     run_isatab_germline = run_cookiecutter(TEMPLATES["germline"], no_input=True)

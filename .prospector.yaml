@@ -27,3 +27,4 @@ pylint:
     - no-else-return
     - too-many-locals
     - import-error
+    - no-self-use

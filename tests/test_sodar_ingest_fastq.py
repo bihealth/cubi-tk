@@ -14,7 +14,7 @@ from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_sodar_ingest_fastq_help(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sodar", "ingest-fastq", "--help"])
 
@@ -26,7 +26,7 @@ def test_run_sodar_ingest_fastq_help(capsys):
 
 
 def test_run_sodar_ingest_fastq_nothing(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sodar", "ingest-fastq"])
@@ -59,7 +59,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
         landing_zone_uuid,
     ]
 
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
