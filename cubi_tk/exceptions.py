@@ -43,3 +43,7 @@ class ParameterException(CubiSakException):
 
 class ParseOutputException(CubiSakException):
     """Problem with parsing output of sub command."""
+
+
+class UserCanceledException(CubiSakException):
+    """Raised when user doesn't allow the process to continue."""
