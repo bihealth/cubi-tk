@@ -19,7 +19,7 @@ import requests
 from retrying import retry
 import tqdm
 
-from ..exceptions import MissingFileException
+from ..exceptions import MissingFileException, ParameterException
 from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
 
 #: Default number of parallel transfers.
@@ -336,22 +336,20 @@ class SnappyItransferCommandBase:
 
     def get_sodar_info(self):
         """
-
         Method evaluates user input to extract or create iRODS path. Use cases:
         1. User provides iRODS path. Same as before, use it.
         2. User provides Landing Zone UUID. Same as before, fetch path and use it.
         3. User provides Project UUID:
            i. If there are LZ associated with project, select the latest active and use it.
           ii. If there are no LZ associated with project, create a new one and use it.
-        4. Data provided by user is neither an iRODS path nor a valid UUID. Report error and exit.
+        4. Data provided by user is neither an iRODS path nor a valid UUID. Report error and throw exception.
 
         :return: Returns landing zone UUID and path to iRODS directory.
         """
         # Initialise variables
         lz_irods_path = None
         lz_uuid = None
-        is_project_uuid = True
-        is_lz_uuid = True
+        not_project_uuid = False
         create_lz_bool = self.args.yes
         in_destination = self.args.destination
 
@@ -372,7 +370,7 @@ class SnappyItransferCommandBase:
                     exception_str = str(e)
                     logger.error(f"Unable to create Landing Zone using UUID {in_destination}. "
                                  f"HTTP error {exception_str}")
-                    exit(os.EX_DATAERR)
+                    raise e
 
             else:
                 # Assume that provided UUID is associated with a Project.
@@ -380,13 +378,13 @@ class SnappyItransferCommandBase:
                 try:
                     lz_uuid, lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
                 except requests.exceptions.HTTPError as e:
+                    not_project_uuid = True
                     exception_str = str(e)
                     logger.debug(f"Provided UUID may not be associated with a Project. HTTP error {exception_str}")
-                    is_project_uuid = False
 
                 # Assume that provided UUID is associated with a LZ
                 # Behaviour: get iRODS path from it.
-                if not is_project_uuid:
+                if not_project_uuid:
                     try:
                         lz_uuid = in_destination
                         lz_irods_path = self.get_landing_zone_by_uuid(lz_uuid=lz_uuid)
@@ -394,11 +392,10 @@ class SnappyItransferCommandBase:
                         exception_str = str(e)
                         logger.debug(f"Provided UUID may not be associated with a Landing Zone. "
                                      f"HTTP error {exception_str}")
-                        is_lz_uuid = False
 
                 # Request input from user.
                 # Behaviour: depends on user reply to questions.
-                if is_project_uuid:
+                if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
                     if lz_irods_path:
@@ -413,7 +410,7 @@ class SnappyItransferCommandBase:
                             else:
                                 logger.info("Not possible to continue the process without a "
                                             "landing zone path. Breaking...")
-                                exit(os.EX_OK)
+                                pass
                     # No active lz available
                     # As user if should create new new.
                     else:
@@ -423,14 +420,14 @@ class SnappyItransferCommandBase:
                         else:
                             logger.info("Not possible to continue the process without a "
                                         "landing zone path. Breaking...")
-                            exit(os.EX_OK)
+                            pass
 
-        # Not able to process - exit.
+        # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz.
-        if lz_irods_path is None and not (is_project_uuid or is_lz_uuid):
+        if lz_irods_path is None:
             logger.error(f"Data provided by user is neither an iRODS path nor a valid UUID."
                          f"Please review input: '{in_destination}'")
-            exit(os.EX_DATAERR)
+            raise ParameterException
 
         # Log
         logger.info(f"Target iRODS path: {lz_irods_path}")
