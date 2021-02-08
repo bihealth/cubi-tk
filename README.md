@@ -1,3 +1,5 @@
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/71dd0ea53e444cd0949a00a7025face7)](https://www.codacy.com/gh/bihealth/cubi-tk/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bihealth/cubi-tk&amp;utm_campaign=Badge_Grade)
+
 # CUBI Toolkit
 
 Tooling for connecting GitLab, pipelines, and SODAR at CUBI.
