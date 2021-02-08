@@ -136,7 +136,7 @@ TEMPLATES = {tpl.name: tpl for tpl in _TEMPLATES}
 
 
 @curry
-def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
+def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     """Run cookiecutter, ``tpl`` will be bound with ``toolz.curry``."""
     extra_context = {}
     for name in tpl.configuration:  # pragma: nocover

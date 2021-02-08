@@ -14,7 +14,7 @@ from cubi_tk.sea_snap.pull_isa import URL_TPL
 
 
 def test_run_seasnap_write_sample_info_help(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sea-snap", "write-sample-info", "--help"])
 
