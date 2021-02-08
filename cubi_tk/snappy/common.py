@@ -28,7 +28,7 @@ class CouldNotFindPipelineRoot(Exception):
 
 
 def find_snappy_root_dir(
-    start_path: typing.Union[str, pathlib.Path], more_markers: typing.Iterable[str] = []
+    start_path: typing.Union[str, pathlib.Path], more_markers: typing.Iterable[str] = ()
 ):
     markers = [".snappy_pipeline"] + list(more_markers)
     start_path = pathlib.Path(start_path)
@@ -37,6 +37,5 @@ def find_snappy_root_dir(
         if any((path / name).exists() for name in markers):
             logger.info("Will start at %s", path)
             return path
-    else:
-        logger.error("Could not find SNAPPY pipeline directories below %s", start_path)
-        raise CouldNotFindPipelineRoot()
+    logger.error("Could not find SNAPPY pipeline directories below %s", start_path)
+    raise CouldNotFindPipelineRoot()

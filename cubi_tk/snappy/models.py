@@ -65,7 +65,7 @@ def load_datasets(path: pathlib.Path) -> typing.Dict[str, DataSet]:
     filtered = {key: ds for key, ds in data_sets.items() if ds.sodar_uuid}
     logger.info("Loaded %d data sets, %d with SODAR UUID", len(data_sets), len(filtered))
 
-    for key, ds in sorted(filtered.items()):
+    for _key, ds in sorted(filtered.items()):
         logger.debug("  - %s%s", ds.sodar_uuid, ": %s" % ds.sodar_title if ds.sodar_title else "")
 
     return filtered

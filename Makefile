@@ -1,24 +1,33 @@
-.PHONY: default black flake8 mypy test test-v test-vv
+.PHONY: all
+all: black
 
-default: black flake8 mypy test
-
+.PHONY: black
 black:
 	black -l 100 .
 
-black-check:
+.PHONY: test
+test:
 	black -l 100 --check .
 
-flake8:
-	flake8 .
+.PHONY: pytest
+pytest:
+	pytest .
 
-mypy:
-	mypy cubi_tk
+.PHONY: lint-all
+lint-all: bandit pyflakes pep257 prospector
 
-test:
-	pytest --disable-pytest-warnings
+.PHONY: bandit
+bandit:
+	bandit -c bandit.yml -r cubi_tk
 
-test-v:
-	pytest -v --disable-pytest-warnings
+.PHONY: pyflakes
+pyflakes:
+	pyflakes cubi_tk tests
 
-test-vv:
-	pytest -vv --disable-pytest-warnings
+.PHONY: pep257
+pep257:
+	pep257
+
+.PHONY: prospector
+prospector:
+	prospector

@@ -31,3 +31,8 @@ recommonmark >=0.6.0
 
 # Type checking.
 mypy
+
+# More checking
+bandit
+pyflakes
+prospector

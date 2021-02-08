@@ -118,7 +118,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument(
         "in_path_pattern",
-        help="Path pattern to use for extracting input file information. See https://cubi-gitlab.bihealth.org/CUBI/Pipelines/sea-snap/blob/master/documentation/prepare_input.md#fastq-files-folder-structure.",
+        help="Path pattern to use for extracting input file information. See "
+        "https://cubi-gitlab.bihealth.org/CUBI/Pipelines/sea-snap/blob/master/"
+        "documentation/prepare_input.md#fastq-files-folder-structure.",
     )
 
     parser.add_argument(
@@ -252,8 +254,8 @@ class SampleInfoTool:
             match_pattern = re.sub(r"\\\*\\\*", "[^{}]*", match_pattern)
             match_pattern = re.sub(r"(?<!\[\^{}\]\*)\\\*", "[^{}./]*", match_pattern)
 
-        logger.info("\ninput files:\n{}".format("\n".join(input_files)))
-        logger.info(f"\nmatch pattern:\n{match_pattern}")
+        logger.info("\ninput files:\n%s", "\n".join(input_files))
+        logger.info("\nmatch pattern:\n%s", match_pattern)
 
         wildcard_values = {w: [] for w in wildcards}
         wildcard_values["read_extension"] = []
@@ -285,7 +287,7 @@ class SampleInfoTool:
         """ go through wildcard values and get combinations """
 
         combinations = []
-        WildcardComb = namedtuple("WildcardComb", [s for s in wildcard_values])
+        WildcardComb = namedtuple("WildcardComb", wildcard_values)
         wildcard_comb_num = len(wildcard_values["sample"])
         assert all([len(val) == wildcard_comb_num for val in wildcard_values.values()])
         for index in range(wildcard_comb_num):
@@ -327,9 +329,8 @@ class SampleInfoTool:
             if comb.read_extension in self.allowed_read_extensions
         ]
         logger.info(
-            "\nextracted combinations:\n{}".format(
-                "\n".join("\t".join(i) for i in [wildcard_combs[0]._fields] + wildcard_combs)
-            )
+            "\nextracted combinations:\n%s",
+            "\n".join("\t".join(i) for i in [wildcard_combs[0]._fields] + wildcard_combs),
         )
 
         sample_info = {}
@@ -423,9 +424,7 @@ class SampleInfoTool:
                     ):
                         for p in assay.processes[key].parameter_values:
                             if p.name == "Library layout":
-                                sample_info[sample_name]["paired"] = (
-                                    True if p.value == "PAIRED" else False
-                                )
+                                sample_info[sample_name]["paired"] = p.value == "PAIRED"
                             elif p.name == "Library strand-specificity":
                                 sample_info[sample_name]["stranded"] = p.value.lower()
                             elif p.name == "Library name mRNA" and p.value[0]:
@@ -496,7 +495,6 @@ def pull_isa(args) -> typing.Optional[int]:
             print(all_data["assays"][assay]["tsv"], file=f)
 
     logger.debug("Done pulling ISA files.")
-    return None
 
 
 def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
@@ -518,9 +516,8 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
                 return 1
             elif len(assay_files) > 1:
                 logger.info(
-                    "Several assay files were pulled, choose one.\n{}".format(
-                        "\n".join(f"[{i}] {assay_files[i]}" for i in range(len(assay_files)))
-                    )
+                    "Several assay files were pulled, choose one.\n%s",
+                    "\n".join(f"[{i}] {assay_files[i]}" for i in range(len(assay_files))),
                 )
                 args.isa_assay = open(assay_files[int(input("choice: "))], "rt")
             else:

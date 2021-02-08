@@ -80,6 +80,7 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
+    _ = args
 
 
 def load_sheet_tsv(args):
@@ -291,7 +292,7 @@ class SnappyItransferCommandBase:
                 sodar_api_token=self.args.sodar_api_token,
                 landing_zone_uuid=self.args.destination,
             ).irods_path
-            logger.info(f"Target iRods path: {lz_irods_path}")
+            logger.info("Target iRods path: %s", lz_irods_path)
 
         transfer_jobs = []
         for library_name in library_names:
@@ -303,7 +304,7 @@ class SnappyItransferCommandBase:
                 real_result = os.path.realpath(glob_result)
                 if real_result.endswith(".md5"):
                     continue  # skip, will be added automatically
-                elif not os.path.isfile(real_result):
+                if not os.path.isfile(real_result):
                     continue  # skip if did not resolve to file
                 remote_dir = os.path.join(
                     lz_irods_path,

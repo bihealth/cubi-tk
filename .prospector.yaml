@@ -1,5 +1,5 @@
 ignore-paths:
-  - clearCNV/_version.py
+  - cubi_tk/_version.py
   - versioneer.py
 
 pep257:
