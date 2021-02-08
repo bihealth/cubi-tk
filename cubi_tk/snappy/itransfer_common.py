@@ -336,6 +336,7 @@ class SnappyItransferCommandBase:
 
     def get_sodar_info(self):
         """
+
         Method evaluates user input to extract or create iRODS path. Use cases:
         1. User provides iRODS path. Same as before, use it.
         2. User provides Landing Zone UUID. Same as before, fetch path and use it.
