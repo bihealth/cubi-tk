@@ -494,7 +494,6 @@ class SnappyItransferCommandBase:
         :return: Returns landing zone UUID and iRODS path in latest active landing zone available.
         If none available, it returns None for both.
         """
-        #
         from ..sodar.api import landing_zones
 
         # Initialise variables
