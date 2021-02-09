@@ -118,3 +118,4 @@ ENV/
 
 # Pytest
 .pytest_cache/
+sample_info.yaml
