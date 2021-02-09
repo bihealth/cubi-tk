@@ -52,9 +52,7 @@ class IrodsCheckCommand:
     def get_files(self):
         """get files on iRods."""
         try:
-            ils_out = check_output(f"ils -r {self.args.irods_path}", shell=True).decode(
-                sys.stdout.encoding
-            )
+            ils_out = check_output(["ils", "-r", self.args.irods_path]).decode(sys.stdout.encoding)
         except SubprocessError as e:  # pragma: nocover
             logger.error("Something went wrong: %s\nAre you logged in? try 'iinit'", e)
             raise
@@ -128,9 +126,7 @@ def check_file(file, md5s, req_num_reps, t):
 
     # 2) enough replicas?
     try:
-        isysmeta_out = check_output(f"isysmeta -l ls {file}", shell=True).decode(
-            sys.stdout.encoding
-        )
+        isysmeta_out = check_output(["isysmeta", "-l", "ls", "{file}"]).decode(sys.stdout.encoding)
     except SubprocessError as e:  # pragma: nocover
         logger.error("Problem executing isysmeta: %s (probably retrying)", e)
         raise
@@ -150,7 +146,7 @@ def check_file(file, md5s, req_num_reps, t):
     # 3) checksum consistent with .md5 file?
     try:
         temp_file = f"./temp_{str(uuid.uuid4())}.md5"
-        check_output(f"irsync -aK i:{file}.md5 {temp_file}", shell=True)
+        check_output(["irsync", "-aK", "i:{file}.md5", temp_file])
     except SubprocessError as e:  # pragma: nocover
         logger.error("Could not fetch file for md5 sum check: %s.md5: %s", temp_file, e)
         raise
