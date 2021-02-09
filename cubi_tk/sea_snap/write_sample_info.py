@@ -422,45 +422,48 @@ class SampleInfoTool:
                         "Library construction [a-z]*RNA[-_]?[Ss]eq",
                         assay.processes.get(key, dummy).protocol_ref,
                     ):
-                        for p in assay.processes[key].parameter_values:
-                            if p.name == "Library layout":
-                                sample_info[sample_name]["paired"] = p.value == "PAIRED"
-                            elif p.name == "Library strand-specificity":
-                                sample_info[sample_name]["stranded"] = p.value.lower()
-                            elif p.name == "Library name mRNA" and p.value[0]:
-                                if "lib_types" not in sample_info[sample_name]:
-                                    sample_info[sample_name]["lib_types"] = []
-                                sample_info[sample_name]["lib_types"].append(
-                                    (",".join(p.value), "Gene Expression")
-                                )
-                            elif p.name == "Library name sample tag" and p.value[0]:
-                                if "lib_types" not in sample_info[sample_name]:
-                                    sample_info[sample_name]["lib_types"] = []
-                                sample_info[sample_name]["lib_types"].append(
-                                    (",".join(p.value), "Antibody Capture")
-                                )
+                        self._parse_isatab_library_construction(
+                            assay, key, sample_info, sample_name
+                        )
 
                     elif re.match(
                         "Nucleic acid sequencing [a-z]*RNA[-_]?[Ss]eq",
                         assay.processes.get(key, dummy).protocol_ref,
                     ):
-                        for p in assay.processes[key].parameter_values:
-                            if p.name == "Instrument model":
-                                sample_info[sample_name]["instrument"] = ",".join(p.value)
-                            if p.name == "Sequencing kit":
-                                sample_info[sample_name]["sequencing_kit"] = ",".join(p.value)
-                            elif (
-                                p.name == "Platform"
-                                and "instrument" not in sample_info[sample_name]
-                            ):
-                                sample_info[sample_name]["instrument"] = ",".join(p.value)
-                            elif p.name == "Target read length":
-                                sample_info[sample_name]["read_length"] = p.value
+                        self._parse_isatab_sequencing(assay, key, sample_info, sample_name)
 
         logger.info("Samples in ISA assay:\n%s", ", ".join(sample_info))
         logger.debug(sample_info)
 
         self.sample_info = sample_info
+
+    def _parse_isatab_sequencing(self, assay, key, sample_info, sample_name):
+        for p in assay.processes[key].parameter_values:
+            if p.name == "Instrument model":
+                sample_info[sample_name]["instrument"] = ",".join(p.value)
+            if p.name == "Sequencing kit":
+                sample_info[sample_name]["sequencing_kit"] = ",".join(p.value)
+            elif p.name == "Platform" and "instrument" not in sample_info[sample_name]:
+                sample_info[sample_name]["instrument"] = ",".join(p.value)
+            elif p.name == "Target read length":
+                sample_info[sample_name]["read_length"] = p.value
+
+    def _parse_isatab_library_construction(self, assay, key, sample_info, sample_name):
+        for p in assay.processes[key].parameter_values:
+            if p.name == "Library layout":
+                sample_info[sample_name]["paired"] = p.value == "PAIRED"
+            elif p.name == "Library strand-specificity":
+                sample_info[sample_name]["stranded"] = p.value.lower()
+            elif p.name == "Library name mRNA" and p.value[0]:
+                if "lib_types" not in sample_info[sample_name]:
+                    sample_info[sample_name]["lib_types"] = []
+                sample_info[sample_name]["lib_types"].append((",".join(p.value), "Gene Expression"))
+            elif p.name == "Library name sample tag" and p.value[0]:
+                if "lib_types" not in sample_info[sample_name]:
+                    sample_info[sample_name]["lib_types"] = []
+                sample_info[sample_name]["lib_types"].append(
+                    (",".join(p.value), "Antibody Capture")
+                )
 
 
 def pull_isa(args) -> typing.Optional[int]:

@@ -164,10 +164,15 @@ class PullRawDataCommand:
         logger.info("Using irods path of first assay: %s", assay.irods_path)
 
         library_to_folder = self._get_library_to_folder()
+        commands = self._build_commands(assay, library_to_folder)
+        if not commands:
+            logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
+            return 0
+        return self._executed_commands(commands)
+
+    def _build_commands(self, assay, library_to_folder):
         commands = []
         for k, v in library_to_folder.items():
-            if "12_3456" in k:  # TODO: remove this if block
-                continue  # skip sample line for now
             commands.append(["irsync", "-r"])
             if self.config.irsync_threads:
                 commands[-1] += ["-N", str(self.config.irsync_threads)]
@@ -175,10 +180,9 @@ class PullRawDataCommand:
                 "i:%s/%s" % (assay.irods_path, k),
                 "%s/%s" % (self.config.output_dir, v),
             ]
-        if not commands:
-            logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
-            return 0
+        return commands
 
+    def _executed_commands(self, commands):
         cmds_txt = "\n".join(["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands])
         logger.info("Pull data using the following commands?\n\n%s\n", cmds_txt)
         if self.config.yes:

@@ -1,6 +1,7 @@
 """Code for parsing pedigree files."""
 
 import re
+import typing
 
 import attr
 
@@ -23,7 +24,7 @@ class Donor:
     disease: str
 
 
-def parse_ped(ped_file):
+def parse_ped(ped_file: typing.TextIO):
     """Parse a given PED file and yield each line as a Donor."""
     for line in ped_file.readlines():
         line = re.split(r"\s+", line.rstrip())[:6]
