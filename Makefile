@@ -28,6 +28,10 @@ pyflakes:
 pep257:
 	pep257
 
+.PHONY: flake8
+flake8:
+	flake8
+
 .PHONY: prospector
 prospector:
 	prospector

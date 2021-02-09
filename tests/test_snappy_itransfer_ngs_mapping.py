@@ -40,7 +40,6 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
 
 def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
     fake_base_path = "/base/path"
-    # landing_zone_uuid = "landing_zone_uuid"
     sodar_path = "sodar/path/to/landing/zone/landing_zone_uuid"
     tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
     argv = [
