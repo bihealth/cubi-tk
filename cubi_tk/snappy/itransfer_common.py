@@ -371,7 +371,7 @@ class SnappyItransferCommandBase:
                     exception_str = str(e)
                     logger.error(f"Unable to create Landing Zone using UUID {in_destination}. "
                                  f"HTTP error {exception_str}")
-                    raise e
+                    raise
 
             else:
                 # Assume that provided UUID is associated with a Project.
@@ -407,9 +407,9 @@ class SnappyItransferCommandBase:
                             if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
                                 lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
                             else:
-                                logger.info("Not possible to continue the process without a "
-                                            "landing zone path. Breaking...")
-                                raise UserCanceledException
+                                msg = "Not possible to continue the process without a landing zone path. Breaking..."
+                                logger.info(msg)
+                                raise UserCanceledException(msg)
 
                     # No active lz available
                     # As user if should create new new.
@@ -418,16 +418,17 @@ class SnappyItransferCommandBase:
                         if input("Can the process create a new landing zone? [yN] ").lower().startswith("y"):
                             lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
                         else:
-                            logger.info("Not possible to continue the process without a "
-                                        "landing zone path. Breaking...")
-                            raise UserCanceledException
+                            msg = "Not possible to continue the process without a landing zone path. Breaking..."
+                            logger.info(msg)
+                            raise UserCanceledException(msg)
 
         # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz.
         if lz_irods_path is None:
-            logger.error(f"Data provided by user is neither an iRODS path nor a valid UUID."
-                         f"Please review input: '{in_destination}'")
-            raise ParameterException
+            msg = "Data provided by user is neither an iRODS path nor a valid UUID. " \
+                  "Please review input: " + in_destination
+            logger.error(msg)
+            raise ParameterException(msg)
 
         # Log
         logger.info(f"Target iRODS path: {lz_irods_path}")
