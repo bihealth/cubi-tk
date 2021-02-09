@@ -83,7 +83,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
 
         # samples in project
         with open(os.path.join(self.args.results_folder, "sample_info.yaml"), "r") as stream:
-            samples = list(yaml.load(stream)["sample_info"])
+            samples = list(yaml.safe_load(stream)["sample_info"])
         logger.info("Samples in sample_info.yaml: %s", ", ".join(samples))
 
         # destinations from blueprint file
