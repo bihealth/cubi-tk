@@ -1,18 +1,14 @@
 """Client API code for SODAR."""
 
 import contextlib
-import io
 import pathlib
 from types import SimpleNamespace
 import typing
 
-from altamisa.isatab import InvestigationReader, StudyReader, AssayReader
 import cattr
 from logzero import logger
 import requests
 
-from ..exceptions import ParameterException, UnsupportedIsaTabFeatureException
-from ..isa_support import IsaData
 from . import models
 
 
@@ -62,10 +58,9 @@ def _samplesheets_upload(*, sodar_url, sodar_api_token, project_uuid, file_paths
         for no, path in enumerate(file_paths):
             p = pathlib.Path(path)
             files.append(
-                ("file_%d" % no, (path.name, stack.enter_context(p.open("rt")), "text/plain"))
+                ("file_%d" % no, (p.name, stack.enter_context(p.open("rt")), "text/plain"))
             )
         r = requests.post(url, headers=headers, files=files)
-    print(vars(r))
     r.raise_for_status()
     return r.json()
 
@@ -112,15 +107,15 @@ def _landingzones_create(*, sodar_url, sodar_api_token, project_uuid, assay_uuid
         investigation = investigations.get(
             sodar_url=sodar_url, sodar_api_token=sodar_api_token, project_uuid=project_uuid
         )
-        if len(investigation.studies) != 1:
+        if len(investigation.studies) != 1:  # pragma: no cover
             logger.error("Expected one study, found %d", len(investigation.studies))
             logger.info("Try specifying an explicit --assay parameter")
-            raise Exception("Invalid number of studies in investigation!")
+            raise Exception("Invalid number of studies in investigation!")  # TODO
         study = list(investigation.studies.values())[0]
-        if len(study.assays) != 1:
+        if len(study.assays) != 1:  # pragma: no cover
             logger.error("Expected one assay, found %d", len(study.assays))
             logger.info("Try specifying an explicit --assay parameter")
-            raise Exception("Invalid number of assays in investigation!")
+            raise Exception("Invalid number of assays in investigation!")  # TODO
         assay_uuid = list(study.assays.keys())[0]
 
     # Create landing zone through API.
@@ -160,47 +155,3 @@ landing_zones = SimpleNamespace(
     move=_landingzones_move,
     get=_landingzones_get,
 )
-
-
-class _SheetClient:
-    """Provide commands for sample sheets."""
-
-    def __init__(self, owner):
-        #: Owning ``Client`` instance.
-        self.owner = owner
-
-    def get_raw(self, project_uuid=None):
-        """Get raw sample sheet data, ``project_uuid`` can override default ``project_uuid`` from ``self.owner``."""
-        if not project_uuid and not self.owner.project_uuid:
-            raise ParameterException("Both Client and method's project_uuid argument missing.")
-        return _samplesheets_get(
-            sodar_url=self.owner.sodar_url,
-            sodar_api_token=self.owner.sodar_api_token,
-            project_uuid=project_uuid or self.owner.project_uuid,
-        )
-
-    def get(self, project_uuid=None) -> IsaData:
-        raw_data = self.get_raw(project_uuid)
-        investigation = InvestigationReader.from_stream(
-            input_file=io.StringIO(raw_data["investigation"]["tsv"]),
-            filename=raw_data["investigation"]["path"],
-        ).read()
-        studies = {
-            path: StudyReader.from_stream(
-                study_id=path, input_file=io.StringIO(details["tsv"]), filename=path
-            ).read()
-            for path, details in raw_data["studies"].items()
-        }
-        if len(studies) > 1:  # pragma: nocover
-            raise UnsupportedIsaTabFeatureException("More than one study found!")
-        study = list(studies.values())[0]
-        assays = {
-            path: AssayReader.from_stream(
-                study_id=study.file,
-                assay_id=path,
-                input_file=io.StringIO(details["tsv"]),
-                filename=path,
-            ).read()
-            for path, details in raw_data["assays"].items()
-        }
-        return IsaData(investigation, raw_data["investigation"]["path"], studies, assays)

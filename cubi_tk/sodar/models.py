@@ -1,4 +1,8 @@
-"""Python attrs based models for the SODAR API."""
+"""Python attrs based models for the SODAR API.
+
+In some cases, ``typing.Optional[str]`` is used for the ``sodar_uuid`` attribute as the SODAR API does not return
+the UUID as an attribute.
+"""
 
 import typing
 
@@ -14,6 +18,7 @@ class OntologyTermRef:
 
 @attr.s(frozen=True, auto_attribs=True)
 class Assay:
+    sodar_uuid: typing.Optional[str]
     file_name: str
     irods_path: str
     technology_platform: str
@@ -24,6 +29,7 @@ class Assay:
 
 @attr.s(frozen=True, auto_attribs=True)
 class Study:
+    sodar_uuid: typing.Optional[str]
     identifier: str
     file_name: str
     irods_path: str
@@ -35,6 +41,7 @@ class Study:
 
 @attr.s(frozen=True, auto_attribs=True)
 class Investigation:
+    sodar_uuid: typing.Optional[str]
     archive_name: str
     comments: typing.Any
     description: str
@@ -67,7 +74,7 @@ class LandingZone:
     """Represent a landing zone in the SODAR API."""
 
     #: UUID of the landing zone.
-    sodar_uuid: str
+    sodar_uuid: typing.Optional[str]
     #: Date of last modification.
     date_modified: str
 
