@@ -98,7 +98,7 @@ _TEMPLATES = (
         name="single_cell_rnaseq",
         path=os.path.join(_BASE_DIR, "isatab-single_cell_rnaseq"),
         description="single cell RNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-generic"),
+        configuration=load_variables("isatab-single_cell_rnaseq"),
     ),
     IsaTabTemplate(
         name="tumor_normal_dna",
