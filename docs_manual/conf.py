@@ -56,9 +56,9 @@ source_suffix = [".rst", ".md"]
 master_doc = "index"
 
 # General information about the project.
-project = u"CUBI-SAK"
-copyright = u"2018-2019, Berlin Institute of Health"  # pylint:disable=redefined-builtin
-author = u"Mathias Kuhring, Manuel Holtgrewe"
+project = u"cubi-tk"
+copyright = u"2020-2021, Berlin Institute of Health"  # pylint:disable=redefined-builtin
+author = u"Core Unit Bioinformatics"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
