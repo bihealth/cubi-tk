@@ -23,7 +23,13 @@ def _investigations_get(*, sodar_url, sodar_api_token, project_uuid):
     headers = {"Authorization": "Token %s" % sodar_api_token}
     r = requests.get(url, headers=headers)
     r.raise_for_status()
-    return cattr.structure(r.json(), models.Investigation)
+    # TODO: remove workaround once SODAR directly returns sodar_uuid
+    tmp = r.json()
+    for study_sodar_uuid, study in tmp["studies"].items():
+        study["sodar_uuid"] = study_sodar_uuid
+        for assay_sodar_uuid, assay in study["assays"].items():
+            assay["sodar_uuid"] = assay_sodar_uuid
+    return cattr.structure(tmp, models.Investigation)
 
 
 #: Investigation-related API.
