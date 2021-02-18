@@ -21,6 +21,7 @@ def test_investigations_get(requests_mock):
         json=cattr.unstructure(expected),
     )
     result = investigations.get(**args)
+    _ = result
     # TODO: uncomment once sodar_uuid is written out for assay/study
     # assert expected == result
 
