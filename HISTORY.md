@@ -1,5 +1,10 @@
 # History
 
+## HEAD (unreleased)
+
+- temporarily working around SODAR REST API not returning sodar\_uuid where we expect it to
+- using library\_ name as an alternative to folder\_name
+
 ## v0.2.0
 
 - Adjusting package meta data in `setup.py`.
