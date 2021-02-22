@@ -64,10 +64,13 @@ class LibraryInfoCollector(IsaNodeVisitor):
         elif material.type == "Library Name":
             library = material
             sample = material_path[0]
+            folder = first_value("Folder name", node_path)
+            if not folder:
+                folder = library.name
             self.samples[sample.name] = {
                 "source": self.sources[sample.name],
                 "library_name": library.name,
-                "folder_name": first_value("Folder name", node_path)
+                "folder_name": folder
             }
 
 
