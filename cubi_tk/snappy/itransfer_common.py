@@ -369,9 +369,13 @@ class SnappyItransferCommandBase:
 
             if create_lz_bool:
                 # Assume that provided UUID is associated with a Project and user wants a new LZ.
-                # Behavior: create new LZ.
+                # Behavior: search for available LZ; if none,create new LZ.
                 try:
-                    lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
+                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
+                    if not lz_irods_path:
+                        logger.info(f"No active Landing Zone available for project {lz_uuid}, "
+                                    f"a new one will be created...")
+                        lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(
