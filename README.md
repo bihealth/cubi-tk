@@ -8,6 +8,8 @@
 
 Tooling for connecting GitLab, pipelines, and SODAR at CUBI.
 
+- [Documentation](https://cubi-tk.readthedocs.io/en/latest/?badge=latest)
+
 ## Getting Started
 
 Prerequisites when using conda:
