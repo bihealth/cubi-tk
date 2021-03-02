@@ -70,7 +70,7 @@ class LibraryInfoCollector(IsaNodeVisitor):
             self.samples[sample.name] = {
                 "source": self.sources[sample.name],
                 "library_name": library.name,
-                "folder_name": folder
+                "folder_name": folder,
             }
 
 
@@ -118,7 +118,7 @@ class PullRawDataCommand:
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
 
         parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
+            "--assay", dest="assay", default=None, help="UUID of assay to download data for."
         )
 
         parser.add_argument("project_uuid", help="UUID of project to download data for.")
@@ -165,7 +165,7 @@ class PullRawDataCommand:
             for assay_uuid in study.assays.keys():
                 if (self.config.assay is None) and (assay is None):
                     assay = study.assays[assay_uuid]
-                if (not self.config.assay is None) and (self.config.assay == assay_uuid):
+                if (self.config.assay is not None) and (self.config.assay == assay_uuid):
                     assay = study.assays[assay_uuid]
                     logger.info("Using irods path of assay %s: %s", assay_uuid, assay.irods_path)
                     break
