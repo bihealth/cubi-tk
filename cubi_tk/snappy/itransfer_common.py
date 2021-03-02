@@ -371,15 +371,22 @@ class SnappyItransferCommandBase:
                 # Assume that provided UUID is associated with a Project and user wants a new LZ.
                 # Behavior: search for available LZ; if none,create new LZ.
                 try:
-                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
+                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(
+                        project_uuid=in_destination
+                    )
                     if not lz_irods_path:
-                        logger.info("No active Landing Zone available for project %s, "
-                                    "a new one will be created..." % lz_uuid)
-                        lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
+                        logger.info(
+                            "No active Landing Zone available for project %s, "
+                            "a new one will be created..." % lz_uuid
+                        )
+                        lz_uuid, lz_irods_path = self.create_landing_zone(
+                            project_uuid=in_destination
+                        )
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(
-                        "Unable to create Landing Zone using UUID %s. HTTP error %s " % (in_destination, exception_str)
+                        "Unable to create Landing Zone using UUID %s. HTTP error %s "
+                        % (in_destination, exception_str)
                     )
                     raise
 
@@ -394,7 +401,8 @@ class SnappyItransferCommandBase:
                     not_project_uuid = True
                     exception_str = str(e)
                     logger.debug(
-                        "Provided UUID may not be associated with a Project. HTTP error %s" % exception_str
+                        "Provided UUID may not be associated with a Project. HTTP error %s"
+                        % exception_str
                     )
 
                 # Assume that provided UUID is associated with a LZ
@@ -406,7 +414,8 @@ class SnappyItransferCommandBase:
                     except requests.exceptions.HTTPError as e:
                         exception_str = str(e)
                         logger.debug(
-                            "Provided UUID may not be associated with a Landing Zone. HTTP error %s" % exception_str
+                            "Provided UUID may not be associated with a Landing Zone. HTTP error %s"
+                            % exception_str
                         )
 
                 # Request input from user.
@@ -422,7 +431,8 @@ class SnappyItransferCommandBase:
                             .startswith("y")
                         ):
                             logger.info(
-                                "...an alternative is to create another Landing Zone using the UUID %s" % in_destination
+                                "...an alternative is to create another Landing Zone using the UUID %s"
+                                % in_destination
                             )
                             if (
                                 input("Can the process create a new landing zone? [yN] ")
@@ -440,9 +450,7 @@ class SnappyItransferCommandBase:
                     # No active lz available
                     # As user if should create new new.
                     else:
-                        logger.info(
-                            "No active Landing Zone available for UUID %s" % in_destination
-                        )
+                        logger.info("No active Landing Zone available for UUID %s" % in_destination)
                         if (
                             input("Can the process create a new landing zone? [yN] ")
                             .lower()
@@ -482,7 +490,8 @@ class SnappyItransferCommandBase:
         from ..sodar.api import landing_zones
 
         logger.info(
-            "Transferred files move to Landing Zone %s will be validated and moved in SODAR..." % lz_uuid
+            "Transferred files move to Landing Zone %s will be validated and moved in SODAR..."
+            % lz_uuid
         )
         _ = landing_zones.move(
             sodar_url=self.args.sodar_url,
