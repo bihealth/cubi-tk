@@ -9,7 +9,7 @@ from logzero import logger
 import yaml
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class SearchPattern:
     """Represent an entry in the ``search_patterns`` list."""
 
@@ -19,7 +19,7 @@ class SearchPattern:
     right: typing.Optional[str] = None
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class DataSet:
     """Represent a data set in the ``config.yaml`` file."""
 

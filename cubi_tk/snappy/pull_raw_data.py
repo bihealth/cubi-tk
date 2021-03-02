@@ -37,6 +37,7 @@ class Config:
     irsync_threads: int
     yes: bool
     project_uuid: str
+    assay: str
     samples: typing.List[str]
 
 
@@ -93,6 +94,10 @@ class PullRawDataCommand:
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
         )
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
+
+        parser.add_argument(
+            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
+        )
 
         parser.add_argument("project_uuid", help="UUID of project to download data for.")
 
@@ -153,6 +158,7 @@ class PullRawDataCommand:
                 irsync_threads=self.config.irsync_threads,
                 yes=self.config.yes,
                 project_uuid=self.config.project_uuid,
+                assay=self.config.assay,
                 output_dir=download_path,
             )
         ).execute()

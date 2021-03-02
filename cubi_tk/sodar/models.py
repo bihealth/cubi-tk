@@ -12,13 +12,13 @@ import attr
 @attr.s(frozen=True, auto_attribs=True)
 class OntologyTermRef:
     name: str
-    accession: typing.Optional[str]
-    ontology_name: typing.Optional[str]
+    accession: typing.Optional[str] = None
+    ontology_name: typing.Optional[str] = None
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class Assay:
-    sodar_uuid: typing.Optional[str]
+    sodar_uuid: typing.Optional[str] = None
     file_name: str
     irods_path: str
     technology_platform: str
@@ -27,9 +27,9 @@ class Assay:
     comments: typing.Dict[str, str]
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class Study:
-    sodar_uuid: typing.Optional[str]
+    sodar_uuid: typing.Optional[str] = None
     identifier: str
     file_name: str
     irods_path: str
@@ -39,9 +39,9 @@ class Study:
     assays: typing.Dict[str, Assay]
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class Investigation:
-    sodar_uuid: typing.Optional[str]
+    sodar_uuid: typing.Optional[str] = None
     archive_name: str
     comments: typing.Any
     description: str
@@ -50,7 +50,6 @@ class Investigation:
     irods_status: bool
     parser_version: str
     project: str
-    sodar_uuid: str
     studies: typing.Dict[str, Study]
     title: str
 
@@ -69,12 +68,12 @@ class User:
     email: str
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class LandingZone:
     """Represent a landing zone in the SODAR API."""
 
     #: UUID of the landing zone.
-    sodar_uuid: typing.Optional[str]
+    sodar_uuid: typing.Optional[str] = None
     #: Date of last modification.
     date_modified: str
 
@@ -95,8 +94,8 @@ class LandingZone:
     #: Status information string.
     status_info: str
     #: Optional configuration name.
-    configuration: typing.Optional[typing.Any]
+    configuration: typing.Optional[typing.Any] = None
     #: Optional configuration data.
-    config_data: typing.Optional[typing.Any]
+    config_data: typing.Optional[typing.Any] = None
     #: Path in iRODS.
     irods_path: str
