@@ -9,7 +9,7 @@ import typing
 import attr
 
 
-@attr.s(frozen=True, auto_attribs=True, kw_only=True)
+@attr.s(frozen=True, auto_attribs=True)
 class OntologyTermRef:
     name: str
     accession: typing.Optional[str] = None
