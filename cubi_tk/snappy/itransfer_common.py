@@ -373,14 +373,13 @@ class SnappyItransferCommandBase:
                 try:
                     lz_uuid, lz_irods_path = self.get_latest_landing_zone(project_uuid=in_destination)
                     if not lz_irods_path:
-                        logger.info(f"No active Landing Zone available for project {lz_uuid}, "
-                                    f"a new one will be created...")
+                        logger.info("No active Landing Zone available for project %s, "
+                                    "a new one will be created..." % lz_uuid)
                         lz_uuid, lz_irods_path = self.create_landing_zone(project_uuid=in_destination)
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(
-                        f"Unable to create Landing Zone using UUID {in_destination}. "
-                        f"HTTP error {exception_str}"
+                        "Unable to create Landing Zone using UUID %s. HTTP error %s " % (in_destination, exception_str)
                     )
                     raise
 
@@ -395,7 +394,7 @@ class SnappyItransferCommandBase:
                     not_project_uuid = True
                     exception_str = str(e)
                     logger.debug(
-                        f"Provided UUID may not be associated with a Project. HTTP error {exception_str}"
+                        "Provided UUID may not be associated with a Project. HTTP error %s" % exception_str
                     )
 
                 # Assume that provided UUID is associated with a LZ
@@ -407,8 +406,7 @@ class SnappyItransferCommandBase:
                     except requests.exceptions.HTTPError as e:
                         exception_str = str(e)
                         logger.debug(
-                            f"Provided UUID may not be associated with a Landing Zone. "
-                            f"HTTP error {exception_str}"
+                            "Provided UUID may not be associated with a Landing Zone. HTTP error %s" % exception_str
                         )
 
                 # Request input from user.
@@ -417,15 +415,14 @@ class SnappyItransferCommandBase:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
                     if lz_irods_path:
-                        logger.info(f"Found active Landing Zone: {lz_irods_path}")
+                        logger.info("Found active Landing Zone: %s" % lz_irods_path)
                         if (
                             not input("Can the process use this path? [yN] ")
                             .lower()
                             .startswith("y")
                         ):
                             logger.info(
-                                f"...an alternative is to create another Landing Zone "
-                                f"using the UUID {in_destination}"
+                                "...an alternative is to create another Landing Zone using the UUID %s" % in_destination
                             )
                             if (
                                 input("Can the process create a new landing zone? [yN] ")
@@ -443,7 +440,9 @@ class SnappyItransferCommandBase:
                     # No active lz available
                     # As user if should create new new.
                     else:
-                        logger.info(f"No active Landing Zone available for UUID {in_destination}")
+                        logger.info(
+                            "No active Landing Zone available for UUID %s" % in_destination
+                        )
                         if (
                             input("Can the process create a new landing zone? [yN] ")
                             .lower()
@@ -468,7 +467,7 @@ class SnappyItransferCommandBase:
             raise ParameterException(msg)
 
         # Log
-        logger.info(f"Target iRODS path: {lz_irods_path}")
+        logger.info("Target iRODS path: %s" % lz_irods_path)
 
         # Return
         return lz_uuid, lz_irods_path
@@ -483,7 +482,7 @@ class SnappyItransferCommandBase:
         from ..sodar.api import landing_zones
 
         logger.info(
-            f"Transferred files move to Landing Zone {lz_uuid} will be validated and moved in SODAR..."
+            "Transferred files move to Landing Zone %s will be validated and moved in SODAR..." % lz_uuid
         )
         _ = landing_zones.move(
             sodar_url=self.args.sodar_url,
