@@ -1,13 +1,13 @@
 """``cubi-tk isa-tab annotate``: add annotation to ISA-tab from CSV file."""
 
 import argparse
+import csv
 import io
 import pathlib
 import typing
 from warnings import warn
 
 import attr
-import pandas as pd
 from altamisa.constants.table_headers import (
     SAMPLE_NAME,
     MATERIAL_NAME_HEADERS,
@@ -267,14 +267,12 @@ class AddAnnotationIsaTabCommand:
         # Check target study/assay availability
         self._check_studies_and_assays(isa_data)
 
-        # Read annotation file
-        annotation = pd.read_csv(self.config.input_annotation_file, sep="\t", header=0)
-        if annotation.empty:
-            logger.error("No entries in annotation file")
-            return 1
+        # Read annotation file and build mapping
+        annotation_data = self._read_annotation(self.config.input_annotation_file)
+        annotation_map, header_map = self._build_annotation_map(annotation_data)
 
         # Add annotation
-        self._perform_update(isa_data, annotation)
+        self._perform_update(isa_data, annotation_map, header_map)
 
         return 0
 
@@ -317,9 +315,84 @@ class AddAnnotationIsaTabCommand:
             logger.error("No assays available in investigation.")
             return 1
 
-    def _perform_update(self, isa, annotation):
+    def _read_annotation(self, filename):
+        with open(filename) as infile:
+            anno_reader = csv.reader(infile, delimiter="\t")
+            annotation_data = []
+            for row in anno_reader:
+                annotation_data.append(row)
+
+        # Need at least two columns (e.g. one source/sample name plus new annotation) and one data row
+        if len(annotation_data) < 2 and len(annotation_data[0]) < 2:
+            logger.error("Annotation file needs at least two columns and two rows")
+            return 1
+        return annotation_data
+
+    def _build_annotation_map(self, annotation):
+        # change to long df
+        # node_type: material type, e.g. Source Name, Sample Name, etc.
+        # ID: actual source name, sample name, etc.
+        # col_name: annotation key, e.g. name to use for characteristic, comment, etc.
+        # annotation_value: value to assign
+        long_df = {"node_type": [], "ID": [], "col_name": [], "annotation_value": []}
+        node_type = None
+        header = annotation.pop(0)
+        if header[0] not in MATERIAL_NAME_HEADERS:
+            raise ValueError(
+                f"Error in annotation file: first column header must be one of: {', '.join(MATERIAL_NAME_HEADERS)}."
+            )
+        for i, col in enumerate(header):
+            if col in list(PROCESS_NAME_HEADERS) + [PROTOCOL_REF]:
+                raise ValueError(
+                    "Error in annotation file: Process parameter annotation currently not supported."
+                )
+            if col in MATERIAL_NAME_HEADERS:
+                node_type = col
+                id_index = i
+            else:
+                long_df["ID"].extend([row[id_index] for row in annotation])
+                long_df["node_type"].extend([node_type] * len(annotation))
+                long_df["annotation_value"].extend([row[i] for row in annotation])
+                long_df["col_name"].extend([col] * len(annotation))
+
+        annotation_map = {}
+        header_map = {}
+        for i in range(len(long_df["ID"])):
+            node_id = long_df["ID"][i]
+            node_type = long_df["node_type"][i]
+            col_name = long_df["col_name"][i]
+            anno_value = long_df["annotation_value"][i]
+
+            if node_type not in annotation_map:
+                annotation_map[node_type] = {}
+            if node_id not in annotation_map[node_type]:
+                annotation_map[node_type][node_id] = {}
+
+            if col_name in annotation_map[node_type][node_id]:
+                if annotation_map[node_type][node_id][col_name] != anno_value:
+                    ValueError(
+                        f"Node {node_id} and annotation {col_name} set twice "
+                        "in annotation file with ambiguous values."
+                    )
+            else:
+                annotation_map[node_type][node_id][col_name] = str(anno_value)
+
+            if node_type not in header_map:
+                header_map[node_type] = {}
+            if col_name not in header_map[node_type]:
+                # Materials only get new Characteristics, Files only new Comment and Processes only new Parameter Value
+                if node_type in DATA_FILE_HEADERS:
+                    isa_col_name = f"Comment[{col_name}]"
+                elif node_type in MATERIAL_NAME_HEADERS:
+                    isa_col_name = f"Characteristics[{col_name}]"
+                # elif node_type in PROTOCOL_REF: # Not yet supported and caught above
+                # else: # Won't happen since caught above
+                header_map[node_type][col_name] = isa_col_name
+
+        return annotation_map, header_map
+
+    def _perform_update(self, isa, annotation_map, header_map):
         # Traverse investigation, studies, assays, potentially updating the nodes.
-        annotation_map, header_map = self._build_annotation_map(annotation)
         visitor = SheetUpdateVisitor(
             annotation_map,
             header_map,
@@ -373,63 +446,6 @@ class AddAnnotationIsaTabCommand:
                 show_diff_side_by_side=self.config.show_diff_side_by_side,
                 answer_yes=self.config.yes,
             )
-
-    def _build_annotation_map(self, annotation_df):
-        # change to long df
-        long_df = {"node_type": [], "ID": [], "col_name": [], "annotation_value": []}
-        node_type = None
-        if annotation_df.columns[0] not in MATERIAL_NAME_HEADERS:
-            raise ValueError(
-                f"Error in annotation file: first column header must be one of: {', '.join(MATERIAL_NAME_HEADERS)}."
-            )
-        for col in annotation_df:
-            if col in list(PROCESS_NAME_HEADERS) + [PROTOCOL_REF]:
-                raise ValueError(
-                    "Error in annotation file: Process parameter annotation currently not supported."
-                )
-            if col in MATERIAL_NAME_HEADERS:
-                node_type = col
-            else:
-                long_df["ID"].extend(list(annotation_df[node_type]))
-                long_df["node_type"].extend([node_type] * annotation_df[node_type].size)
-                long_df["annotation_value"].extend(list(annotation_df[col]))
-                long_df["col_name"].extend([col] * annotation_df[col].size)
-
-        annotation_map = {}
-        header_map = {}
-        for i in range(len(long_df["ID"])):
-            node_id = long_df["ID"][i]
-            node_type = long_df["node_type"][i]
-            col_name = long_df["col_name"][i]
-            anno_value = long_df["annotation_value"][i]
-
-            if node_type not in annotation_map:
-                annotation_map[node_type] = {}
-            if node_id not in annotation_map[node_type]:
-                annotation_map[node_type][node_id] = {}
-
-            if col_name in annotation_map[node_type][node_id]:
-                if annotation_map[node_type][node_id][col_name] != anno_value:
-                    ValueError(
-                        f"Node {node_id} and annotation {col_name} set twice "
-                        "in annotation file with ambiguous values."
-                    )
-            else:
-                annotation_map[node_type][node_id][col_name] = str(anno_value)
-
-            if node_type not in header_map:
-                header_map[node_type] = {}
-            if col_name not in header_map[node_type]:
-                # Materials only get new Characteristics, Files only new Comment and Processes only new Parameter Value
-                if node_type in DATA_FILE_HEADERS:
-                    isa_col_name = f"Comment[{col_name}]"
-                elif node_type in MATERIAL_NAME_HEADERS:
-                    isa_col_name = f"Characteristics[{col_name}]"
-                # elif node_type in PROTOCOL_REF: # Not yet supported and caught above
-                # else: # Won't happen since caught above
-                header_map[node_type][col_name] = isa_col_name
-
-        return annotation_map, header_map
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
