@@ -13,8 +13,9 @@ from altamisa.constants.table_headers import (
     MATERIAL_NAME_HEADERS,
     PROCESS_NAME_HEADERS,
     PROTOCOL_REF,
+    DATA_FILE_HEADERS,
 )
-from altamisa.isatab import InvestigationWriter, AssayWriter, StudyWriter, Characteristics
+from altamisa.isatab import InvestigationWriter, AssayWriter, StudyWriter, Characteristics, Comment
 from altamisa.isatab.helpers import is_ontology_term_ref
 from logzero import logger
 
@@ -59,54 +60,108 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
             else:
                 return value
 
-        if assay and material.type == SAMPLE_NAME:
-            return material
-        elif (material.type, material.name) in self.annotation_map:
-            annotation = self.annotation_map[(material.type, material.name)]
-            characteristics = []
-            # update available characteristics
-            for c in material.characteristics:
-                if c.name in annotation:
-                    if has_content(c.value[0]):
-                        if self.overwrite:
-                            c = attr.evolve(c, value=[annotation.pop(c.name)])
-                            # TODO: consider ontologies as values
+        def update_characteristics(material):
+            if assay and material.type == SAMPLE_NAME:
+                return material
+            elif (
+                material.type in self.annotation_map
+                and material.name in self.annotation_map[material.type]
+            ):
+                annotation = self.annotation_map[material.type][material.name]
+                characteristics = []
+                # update available characteristics
+                for c in material.characteristics:
+                    if c.name in annotation:
+                        if has_content(c.value[0]):
+                            if self.overwrite:
+                                c = attr.evolve(c, value=[annotation.pop(c.name)])
+                                # TODO: consider ontologies as values
+                            else:
+                                warn(
+                                    f"Value for material {material.name} and characteristic {c.name} "
+                                    "already exist and --force-update not set. Skipping..."
+                                )
+                                annotation.pop(c.name)
                         else:
-                            warn(
-                                f"Value for material {material.name} and characteristic {c.name} "
-                                "already exist and --force-update not set. Skipping..."
-                            )
-                            annotation.pop(c.name)
-                    else:
-                        c = attr.evolve(c, value=[annotation.pop(c.name)])
-                characteristics.append(c)
-            # add new characteristics
-            if annotation:
-                for col_name, annotation_value in annotation.items():
-                    c = Characteristics(name=col_name, value=[annotation_value], unit=None)
-                    # TODO: consider ontologies, units
+                            c = attr.evolve(c, value=[annotation.pop(c.name)])
                     characteristics.append(c)
-                    material = attr.evolve(
-                        material, headers=material.headers + [f"Characteristics[{col_name}]"]
-                    )
-            return attr.evolve(material, characteristics=tuple(characteristics))
-        elif material.type in self.header_map and not all(
-            x in material.headers for x in self.header_map[material.type].values()
-        ):
-            # header update
-            material_headers = material.headers
-            material_characteristics = list(material.characteristics)
-            for char_name, isatab_col_name in self.header_map[material.type].items():
-                if isatab_col_name not in material.headers:
-                    material_headers.append(isatab_col_name)
-                    material_characteristics.append(
-                        Characteristics(name=char_name, value=[""], unit=None)
-                    )
-            return attr.evolve(
-                material, headers=material_headers, characteristics=material_characteristics
-            )
-        else:
-            return material
+                # add new characteristics
+                if annotation:
+                    for col_name, annotation_value in annotation.items():
+                        c = Characteristics(name=col_name, value=[annotation_value], unit=None)
+                        # TODO: consider ontologies, units
+                        characteristics.append(c)
+                        material = attr.evolve(
+                            material, headers=material.headers + [f"Characteristics[{col_name}]"]
+                        )
+                return attr.evolve(material, characteristics=tuple(characteristics))
+            elif material.type in self.header_map and not all(
+                x in material.headers for x in self.header_map[material.type].values()
+            ):
+                # header update
+                material_headers = material.headers
+                material_characteristics = list(material.characteristics)
+                for char_name, isatab_col_name in self.header_map[material.type].items():
+                    if isatab_col_name not in material.headers:
+                        material_headers.append(isatab_col_name)
+                        material_characteristics.append(
+                            Characteristics(name=char_name, value=[""], unit=None)
+                        )
+                return attr.evolve(
+                    material, headers=material_headers, characteristics=material_characteristics
+                )
+            else:
+                return material
+
+        def update_comments(material):
+            if (
+                material.type in self.annotation_map
+                and material.name in self.annotation_map[material.type]
+            ):
+                annotation = self.annotation_map[material.type][material.name]
+                comments = []
+                # update available comments
+                for c in material.comments:
+                    if c.name in annotation:
+                        if c.value:
+                            if self.overwrite:
+                                c = attr.evolve(c, value=[annotation.pop(c.name)])
+                            else:
+                                warn(
+                                    f"Value for material {material.name} and comment {c.name} "
+                                    "already exist and --force-update not set. Skipping..."
+                                )
+                                annotation.pop(c.name)
+                        else:
+                            c = attr.evolve(c, value=[annotation.pop(c.name)])
+                    comments.append(c)
+                # add new comments
+                if annotation:
+                    for col_name, annotation_value in annotation.items():
+                        c = Comment(name=col_name, value=annotation_value)
+                        comments.append(c)
+                        material = attr.evolve(
+                            material, headers=material.headers + [f"Comment[{col_name}]"]
+                        )
+                return attr.evolve(material, comments=tuple(comments))
+            elif material.type in self.header_map and not all(
+                x in material.headers for x in self.header_map[material.type].values()
+            ):
+                # header update
+                material_headers = material.headers
+                material_comments = list(material.comments)
+                for comment_name, isatab_col_name in self.header_map[material.type].items():
+                    if isatab_col_name not in material.headers:
+                        material_headers.append(isatab_col_name)
+                        material_comments.append(Comment(name=comment_name, value=""))
+                return attr.evolve(material, headers=material_headers, comments=material_comments)
+            else:
+                return material
+
+        if material.type in DATA_FILE_HEADERS:
+            return update_comments(material)
+        else:  # Normal Materials
+            return update_characteristics(material)
 
 
 class AddAnnotationIsaTabCommand:
@@ -272,29 +327,36 @@ class AddAnnotationIsaTabCommand:
         annotation_map = {}
         header_map = {}
         for i in range(len(long_df["ID"])):
-            node_key = (long_df["node_type"][i], long_df["ID"][i])
-            if node_key not in annotation_map:
-                annotation_map[node_key] = {}
-            if long_df["col_name"][i] in annotation_map[node_key]:
-                if (
-                    annotation_map[node_key][long_df["col_name"][i]]
-                    != long_df["annotation_value"][i]
-                ):
+            node_id = long_df["ID"][i]
+            node_type = long_df["node_type"][i]
+            col_name = long_df["col_name"][i]
+            anno_value = long_df["annotation_value"][i]
+
+            if node_type not in annotation_map:
+                annotation_map[node_type] = {}
+            if node_id not in annotation_map[node_type]:
+                annotation_map[node_type][node_id] = {}
+
+            if col_name in annotation_map[node_type][node_id]:
+                if annotation_map[node_type][node_id][col_name] != anno_value:
                     ValueError(
-                        f"Node {long_df['ID'][i]} and annotation {long_df['col_name'][i]} set twice "
+                        f"Node {node_id} and annotation {col_name} set twice "
                         "in annotation file with ambiguous values."
                     )
             else:
-                annotation_map[node_key][long_df["col_name"][i]] = str(
-                    long_df["annotation_value"][i]
-                )
+                annotation_map[node_type][node_id][col_name] = str(anno_value)
 
-            if long_df["node_type"][i] not in header_map:
-                header_map[long_df["node_type"][i]] = {}
-            if long_df["col_name"][i] not in header_map[long_df["node_type"][i]]:
-                header_map[long_df["node_type"][i]][
-                    long_df["col_name"][i]
-                ] = f"Characteristics[{long_df['col_name'][i]}]"
+            if node_type not in header_map:
+                header_map[node_type] = {}
+            if col_name not in header_map[node_type]:
+                # Materials only get new Characteristics, Files only new Comment and Processes only new Parameter Value
+                if node_type in DATA_FILE_HEADERS:
+                    isa_col_name = f"Comment[{col_name}]"
+                elif node_type in MATERIAL_NAME_HEADERS:
+                    isa_col_name = f"Characteristics[{col_name}]"
+                # elif node_type in PROTOCOL_REF: # Not yet supported and caught above
+                # else: # Won't happen since caught above
+                header_map[node_type][col_name] = isa_col_name
 
         return annotation_map, header_map
 
