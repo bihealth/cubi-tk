@@ -64,6 +64,10 @@ def test_run_isatab_annotate_case2(tmp_path):
         "--yes",
         os.path.join(path_input, "i_Investigation.txt"),
         path_input_annotation,
+        "--target-study",
+        "s_isatest.txt",
+        "--target-assay",
+        "a_isatest_transcriptome_profiling_nucleotide_sequencing_2.txt",
     ]
 
     res = main(argv)

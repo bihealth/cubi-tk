@@ -23,7 +23,7 @@ from .. import isa_support
 from ..common import overwrite_helper
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=False, auto_attribs=True)
 class Config:
     verbose: bool
     config: str
@@ -38,18 +38,23 @@ class Config:
     # batch_no: str
     input_investigation_file: str
     input_annotation_file: str
+    target_study: str
+    target_assay: str
 
 
 class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
     """IsaNodeVisitor that updates the ISA sample sheet as we walk along it."""
 
-    def __init__(self, annotation_map, header_map, overwrite):
+    def __init__(self, annotation_map, header_map, overwrite, target_study, target_assay):
         #: Mapping from normalized donor name to Donor instance.
         self.annotation_map = annotation_map
         self.header_map = header_map
         self.overwrite = overwrite
         #: The source names seen so far.
         self.seen_source_names = set()
+        #: Study and assay selected for annotation update
+        self.target_study = target_study
+        self.target_assay = target_assay
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
         super().on_visit_material(material, node_path, study, assay)
@@ -158,10 +163,14 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
             else:
                 return material
 
-        if material.type in DATA_FILE_HEADERS:
-            return update_comments(material)
-        else:  # Normal Materials
-            return update_characteristics(material)
+        # Update material node only if part of targeted study or assay
+        if study.file.name.endswith(self.target_study) and not (
+            assay and not assay.file.name.endswith(self.target_assay)
+        ):
+            if material.type in DATA_FILE_HEADERS:
+                return update_comments(material)
+            else:  # Normal Materials
+                return update_characteristics(material)
 
 
 class AddAnnotationIsaTabCommand:
@@ -224,6 +233,19 @@ class AddAnnotationIsaTabCommand:
             help="Path to annotation (TSV) file with information to add.",
         )
 
+        parser.add_argument(
+            "--target-study",
+            "-s",
+            metavar="s_study.tsv",
+            help="File name study to annotate. If not provided, first study in investigation is used.",
+        )
+        parser.add_argument(
+            "--target-assay",
+            "-a",
+            metavar="a_assay.tsv",
+            help="File name of assay to annotate. If not provided, first assay in investigation is used.",
+        )
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -239,23 +261,72 @@ class AddAnnotationIsaTabCommand:
         logger.info("Starting cubi-tk isa-tab annotate")
         logger.info("  config: %s", self.config)
 
+        # Read isa-tab file
         isa_data = isa_support.load_investigation(self.config.input_investigation_file)
-        if len(isa_data.studies) > 1 or len(isa_data.assays) > 1:
-            logger.error("Only one study and assay per ISA-tab supported at the moment.")
-            return 1
 
+        # Check target study/assay availability
+        self._check_studies_and_assays(isa_data)
+
+        # Read annotation file
         annotation = pd.read_csv(self.config.input_annotation_file, sep="\t", header=0)
         if annotation.empty:
             logger.error("No entries in annotation file")
             return 1
 
+        # Add annotation
         self._perform_update(isa_data, annotation)
+
         return 0
+
+    def _check_studies_and_assays(self, isa_data):
+        # List studies
+        study_file_names = [s for s in isa_data.studies.keys()]
+        # Check that a least one study exists
+        if len(study_file_names) > 0:
+            # If no target study declared, use first study
+            if not self.config.target_study:
+                self.config.target_study = study_file_names[0]
+            # Check if target study is in list (i.e. in investigation)
+            elif self.config.target_study not in study_file_names:
+                logger.error(
+                    "Invalid target study '%s'.\nStudies available:\n%s",
+                    self.config.target_study,
+                    study_file_names,
+                )
+                return 1
+        else:
+            logger.error("No studies available in investigation.")
+            return 1
+
+        # List assays
+        assay_file_names = [a for a in isa_data.assays.keys()]
+        # Check that a least one assay exists
+        if len(assay_file_names) > 0:
+            # If no target assay declared, use first assay
+            if not self.config.target_assay:
+                self.config.target_assay = assay_file_names[0]
+            # Check if target assay is in list (i.e. in investigation)
+            if self.config.target_assay not in assay_file_names:
+                logger.error(
+                    "Invalid target assay '%s'.\nAssays available:\n%s",
+                    self.config.target_assay,
+                    assay_file_names,
+                )
+                return 1
+        else:
+            logger.error("No assays available in investigation.")
+            return 1
 
     def _perform_update(self, isa, annotation):
         # Traverse investigation, studies, assays, potentially updating the nodes.
         annotation_map, header_map = self._build_annotation_map(annotation)
-        visitor = SheetUpdateVisitor(annotation_map, header_map, self.config.force_update)
+        visitor = SheetUpdateVisitor(
+            annotation_map,
+            header_map,
+            self.config.force_update,
+            self.config.target_study,
+            self.config.target_assay,
+        )
         iwalker = isa_support.InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
         iwalker.run(visitor)
         investigation, studies, assays = iwalker.build_evolved()

@@ -237,13 +237,9 @@ class InvestigationTraversal:
         #: Investigation object.
         self.investigation = investigation
         #: Mapping from study name (file name) to Study
-        self.studies = dict(studies)
-        if len(self.studies) > 1:
-            raise Exception("Only one study supported")
+        self.studies = studies
         #: Mapping from assay name (file name) to Assay
         self.assays = assays
-        if len(self.assays) > 1:
-            raise Exception("Only one assay supported")
         # Study traversal objects.
         self._study_traversals = {}
 

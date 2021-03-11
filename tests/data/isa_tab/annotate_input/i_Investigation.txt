@@ -58,14 +58,14 @@ Study Factor Type
 Study Factor Type Term Accession Number
 Study Factor Type Term Source REF
 STUDY ASSAYS
-Study Assay File Name	a_isatest_transcriptome_profiling_nucleotide_sequencing.txt
-Study Assay Measurement Type	transcriptome profiling
-Study Assay Measurement Type Term Accession Number	""
-Study Assay Measurement Type Term Source REF	""
-Study Assay Technology Type	nucleotide sequencing
-Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626
-Study Assay Technology Type Term Source REF	OBI
-Study Assay Technology Platform	Illumina
+Study Assay File Name	a_isatest_transcriptome_profiling_nucleotide_sequencing.txt	a_isatest_transcriptome_profiling_nucleotide_sequencing_2.txt
+Study Assay Measurement Type	transcriptome profiling	transcriptome profiling
+Study Assay Measurement Type Term Accession Number	""	""
+Study Assay Measurement Type Term Source REF	""	""
+Study Assay Technology Type	nucleotide sequencing	nucleotide sequencing
+Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626
+Study Assay Technology Type Term Source REF	OBI	OBI
+Study Assay Technology Platform	Illumina	Illumina
 STUDY PROTOCOLS
 Study Protocol Name	Sample collection	Nucleic acid extraction mRNA_seq	Library construction mRNA_seq	Nucleic acid sequencing mRNA_seq
 Study Protocol Type	Sample collection	Nucleic acid extraction mRNA_seq	Library construction mRNA_seq	Nucleic acid sequencing mRNA_seq
