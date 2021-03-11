@@ -4,6 +4,7 @@
 
 - temporarily working around SODAR REST API not returning sodar\_uuid where we expect it to
 - using library\_ name as an alternative to folder\_name
+- Adding `cubi-tk isa-tab annotate` command.
 
 ## v0.2.0
 
