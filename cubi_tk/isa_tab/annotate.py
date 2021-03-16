@@ -59,118 +59,120 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
     def on_visit_material(self, material, node_path, study=None, assay=None):
         super().on_visit_material(material, node_path, study, assay)
 
-        def has_content(value):
-            if is_ontology_term_ref(value):
-                return value.name or value.accession or value.ontology_name
-            else:
-                return value
-
-        def update_characteristics(material):
-            if assay and material.type == SAMPLE_NAME:
-                return material
-            elif (
-                material.type in self.annotation_map
-                and material.name in self.annotation_map[material.type]
-            ):
-                annotation = self.annotation_map[material.type][material.name]
-                characteristics = []
-                # update available characteristics
-                for c in material.characteristics:
-                    if c.name in annotation:
-                        if has_content(c.value[0]):
-                            if self.overwrite:
-                                c = attr.evolve(c, value=[annotation.pop(c.name)])
-                                # TODO: consider ontologies as values
-                            else:
-                                warn(
-                                    f"Value for material {material.name} and characteristic {c.name} "
-                                    "already exist and --force-update not set. Skipping..."
-                                )
-                                annotation.pop(c.name)
-                        else:
-                            c = attr.evolve(c, value=[annotation.pop(c.name)])
-                    characteristics.append(c)
-                # add new characteristics
-                if annotation:
-                    for col_name, annotation_value in annotation.items():
-                        c = Characteristics(name=col_name, value=[annotation_value], unit=None)
-                        # TODO: consider ontologies, units
-                        characteristics.append(c)
-                        material = attr.evolve(
-                            material, headers=material.headers + [f"Characteristics[{col_name}]"]
-                        )
-                return attr.evolve(material, characteristics=tuple(characteristics))
-            elif material.type in self.header_map and not all(
-                x in material.headers for x in self.header_map[material.type].values()
-            ):
-                # header update
-                material_headers = material.headers
-                material_characteristics = list(material.characteristics)
-                for char_name, isatab_col_name in self.header_map[material.type].items():
-                    if isatab_col_name not in material.headers:
-                        material_headers.append(isatab_col_name)
-                        material_characteristics.append(
-                            Characteristics(name=char_name, value=[""], unit=None)
-                        )
-                return attr.evolve(
-                    material, headers=material_headers, characteristics=material_characteristics
-                )
-            else:
-                return material
-
-        def update_comments(material):
-            if (
-                material.type in self.annotation_map
-                and material.name in self.annotation_map[material.type]
-            ):
-                annotation = self.annotation_map[material.type][material.name]
-                comments = []
-                # update available comments
-                for c in material.comments:
-                    if c.name in annotation:
-                        if c.value:
-                            if self.overwrite:
-                                c = attr.evolve(c, value=[annotation.pop(c.name)])
-                            else:
-                                warn(
-                                    f"Value for material {material.name} and comment {c.name} "
-                                    "already exist and --force-update not set. Skipping..."
-                                )
-                                annotation.pop(c.name)
-                        else:
-                            c = attr.evolve(c, value=[annotation.pop(c.name)])
-                    comments.append(c)
-                # add new comments
-                if annotation:
-                    for col_name, annotation_value in annotation.items():
-                        c = Comment(name=col_name, value=annotation_value)
-                        comments.append(c)
-                        material = attr.evolve(
-                            material, headers=material.headers + [f"Comment[{col_name}]"]
-                        )
-                return attr.evolve(material, comments=tuple(comments))
-            elif material.type in self.header_map and not all(
-                x in material.headers for x in self.header_map[material.type].values()
-            ):
-                # header update
-                material_headers = material.headers
-                material_comments = list(material.comments)
-                for comment_name, isatab_col_name in self.header_map[material.type].items():
-                    if isatab_col_name not in material.headers:
-                        material_headers.append(isatab_col_name)
-                        material_comments.append(Comment(name=comment_name, value=""))
-                return attr.evolve(material, headers=material_headers, comments=material_comments)
-            else:
-                return material
-
         # Update material node only if part of targeted study or assay
         if study.file.name.endswith(self.target_study) and not (
             assay and not assay.file.name.endswith(self.target_assay)
         ):
             if material.type in DATA_FILE_HEADERS:
-                return update_comments(material)
+                return self._update_comments(material)
             else:  # Normal Materials
-                return update_characteristics(material)
+                return self._update_characteristics(material, assay)
+
+        return None
+
+    def _has_content(self, value):
+        if is_ontology_term_ref(value):
+            return value.name or value.accession or value.ontology_name
+        else:
+            return value
+
+    def _update_characteristics(self, material, assay):
+        if assay and material.type == SAMPLE_NAME:
+            return material
+        elif (
+            material.type in self.annotation_map
+            and material.name in self.annotation_map[material.type]
+        ):
+            annotation = self.annotation_map[material.type][material.name]
+            characteristics = []
+            # update available characteristics
+            for c in material.characteristics:
+                if c.name in annotation:
+                    if self._has_content(c.value[0]):
+                        if self.overwrite:
+                            c = attr.evolve(c, value=[annotation.pop(c.name)])
+                            # TODO: consider ontologies as values
+                        else:
+                            warn(
+                                f"Value for material {material.name} and characteristic {c.name} "
+                                "already exist and --force-update not set. Skipping..."
+                            )
+                            annotation.pop(c.name)
+                    else:
+                        c = attr.evolve(c, value=[annotation.pop(c.name)])
+                characteristics.append(c)
+            # add new characteristics
+            if annotation:
+                for col_name, annotation_value in annotation.items():
+                    c = Characteristics(name=col_name, value=[annotation_value], unit=None)
+                    # TODO: consider ontologies, units
+                    characteristics.append(c)
+                    material = attr.evolve(
+                        material, headers=material.headers + [f"Characteristics[{col_name}]"]
+                    )
+            return attr.evolve(material, characteristics=tuple(characteristics))
+        elif material.type in self.header_map and not all(
+            x in material.headers for x in self.header_map[material.type].values()
+        ):
+            # header update
+            material_headers = material.headers
+            material_characteristics = list(material.characteristics)
+            for char_name, isatab_col_name in self.header_map[material.type].items():
+                if isatab_col_name not in material.headers:
+                    material_headers.append(isatab_col_name)
+                    material_characteristics.append(
+                        Characteristics(name=char_name, value=[""], unit=None)
+                    )
+            return attr.evolve(
+                material, headers=material_headers, characteristics=material_characteristics
+            )
+        else:
+            return material
+
+    def _update_comments(self, material):
+        if (
+            material.type in self.annotation_map
+            and material.name in self.annotation_map[material.type]
+        ):
+            annotation = self.annotation_map[material.type][material.name]
+            comments = []
+            # update available comments
+            for c in material.comments:
+                if c.name in annotation:
+                    if c.value:
+                        if self.overwrite:
+                            c = attr.evolve(c, value=[annotation.pop(c.name)])
+                        else:
+                            warn(
+                                f"Value for material {material.name} and comment {c.name} "
+                                "already exist and --force-update not set. Skipping..."
+                            )
+                            annotation.pop(c.name)
+                    else:
+                        c = attr.evolve(c, value=[annotation.pop(c.name)])
+                comments.append(c)
+            # add new comments
+            if annotation:
+                for col_name, annotation_value in annotation.items():
+                    c = Comment(name=col_name, value=annotation_value)
+                    comments.append(c)
+                    material = attr.evolve(
+                        material, headers=material.headers + [f"Comment[{col_name}]"]
+                    )
+            return attr.evolve(material, comments=tuple(comments))
+        elif material.type in self.header_map and not all(
+            x in material.headers for x in self.header_map[material.type].values()
+        ):
+            # header update
+            material_headers = material.headers
+            material_comments = list(material.comments)
+            for comment_name, isatab_col_name in self.header_map[material.type].items():
+                if isatab_col_name not in material.headers:
+                    material_headers.append(isatab_col_name)
+                    material_comments.append(Comment(name=comment_name, value=""))
+            return attr.evolve(material, headers=material_headers, comments=material_comments)
+        else:
+            return material
 
 
 class AddAnnotationIsaTabCommand:
@@ -265,7 +267,8 @@ class AddAnnotationIsaTabCommand:
         isa_data = isa_support.load_investigation(self.config.input_investigation_file)
 
         # Check target study/assay availability
-        self._check_studies_and_assays(isa_data)
+        if not self._check_studies_and_assays(isa_data):
+            return 1
 
         # Read annotation file and build mapping
         annotation_data = self._read_annotation(self.config.input_annotation_file)
@@ -278,7 +281,7 @@ class AddAnnotationIsaTabCommand:
 
     def _check_studies_and_assays(self, isa_data):
         # List studies
-        study_file_names = [s for s in isa_data.studies.keys()]
+        study_file_names = list(isa_data.studies.keys())
         # Check that a least one study exists
         if len(study_file_names) > 0:
             # If no target study declared, use first study
@@ -291,13 +294,13 @@ class AddAnnotationIsaTabCommand:
                     self.config.target_study,
                     study_file_names,
                 )
-                return 1
+                return False
         else:
             logger.error("No studies available in investigation.")
-            return 1
+            return False
 
         # List assays
-        assay_file_names = [a for a in isa_data.assays.keys()]
+        assay_file_names = list(isa_data.assays.keys())
         # Check that a least one assay exists
         if len(assay_file_names) > 0:
             # If no target assay declared, use first assay
@@ -310,10 +313,12 @@ class AddAnnotationIsaTabCommand:
                     self.config.target_assay,
                     assay_file_names,
                 )
-                return 1
+                return False
         else:
             logger.error("No assays available in investigation.")
-            return 1
+            return False
+
+        return True
 
     def _read_annotation(self, filename):
         with open(filename) as infile:
