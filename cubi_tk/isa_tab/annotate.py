@@ -35,7 +35,6 @@ class Config:
     dry_run: bool
     show_diff: bool
     show_diff_side_by_side: bool
-    # batch_no: str
     input_investigation_file: str
     input_annotation_file: str
     target_study: str

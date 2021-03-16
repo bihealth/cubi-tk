@@ -31,7 +31,7 @@ demonstrated in the example below.
 By default, if Characteristics or Comments with the same name already exist for a node type, only empty values are
 updated. Overwriting existing values requires confirmation (`--force-update`).
 
-Annotations are only applied to only one study and assay, since material names are not necessarily unique between the
+Annotations are only applied to one study and assay, since material names are not necessarily unique between the
 same material types of different studies or different assays (and thus, annotations couldn't be assigned unambiguously).
 By default the first study and assay listed in the investigation file are considered for annotation. A specific study
 and assay may be selected by file name (not path!) via `--target-study` or `--target-assay`, resp.
