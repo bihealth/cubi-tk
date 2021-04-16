@@ -10,17 +10,20 @@ from shutil import copytree
 from cubi_tk.__main__ import main
 
 
-def test_run_isatab_annotate_case1(tmp_path):
-    # test input isa-tab files
+def test_run_isatab_annotate_case1_default(tmp_path):
+    # Testing under default settings
+    # i.e. first study, first assay, no forced overwrite of annotations
+
+    # Input isa-tab files
     path_input = os.path.join(os.path.dirname(__file__), "data", "isa_tab", "annotate_input")
     path_input = copytree(path_input, os.path.join(tmp_path, "isa_tab_annotate"))
 
-    # test input annotation
+    # Input annotation
     path_input_annotation = os.path.join(
         os.path.dirname(__file__), "data", "isa_tab", "annotate_input", "isa_tab_annotation.csv"
     )
 
-    # run annotation
+    # Run annotation
     argv = [
         "isa-tab",
         "annotate",
@@ -32,10 +35,10 @@ def test_run_isatab_annotate_case1(tmp_path):
     res = main(argv)
     assert not res
 
-    # test reference files
+    # Reference files
     path_test = os.path.join(os.path.dirname(__file__), "data", "isa_tab", "annotate_result1")
 
-    # tests
+    # Tests
     files = glob.glob(os.path.join(path_test, "*"))
 
     match, mismatch, errors = filecmp.cmpfiles(
@@ -46,17 +49,20 @@ def test_run_isatab_annotate_case1(tmp_path):
     assert len(errors) == 0
 
 
-def test_run_isatab_annotate_case2(tmp_path):
-    # test input isa-tab files
+def test_run_isatab_annotate_case2_specific(tmp_path):
+    # Testing more specific settings
+    # i.e. selecting a specific study and assay and forced overwrite of annotations
+
+    # Input isa-tab files
     path_input = os.path.join(os.path.dirname(__file__), "data", "isa_tab", "annotate_input")
     path_input = copytree(path_input, os.path.join(tmp_path, "isa_tab_annotate"))
 
-    # test input annotation
+    # Input annotation
     path_input_annotation = os.path.join(
         os.path.dirname(__file__), "data", "isa_tab", "annotate_input", "isa_tab_annotation.csv"
     )
 
-    # run annotation
+    # Run annotation
     argv = [
         "isa-tab",
         "annotate",
@@ -67,16 +73,16 @@ def test_run_isatab_annotate_case2(tmp_path):
         "--target-study",
         "s_isatest.txt",
         "--target-assay",
-        "a_isatest_transcriptome_profiling_nucleotide_sequencing_2.txt",
+        "a_isatest_selecting_assay_2.txt",
     ]
 
     res = main(argv)
     assert not res
 
-    # test reference files
+    # Reference files
     path_test = os.path.join(os.path.dirname(__file__), "data", "isa_tab", "annotate_result2")
 
-    # tests
+    # Tests
     files = glob.glob(os.path.join(path_test, "*"))
 
     match, mismatch, errors = filecmp.cmpfiles(

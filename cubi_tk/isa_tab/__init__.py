@@ -20,24 +20,35 @@ Sub Commands
 Annotate
 --------
 
-``cubi-tk isa-tab annotate`` updates material and files nodes in ISA-tab studies and assays with annotations provided as
-tab-separated text file.
+``cubi-tk isa-tab annotate`` updates material and file nodes in ISA-tab studies and assays with
+annotations provided as tab-separated text file.
 
-In the annotation file header, target node types need to be indicated in ISA-tab style (i.e. "Source Name", etc.) while
-annotations are just named normally. Annotations for materials are automatically recorded as Characteristics, while
-annotations for files are recorded as Comments. Different node types can be annotated using only one annotation file, as
-demonstrated in the example below.
+In the annotation file header, target node types need to be indicated in ISA-tab style (i.e.
+"Source Name", etc.) while annotations are just named normally. Annotations for materials are
+automatically recorded as Characteristics, while annotations for files are recorded as Comments.
+Different node types can be annotated using only one annotation file, as demonstrated in the
+example below.
 
-By default, if Characteristics or Comments with the same name already exist for a node type, only empty values are
-updated. Overwriting existing values requires confirmation (`--force-update`).
+By default, if Characteristics or Comments with the same name already exist for a node type, only
+empty values are updated. Overwriting existing values requires confirmation (`--force-update`).
 
-Annotations are only applied to one study and assay, since material names are not necessarily unique between the
-same material types of different studies or different assays (and thus, annotations couldn't be assigned unambiguously).
-By default the first study and assay listed in the investigation file are considered for annotation. A specific study
-and assay may be selected by file name (not path!) via `--target-study` or `--target-assay`, resp.
+Annotations are only applied to one study and assay, since material names are not necessarily unique
+between the same material types of different studies or different assays (and thus, annotations
+couldn't be assigned unambiguously). By default the first study and assay listed in the
+investigation file are considered for annotation. A specific study and assay may be selected by
+file name (not path, just as listed in the investigation file) via `--target-study` or
+`--target-assay`, resp.
 
 Example execution:
-``cubi-tk isa-tab annotate investigation.tsv annotation.tsv --target-study s_study.tsv --target-assay a_assay.tsv``
+
+.. code-block:: bash
+
+    $ cubi-tk isa-tab annotate investigation.tsv annotation.tsv --target-study s_study.tsv
+    --target-assay a_assay.tsv
+
+Note: investigation.tsv and annotation.tsv have to be indicated via absolute or relative paths.
+However, s_study.tsv and a_assay.tsv have to be indicated by name only, just as they are referenced
+in their corresponding investigation file.
 
 .. list-table:: Annotation example tsv file
    :header-rows: 1

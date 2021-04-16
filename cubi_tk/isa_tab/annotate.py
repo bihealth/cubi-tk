@@ -62,10 +62,12 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
         if study.file.name.endswith(self.target_study) and not (
             assay and not assay.file.name.endswith(self.target_assay)
         ):
+            # If material is a data file, update annotations as comments
             if material.type in DATA_FILE_HEADERS:
-                return self._update_comments(material)
-            else:  # Normal Materials
-                return self._update_characteristics(material, assay)
+                return self._update_annotations(material, assay, "comments")
+            # For normal materials (Sample Name, etc.), update annotations as characteristics
+            else:
+                return self._update_annotations(material, assay, "characteristics")
 
         return None
 
@@ -75,103 +77,142 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
         else:
             return value
 
-    def _update_characteristics(self, material, assay):
+    def _update_annotations(self, material, assay, anno_type):
+        # Catch unsupported annotation types
+        if anno_type not in ["characteristics", "comments"]:
+            raise ValueError("Annotation of type '{}' not supported".format(anno_type))
+
+        # Return materials of type "Sample Name" in assays without annotating them
+        # (since they are supposed to only have their annotations in the corresponding study)
         if assay and material.type == SAMPLE_NAME:
-            return material
+            pass
+        # Check if new annotations are available for the current material
+        # by checking for its specific type and name in the annotation map
         elif (
             material.type in self.annotation_map
             and material.name in self.annotation_map[material.type]
         ):
-            annotation = self.annotation_map[material.type][material.name]
-            characteristics = []
-            # update available characteristics
-            for c in material.characteristics:
-                if c.name in annotation:
-                    if self._has_content(c.value[0]):
-                        if self.overwrite:
-                            c = attr.evolve(c, value=[annotation.pop(c.name)])
-                            # TODO: consider ontologies as values
-                        else:
-                            warn(
-                                f"Value for material {material.name} and characteristic {c.name} "
-                                "already exist and --force-update not set. Skipping..."
-                            )
-                            annotation.pop(c.name)
-                    else:
-                        c = attr.evolve(c, value=[annotation.pop(c.name)])
-                characteristics.append(c)
-            # add new characteristics
-            if annotation:
-                for col_name, annotation_value in annotation.items():
-                    c = Characteristics(name=col_name, value=[annotation_value], unit=None)
-                    # TODO: consider ontologies, units
-                    characteristics.append(c)
-                    material = attr.evolve(
-                        material, headers=material.headers + [f"Characteristics[{col_name}]"]
-                    )
-            return attr.evolve(material, characteristics=tuple(characteristics))
+            # Update characteristics or comments data
+            if anno_type == "characteristics":
+                material = self._update_characteristics_data(material)
+            else:  # anno_type == "comments"
+                material = self._update_comments_data(material)
+        # For materials not updated, check if a header update is necessary (in case new
+        # characteristics/comments have been introduced in other materials of same type)
         elif material.type in self.header_map and not all(
             x in material.headers for x in self.header_map[material.type].values()
         ):
-            # header update
-            material_headers = material.headers
-            material_characteristics = list(material.characteristics)
-            for char_name, isatab_col_name in self.header_map[material.type].items():
-                if isatab_col_name not in material.headers:
-                    material_headers.append(isatab_col_name)
-                    material_characteristics.append(
-                        Characteristics(name=char_name, value=[""], unit=None)
-                    )
-            return attr.evolve(
-                material, headers=material_headers, characteristics=material_characteristics
-            )
-        else:
-            return material
+            # Add characteristics or comments headers
+            if anno_type == "characteristics":
+                material = self._add_characteristic_headers(material)
+            else:  # anno_type == "comments"
+                material = self._add_comments_headers(material)
 
-    def _update_comments(self, material):
-        if (
-            material.type in self.annotation_map
-            and material.name in self.annotation_map[material.type]
-        ):
-            annotation = self.annotation_map[material.type][material.name]
-            comments = []
-            # update available comments
-            for c in material.comments:
-                if c.name in annotation:
-                    if c.value:
-                        if self.overwrite:
-                            c = attr.evolve(c, value=[annotation.pop(c.name)])
-                        else:
-                            warn(
-                                f"Value for material {material.name} and comment {c.name} "
-                                "already exist and --force-update not set. Skipping..."
-                            )
-                            annotation.pop(c.name)
-                    else:
+        return material
+
+    def _update_characteristics_data(self, material):
+        # Updating or adding annotations as characteristics
+
+        annotation = self.annotation_map[material.type][material.name]
+        characteristics = []
+        # Update characteristics already available in the material
+        for c in material.characteristics:
+            if c.name in annotation:
+                if self._has_content(c.value[0]):
+                    if self.overwrite:
                         c = attr.evolve(c, value=[annotation.pop(c.name)])
+                        # TODO: consider ontologies as values
+                    else:
+                        warn(
+                            (
+                                "Value for material {} and characteristic {}"
+                                "already exist and --force-update not set. Skipping..."
+                            ).format(material.name, c.name)
+                        )
+                        annotation.pop(c.name)
+                else:
+                    c = attr.evolve(c, value=[annotation.pop(c.name)])
+            characteristics.append(c)
+        # Add new characteristics, if annotations not depleted during update
+        if annotation:
+            for col_name, annotation_value in annotation.items():
+                c = Characteristics(name=col_name, value=[annotation_value], unit=None)
+                # TODO: consider ontologies, units
+                characteristics.append(c)
+                material = attr.evolve(
+                    material, headers=material.headers + ["Characteristics[{}]".format(col_name)]
+                )
+
+        return attr.evolve(material, characteristics=tuple(characteristics))
+
+    def _update_comments_data(self, material):
+        # Updating or adding annotations as comments
+
+        annotation = self.annotation_map[material.type][material.name]
+        comments = []
+
+        # Update comments already available in the material
+        for c in material.comments:
+            if c.name in annotation:
+                if c.value:
+                    if self.overwrite:
+                        c = attr.evolve(c, value=[annotation.pop(c.name)])
+                    else:
+                        warn(
+                            (
+                                "Value for material {} and comment {}"
+                                "already exist and --force-update not set. Skipping..."
+                            ).format(material.name, c.name)
+                        )
+                        annotation.pop(c.name)
+                else:
+                    c = attr.evolve(c, value=[annotation.pop(c.name)])
+            comments.append(c)
+
+        # Add new comments, if annotations not depleted during update
+        if annotation:
+            for col_name, annotation_value in annotation.items():
+                c = Comment(name=col_name, value=annotation_value)
                 comments.append(c)
-            # add new comments
-            if annotation:
-                for col_name, annotation_value in annotation.items():
-                    c = Comment(name=col_name, value=annotation_value)
-                    comments.append(c)
-                    material = attr.evolve(
-                        material, headers=material.headers + [f"Comment[{col_name}]"]
-                    )
-            return attr.evolve(material, comments=tuple(comments))
-        elif material.type in self.header_map and not all(
-            x in material.headers for x in self.header_map[material.type].values()
-        ):
-            # header update
-            material_headers = material.headers
-            material_comments = list(material.comments)
-            for comment_name, isatab_col_name in self.header_map[material.type].items():
-                if isatab_col_name not in material.headers:
-                    material_headers.append(isatab_col_name)
-                    material_comments.append(Comment(name=comment_name, value=""))
-            return attr.evolve(material, headers=material_headers, comments=material_comments)
-        else:
-            return material
+                material = attr.evolve(
+                    material, headers=material.headers + ["Comment[{}]".format(col_name)]
+                )
+
+        return attr.evolve(material, comments=tuple(comments))
+
+    def _add_characteristic_headers(self, material):
+        # Add missing characteristics headers
+
+        material_headers = material.headers
+        material_characteristics = list(material.characteristics)
+
+        # Iterate headers of new annotations
+        for char_name, isatab_col_name in self.header_map[material.type].items():
+            # If material doesn't contain a header, add header and empty characteristic
+            if isatab_col_name not in material.headers:
+                material_headers.append(isatab_col_name)
+                material_characteristics.append(
+                    Characteristics(name=char_name, value=[""], unit=None)
+                )
+
+        return attr.evolve(
+            material, headers=material_headers, characteristics=material_characteristics
+        )
+
+    def _add_comments_headers(self, material):
+        # Add missing comment headers
+
+        material_headers = material.headers
+        material_comments = list(material.comments)
+
+        # Iterate headers of new annotations
+        for comment_name, isatab_col_name in self.header_map[material.type].items():
+            # If material doesn't contain a header, add header and empty comment
+            if isatab_col_name not in material.headers:
+                material_headers.append(isatab_col_name)
+                material_comments.append(Comment(name=comment_name, value=""))
+
+        return attr.evolve(material, headers=material_headers, comments=material_comments)
 
 
 class AddAnnotationIsaTabCommand:
@@ -197,7 +238,10 @@ class AddAnnotationIsaTabCommand:
             "-n",
             default=False,
             action="store_true",
-            help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
+            help=(
+                "Perform a dry run, i.e., "
+                "don't change anything only display change, implies '--show-diff'."
+            ),
         )
         parser.add_argument(
             "--no-show-diff",
@@ -220,8 +264,6 @@ class AddAnnotationIsaTabCommand:
             help="Overwrite non-empty ISA-tab entries.",
         )
 
-        # parser.add_argument("--batch-no", default=".", help="Value to set as the batch number.")
-
         parser.set_defaults(no_warnings=False)
         parser.add_argument(
             "input_investigation_file",
@@ -238,13 +280,19 @@ class AddAnnotationIsaTabCommand:
             "--target-study",
             "-s",
             metavar="s_study.tsv",
-            help="File name study to annotate. If not provided, first study in investigation is used.",
+            help=(
+                "File name study to annotate. "
+                "If not provided, first study in investigation is used."
+            ),
         )
         parser.add_argument(
             "--target-assay",
             "-a",
             metavar="a_assay.tsv",
-            help="File name of assay to annotate. If not provided, first assay in investigation is used.",
+            help=(
+                "File name of assay to annotate. "
+                "If not provided, first assay in investigation is used."
+            ),
         )
 
     @classmethod
@@ -326,47 +374,54 @@ class AddAnnotationIsaTabCommand:
             for row in anno_reader:
                 annotation_data.append(row)
 
-        # Need at least two columns (e.g. one source/sample name plus new annotation) and one data row
+        # Need at least two columns (one source/sample name plus new annotation) and one data row
         if len(annotation_data) < 2 and len(annotation_data[0]) < 2:
             logger.error("Annotation file needs at least two columns and two rows")
             return 1
         return annotation_data
 
     def _build_annotation_map(self, annotation):
-        # change to long df
+        # Build annotation and header map from tab-separated annotation table
+
+        # Change table to a long format data frame, i.e. one row contains only one annotation
         # node_type: material type, e.g. Source Name, Sample Name, etc.
-        # ID: actual source name, sample name, etc.
+        # node_id: actual source name, sample name, etc.
         # col_name: annotation key, e.g. name to use for characteristic, comment, etc.
         # annotation_value: value to assign
-        long_df = {"node_type": [], "ID": [], "col_name": [], "annotation_value": []}
+        long_df = {"node_type": [], "node_id": [], "col_name": [], "annotation_value": []}
         node_type = None
         header = annotation.pop(0)
         if header[0] not in MATERIAL_NAME_HEADERS:
             raise ValueError(
-                f"Error in annotation file: first column header must be one of: {', '.join(MATERIAL_NAME_HEADERS)}."
+                "Error in annotation file: first column header must be one of: {}.".format(
+                    ", ".join(MATERIAL_NAME_HEADERS)
+                )
             )
         for i, col in enumerate(header):
             if col in list(PROCESS_NAME_HEADERS) + [PROTOCOL_REF]:
                 raise ValueError(
-                    "Error in annotation file: Process parameter annotation currently not supported."
+                    "Error in annotation file: Process parameter annotation not supported yet."
                 )
             if col in MATERIAL_NAME_HEADERS:
                 node_type = col
                 id_index = i
             else:
-                long_df["ID"].extend([row[id_index] for row in annotation])
+                long_df["node_id"].extend([row[id_index] for row in annotation])
                 long_df["node_type"].extend([node_type] * len(annotation))
                 long_df["annotation_value"].extend([row[i] for row in annotation])
                 long_df["col_name"].extend([col] * len(annotation))
 
-        annotation_map = {}
-        header_map = {}
-        for i in range(len(long_df["ID"])):
-            node_id = long_df["ID"][i]
+        annotation_map = {}  # {node_type: {node_id: {col_name: anno_value}}}
+        header_map = {}  # {node_type: {col_name: isa_col_name}}
+
+        # Iterate long format data frame to add annotations to a dictionary map
+        for i in range(len(long_df["node_id"])):
+            node_id = long_df["node_id"][i]
             node_type = long_df["node_type"][i]
             col_name = long_df["col_name"][i]
             anno_value = long_df["annotation_value"][i]
 
+            # Add to annotation map
             if node_type not in annotation_map:
                 annotation_map[node_type] = {}
             if node_id not in annotation_map[node_type]:
@@ -374,21 +429,25 @@ class AddAnnotationIsaTabCommand:
 
             if col_name in annotation_map[node_type][node_id]:
                 if annotation_map[node_type][node_id][col_name] != anno_value:
-                    ValueError(
-                        f"Node {node_id} and annotation {col_name} set twice "
+                    tpl = (
+                        "Node {} and annotation {} set twice "
                         "in annotation file with ambiguous values."
                     )
+                    msg = tpl.format(node_id, col_name)
+                    ValueError(msg)
             else:
                 annotation_map[node_type][node_id][col_name] = str(anno_value)
 
+            # Add to header map (if not added already)
             if node_type not in header_map:
                 header_map[node_type] = {}
             if col_name not in header_map[node_type]:
-                # Materials only get new Characteristics, Files only new Comment and Processes only new Parameter Value
+                # Materials only get new Characteristics, Files only new Comment
+                # and Processes only new Parameter Value
                 if node_type in DATA_FILE_HEADERS:
-                    isa_col_name = f"Comment[{col_name}]"
+                    isa_col_name = "Comment[{}]".format(col_name)
                 elif node_type in MATERIAL_NAME_HEADERS:
-                    isa_col_name = f"Characteristics[{col_name}]"
+                    isa_col_name = "Characteristics[{}]".format(col_name)
                 # elif node_type in PROTOCOL_REF: # Not yet supported and caught above
                 # else: # Won't happen since caught above
                 header_map[node_type][col_name] = isa_col_name

@@ -58,7 +58,7 @@ Study Factor Type
 Study Factor Type Term Accession Number
 Study Factor Type Term Source REF
 STUDY ASSAYS
-Study Assay File Name	a_isatest_transcriptome_profiling_nucleotide_sequencing.txt	a_isatest_transcriptome_profiling_nucleotide_sequencing_2.txt
+Study Assay File Name	a_isatest_selecting_assay_1.txt	a_isatest_selecting_assay_2.txt
 Study Assay Measurement Type	transcriptome profiling	transcriptome profiling
 Study Assay Measurement Type Term Accession Number	""	""
 Study Assay Measurement Type Term Source REF	""	""
