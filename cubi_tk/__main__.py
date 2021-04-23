@@ -26,6 +26,8 @@ from .org_raw import run as run_org_raw
 from .org_raw import setup_argparse as setup_argparse_org_raw
 from .sea_snap import run as run_sea_snap
 from .sea_snap import setup_argparse as setup_argparse_sea_snap
+from .dkfz import run as run_dkfz
+from .dkfz import setup_argparse as setup_argparse_dkfz
 
 
 def setup_argparse_only():  # pragma: nocover
@@ -80,6 +82,7 @@ def setup_argparse():
     setup_argparse_sea_snap(
         subparsers.add_parser("sea-snap", help="Tools for supporting the RNA-SeASnaP pipeline.")
     )
+    setup_argparse_dkfz(subparsers.add_parser("dkfz", help="Tools to import data from the DKFZ sequencing center"))
 
     return parser, subparsers
 
@@ -114,6 +117,7 @@ def main(argv=None):
         "sodar": run_sodar,
         "irods": run_irods,
         "org-raw": run_org_raw,
+        "dkfz": run_dkfz,
     }
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)
