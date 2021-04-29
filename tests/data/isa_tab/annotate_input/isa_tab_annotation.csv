@@ -1,0 +1,4 @@
+Source Name	Age	Sex	Sample Name	Volume	Raw Data File	File size
+alpha	18	FEMALE	alpha-N1	1000	alpha-N1-RNA1-mRNA_seq1.fastq	100
+beta	27	MALE	beta-N1	1000	beta-N1-RNA1-mRNA_seq1.fastq	1000
+gamma	69	FEMALE	gamma-N1	800	gamma-N1-RNA1-mRNA_seq1.fastq	10000

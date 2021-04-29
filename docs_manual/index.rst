@@ -12,7 +12,8 @@ Installation & Getting Started
 Manual
     This section contains manuals for specific commands.
 
-    | :ref:`Creating ISA-tab folders <man_isa_tpl>`
+    | :ref:`Creating ISA-tab files <man_isa_tpl>`
+    | :ref:`Annotating ISA-tab files <man_isa_tab>`
     | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
     | :ref:`Upload raw data to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
@@ -24,7 +25,8 @@ Use cases
     | :ref:`Clinical single cell pipeline <usecase_single_cell>`
 
 Project Info
-    More information on the project, including the changelog, list of contributing authors, and contribution instructions.
+    More information on the project, including the changelog, list of contributing authors, and
+    contribution instructions.
 
     | :ref:`Authors <authors>`
     | :ref:`History <history>`
@@ -46,6 +48,7 @@ Project Info
     :maxdepth: 1
 
     man_isa_tpl
+    man_isa_tab
     man_ingest_fastq
     man_itransfer_results
     man_write_sample_info
