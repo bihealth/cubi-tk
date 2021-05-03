@@ -142,7 +142,7 @@ class DkfzMeta:
         df.loc[:,cubi] = [x[str(y)]+1 for y in df[original].astype(str).tolist()]
         return df
 
-    def dktk(self, output_file=None, apply=False):
+    def dktk(self):
         dfs = None
         for assay_type in self.assays.keys():
             assay   = self.assays[assay_type]["isatab"]
@@ -175,12 +175,12 @@ class DkfzMeta:
                 is_metastasis.set_values([p.match(x).group(5) if p.match else "" for x in v], category="values")
                 verify = list(zip(is_tumor.values["values"], is_metastasis.values["values"]))
                 if not all([(x[0]=="N" and x[1]!="T" and x[1]!="M") or (x[0]=="T" and (x[1]=="T" or x[1]=="M")) for x in verify]):
-                    print("WARNING- Can't infer metastasis status for assay {}".format(assay_type))
+                    logger.warning("Can't infer metastasis status for assay {}".format(assay_type))
                 else:
                     is_metastasis.set_values([x=="M" for x in is_metastasis.values["values"]], category="values")
                     assay.Materials["Sample"].annotations.append(is_metastasis)
             else:
-                print("WARNING- Can't infer normal/tumor status for assay {}".format(assay_type))
+                logger.warning("Can't infer normal/tumor status for assay {}".format(assay_type))
 
             batch = None
             if "Batch" in df.columns:
@@ -188,7 +188,7 @@ class DkfzMeta:
                 batch.set_values(df["Batch"].astype(int).tolist(), category="values")
                 assay.Materials["Library"].annotations.append(batch)
             else:
-                print("WARNING- Can't set batch number for assay {}".format(assay_type))
+                logger.warning("Can't set batch number for assay {}".format(assay_type))
         
             if is_tumor and batch:
                 dfs = pd.concat([dfs, pd.DataFrame(data={
@@ -238,12 +238,11 @@ class DkfzMeta:
 
             dfs = dfs[["Sample Name", "Sample Name CUBI", "Extract Name CUBI", "Library Name CUBI"]].drop_duplicates()
 
-            if output_file:
-                dfs.to_csv(output_file, sep="\t", index=False)
             if any(dfs["Sample Name"].duplicated()) or any(dfs["Library Name CUBI"].duplicated()):
                 logger.error("Creation of CUBI sample ids is not possible, mapping not 1-1")
                 return None
-            return dfs
+
+        return dfs
 
     def filename_mapping(self, assay_type, sodar_path=None, date=str(datetime.date(datetime.now()))):
         assay = self.assays[assay_type]
@@ -258,10 +257,12 @@ class DkfzMeta:
 
         df["basename"] = [pattern.match(x).group(1) if pattern.match else None for x in df["source_path"].tolist()]
 
-        df = df.groupby("folder_name").apply(lambda x: DkfzMeta.find_sample_nb(x, original="basename", cubi="library_nb")).reset_index(drop=True)
+        df = df\
+            .groupby("folder_name")\
+            .apply(lambda x: DkfzMeta.find_sample_nb(x, original="basename", cubi="library_nb"))\
+            .reset_index(drop=True)
         library_name = ["%s_%03d_R%d.fastq.gz" % (x[0], x[1], x[2]) for x in list(zip(df["folder_name"].tolist(), df["library_nb"].tolist(), df["mate"].tolist()))]
-        df["target_name"] = df["folder_name"] + "/raw_data/" + date + "/" + library_name
+        df["library_name"] = library_name
 
-        for i in range(df.shape[0]):
-            print("iput -aK {} i:{}/{}".format(df.iloc[i,0], sodar_path, df.iloc[i,6]))
+        return df
 
