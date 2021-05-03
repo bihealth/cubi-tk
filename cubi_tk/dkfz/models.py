@@ -10,6 +10,7 @@ from logzero import logger
 
 import pdb
 
+
 class MultiColumns:
     columns = []
 
@@ -18,13 +19,15 @@ class MultiColumns:
         return cls.columns
 
     def __init__(self):
-        self.values   = {x: []   for x in self.columns}
+        self.values = {x: [] for x in self.columns}
         self.defaults = {x: None for x in self.columns}
-        self.active   = set()
-        self.size     = 0
+        self.active = set()
+        self.size = 0
 
     def __str__(self):
-        ", ".join(self.columns) # ["{}: {}".format(k, v if k in self.active else "Inactive") for (k, v) in self.values.items()])
+        ", ".join(
+            self.columns
+        )  # ["{}: {}".format(k, v if k in self.active else "Inactive") for (k, v) in self.values.items()])
 
     def __len__(self):
         return self.size
@@ -57,28 +60,38 @@ class MultiColumns:
 
     def set_default(self, value=None, category=None):
         if (category is None) or (not category in self.columns):
-            raise ValueError("Missing or illegal category {} to set default value".format(category))
+            raise ValueError(
+                "Missing or illegal category {} to set default value".format(category)
+            )
         self.active = self.active.union([category])
         self.defaults[category] = value
 
     def set_values(self, values=[], category=None, update_default=True):
         if (category is None) or (not category in self.columns):
-            raise ValueError("Missing or illegal category {} to set values".format(category))
+            raise ValueError(
+                "Missing or illegal category {} to set values".format(category)
+            )
         if (self.size > 0) and (len(values) > 0) and (self.size != len(values)):
-            raise ValueError("Cannot set values for category {}, previous size = {}, target size = {}".format(category, self.size, len(values)))
+            raise ValueError(
+                "Cannot set values for category {}, previous size = {}, target size = {}".format(
+                    category, self.size, len(values)
+                )
+            )
         self.active.union([category])
         if (not values is None) and (len(values) > 0):
             self.values[category] = values
-            self.size             = len(values)
+            self.size = len(values)
         if update_default and (not self.defaults[category]):
             self.defaults[category] = MultiColumns._get_default(values)
- 
-    def _extend(self, other: 'MultiColumns', allow_different_columns=False, update_defaults=True):
+
+    def _extend(
+        self, other: "MultiColumns", allow_different_columns=False, update_defaults=True
+    ):
         x = self.active
         y = other.active
         common = list(x.intersection(y))
-        xonly  = list(x.difference(y))
-        yonly  = list(y.difference(x))
+        xonly = list(x.difference(y))
+        yonly = list(y.difference(x))
         if (not allow_different_columns) and ((len(xonly) > 0) or (len(yonly) > 0)):
             raise ValueError("Can't append objects with different columns")
         for category in common:
@@ -86,7 +99,9 @@ class MultiColumns:
                 if other.defaults[category]:
                     self.defaults[category] = other.defaults[category]
                 else:
-                    self.defaults[category] = MultiColumns._get_default(other.values[category])
+                    self.defaults[category] = MultiColumns._get_default(
+                        other.values[category]
+                    )
             if (self.size > 0) and (len(self.values[category]) == 0):
                 self.values[category] = [self.defaults[category]] * self.size
             self.values[category].extend(other.values[category])
@@ -99,25 +114,38 @@ class MultiColumns:
             self.active.union([category])
         self.size += other.size
 
+
 class Annotation(MultiColumns):
     pattern = "{}"
     columns = ["values", "unit", "ref", "accession"]
+
     def __init__(self, name):
         super().__init__()
-        self.name   = name
+        self.name = name
         self.active = set(["values"])
 
     def __str__(self):
-        return("name: {}, size: {}, {}".format(self.name, self.size, self.values["values"])) # super().__str__()))
+        return "name: {}, size: {}, {}".format(
+            self.name, self.size, self.values["values"]
+        )  # super().__str__()))
 
-    def extend(self, annotation: 'Annotation', update_defaults=True):
+    def extend(self, annotation: "Annotation", update_defaults=True):
         if self.name != annotation.name:
-            raise ValueError("Cannot extend two annotations with different names ({} and {})".format(self.name, annotation.name))
+            raise ValueError(
+                "Cannot extend two annotations with different names ({} and {})".format(
+                    self.name, annotation.name
+                )
+            )
         super()._extend(annotation, update_defaults=update_defaults)
 
     def get_DataFrame(self):
         df = {}
-        for (k, v) in {"values": self.pattern.format(self.name), "unit": "Unit", "ref": "Term Source REF", "accession": "Term Accession Number"}.items():
+        for (k, v) in {
+            "values": self.pattern.format(self.name),
+            "unit": "Unit",
+            "ref": "Term Source REF",
+            "accession": "Term Accession Number",
+        }.items():
             if k in self.active:
                 x = self.values[k]
                 if not x:
@@ -125,41 +153,64 @@ class Annotation(MultiColumns):
                 df[v] = x
         return pd.DataFrame(data=df)
 
+
 class Characteristics(Annotation):
     pattern = "Characteristics[{}]"
+
     def __init(self, name):
         super().__init__(name)
+
 
 class Parameter(Annotation):
     pattern = "Parameter[{}]"
+
     def __init(self, name):
         super().__init__(name)
+
 
 class Comment(Annotation):
     pattern = "Comment[{}]"
+
     def __init(self, name):
         super().__init__(name)
 
+
 class Node(MultiColumns):
     pattern = "{}"
+
     def __init__(self, name):
         super().__init__()
-        self.name        = name
+        self.name = name
         self.annotations = []
-        self.comments    = []
+        self.comments = []
 
     def __str__(self):
-        return "name: {}, size: {}, {}".format(self.name, self.size, self.values["values"] if "values" in self.values.keys() else "") + \
-            "[(" + "), (".join(x.__str__() for x in self.annotations) + ")]" if self.annotations else "None" + \
-            "[(" + "), (".join(x.__str__() for x in self.comments) + ")]"    if self.comments    else "None"
+        return (
+            "name: {}, size: {}, {}".format(
+                self.name,
+                self.size,
+                self.values["values"] if "values" in self.values.keys() else "",
+            )
+            + "[("
+            + "), (".join(x.__str__() for x in self.annotations)
+            + ")]"
+            if self.annotations
+            else "None" + "[(" + "), (".join(x.__str__() for x in self.comments) + ")]"
+            if self.comments
+            else "None"
+        )
 
-    def _extend(self, node: 'Node', update_defaults=True):
+    def _extend(self, node: "Node", update_defaults=True):
         if self.name != node.name:
-            raise ValueError("Cannot extend two nodes with different names ({} and {})".format(self.name, node.name))
+            raise ValueError(
+                "Cannot extend two nodes with different names ({} and {})".format(
+                    self.name, node.name
+                )
+            )
 
         x = set([a.name for a in self.annotations])
         y = set([a.name for a in node.annotations])
-        yonly  = y.difference(x)
+        yonly = y.difference(x)
         for annotation in self.annotations:
             found = False
             for a in node.annotations:
@@ -180,10 +231,10 @@ class Node(MultiColumns):
                 tmp.extend(a)
                 self.annotations.append(tmp)
                 # print("DEBUG- annotation extension OK, current size = {}".format("?"))
-        
+
         x = set([a.name for a in self.comments])
         y = set([a.name for a in node.comments])
-        yonly  = y.difference(x)
+        yonly = y.difference(x)
         for comment in self.comments:
             found = False
             for a in node.comments:
@@ -204,14 +255,18 @@ class Node(MultiColumns):
                 tmp.extend(a)
                 self.comments.append(tmp)
                 # print("DEBUG- comment extension OK, current size = {}".format("?"))
-        
+
         # print("DEBUG- extending {}, initial size = {}, extension size = {}".format(self.name, self.size, node.size))
         super()._extend(node, update_defaults=update_defaults)
         # print("DEBUG- extension of main values OK, current size = {}".format(self.size))
 
     def _set_annotation(self, annotation: Annotation, comment=False):
         if self.size > 0 and annotation.size > 0 and self.size != annotation.size:
-            raise ValueError("Cannot set annotation {} for node {}, previous values size = {}, replacement values size = {}".format(annotation.name, self.name, self.size, annotation.size))
+            raise ValueError(
+                "Cannot set annotation {} for node {}, previous values size = {}, replacement values size = {}".format(
+                    annotation.name, self.name, self.size, annotation.size
+                )
+            )
         if annotation.size == 0 and self.size > 0:
             annotation.set_size(self.size)
         if annotation.size > 0 and self.size == 0:
@@ -220,7 +275,9 @@ class Node(MultiColumns):
             self.comments = [c for c in self.comments if c.name != annotation.name]
             self.comments.append(annotation)
         else:
-            self.annotations = [a for a in self.annotations if a.name != annotation.name]
+            self.annotations = [
+                a for a in self.annotations if a.name != annotation.name
+            ]
             self.annotations.append(annotation)
 
     def set_size(self, N):
@@ -241,9 +298,11 @@ class Node(MultiColumns):
             df = pd.concat([df, comment.get_DataFrame()], axis=1)
         return df
 
+
 class Material(Node):
     pattern = "{} Name"
     columns = ["name"]
+
     def __init__(self, name, values=[]):
         super().__init__(name)
         self.active = set(Material.columns)
@@ -254,15 +313,25 @@ class Material(Node):
     def set_characteristic(self, characteristic: Characteristics):
         super()._set_annotation(characteristic)
 
-    def extend(self, node: 'Material', update_defaults=True):
+    def extend(self, node: "Material", update_defaults=True):
         super()._extend(node, update_defaults=update_defaults)
 
     def get_DataFrame(self) -> pd.DataFrame:
-        return pd.concat([pd.DataFrame(data={self.pattern.format(self.name): self.values["name"]}), super().get_DataFrame()], axis=1)
+        return pd.concat(
+            [
+                pd.DataFrame(
+                    data={self.pattern.format(self.name): self.values["name"]}
+                ),
+                super().get_DataFrame(),
+            ],
+            axis=1,
+        )
+
 
 class Protocol(Node):
     pattern = "{}"
     columns = ["Performer", "Date"]
+
     def __init__(self, name):
         super().__init__(name)
         self.active = set(Protocol.columns)
@@ -270,28 +339,41 @@ class Protocol(Node):
     def set_parameter(self, parameter: Parameter):
         super()._set_annotation(parameter)
 
-    def extend(self, node: 'Protocol', update_defaults=True):
+    def extend(self, node: "Protocol", update_defaults=True):
         super()._extend(node, update_defaults=update_defaults)
 
     def get_DataFrame(self) -> pd.DataFrame:
-        return pd.concat([
-            pd.DataFrame(data={"Protocol REF": [self.name] * self.size}),
-            super().get_DataFrame(),
-            pd.DataFrame(data={"Performer": self.values["Performer"]}),
-            pd.DataFrame(data={"Date": self.values["Date"]})
-        ], axis=1)
+        return pd.concat(
+            [
+                pd.DataFrame(data={"Protocol REF": [self.name] * self.size}),
+                super().get_DataFrame(),
+                pd.DataFrame(data={"Performer": self.values["Performer"]}),
+                pd.DataFrame(data={"Date": self.values["Date"]}),
+            ],
+            axis=1,
+        )
+
 
 class Assay:
     def __init__(self, assay_type):
         self.assay_type = assay_type
-        self.Materials  = {}
-        self.Protocols  = {}
+        self.Materials = {}
+        self.Protocols = {}
 
     def __str__(self):
         sep = "-" * 60 + "\n"
         SEP = "=" * 60 + "\n"
-        return SEP + sep.join(["Material\n{}\n".format(x.__str__()) for x in self.Materials.values()]) + \
-               SEP + sep.join(["Protocol\n{}\n".format(x.__str__()) for x in self.Protocols.values()]) + SEP
+        return (
+            SEP
+            + sep.join(
+                ["Material\n{}\n".format(x.__str__()) for x in self.Materials.values()]
+            )
+            + SEP
+            + sep.join(
+                ["Protocol\n{}\n".format(x.__str__()) for x in self.Protocols.values()]
+            )
+            + SEP
+        )
 
     def set_size(self, N):
         for material in self.Materials.values():
@@ -305,13 +387,25 @@ class Assay:
     def set_protocol(self, protocol: Protocol):
         self.Protocols[protocol.name] = protocol
 
-    def extend(self, assay: 'Assay'):
+    def extend(self, assay: "Assay"):
         if self.assay_type != assay.assay_type:
-            raise ValueError("Cannot extend assay of type {} by assay of type {}".format(self.assay_type, assay.assay_type))
+            raise ValueError(
+                "Cannot extend assay of type {} by assay of type {}".format(
+                    self.assay_type, assay.assay_type
+                )
+            )
         if set(self.Materials.keys()) != set(assay.Materials.keys()):
-            raise ValueError("Cannot extend assay {}, different material nodes".format(self.assay_type))
+            raise ValueError(
+                "Cannot extend assay {}, different material nodes".format(
+                    self.assay_type
+                )
+            )
         if set(self.Protocols.keys()) != set(assay.Protocols.keys()):
-            raise ValueError("Cannot extend assay {}, different protocol nodes".format(self.assay_type))
+            raise ValueError(
+                "Cannot extend assay {}, different protocol nodes".format(
+                    self.assay_type
+                )
+            )
         for (name, material) in self.Materials.items():
             material.extend(assay.Materials[name])
         for (name, protocol) in self.Protocols.items():
