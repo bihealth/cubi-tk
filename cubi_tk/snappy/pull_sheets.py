@@ -16,10 +16,10 @@ import typing
 
 import attr
 from logzero import logger
+from sodar_cli import api
 
 from ..common import CommonConfig, overwrite_helper, load_toml_config
 from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
-from ..sodar import api
 from .models import load_datasets
 from .common import find_snappy_root_dir
 

@@ -8,8 +8,8 @@ from pathlib import Path
 
 import attr
 from logzero import logger
+from sodar_cli import api
 
-from . import api
 from .. import isa_support
 from ..common import overwrite_helper, load_toml_config
 from ..exceptions import OverwriteRefusedException
