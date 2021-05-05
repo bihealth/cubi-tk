@@ -8,8 +8,8 @@ import typing
 
 import cattr
 from logzero import logger
+from sodar_cli import api
 
-from . import api
 from ..common import load_toml_config
 
 

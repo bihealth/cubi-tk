@@ -60,3 +60,6 @@ toml
 retrying
 
 simplejson
+
+# REST API client for SODAR
+sodar-cli ==0.1.0

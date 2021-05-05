@@ -13,10 +13,10 @@ import pathlib
 import glob
 
 from logzero import logger
+from sodar_cli import api
 import tqdm
 
 from ..exceptions import MissingFileException
-from ..sodar.api import landing_zones
 from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob, irsync_transfer
 
 #: Default value for --src-regex.
@@ -177,10 +177,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            lz_irods_path = landing_zones.get(
+            lz_irods_path = api.landingzone.retrieve(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
-                landing_zone_uuid=self.args.destination,
+                landingzone_uuid=self.args.destination,
             ).irods_path
             logger.info("Target iRods path: %s", lz_irods_path)
 
