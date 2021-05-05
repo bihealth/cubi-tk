@@ -95,7 +95,7 @@ class UploadSheetCommand:
 
         logger.info("Uploading files: \n%s", "\n".join(map(str, file_paths)))
 
-        api.samplesheets.upload(
+        api.samplesheet.upload(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,

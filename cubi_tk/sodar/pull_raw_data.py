@@ -216,7 +216,7 @@ class PullRawDataCommand:
         return 0
 
     def _get_library_to_folder(self, assay):
-        isa_dict = api.samplesheets.get(
+        isa_dict = api.samplesheet.export(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,

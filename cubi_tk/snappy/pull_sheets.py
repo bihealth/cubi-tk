@@ -227,7 +227,7 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
     result = []
 
     # Obtain ISA-tab from SODAR REST API.
-    isa_dict = api.samplesheets.get(
+    isa_dict = api.samplesheet.export(
         sodar_url=config.global_config.sodar_server_url,
         sodar_api_token=config.global_config.sodar_api_token,
         project_uuid=project_uuid,
