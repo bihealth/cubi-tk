@@ -1,6 +1,6 @@
 # History
 
-## HEAD (unreleased)
+## v0.3.0
 
 - Moving SODAR REST API calls to package `sodar-cli`.
 - Switching to Github actions for CI tests.
