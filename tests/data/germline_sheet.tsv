@@ -1,0 +1,15 @@
+[Custom Fields]
+key	annotatedEntity	docs	type	minimum	maximum	unit	choices	pattern
+batchNo	bioEntity	Batch No.	integer	.	.	.	.	.
+familyId	bioEntity	Family	string	.	.	.	.	.
+libraryKit	ngsLibrary	Enrichment kit	string	.	.	.	.	.
+
+[Data]
+familyId	patientName	fatherName	motherName	sex	isAffected	batchNo	libraryType	libraryKit	folderName	hpoTerms
+FAM_P001	P001	P002	P003	F	Y	1	WGS	Agilent SureSelect Human All Exon V6	P001	.
+FAM_P001	P002	.	.	M	N	1	WGS	Agilent SureSelect Human All Exon V6	P002	.
+FAM_P001	P003	.	.	F	N	1	WGS	Agilent SureSelect Human All Exon V6	P003	.
+FAM_P004	P004	P005	P006	M	Y	2	WGS	Agilent SureSelect Human All Exon V6	P004	.
+FAM_P004	P005	.	.	M	N	2	WGS	Agilent SureSelect Human All Exon V6	P005	.
+FAM_P004	P006	.	.	F	Y	2	WGS	Agilent SureSelect Human All Exon V6	P006	.
+FAM_P004	P007	.	.	F	Y	3	WGS	Agilent SureSelect Human All Exon V6	P007	.

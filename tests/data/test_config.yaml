@@ -1,0 +1,23 @@
+static_data_config: {}
+
+step_config: {}
+
+data_sets:
+  first_batch:
+    file: sheet.tsv
+    search_patterns:
+    - {'left': '*/*/*_R1.fastq.gz', 'right': '*/*/*_R2.fastq.gz'}
+    search_paths: ['/path']
+    type: germline_variants
+    naming_scheme: only_secondary_id
+    sodar_uuid: 99999999-aaaa-bbbb-cccc-999999999999
+    pedigree_field: familyId
+
+  second_batch:
+    file: sheet_wo.tsv
+    search_patterns:
+    - {'left': '*/*/*_R1.fastq.gz', 'right': '*/*/*_R2.fastq.gz'}
+    search_paths: ['/path']
+    type: germline_variants
+    naming_scheme: only_secondary_id
+    sodar_uuid: 99999999-dddd-eeee-ffff-999999999999
