@@ -487,16 +487,16 @@ class SnappyItransferCommandBase:
         :param lz_uuid: Landing zone UUID.
         :type lz_uuid: str
         """
-        from ..sodar.api import landing_zones
+        from sodar_cli.api import landingzone
 
         logger.info(
             "Transferred files move to Landing Zone %s will be validated and moved in SODAR..."
             % lz_uuid
         )
-        _ = landing_zones.move(
+        _ = landingzone.submit_move(
             sodar_url=self.args.sodar_url,
             sodar_api_token=self.args.sodar_api_token,
-            landing_zone_uuid=lz_uuid,
+            landingzone_uuid=lz_uuid,
         )
         logger.info("done.")
 
@@ -507,12 +507,12 @@ class SnappyItransferCommandBase:
 
         :return: Returns iRODS path.
         """
-        from ..sodar.api import landing_zones
+        from sodar_cli.api import landingzone
 
-        lz = landing_zones.get(
+        lz = landingzone.retrieve(
             sodar_url=self.args.sodar_url,
             sodar_api_token=self.args.sodar_api_token,
-            landing_zone_uuid=lz_uuid,
+            landingzone_uuid=lz_uuid,
         )
         return lz.irods_path
 
@@ -524,9 +524,9 @@ class SnappyItransferCommandBase:
         :return: Returns landing zone UUID and iRODS path to newly created landing zone.
         """
         logger.info("Creating new Landing Zone...")
-        from ..sodar.api import landing_zones
+        from sodar_cli.api import landingzone
 
-        lz = landing_zones.create(
+        lz = landingzone.create(
             sodar_url=self.args.sodar_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
@@ -542,7 +542,7 @@ class SnappyItransferCommandBase:
         :return: Returns landing zone UUID and iRODS path in latest active landing zone available.
         If none available, it returns None for both.
         """
-        from ..sodar.api import landing_zones
+        from sodar_cli.api import landingzone
 
         # Initialise variables
         lz_irods_path = None
@@ -550,7 +550,7 @@ class SnappyItransferCommandBase:
 
         # List existing lzs
         existing_lzs = sorted(
-            landing_zones.list(
+            landingzone.list_(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=project_uuid,
