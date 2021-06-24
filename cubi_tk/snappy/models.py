@@ -37,6 +37,8 @@ class DataSet:
     sodar_uuid: typing.Optional[str] = None
     #: The optional SODAR title.
     sodar_title: typing.Optional[str] = None
+    #: Field to be used to define pedigrees.
+    pedigree_field: typing.Optional[str] = None
 
 
 def load_config_yaml(path: pathlib.Path) -> typing.Any:
