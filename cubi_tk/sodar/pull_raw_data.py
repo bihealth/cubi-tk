@@ -155,7 +155,7 @@ class PullRawDataCommand:
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
-        investigation = api.investigations.get(
+        investigation = api.samplesheet.retrieve(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,
