@@ -180,14 +180,20 @@ class SampleSheetBuilder(IsaNodeVisitor):
             sample = material
             characteristics = {c.name: c for c in source.characteristics}
             comments = {c.name: c for c in source.comments}
+            batch = characteristics.get("Batch", comments.get("Batch"))
+            family = characteristics.get("Family", comments.get("Family"))
+            father = characteristics.get("Father", comments.get("Father"))
+            mother = characteristics.get("Mother", comments.get("Mother"))
+            sex = characteristics.get("Sex", comments.get("Sex"))
+            affected = characteristics.get("Disease status", comments.get("Disease status"))
             self.sources[material.name] = Source(
-                family=characteristics["Family"].value[0],
+                family=family.value[0] if family else None,
                 source_name=source.name,
-                batch_no=characteristics.get("Batch", comments.get("Batch")).value[0],
-                father=characteristics["Father"].value[0],
-                mother=characteristics["Mother"].value[0],
-                sex=characteristics["Sex"].value[0],
-                affected=characteristics["Disease status"].value[0],
+                batch_no=batch.value[0] if batch else None,
+                father=father.value[0] if father else None,
+                mother=mother.value[0] if mother else None,
+                sex=sex.value[0] if sex else None,
+                affected=affected.value[0] if affected else None,
                 sample_name=sample.name,
             )
         elif material.type == "Library Name":
@@ -199,14 +205,19 @@ class SampleSheetBuilder(IsaNodeVisitor):
                 library_type = "WES"
             elif library.name.split("-")[-1].startswith("Panel_seq"):
                 library_type = "Panel_seq"
+            elif library.name.split("-")[-1].startswith("mRNA_seq"):
+                library_type = "mRNA_seq"
             else:
                 raise Exception("Cannot infer library type from %s" % library.name)
 
+            folder_name = first_value("Folder name", node_path)
+            if not folder_name:
+                folder_name = library.name
             self.samples[sample.name] = Sample(
                 source=self.sources[sample.name],
                 library_name=library.name,
                 library_type=library_type,
-                folder_name=first_value("Folder name", node_path),
+                folder_name=folder_name,
                 seq_platform=first_value("Platform", node_path),
                 library_kit=first_value("Library Kit", node_path),
             )
