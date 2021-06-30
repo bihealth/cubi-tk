@@ -142,11 +142,9 @@ class SnappyItransferCommandBase:
             default=os.environ.get("SODAR_API_TOKEN", None),
             help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
-
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
         parser.add_argument(
             "--num-parallel-transfers",
             type=int,
@@ -160,10 +158,10 @@ class SnappyItransferCommandBase:
             help="The shortcut TSV schema to use.",
         )
         parser.add_argument(
-            "--start-batch",
-            default=0,
-            type=int,
-            help="Batch to start the transfer at, defaults to 0.",
+            "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
+        )
+        parser.add_argument(
+            "--last-batch", type=int, required=False, help="Last batch to be transferred."
         )
         parser.add_argument(
             "--base-path",
@@ -181,13 +179,11 @@ class SnappyItransferCommandBase:
             default="{library_name}/%s/{date}" % cls.step_name,
             help="Pattern to use for constructing remote pattern",
         )
-
         parser.add_argument(
             "biomedsheet_tsv",
             type=argparse.FileType("rt"),
             help="Path to biomedsheets TSV file to load.",
         )
-
         parser.add_argument(
             "--yes",
             default=False,
@@ -195,14 +191,12 @@ class SnappyItransferCommandBase:
             help="Assume all answers are yes, e.g., will create or use "
             "existing available landing zones without asking.",
         )
-
         parser.add_argument(
             "--validate-and-move",
             default=False,
             action="store_true",
             help="After files are transferred to SODAR, it will proceed with validation and move.",
         )
-
         parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     @classmethod
@@ -241,7 +235,8 @@ class SnappyItransferCommandBase:
 
         return res
 
-    def _build_family_max_batch(self, sheet, batch_key, family_key):
+    @staticmethod
+    def _build_family_max_batch(sheet, batch_key, family_key):
         family_max_batch = {}
         for donor in sheet.bio_entities.values():
             if batch_key in donor.extra_infos and family_key in donor.extra_infos:
@@ -261,7 +256,7 @@ class SnappyItransferCommandBase:
         return batch
 
     def yield_ngs_library_names(
-        self, sheet, min_batch=None, batch_key="batchNo", family_key="familyId"
+        self, sheet, min_batch=None, max_batch=None, batch_key="batchNo", family_key="familyId"
     ):
         """Yield all NGS library names from sheet.
 
@@ -269,11 +264,29 @@ class SnappyItransferCommandBase:
         ``min_batch`` will be used.
 
         This function can be overloaded, for example to only consider the indexes.
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param min_batch: Minimum batch number to be extracted from the sheet. All samples in batches below this values
+        will be skipped.
+        :type min_batch: int
+
+        :param max_batch: Maximum batch number to be extracted from the sheet. All samples in batches above this values
+        will be skipped.
+        :type max_batch: int
+
+        :param batch_key: Batch number key in sheet. Default: 'batchNo'.
+        :type batch_key: str
+
+        :param family_key: Family identifier key. Default: 'familyId'.
+        :type family_key: str
         """
         family_max_batch = self._build_family_max_batch(sheet, batch_key, family_key)
 
         # Process all libraries and filter by family batch ID.
         for donor in sheet.bio_entities.values():
+            # Ignore below min batch number if applicable
             if min_batch is not None:
                 batch = self._batch_of(donor, family_max_batch, batch_key, family_key)
                 if batch < min_batch:
@@ -284,6 +297,20 @@ class SnappyItransferCommandBase:
                         batch,
                         min_batch,
                     )
+                    continue
+            # Ignore above max batch number if applicable
+            if max_batch is not None:
+                batch = self._batch_of(donor, family_max_batch, batch_key, family_key)
+                if batch > max_batch:
+                    logger.debug(
+                        "Skipping donor %s because %s = %d > max_batch = %d",
+                        donor.name,
+                        batch_key,
+                        batch,
+                        max_batch,
+                    )
+                    # It would be tempting to add a `break`, but there is no guarantee that
+                    # the sample sheet is sorted.
                     continue
             for bio_sample in donor.bio_samples.values():
                 for test_sample in bio_sample.test_samples.values():
@@ -623,7 +650,11 @@ class SnappyItransferCommandBase:
         logger.info("  args: %s", self.args)
 
         sheet = load_sheet_tsv(self.args)
-        library_names = list(self.yield_ngs_library_names(sheet, min_batch=self.args.start_batch))
+        library_names = list(
+            self.yield_ngs_library_names(
+                sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
+            )
+        )
         logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
 
         lz_uuid, transfer_jobs = self.build_jobs(library_names)

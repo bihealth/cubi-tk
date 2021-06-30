@@ -1,0 +1,22 @@
+[Custom Fields]
+key	annotatedEntity	docs	type	minimum	maximum	unit	choices	pattern
+batchNo	bioEntity	Batch No.	integer	.	.	.	.	.
+libraryKit	ngsLibrary	Enrichment kit	string	.	.	.	.	.
+
+[Data]
+patientName	fatherName	motherName	sex	isAffected	batchNo	libraryType	libraryKit	folderName	hpoTerms
+P001	P002	P003	F	Y	1	WGS	Agilent SureSelect Human All Exon V6	P001	.
+P002	.	.	M	N	1	WGS	Agilent SureSelect Human All Exon V6	P002	.
+P003	.	.	F	N	1	WGS	Agilent SureSelect Human All Exon V6	P003	.
+P004	P005	P006	M	Y	2	WGS	Agilent SureSelect Human All Exon V6	P004	.
+P005	.	.	M	N	2	WGS	Agilent SureSelect Human All Exon V6	P005	.
+P006	.	.	F	Y	2	WGS	Agilent SureSelect Human All Exon V6	P006	.
+P007	.	.	F	Y	3	WGS	Agilent SureSelect Human All Exon V6	P007	.
+P008	.	.	F	Y	3	WGS	Agilent SureSelect Human All Exon V6	P008	.
+P009	.	.	F	Y	3	WGS	Agilent SureSelect Human All Exon V6	P009	.
+P010	.	.	F	Y	4	WGS	Agilent SureSelect Human All Exon V6	P010	.
+P011	.	.	F	Y	4	WGS	Agilent SureSelect Human All Exon V6	P011	.
+P012	.	.	F	Y	4	WGS	Agilent SureSelect Human All Exon V6	P012	.
+P013	.	.	F	Y	5	WGS	Agilent SureSelect Human All Exon V6	P013	.
+P014	.	.	F	Y	5	WGS	Agilent SureSelect Human All Exon V6	P014	.
+P015	.	.	F	Y	6	WGS	Agilent SureSelect Human All Exon V6	P015	.
