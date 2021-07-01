@@ -40,8 +40,7 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
 
 def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
     fake_base_path = "/base/path"
-    sodar_path = "sodar/path/to/landing/zone/landing_zone_uuid"
-    tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
+    sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "--verbose",
         "snappy",
@@ -50,8 +49,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
         fake_base_path,
         "--sodar-api-token",
         "XXXX",
-        tsv_path,
-        sodar_path,
+        sodar_uuid,
     ]
 
     parser, subparsers = setup_argparse()
@@ -123,7 +121,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
             path, os.path.join(fake_base_path, "ngs_mapping/output")
         ).split("/", 1)
         _mapper, index = mapper_index.rsplit(".", 1)
-        remote_path = os.path.join(sodar_path, index, "ngs_mapping", args.remote_dir_date, rel_path)
+        remote_path = os.path.join(sodar_uuid, index, "ngs_mapping", args.remote_dir_date, rel_path)
         expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
         expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
         expected_ils_argv = ["ils", os.path.dirname(remote_path)]

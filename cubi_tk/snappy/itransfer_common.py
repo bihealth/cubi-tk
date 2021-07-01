@@ -21,6 +21,7 @@ import tqdm
 
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
+from .common import get_biomedsheet_path, load_sheet_tsv
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -82,17 +83,6 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     _ = args
-
-
-def load_sheet_tsv(args):
-    """Load sample sheet."""
-    logger.info(
-        "Loading %s sample sheet from %s.",
-        args.tsv_shortcut,
-        getattr(args.biomedsheet_tsv, "name", "stdin"),
-    )
-    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % args.tsv_shortcut)
-    return load_tsv(args.biomedsheet_tsv, naming_scheme=NAMING_ONLY_SECONDARY_ID)
 
 
 def load_sheets_tsv(args):
@@ -178,11 +168,6 @@ class SnappyItransferCommandBase:
             "--remote-dir-pattern",
             default="{library_name}/%s/{date}" % cls.step_name,
             help="Pattern to use for constructing remote pattern",
-        )
-        parser.add_argument(
-            "biomedsheet_tsv",
-            type=argparse.FileType("rt"),
-            help="Path to biomedsheets TSV file to load.",
         )
         parser.add_argument(
             "--yes",
@@ -642,17 +627,25 @@ class SnappyItransferCommandBase:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
+        # Validate arguments
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
 
+        # Logger
         logger.info("Starting cubi-tk snappy %s", self.command_name)
         logger.info("  args: %s", self.args)
 
-        sheet = load_sheet_tsv(self.args)
+        # Find biomedsheet file
+        biomedsheet_tsv = get_biomedsheet_path(
+            start_path=self.args.base_path, uuid=self.args.destination
+        )
+
+        # Extract library names from sample sheet
+        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
         library_names = list(
             self.yield_ngs_library_names(
-                sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
+                sheet=sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
             )
         )
         logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
@@ -698,8 +691,32 @@ class IndexLibrariesOnlyMixin:
     """Mixin for ``SnappyItransferCommandBase`` that only considers libraries of indexes."""
 
     def yield_ngs_library_names(
-        self, sheet, min_batch=None, batch_key="batchNo", family_key="familyId"
+        self, sheet, min_batch=None, max_batch=None, batch_key="batchNo", family_key="familyId"
     ):
+        """Yield index only NGS library names from sheet.
+
+        When ``min_batch`` is given then only the donors for which the ``extra_infos[batch_key]`` is greater than
+        ``min_batch`` will be used.
+
+        This function can be overloaded, for example to only consider the indexes.
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param min_batch: Minimum batch number to be extracted from the sheet. All samples in batches below this values
+        will be skipped.
+        :type min_batch: int
+
+        :param max_batch: Maximum batch number to be extracted from the sheet. All samples in batches above this values
+        will be skipped.
+        :type max_batch: int
+
+        :param batch_key: Batch number key in sheet. Default: 'batchNo'.
+        :type batch_key: str
+
+        :param family_key: Family identifier key. Default: 'familyId'.
+        :type family_key: str
+        """
         family_max_batch = self._build_family_max_batch(sheet, batch_key, family_key)
 
         shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
@@ -714,6 +731,16 @@ class IndexLibrariesOnlyMixin:
                         batch_key,
                         donor.extra_infos[batch_key],
                         min_batch,
+                    )
+                    continue
+            if max_batch is not None:
+                if batch > max_batch:
+                    logger.debug(
+                        "Skipping donor %s because %s = %d > max_batch = %d",
+                        donor.name,
+                        batch_key,
+                        donor.extra_infos[batch_key],
+                        max_batch,
                     )
                     continue
             logger.debug("Processing NGS library for donor %s", donor.name)

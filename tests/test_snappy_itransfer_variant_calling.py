@@ -4,6 +4,7 @@ We only run some smoke tests here.
 """
 
 import os
+import textwrap
 from unittest import mock
 from unittest.mock import ANY
 
@@ -11,6 +12,50 @@ import pytest
 from pyfakefs import fake_filesystem
 
 from cubi_tk.__main__ import setup_argparse, main
+
+
+@pytest.fixture
+def minimal_config():
+    """Return configuration text"""
+    return textwrap.dedent(
+        r"""
+        static_data_config: {}
+
+        step_config: {}
+
+        data_sets:
+          first_batch:
+            file: sheet.tsv
+            search_patterns:
+            - {'left': '*/*/*_R1.fastq.gz', 'right': '*/*/*_R2.fastq.gz'}
+            search_paths: ['/path']
+            type: germline_variants
+            naming_scheme: only_secondary_id
+        """
+    ).lstrip()
+
+
+@pytest.fixture
+def germline_trio_plus_sheet_tsv():
+    """Return contents for germline trio plus TSV file"""
+    return textwrap.dedent(
+        """
+        [Custom Fields]
+        key\tannotatedEntity\tdocs\ttype\tminimum\tmaximum\tunit\tchoices\tpattern
+        familyId\tbioEntity\tFamily\tstring\t.\t.\t.\t.\t.
+        libraryKit\tngsLibrary\tEnrichment kit\tstring\t.\t.\t.\t.\t.
+
+        [Data]
+        familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tlibraryKit\tfolderName\thpoTerms
+        family1\tP001\tP002\tP003\tF\tY\tWGS\tAgilent SureSelect Human All Exon V6\tP011\t.
+        family1\tP002\t.\t.\tM\tN\tWGS\tAgilent SureSelect Human All Exon V6\tP002\t.
+        family1\tP003\t.\t.\tF\tN\tWGS\tAgilent SureSelect Human All Exon V6\tP003\t.
+        family2\tP004\tP005\tP006\tM\tY\tWGS\tAgilent SureSelect Human All Exon V6\tP004\t.
+        family2\tP005\t.\t.\tM\tN\tWGS\tAgilent SureSelect Human All Exon V6\tP005\t.
+        family2\tP006\t.\t.\tF\tY\tWGS\tAgilent SureSelect Human All Exon V6\tP006\t.
+        family2\tP007\t.\t.\tF\tY\tWGS\tAgilent SureSelect Human All Exon V6\tP007\t.
+        """
+    ).lstrip()
 
 
 def test_run_snappy_itransfer_variant_calling_help(capsys):
@@ -38,10 +83,11 @@ def test_run_snappy_itransfer_variant_calling_nothing(capsys):
     assert res.err
 
 
-def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
+def test_run_snappy_itransfer_variant_calling_smoke_test(
+    mocker, minimal_config, germline_trio_plus_sheet_tsv
+):
     fake_base_path = "/base/path"
-    dest_path = "/irods/dest"
-    tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
+    dest_path = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "--verbose",
         "snappy",
@@ -50,7 +96,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
         fake_base_path,
         "--sodar-api-token",
         "XXXX",
-        tsv_path,
+        # tsv_path,
         dest_path,
     ]
 
@@ -76,8 +122,17 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
                 % (fake_base_path, member, member, ext)
             )
             fs.create_file(fake_file_paths[-1])
+    # Create sample sheet in fake file system
+    sample_sheet_path = fake_base_path + "/.snappy_pipeline/sheet.tsv"
+    fs.create_file(
+        sample_sheet_path, contents=germline_trio_plus_sheet_tsv, create_missing_dirs=True
+    )
+    # Create config in fake file system
+    config_path = fake_base_path + "/.snappy_pipeline/config.yaml"
+    fs.create_file(config_path, contents=minimal_config, create_missing_dirs=True)
 
-    print("\n".join(fake_file_paths))
+    # Print path to all created files
+    print("\n".join(fake_file_paths + [sample_sheet_path, config_path]))
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
