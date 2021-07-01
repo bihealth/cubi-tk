@@ -77,7 +77,7 @@ def yield_ngs_library_names(sheet, min_batch=None, batch_key="batchNo", pedigree
     shortcut_sheet = shortcuts.GermlineCaseSheet(sheet, **kwargs)
     for pedigree in shortcut_sheet.cohort.pedigrees:
         max_batch = max(donor.extra_infos.get(batch_key, 0) for donor in pedigree.donors)
-        if min_batch is None or min_batch <= max_batch:
+        if (min_batch is None or min_batch <= max_batch) and pedigree.index.dna_ngs_library:
             yield pedigree.index.dna_ngs_library.name
 
 
