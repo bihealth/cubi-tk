@@ -6,7 +6,7 @@ import os
 import pathlib
 import typing
 
-from biomedsheets import io_tsv, shortcuts
+from biomedsheets import shortcuts
 from logzero import logger
 from varfish_cli.__main__ import main as varfish_cli_main
 

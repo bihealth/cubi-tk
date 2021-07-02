@@ -95,7 +95,8 @@ def get_biomedsheet_path(start_path, uuid):
     snappy_config = snappy_dir_parent / ".snappy_pipeline" / "config.yaml"
 
     # Load config
-    config = yaml.safe_load(snappy_config)
+    with open(snappy_config, "r") as stream:
+        config = yaml.safe_load(stream)
 
     # Search config for the correct dataset
     for project in config["data_sets"]:
@@ -104,7 +105,7 @@ def get_biomedsheet_path(start_path, uuid):
             if dataset["sodar_uuid"] == uuid:
                 biomedsheet_path = snappy_dir_parent / ".snappy_pipeline" / dataset["file"]
         except KeyError:
-            # Not every dataset has an UUID associated
+            # Not every dataset has an associated UUID
             pass
 
     # Raise exception if none found
