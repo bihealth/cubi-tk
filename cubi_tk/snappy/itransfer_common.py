@@ -355,12 +355,11 @@ class SnappyItransferCommandBase:
     def get_sodar_info(self):
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
-        1. User provides iRODS path. Same as before, use it.
-        2. User provides Landing Zone UUID. Same as before, fetch path and use it.
-        3. User provides Project UUID:
+        1. User provides Landing Zone UUID: fetch path and use it.
+        2. User provides Project UUID:
            i. If there are LZ associated with project, select the latest active and use it.
           ii. If there are no LZ associated with project, create a new one and use it.
-        4. Data provided by user is neither an iRODS path nor a valid UUID. Report error and throw exception.
+        3. Data provided by user is neither an iRODS path nor a valid UUID. Report error and throw exception.
 
         :return: Returns landing zone UUID and path to iRODS directory.
         """
@@ -371,13 +370,8 @@ class SnappyItransferCommandBase:
         create_lz_bool = self.args.yes
         in_destination = self.args.destination
 
-        # iRODS path provided by user
-        # Not possible to retrieve lz uuid from path. Returns None for lz_uuid.
-        if "/" in in_destination:
-            lz_irods_path = in_destination
-
         # Project UUID provided by user
-        elif is_uuid(in_destination):
+        if is_uuid(in_destination):
 
             if create_lz_bool:
                 # Assume that provided UUID is associated with a Project and user wants a new LZ.
@@ -479,9 +473,8 @@ class SnappyItransferCommandBase:
         # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz.
         if lz_irods_path is None:
-            msg = (
-                "Data provided by user is neither an iRODS path nor a valid UUID. "
-                "Please review input: " + in_destination
+            msg = "Data provided by user is not a valid UUID. Please review input: {0}".format(
+                in_destination
             )
             logger.error(msg)
             raise ParameterException(msg)
