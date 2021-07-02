@@ -182,7 +182,9 @@ class SnappyItransferCommandBase:
             action="store_true",
             help="After files are transferred to SODAR, it will proceed with validation and move.",
         )
-        parser.add_argument("destination", help="UUID from Landing Zone or Project - where files will be moved to.")
+        parser.add_argument(
+            "destination", help="UUID from Landing Zone or Project - where files will be moved to."
+        )
 
     @classmethod
     def run(
