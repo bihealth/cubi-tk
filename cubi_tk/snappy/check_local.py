@@ -1,4 +1,4 @@
-"""``cubi-tk snappy check``: check within sample sheet and between sample sheet and files."""
+"""``cubi-tk snappy check-local``: check within sample sheet and between sample sheet and files."""
 
 import argparse
 import glob
@@ -463,7 +463,7 @@ class SnappyCheckLocalCommand:
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk snappy check")
+        logger.info("Starting cubi-tk snappy check-local")
         logger.info("  args: %s", self.args)
 
         results = [
