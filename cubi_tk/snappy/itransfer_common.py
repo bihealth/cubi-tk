@@ -85,22 +85,6 @@ def check_args(args):
     _ = args
 
 
-def load_sheets_tsv(args):
-    """Load multiple sample sheets."""
-    result = []
-
-    for path in args.biomedsheet_tsv:
-        logger.info(
-            "Loading %s sample sheet from %s.",
-            args.tsv_shortcut,
-            getattr(args.biomedsheet_tsv, "name", "stdin"),
-        )
-        load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % args.tsv_shortcut)
-        result.append(load_tsv(path, naming_scheme=NAMING_ONLY_SECONDARY_ID))
-
-    return result
-
-
 class SnappyItransferCommandBase:
     """Base class for itransfer commands."""
 
