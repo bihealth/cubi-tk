@@ -107,7 +107,6 @@ def get_biomedsheet_path(start_path, uuid):
         except KeyError:
             # Not every dataset has an associated UUID
             logger.info("Data set '{0}' has no associated UUID.".format(project))
-            pass
 
     # Raise exception if none found
     if biomedsheet_path is None:
