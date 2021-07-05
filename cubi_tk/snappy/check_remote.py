@@ -6,18 +6,13 @@ of the MD5 sum.  Otherwise, just checks for presence of files (for now), the rat
 """
 
 import argparse
-import glob
 import os
-import pathlib
 import typing
-import warnings
 
 from biomedsheets import shortcuts
 from logzero import logger
-import vcfpy
 
-from .common import get_biomedsheet_path, get_all_biomedsheet_paths, load_sheet_tsv
-from .. import parse_ped
+from .common import get_biomedsheet_path, load_sheet_tsv
 
 
 class RawDataChecker:
@@ -66,7 +61,9 @@ class SnappyCheckRemoteCommand:
         #: Command line arguments.
         self.args = args
         # Find biomedsheet file
-        self.biomedsheet_tsv = get_biomedsheet_path(start_path=self.args.base_path, uuid=args.project_uuid)
+        self.biomedsheet_tsv = get_biomedsheet_path(
+            start_path=self.args.base_path, uuid=args.project_uuid
+        )
         #: Raw sample sheet.
         self.sheet = load_sheet_tsv(self.biomedsheet_tsv, args.tsv_shortcut)
         #: Shortcut sample sheet.
@@ -94,11 +91,7 @@ class SnappyCheckRemoteCommand:
                 "back to current working directory by default."
             ),
         )
-        parser.add_argument(
-            "project_uuid",
-            type=str,
-            help="UUID from project to check.",
-        )
+        parser.add_argument("project_uuid", type=str, help="UUID from project to check.")
 
     @classmethod
     def run(

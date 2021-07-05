@@ -50,7 +50,8 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_check_local(
         subparsers.add_parser(
-            "check-local", help="Check consistency within local sample sheet and between local sheets and files"
+            "check-local",
+            help="Check consistency within local sample sheet and between local sheets and files",
         )
     )
     setup_argparse_check_remote(
