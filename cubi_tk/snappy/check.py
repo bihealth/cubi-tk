@@ -11,7 +11,7 @@ from biomedsheets import shortcuts
 from logzero import logger
 import vcfpy
 
-from .itransfer_common import load_sheets_tsv
+from .common import get_biomedsheet_path, get_all_biomedsheet_paths, load_sheet_tsv
 from .. import parse_ped
 
 
@@ -385,8 +385,17 @@ class SnappyCheckCommand:
     def __init__(self, args):
         #: Command line arguments.
         self.args = args
+        # Find biomedsheet file
+        self.biomedsheet_tsvs = None
+        if self.args.project_uuids:
+            self.biomedsheet_tsvs = [
+                get_biomedsheet_path(start_path=self.args.base_path, uuid=uuid)
+                for uuid in self.args.project_uuids
+            ]
+        else:
+            self.biomedsheet_tsvs = get_all_biomedsheet_paths(start_path=self.args.base_path)
         #: Raw sample sheet.
-        self.sheets = load_sheets_tsv(self.args)
+        self.sheets = [load_sheet_tsv(tsv, args.tsv_shortcut) for tsv in self.biomedsheet_tsvs]
         #: Shortcut sample sheet.
         self.shortcut_sheets = [shortcuts.GermlineCaseSheet(sheet) for sheet in self.sheets]
 
@@ -405,19 +414,18 @@ class SnappyCheckCommand:
         )
         parser.add_argument(
             "--base-path",
-            default=None,
+            default=os.getcwd(),
             required=False,
             help=(
                 "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
                 "back to current working directory by default."
             ),
         )
-
         parser.add_argument(
-            "biomedsheet_tsv",
-            nargs="+",
-            type=argparse.FileType("rt"),
-            help="Path to biomedsheets TSV file to load.",
+            "project_uuids",
+            type=str,
+            nargs="*",
+            help="UUID(s) from project(s) to check. Use all if not given.",
         )
 
     @classmethod
@@ -431,7 +439,7 @@ class SnappyCheckCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        for tsv_file in args.biomedsheet_tsv:
+        for tsv_file in self.biomedsheet_tsvs:
             if args.base_path:
                 break
             base_path = pathlib.Path(tsv_file.name).parent

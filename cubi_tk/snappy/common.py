@@ -117,3 +117,29 @@ def get_biomedsheet_path(start_path, uuid):
 
     # Return path
     return biomedsheet_path
+
+
+def get_all_biomedsheet_paths(start_path):
+    """Get paths to all biomedsheet files in a SNAPPY directory.
+
+    :param start_path: Start path to search for snappy root directory.
+    :type start_path: str, pathlib.Path
+
+    :return: Returns paths to sample sheet.
+    """
+    result = []
+
+    # Find config file
+    snappy_dir_parent = find_snappy_root_dir(start_path=start_path)
+    snappy_config = snappy_dir_parent / ".snappy_pipeline" / "config.yaml"
+
+    # Load config
+    with open(snappy_config, "r") as stream:
+        config = yaml.safe_load(stream)
+
+    # Search config for the datasets.
+    for project in config["data_sets"]:
+        dataset = config["data_sets"].get(project)
+        result.append(snappy_dir_parent / ".snappy_pipeline" / dataset["file"])
+
+    return result
