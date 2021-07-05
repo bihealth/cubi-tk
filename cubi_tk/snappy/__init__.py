@@ -32,7 +32,7 @@ More Information
 import argparse
 
 from ..common import run_nocmd
-from .check import setup_argparse as setup_argparse_check
+from .check_local import setup_argparse as setup_argparse_check_local
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
@@ -47,9 +47,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
     subparsers = parser.add_subparsers(dest="snappy_cmd")
 
-    setup_argparse_check(
+    setup_argparse_check_local(
         subparsers.add_parser(
-            "check", help="Check consistency within sample sheet and between sheet and files"
+            "check-local", help="Check consistency within local sample sheet and between local sheets and files"
         )
     )
 
