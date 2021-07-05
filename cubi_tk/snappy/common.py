@@ -106,14 +106,14 @@ def get_biomedsheet_path(start_path, uuid):
                 biomedsheet_path = snappy_dir_parent / ".snappy_pipeline" / dataset["file"]
         except KeyError:
             # Not every dataset has an associated UUID
+            logger.info("Data set '{0}' has no associated UUID.".format(project))
             pass
 
     # Raise exception if none found
     if biomedsheet_path is None:
+        tpl = "Could not find sample sheet for UUID {uuid}. Dataset configuration: {config}"
         config_str = "; ".join(["{} = {}".format(k, v) for k, v in config["data_sets"].items()])
-        msg = "Could not find sample sheet for UUID {uuid}. Dataset configuration: {config}".format(
-            uuid=uuid, config=config_str
-        )
+        msg = tpl.format(uuid=uuid, config=config_str)
         raise CouldNotFindBioMedSheet(msg)
 
     # Return path
