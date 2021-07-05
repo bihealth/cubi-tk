@@ -1,32 +1,14 @@
 """Tests for ``cubi_tk.snappy.varfish_upload``."""
 import pathlib
 
-from biomedsheets import models, shortcuts
 from biomedsheets.io_tsv import read_germline_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 
-
-from cubi_tk.snappy.varfish_upload import load_sheet_tsv, yield_ngs_library_names
-
-
-def test_load_sheet_tsv():
-    """Tests varfish_upload.load_sheet_tsv()"""
-    # Define expected
-    expected_ngs_library_name_list = ["P001-N1-DNA1-WGS1", "P004-N1-DNA1-WGS1", "P007-N1-DNA1-WGS1"]
-
-    # Define input
-    sheet_path = pathlib.Path(__file__).resolve().parent / "data" / "germline_sheet.tsv"
-    # Get actual
-    sheet = load_sheet_tsv(path_tsv=sheet_path)
-    assert isinstance(sheet, models.Sheet)
-    # Convert to manageable format
-    shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
-    for pedigree in shortcut_sheet.cohort.pedigrees:
-        assert pedigree.index.dna_ngs_library.name in expected_ngs_library_name_list
+from cubi_tk.snappy.varfish_upload import yield_ngs_library_names
 
 
 def test_yield_ngs_library_names():
-    """Tests varfish_upload.yield_ngs_library_names()"""
+    """Tests yield_ngs_library_names()"""
     # Define expected
     expected_batch_one = ["P001-N1-DNA1-WGS1"]
     expected_batch_two = ["P004-N1-DNA1-WGS1"]

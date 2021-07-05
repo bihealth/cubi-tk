@@ -6,11 +6,11 @@ import os
 import pathlib
 import typing
 
-from biomedsheets import io_tsv, shortcuts
-from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+from biomedsheets import shortcuts
 from logzero import logger
 from varfish_cli.__main__ import main as varfish_cli_main
 
+from .common import load_sheet_tsv
 from ..common import find_base_path
 from .models import DataSet, load_datasets
 
@@ -37,22 +37,6 @@ PREFIXES = (
     "bwa.xhmm",
     "write_pedigree",
 )
-
-
-def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
-    """Load sample sheet.
-
-    :param path_tsv: Path to sample sheet TSV file.
-    :type path_tsv: pathlib.Path
-
-    :param tsv_shortcut: Sample sheet type. Default: 'germline'.
-    :type tsv_shortcut: str
-
-    :return: Returns Sheet model.
-    """
-    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
-    with open(path_tsv, "rt") as f:
-        return load_tsv(f, naming_scheme=NAMING_ONLY_SECONDARY_ID)
 
 
 def yield_ngs_library_names(sheet, min_batch=None, batch_key="batchNo", pedigree_field=None):
