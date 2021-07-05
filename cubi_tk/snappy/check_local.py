@@ -379,8 +379,8 @@ class VcfFileCheck(FileCheckBase):
         return True
 
 
-class SnappyCheckCommand:
-    """Implementation of the ``check`` command."""
+class SnappyCheckLocalCommand:
+    """Implementation of the ``check-local`` command."""
 
     def __init__(self, args):
         #: Command line arguments.
@@ -401,7 +401,7 @@ class SnappyCheckCommand:
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup common arguments for itransfer commands."""
+        """Setup arguments for ``check-local`` command."""
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -436,7 +436,7 @@ class SnappyCheckCommand:
         return cls(args).execute()
 
     def check_args(self, args):
-        """Called for checking arguments, override to change behaviour."""
+        """Called for checking arguments."""
         res = 0
 
         for tsv_file in self.biomedsheet_tsvs:
@@ -477,5 +477,5 @@ class SnappyCheckCommand:
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk snappy itransfer-raw-data``."""
-    return SnappyCheckCommand.setup_argparse(parser)
+    """Setup argument parser for ``cubi-tk snappy check-local``."""
+    return SnappyCheckLocalCommand.setup_argparse(parser)
