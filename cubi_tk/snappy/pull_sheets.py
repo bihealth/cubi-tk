@@ -207,6 +207,8 @@ class SampleSheetBuilder(IsaNodeVisitor):
                 library_type = "Panel_seq"
             elif library.name.split("-")[-1].startswith("mRNA_seq"):
                 library_type = "mRNA_seq"
+            elif library.name.split("-")[-1].startswith("RNA_seq"):
+                library_type = "RNA_seq"
             else:
                 raise Exception("Cannot infer library type from %s" % library.name)
 
