@@ -5,7 +5,7 @@ import os
 import shlex
 import typing
 from pathlib import Path
-from subprocess import SubprocessError, check_call, DEVNULL
+from subprocess import SubprocessError, check_call
 
 import attr
 from logzero import logger
@@ -107,7 +107,10 @@ class PullRawDataCommand:
         parser.add_argument("--min-batch", default=0, type=int, help="Minimal batch number to pull")
 
         parser.add_argument(
-            "--allow-missing", default=False, action="store_true", help="Allow missing data in assay"
+            "--allow-missing",
+            default=False,
+            action="store_true",
+            help="Allow missing data in assay",
         )
 
         parser.add_argument(
@@ -177,40 +180,37 @@ class PullRawDataCommand:
 
         library_to_folder = self._get_library_to_folder(assay)
 
-        if self.config.allow_missing:
-            commands = self._build_check_commands(assay, library_to_folder)
-            no_data = self._executed_check_commands(commands)
-            for k in no_data:
-                logger.warning("No data for library %s, ignored...", k)
-                del(library_to_folder[k])
-
-
         commands = self._build_commands(assay, library_to_folder)
         if not commands:
             logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
             return 0
-        return self._executed_commands(commands)
+
+        failed_libs = self._executed_commands(commands)
+        if failed_libs:
+            if not self.config.allow_missing:
+                return 1
+            for failed_lib in failed_libs:
+                logger.warning("Data download for %s failed, may have no data", failed_lib)
+
+        return 0
 
     def _build_commands(self, assay, library_to_folder):
-        commands = []
+        commands = {}
         for k, v in library_to_folder.items():
-            commands.append(["irsync", "-r"])
+            cmd = ["irsync", "-r"]
             if self.config.irsync_threads:
-                commands[-1] += ["-N", str(self.config.irsync_threads)]
-            commands[-1] += [
+                cmd += ["-N", str(self.config.irsync_threads)]
+            cmd += [
                 "i:%s/%s" % (assay.irods_path, k),
                 "%s/%s" % (self.config.output_dir, v),
             ]
-        return commands
-
-    def _build_check_commands(self, assay, library_to_folder):
-        commands = {}
-        for k in library_to_folder.keys():
-            commands[k] = ["ils", "%s/%s" % (assay.irods_path, k)]
+            commands[k] = cmd
         return commands
 
     def _executed_commands(self, commands):
-        cmds_txt = "\n".join(["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands])
+        cmds_txt = "\n".join(
+            ["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands.values()]
+        )
         logger.info("Pull data using the following commands?\n\n%s\n", cmds_txt)
         if self.config.yes:
             answer = True
@@ -220,10 +220,11 @@ class PullRawDataCommand:
                 if answer_str.startswith("y") or answer_str.startswith("n"):
                     break
             answer = answer_str == "y"
+        failed_libs = []
         if not answer:
             logger.info("Answered 'no': NOT pulling files")
         else:
-            for cmd in commands:
+            for lib, cmd in commands.items():
                 try:
                     cmd_str = " ".join(map(shlex.quote, cmd))
                     logger.info("Executing %s", cmd_str)
@@ -231,19 +232,12 @@ class PullRawDataCommand:
                     print(cmd_str)
                     check_call(cmd)
                 except SubprocessError as e:  # pragma: nocover
-                    logger.error("Problem executing irsync: %s", e)
-                    return 1
-        return 0
-
-    def _executed_check_commands(self, commands):
-        logger.info("Checking data availability")
-        no_data = []
-        for lib_name, cmd in commands.items():
-            try:
-                check_call(cmd, stdout=DEVNULL, stderr=DEVNULL)
-            except SubprocessError as e:
-                no_data.append(lib_name)
-        return no_data
+                    if not self.config.allow_missing:
+                        logger.error("Problem executing irsync: %s", e)
+                        return [lib]
+                    else:
+                        failed_libs.append(lib)
+        return failed_libs
 
     def _get_library_to_folder(self, assay):
         isa_dict = api.samplesheet.export(
