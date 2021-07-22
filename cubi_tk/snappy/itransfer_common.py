@@ -12,8 +12,7 @@ from subprocess import check_output, SubprocessError, check_call, STDOUT
 import sys
 
 import attr
-from biomedsheets import io_tsv, shortcuts
-from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+from biomedsheets import shortcuts
 from logzero import logger
 import requests
 from retrying import retry
