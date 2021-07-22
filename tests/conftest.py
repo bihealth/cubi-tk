@@ -1,6 +1,10 @@
 """Shared fixtures for the unit tests"""
+import io
 import textwrap
 
+from biomedsheets.io_tsv import read_germline_tsv_sheet
+from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+from biomedsheets.shortcuts import GermlineCaseSheet
 import pytest
 
 
@@ -49,6 +53,16 @@ def germline_trio_sheet_tsv():
         FAM_index\tmother\t0\t0\tF\tN\tWES\tmother\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         """
     ).lstrip()
+
+
+@pytest.fixture
+def germline_trio_sheet_object(germline_trio_sheet_tsv):
+    """Returns GermlineCaseSheet object with trio cohort."""
+    # Create dna sample sheet based on germline sheet
+    germline_sheet_io = io.StringIO(germline_trio_sheet_tsv)
+    return GermlineCaseSheet(
+        sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
+    )
 
 
 def my_exists(self):
