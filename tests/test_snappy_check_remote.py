@@ -1,7 +1,7 @@
 """Tests for ``cubi_tk.snappy.check_remote``."""
 import pathlib
 
-from cubi_tk.snappy.check_remote import FindRemoteFiles
+from cubi_tk.snappy.check_remote import Checker, FindRemoteFiles
 
 
 def test_parse_sample_sheet(germline_trio_sheet_object):
@@ -20,7 +20,9 @@ def test_parse_sample_sheet(germline_trio_sheet_object):
 def test_parse_ils_stdout():
     """Tests FindRemoteFiles::parse_ils_stdout()"""
     # Initialise object
-    find_obj = FindRemoteFiles(sheet=None, sodar_url="", sodar_api_token="", project_uuid="")  # noqa: B106
+    find_obj = FindRemoteFiles(
+        sheet=None, sodar_url="", sodar_api_token="", project_uuid=""
+    )  # noqa: B106
 
     # Define expected number of files per directory
     expected = {
@@ -47,3 +49,35 @@ def test_parse_ils_stdout():
                     dir=directory, count=expected_count
                 )
                 assert len(result.get(directory)) == expected_count, msg
+
+
+def test_find_local_files():
+    """Tests Checker::find_local_files()"""
+    # Create checker object
+    checker = Checker(remote_files_dict=None, base_path=None)
+
+    # Define input
+    test_dir_path = pathlib.Path(__file__).resolve().parent / "data" / "find_snappy" / "output"
+
+    # Define expected
+    expected = {
+        "data/find_snappy/output/P001-N1-DNA1-WES1/out": [
+            "bwa.P001-N1-DNA1-WES1.bam",
+            "bwa.P001-N1-DNA1-WES1.bam.bai",
+        ],
+        "data/find_snappy/output/P001-N1-DNA1-WES1/report/bam_qc": [
+            "bwa.P001-N1-DNA1-WES1.bam.bamstats.html.md5",
+            "bwa.P001-N1-DNA1-WES1.bam.bamstats.html",
+        ],
+    }
+
+    # Run and assert
+    result = checker.find_local_files(library_name="P001-N1-DNA1-WES1", path=test_dir_path)
+    for result_dir in result:
+        for expected_dir in expected:
+            if result_dir.endswith(expected_dir):
+                files_str = ", ".join(expected.get(expected_dir))
+                msg = "Directory {dir} should return files: {files}".format(
+                    dir=result_dir, files=files_str
+                )
+                assert sorted(result.get(result_dir)) == sorted(expected.get(expected_dir)), msg

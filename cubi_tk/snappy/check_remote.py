@@ -4,10 +4,10 @@ Only uses local information for checking that the linked-in RAW data files are c
 of the MD5 sum.  Otherwise, just checks for presence of files (for now), the rationale being that
 
 """
-
 import argparse
 from collections import defaultdict
 import os
+from pathlib import Path
 import shlex
 import typing
 from subprocess import SubprocessError, check_output
@@ -92,7 +92,8 @@ class FindRemoteFiles:
         :param ils_bytes: ils command call stdout.
         :type ils_bytes: bytes
 
-        :return:
+        :return: Returns dictionary with remote files and directories as found in `ils` call. Key: remote directory
+        path; Value: list of files in remote directory.
         """
         # Initialise variables
         dir_to_files_dict = defaultdict(list)  # key: iRODS directory path; value: list of files
@@ -146,6 +147,60 @@ class FindRemoteFiles:
         return library_names
 
 
+class Checker:
+    """Class with common checker methods"""
+
+    def __init__(self, remote_files_dict, base_path, check_md5=False):
+        """ Constructor.
+
+        :param remote_files_dict: Dictionary with remote files and directories structure for all libraries in sample
+        sheet.
+        :type remote_files_dict: dict
+
+        :param base_path: Base path: where to look for NGS mapping output directory.
+        :type base_path: str
+
+        :param check_md5: Flag to indicate if local MD5 files should be compared with
+        """
+        self.remote_files_dict = remote_files_dict
+        self.base_path = base_path
+        self.check_md5 = check_md5
+
+    @staticmethod
+    def find_local_files(library_name, path):
+        """Find local output files.
+
+        :param library_name: Sample library name as used to name directories, e.g., 'P001-N1-DNA1-WES1'.
+        :type library_name: str
+
+        :param path: Path to output.
+        :type path: pathlib.Path
+
+        :return: Returns dictionary with local files in output directories. Key: directory path; Value: list of files
+        in directory.
+        """
+        # Initialise variable
+        library_local_files_dict = {}
+
+        # Find library directories
+        pattern = "*" + library_name + "*"
+        lib_directories = path.glob(pattern)
+
+        # Walk though directory
+        for directory in lib_directories:
+            subdirectories = [scanned.path for scanned in os.scandir(directory) if scanned.is_dir()]
+            all_directories = [directory] + subdirectories
+            for i_directory in all_directories:
+                i_file_list = [
+                    scanned.name for scanned in os.scandir(i_directory) if scanned.is_file()
+                ]
+                if len(i_file_list) > 0:
+                    library_local_files_dict[i_directory] = i_file_list
+
+        # Return dictionary of dirs and files
+        return library_local_files_dict
+
+
 class RawDataChecker:
     """Check for raw data being present and equal as in local ``ngs_mapping`` directory."""
 
@@ -159,16 +214,18 @@ class RawDataChecker:
         return True
 
 
-class NgsMappingChecker:
+class NgsMappingChecker(Checker):
     """Check for mapping results being present without checking content."""
 
-    def __init__(self, sheet, project_uuid):
-        self.sheet = sheet
-        self.project_uuid = project_uuid
+    def __init__(self, *args, **kwargs):
+        """ Constructor."""
+        super().__init__(*args, **kwargs)
+        #: NGS mapping output expected directory
+        self.ngs_mapping_out_dir = Path(self.base_path) / "ngs_mapping" / "output"
 
     def run(self):
         logger.info("Starting ngs_mapping checks ...")
-        logger.info("... done with ngs_mapping checks")
+        logger.info("... done with ngs_mapping checks.")
         return True
 
 
@@ -268,7 +325,7 @@ class SnappyCheckRemoteCommand:
         logger.info("  args: %s", self.args)
 
         # Find all remote files (iRODS)
-        FindRemoteFiles(
+        library_remote_files_dict = FindRemoteFiles(
             self.shortcut_sheet,
             self.args.sodar_url,
             self.args.sodar_api_token,
