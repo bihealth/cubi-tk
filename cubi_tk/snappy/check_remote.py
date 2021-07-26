@@ -9,6 +9,7 @@ from collections import defaultdict
 import os
 from pathlib import Path
 import shlex
+import tempfile
 import typing
 from subprocess import SubprocessError, check_output
 
@@ -353,14 +354,18 @@ class Checker:
             subset_local_files_dict = self.local_files_dict.get(library_name)
             # Compare dictionaries
             i_both, i_remote, i_local = self.compare_local_and_remote_files(
-                local_dict=subset_local_files_dict,
-                remote_dict=subset_remote_files_dict,
-                check_name=check_name,
-                library_name=library_name,
+                local_dict=subset_local_files_dict, remote_dict=subset_remote_files_dict
             )
             in_both_set.update(i_both)
             remote_only_set.update(i_remote)
             local_only_set.update(i_local)
+
+        # MD5 check
+        if self.check_md5:
+            okay_set, different_list = self.compare_md5_files(
+                remote_dict=self.remote_files_dict, in_both_set=in_both_set
+            )
+            self.report_md5(okay_set, different_list)
 
         # Report
         self.report_findings(
@@ -370,8 +375,81 @@ class Checker:
         # Return all okay
         return True
 
+    def compare_md5_files(self, remote_dict, in_both_set):
+        """Compares remote and local MD5 files.
+
+        :param remote_dict: Dictionary with remote file structure. Key: remote directory path; Value: list of file
+        names.
+        :type remote_dict: dict
+
+        :param in_both_set: Set with files found both locally and in remote directory.
+        :type in_both_set: set
+
+        :return:
+        """
+        # Initialise variables
+        same_md5_set = set()
+        different_md5_list = []
+        md5_dict = {}
+        temp_directory = tempfile.gettempdir()
+
+        # Populate MD5 dictionary - key: local path; value: remote path
+        all_local_md5 = [file for file in in_both_set if file.endswith(".md5")]
+        for local in all_local_md5:
+            local_fname = local.split("/")[-1]
+            for library_name in remote_dict:
+                for remote in remote_dict.get(library_name):
+                    if local_fname in remote_dict[library_name][remote]:
+                        md5_dict[local] = remote + "/" + local_fname
+                        break
+        # Compare
+        for local in md5_dict:
+            file_name = os.path.basename(local)
+            # Read local MD5
+            with open(local) as f:
+                l_md5 = f.readline()
+            # Get and read remote MD5
+            self.get_remote_files(irods_path=md5_dict.get(local), dest=temp_directory)
+            tmp_remote = os.path.join(temp_directory, file_name)
+            with open(tmp_remote) as f:
+                r_md5 = f.readline()
+            # Check
+            if l_md5 == r_md5:
+                same_md5_set.add(local)
+            else:
+                different_md5_list.append((local, md5_dict.get(local)))
+
+        # Return set and list of tuples
+        return same_md5_set, different_md5_list
+
     @staticmethod
-    def compare_local_and_remote_files(local_dict, remote_dict, check_name, library_name):
+    def get_remote_files(irods_path, dest):
+        """Get iRODS file content.
+
+        :param irods_path: Path to file in iRODS.
+        :type irods_path: str
+
+        :param dest: Path to destiny, where to store file.
+        :type dest: str
+
+        :return: Returns call check.
+        """
+        cmd = (
+            "iget",
+            "-k",
+            "-f",
+            irods_path,
+            dest,
+        )  # arguments: k to checksum, and f to force overwrite
+        try:
+            cmd_str = " ".join(map(shlex.quote, cmd))
+            logger.info("Executing %s", cmd_str)
+            return check_output(cmd)
+        except SubprocessError as e:  # pragma: nocover
+            logger.error("Problem executing `iget`: %s", e)
+
+    @staticmethod
+    def compare_local_and_remote_files(local_dict, remote_dict):
         """Compare locally and remotely available files.
 
         :param local_dict: Dictionary with local file structure. Key: directory path; Value: list of file names. Paths
@@ -381,12 +459,6 @@ class Checker:
         :param remote_dict: Dictionary with remote file structure. Key: remote directory path; Value: list of file
         names.
         :type remote_dict: dict
-
-        :param check_name: Check name, e.g.: 'ngs_mapping' or 'variant_calling'.
-        :type check_name: str
-
-        :param library_name: Library name, e.g.: 'P001-N1-DNA1-WES1'.
-        :type library_name: str
 
         :return: Returns tuple with three sets: one for files that are found both locally and remotely; one for files
         only found remotely; and, one for files only found locally.
@@ -430,6 +502,35 @@ class Checker:
 
         # Return
         return in_both_set, only_remote_set, only_local_set
+
+    @staticmethod
+    def report_md5(okay_set, different_list):
+        """Report MD5 findings
+
+        :param okay_set: Set with all files with the exact same MD5 value - local path.
+        :type okay_set: set
+
+        :param different_list: List of tuples with files that are different locally
+        and remotely - (local path, remote path).
+        :type different_list: list
+        """
+        # Report same md5
+        okay_str = "\n".join(okay_set)
+        if len(okay_set) > 0:
+            logger.info("Files with SAME MD5 locally and remotely:\n{files}".format(files=okay_str))
+        else:
+            logger.warn("There is ZERO AGREEMENT between local and remote MD5 files.")
+
+        # Report different md5
+        different_str = "\n".join(["\ni:".join(pair) for pair in different_list])
+        if len(different_list) > 0:
+            logger.warn(
+                "Files with DIFFERENT MD5 locally and remotely:\n{files}".format(
+                    files=different_str
+                )
+            )
+        else:
+            logger.info("There is ZERO DISAGREEMENT between local and remote MD5 files.")
 
     @staticmethod
     def report_findings(both_locations, only_remote, only_local):
@@ -581,6 +682,12 @@ class SnappyCheckRemoteCommand:
                 "back to current working directory by default."
             ),
         )
+        parser.add_argument(
+            "--md5",
+            default=False,
+            action="store_true",
+            help="Flag to indicate if local and remote MD5 files should be compared.",
+        )
         parser.add_argument("project_uuid", type=str, help="UUID from project to check.")
 
     @classmethod
@@ -618,6 +725,9 @@ class SnappyCheckRemoteCommand:
         logger.info("Starting cubi-tk snappy check-remote")
         logger.info("  args: %s", self.args)
 
+        if self.args.md5:
+            logger.info("Note that MD5 for raw data files will not be checked.")
+
         # Find all remote files (iRODS)
         library_remote_files_dict = FindRemoteFiles(
             self.shortcut_sheet,
@@ -645,10 +755,12 @@ class SnappyCheckRemoteCommand:
             NgsMappingChecker(
                 remote_files_dict=library_remote_files_dict,
                 local_files_dict=library_local_files_dict.get("ngs_mapping"),
+                check_md5=self.args.md5,
             ).run(),
             VariantCallingChecker(
                 remote_files_dict=library_remote_files_dict,
                 local_files_dict=library_local_files_dict.get("variant_calling"),
+                check_md5=self.args.md5,
             ).run(),
         ]
         if all(results):

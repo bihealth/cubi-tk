@@ -171,10 +171,7 @@ def test_compare_local_and_remote_files():
 
     # Run and assert
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
-        local_dict=in_local_dict,
-        remote_dict=in_remote_dict,
-        check_name="ngs_mapping",
-        library_name="P001-N1-DNA1-WES1",
+        local_dict=in_local_dict, remote_dict=in_remote_dict
     )
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
@@ -185,10 +182,7 @@ def test_compare_local_and_remote_files():
     # ================= #
     # Run and assert
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
-        local_dict=in_local_dict,
-        remote_dict={},
-        check_name="ngs_mapping",
-        library_name="P001-N1-DNA1-WES1",
+        local_dict=in_local_dict, remote_dict={}
     )
     assert actual_both == set()
     assert actual_remote == set()
@@ -209,10 +203,7 @@ def test_compare_local_and_remote_files():
     expected_only_remote += [extra_remote_path + "/" + file for file in extra_remote_files]
     # Run and assert
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
-        local_dict=in_local_dict,
-        remote_dict=in_remote_dict,
-        check_name="ngs_mapping",
-        library_name="P001-N1-DNA1-WES1",
+        local_dict=in_local_dict, remote_dict=in_remote_dict
     )
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
@@ -233,10 +224,7 @@ def test_compare_local_and_remote_files():
     expected_only_local += [extra_local_path + "/" + file for file in extra_local_files]
     # Run and assert
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
-        local_dict=in_local_dict,
-        remote_dict=in_remote_dict,
-        check_name="ngs_mapping",
-        library_name="P001-N1-DNA1-WES1",
+        local_dict=in_local_dict, remote_dict=in_remote_dict
     )
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
