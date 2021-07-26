@@ -45,9 +45,81 @@ class FindFilesCommon:
         # Return list of identifiers
         return library_names
 
+    @staticmethod
+    def iter_dirs(path):
+        """Directory iterator.
+
+        From Stack Overflow: https://stackoverflow.com/questions/57910227
+        """
+        for file_or_directory in path.rglob("*"):
+            if file_or_directory.is_dir():
+                yield file_or_directory
+
+
+class FindLocalRawdataFiles(FindFilesCommon):
+    """Class finds and lists local raw data files associated with samples."""
+
+    def __init__(self, sheet, base_path):
+        """Constructor.
+
+        :param base_path: Base project path.
+        :type base_path: str
+        """
+        super().__init__(sheet)
+        self.inlink_dir_path = Path(base_path) / "ngs_mapping" / "work" / "input_links"
+
+    def run(self):
+        """Runs class routines.
+
+        :return: Returns dictionary of dictionaries: key: library name (e.g., 'P001-N1-DNA1-WES1'); value: dictionary
+        with list of files (values) per directory (key).
+        """
+        logger.info("Starting raw data files search ...")
+
+        # Initialise variables
+        rawdata_structure_dict = defaultdict(dict)
+
+        # Validate input
+        if not self.inlink_dir_path.exists():
+            logger.error(
+                "Path to directory linked to raw data does not exist. Expected: {path}".format(
+                    path=self.inlink_dir_path
+                )
+            )
+            return None
+
+        # Get all libraries
+        library_names = self.parse_sample_sheet()
+
+        # Get directory structure
+        for i_directory in self.iter_dirs(self.inlink_dir_path):
+            # Find library name if any
+            library_name = None
+            for lib in library_names:
+                if lib in str(i_directory.resolve()):
+                    library_name = lib
+                    break
+            if not library_name:
+                continue
+            # Update dictionary
+            i_file_list = [
+                scanned.name for scanned in os.scandir(i_directory) if scanned.is_file()
+            ]  # filter files
+            i_file_list = [
+                file for file in i_file_list if not file.startswith(".")
+            ]  # filter for example '.done'
+            if len(i_file_list) > 0:
+                library_local_files_dict = {str(i_directory): i_file_list}
+                rawdata_structure_dict[library_name].update(library_local_files_dict)
+
+        logger.info("... done with raw data files search.")
+
+        # Return dictionary of dictionaries
+        return rawdata_structure_dict
+
 
 class FindLocalFiles(FindFilesCommon):
-    """Class finds and lists local files associated with samples"""
+    """Class finds and lists local files associated with samples."""
 
     def __init__(self, sheet, base_path, step_list=None):
         """Constructor.
@@ -122,16 +194,6 @@ class FindLocalFiles(FindFilesCommon):
 
         # Return dictionary of dictionaries
         return step_to_file_structure_dict
-
-    @staticmethod
-    def iter_dirs(path):
-        """Directory iterator.
-
-        From Stack Overflow: https://stackoverflow.com/questions/57910227
-        """
-        for file_or_directory in path.rglob("*"):
-            if file_or_directory.is_dir():
-                yield file_or_directory
 
 
 class FindRemoteFiles(FindFilesCommon):
@@ -335,87 +397,36 @@ class Checker:
         in_both_set = set()
         only_remote_set = set()
         only_local_set = set()
-        tpl_err_msg = (
-            "[{source} Paths] Input dictionary should only contain paths associated with step '{step}' "
-            "and library {library}. Invalid entry: {inv}"
-        )
-
-        # Control dictionaries - all entries from both dictionaries must be inspected
-        control_remote_dict = {}
         file_to_remote_path_dict = defaultdict(list)
-        for remote in remote_dict:
-            try:
-                _ = remote.split(library_name)[1]
-                _ = remote.split(check_name)[1]
-                for file in remote_dict.get(remote):
-                    control_remote_dict[file] = 0
-                    file_to_remote_path_dict[file].append(remote)
-                    all_remote_files_set.add(file)
-            except IndexError:
-                msg = tpl_err_msg.format(
-                    source="Remote", step=check_name, library=library_name, inv=remote
-                )
-                logger.error(msg)
-                raise
-        control_local_dict = {}
         file_to_local_path_dict = defaultdict(list)
+
+        # Get all files remote
+        for remote in remote_dict:
+            for file in remote_dict.get(remote):
+                file_to_remote_path_dict[file].append(remote)
+                all_remote_files_set.add(file)
+
+        # Get all files local
         for local in local_dict:
-            try:
-                _ = local.split(library_name)[1]
-                _ = local.split(check_name)[1]
-                for file in local_dict.get(local):
-                    control_local_dict[file] = 0
-                    file_to_local_path_dict[file].append(local)
-                    all_local_files_set.add(file)
-            except IndexError:
-                msg = tpl_err_msg.format(
-                    source="Local", step=check_name, library=library_name, inv=local
-                )
-                logger.error(msg)
-                raise
+            for file in local_dict.get(local):
+                file_to_local_path_dict[file].append(local)
+                all_local_files_set.add(file)
 
         # Present in both - stores only local path
         for file in all_remote_files_set.intersection(all_local_files_set):
-            # Update control
-            control_local_dict[file] = 1
-            control_remote_dict[file] = 1
-            # Update output set
             in_both_set.update([local + "/" + file for local in file_to_local_path_dict.get(file)])
 
         # Only remote
         for file in all_remote_files_set - all_local_files_set:
-            # Update control
-            control_remote_dict[file] = 1
-            # Update output set
             only_remote_set.update(
                 [remote + "/" + file for remote in file_to_remote_path_dict.get(file)]
             )
 
         # Only local
         for file in all_local_files_set - all_remote_files_set:
-            # Update control
-            control_local_dict[file] = 1
             only_local_set.update(
                 [local + "/" + file for local in file_to_local_path_dict.get(file)]
             )
-
-        # Sanity check - all files from both sides must be checked at least once
-        for remote, flag in control_remote_dict.items():
-            if not flag:
-                logger.error(
-                    "Logic error - not all files from REMOTE were checked: '{file}'".format(
-                        file=remote
-                    )
-                )
-                raise Exception()
-        for local, flag in control_local_dict.items():
-            if not flag:
-                logger.error(
-                    "Logic error - not all files from LOCAL were checked: '{file}'".format(
-                        file=local
-                    )
-                )
-                raise Exception()
 
         # Return
         return in_both_set, only_remote_set, only_local_set
@@ -453,26 +464,45 @@ class Checker:
             logger.warn("No file found only locally.")
 
 
-class RawDataChecker:
+class RawDataChecker(Checker):
     """Check for raw data being present and equal as in local ``ngs_mapping`` directory."""
 
-    #: Step name being checked
+    #: Step name being checked.
     check_name = "raw_data"
 
-    def __init__(self, sheet, project_uuid):
+    def __init__(self, sheet, base_path, local_files_dict, remote_files_dict, check_md5):
+        """ Constructor.
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.shortcuts.GermlineCaseSheet
+
+        :param base_path: Base project path.
+        :type base_path: str
+        """
+        super().__init__(local_files_dict, remote_files_dict, check_md5)
         self.sheet = sheet
-        self.project_uuid = project_uuid
+        self.base_path = base_path
 
     def run(self):
+        """Executes checks for Raw Data files."""
         logger.info("Starting raw data checks ...")
-        logger.info("... done with raw data checks")
-        return True
+        # Initialise variable
+        out_flag = False
+        # Get local raw data files
+        self.local_files_dict = FindLocalRawdataFiles(
+            sheet=self.sheet, base_path=self.base_path
+        ).run()
+        if self.local_files_dict:
+            # Compare local and remote
+            out_flag = self.coordinate_run(check_name=self.check_name)
+        logger.info("... done with raw data checks.")
+        return out_flag
 
 
 class NgsMappingChecker(Checker):
     """Check for mapping results being present without checking content."""
 
-    #: Step name being checked
+    #: Step name being checked.
     check_name = "ngs_mapping"
 
     def __init__(self, *args, **kwargs):
@@ -490,16 +520,15 @@ class NgsMappingChecker(Checker):
 class VariantCallingChecker(Checker):
     """Check for variant calling results being present without checking content"""
 
-    #: Step name being checked
+    #: Step name being checked.
     check_name = "variant_calling"
 
     def __init__(self, *args, **kwargs):
         """ Constructor."""
         super().__init__(*args, **kwargs)
-        # #: Variant calling output expected directory
-        # self.variant_calling_out_dir = Path(self.base_path) / self.check_name / "output"
 
     def run(self):
+        """Executes checks for Variant Calling files."""
         logger.info("Starting variant_calling checks ...")
         out_flag = self.coordinate_run(check_name=self.check_name)
         logger.info("... done with variant_calling checks.")
@@ -606,7 +635,13 @@ class SnappyCheckRemoteCommand:
 
         # Run checks
         results = [
-            RawDataChecker(self.sheet, self.args.project_uuid).run(),
+            RawDataChecker(
+                sheet=self.shortcut_sheet,
+                base_path=self.args.base_path,
+                remote_files_dict=library_remote_files_dict,
+                local_files_dict={},  # special case: dict correctly defined inside class
+                check_md5=False,  # special case: it will never check MD5 for raw data
+            ).run(),
             NgsMappingChecker(
                 remote_files_dict=library_remote_files_dict,
                 local_files_dict=library_local_files_dict.get("ngs_mapping"),
