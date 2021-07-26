@@ -3,7 +3,12 @@ import pathlib
 
 import pytest
 
-from cubi_tk.snappy.check_remote import Checker, FindLocalFiles, FindRemoteFiles
+from cubi_tk.snappy.check_remote import (
+    Checker,
+    FindLocalFiles,
+    FindLocalRawdataFiles,
+    FindRemoteFiles,
+)
 
 
 # Tests FindLocalFiles =================================================================================================
@@ -43,6 +48,35 @@ def test_findlocal_run(germline_trio_sheet_object):
         FindLocalFiles(sheet=germline_trio_sheet_object, base_path=str(test_dir_path))
     with pytest.raises(ValueError):
         FindLocalFiles(sheet=germline_trio_sheet_object, base_path=str(test_dir_path), step_list=[])
+
+
+# Tests FindLocalRawdataFiles ==========================================================================================
+
+
+def test_findrawdata_run(germline_trio_sheet_object):
+    """Tests FindLocalRawdataFiles::run()"""
+    # Define expected
+    expected = {
+        "tests/data/find_snappy/ngs_mapping/work/input_links/index-N1-DNA1-WES1": [
+            "P001-tn-Exome_S1_R2_001.fastq.gz",
+            "P001-tn-Exome_S1_R1_001.fastq.gz",
+        ]
+    }
+
+    # Define input
+    test_dir_path = pathlib.Path(__file__).resolve().parent / "data" / "find_snappy"
+
+    # Get actual and assert
+    actual = FindLocalRawdataFiles(
+        sheet=germline_trio_sheet_object, base_path=str(test_dir_path)
+    ).run()
+    assert len(actual) == 1, "Expects a single key for library 'index-N1-DNA1-WES1'."
+    for actual_dir in actual["index-N1-DNA1-WES1"]:
+        for expected_dir in expected:
+            if expected_dir in actual_dir:
+                actual_sorted = sorted(actual["index-N1-DNA1-WES1"][actual_dir])
+                expected_sorted = sorted(expected.get(expected_dir))
+                assert actual_sorted == expected_sorted
 
 
 # Tests FindRemoteFiles ================================================================================================
@@ -207,18 +241,3 @@ def test_compare_local_and_remote_files():
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
     assert actual_local == set(expected_only_local)
-
-    # =========================== #
-    # Test path without step name #
-    # =========================== #
-    # Update input and expected results
-    invalid_local_path = "/local/path/without/step/name"
-    in_local_dict.update({invalid_local_path: ["temp.txt"]})
-    # Expects IndexError because input dictionary wasn't prefiltered
-    with pytest.raises(IndexError):
-        checker.compare_local_and_remote_files(
-            local_dict=in_local_dict,
-            remote_dict=in_remote_dict,
-            check_name="ngs_mapping",
-            library_name="P001-N1-DNA1-WES1",
-        )
