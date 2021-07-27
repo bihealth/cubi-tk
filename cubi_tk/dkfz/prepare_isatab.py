@@ -83,9 +83,11 @@ class DkfzPrepareIsatabCommand:
         
         mapping = None
         if self.args.dktk:
-            mapping = all.dktk(output_file=self.args.isatab_dir + "/" + "sample_ids_map.txt", apply=True)
+            mapping = all.dktk()
         if self.args.mapping:
             mapping = pd.read_table(self.args.mapping)
+        if not mapping is None:
+            mapping.to_csv(self.args.isatab_dir + "/" + "sample_ids_map.txt", sep="\t", index=False)
         all.create_cubi_names(mapping=mapping)
 
         Path(self.args.isatab_dir).mkdir(parents=True, exist_ok=True)

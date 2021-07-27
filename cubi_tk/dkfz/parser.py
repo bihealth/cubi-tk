@@ -290,7 +290,7 @@ class DkfzMetaParser:
         for x in meta[meta_column_name]:
             unique = unique & (x == value)
         if not unique:
-            raise ValueError("Column {} contains more than one value (all values should be equal)".format(meta_column_name))
+            logger.warning("Column {} contains more than one value (all values should be equal)".format(meta_column_name))
 
     def instrument_model(self, object, assay_type, meta_column_name, args):
         meta  = object.assays[assay_type]["meta"]
