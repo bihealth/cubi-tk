@@ -76,6 +76,7 @@ class FindLocalRawdataFiles(FindFilesCommon):
         with list of files (values) per directory (key).
         """
         logger.info("Starting raw data files search ...")
+        logger.info("...this may a few minutes...")
 
         # Initialise variables
         rawdata_structure_dict = defaultdict(dict)
@@ -146,6 +147,7 @@ class FindLocalFiles(FindFilesCommon):
         with file structure per library/sample.
         """
         logger.info("Starting local files search ...")
+        logger.info("...this may take several minutes...")
 
         # Initialise variables
         canonical_paths = {}
@@ -531,7 +533,7 @@ class Checker:
             logger.warn("There is ZERO AGREEMENT between local and remote MD5 files.")
 
         # Report different md5
-        different_str = "\n".join(["\ni:".join(pair) for pair in different_list])
+        different_str = "\n".join(["; i:".join(pair) for pair in different_list])
         if len(different_list) > 0:
             logger.warn(
                 "Files with DIFFERENT MD5 locally and remotely:\n{files}".format(
