@@ -390,7 +390,7 @@ class Checker:
         # Initialise variables
         same_md5_set = set()
         different_md5_list = []
-        md5_dict = {}
+        md5_dict = defaultdict(list)
         temp_directory = tempfile.gettempdir()
 
         # Populate MD5 dictionary - key: local path; value: remote path
@@ -400,8 +400,8 @@ class Checker:
             for library_name in remote_dict:
                 for remote in remote_dict.get(library_name):
                     if local_fname in remote_dict[library_name][remote]:
-                        md5_dict[local] = remote + "/" + local_fname
-                        break
+                        md5_dict[local].append(remote + "/" + local_fname)
+
         # Compare
         for local in md5_dict:
             file_name = os.path.basename(local)
@@ -409,15 +409,24 @@ class Checker:
             with open(local) as f:
                 l_md5 = f.readline()
             # Get and read remote MD5
-            self.get_remote_files(irods_path=md5_dict.get(local), dest=temp_directory)
-            tmp_remote = os.path.join(temp_directory, file_name)
-            with open(tmp_remote) as f:
-                r_md5 = f.readline()
-            # Check
-            if l_md5 == r_md5:
-                same_md5_set.add(local)
+            tmp_same_md5 = []
+            tmp_diff_md5 = []
+            for remote_path in md5_dict.get(local):
+                self.get_remote_files(irods_path=remote_path, dest=temp_directory)
+                tmp_remote = os.path.join(temp_directory, file_name)
+                with open(tmp_remote) as f:
+                    r_md5 = f.readline()
+                # Check
+                if l_md5 == r_md5:
+                    tmp_same_md5.append(local)
+                else:
+                    tmp_diff_md5.append((local, remote_path))
+            # Only add to different if there is no entry equal,
+            # otherwise to verbose - if multiple uploads.
+            if len(tmp_same_md5) > 0:
+                same_md5_set.update(tmp_same_md5)
             else:
-                different_md5_list.append((local, md5_dict.get(local)))
+                different_md5_list.extend(tmp_diff_md5)
 
         # Return set and list of tuples
         return same_md5_set, different_md5_list
@@ -530,7 +539,9 @@ class Checker:
                 )
             )
         else:
-            logger.info("There is ZERO DISAGREEMENT between local and remote MD5 files.")
+            logger.info(
+                "There is ZERO DISAGREEMENT between local files and at least on remote MD5 file."
+            )
 
     @staticmethod
     def report_findings(both_locations, only_remote, only_local):
@@ -562,7 +573,7 @@ class Checker:
         if len(only_local) > 0:
             logger.warn("Files found ONLY LOCALLY:\n{files}".format(files=local_only_str))
         else:
-            logger.warn("No file found only locally.")
+            logger.info("No file found only locally.")
 
 
 class RawDataChecker(Checker):
