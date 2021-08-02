@@ -33,7 +33,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         )
     )
     setup_argparse_ingest_fastq(
-        subparsers.add_parser("ingest-fastq", help="Transfer FASTQs into iRODS landing zone")
+        subparsers.add_parser(
+            "ingest-fastq", help="Transfer FASTQs into iRODS landing zone"
+        )
     )
 
 

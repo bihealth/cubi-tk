@@ -108,13 +108,14 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
             help="Compute md5 checksums and verify them against metadata"
         )
 
-        parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
-
+        parser.add_argument(
+            "destination", help="UUID or iRods path of landing zone to move to."
+        )
 
     @classmethod
     def run(
-            cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-        ) -> typing.Optional[int]:
+        cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
+    ) -> typing.Optional[int]:
         """Entry point into the command."""
         return cls(args).execute()
 
@@ -300,6 +301,121 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
                 logger.error("Problem executing command: %s", e)
                 return 1
         return 0
+
+    @staticmethod
+    def compute_md5_checksum(filename, buffer_size=1048576):
+        hash = None
+        with open(filename, "rb") as f:
+            hash = hashlib.md5()
+            chunk = f.read(buffer_size)
+            while chunk:
+                hash.update(chunk)
+                chunk = f.read(buffer_size)
+        return hash.hexdigest()
+
+    @staticmethod
+    def _compute_md5_checksum_queue(checksums, queue, buffer_size=1048576):
+        while True:
+            filename = queue.get()
+            checksums[filename] = DkfzIngestFastqCommand.compute_md5_checksum(
+                filename, buffer_size=buffer_size
+            )
+            queue.task_done()
+
+    @staticmethod
+    def compute_checksums(filenames, threads=None):
+        checksums = {}
+        if threads and threads > 1:
+            queue = Queue()
+            for f in filenames:
+                queue.put(f)
+            for i in range(threads):
+                worker = Thread(
+                    target=DkfzIngestFastqCommand._compute_md5_checksum_queue,
+                    args=(checksums, queue),
+                )
+                worker.setDaemon(True)
+                worker.start()
+            queue.join()
+        else:
+            for f in filenames:
+                checksums[f] = DkfzIngestFastqCommand.compute_md5_checksum(f)
+        return checksums
+
+    @staticmethod
+    def read_companion_md5(filename, ext=".md5sum"):
+        lines = None
+        with open(filename + ext, "r") as f:
+            lines = f.readlines()
+        if len(lines) != 1:
+            raise ValueError(
+                "Empty or multiple lines in checksum file {}".format(filename + ext)
+            )
+        m = DkfzIngestFastqCommand.md5_pattern.match(lines[0])
+        if not m:
+            raise ValueError(
+                "MD5 checksum {} in file {} doesn't match expected pattern".format(
+                    lines[0], filename + ext
+                )
+            )
+        if m.group(2) != Path(filename).name:
+            raise ValueError(
+                "Checkum file {} doesn't report matching file (contents is {})".format(
+                    filename + ext, lines[0]
+                )
+            )
+        return m.group(1).lower()
+
+    def build_commands(self, catalog):
+        df = catalog[["folder_name", "library_name", "source_path"]]
+
+        lz_irods_path = None
+        if "/" in self.args.destination:
+            lz_irods_path = self.args.destination
+        else:
+            lz_irods_path = landing_zones.get(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                landing_zone_uuid=self.args.destination,
+            ).irods_path
+            logger.info("Target iRods path: %s", lz_irods_path)
+        if self.args.remote_dir_date:
+            date = self.args.remote_dir_date
+        else:
+            date = str(datetime.date.today())
+        threads = ""
+        if self.args.num_parallel_transfers and self.args.num_parallel_transfers > 1:
+            threads = "-N {}".format(threads)
+
+        transfer_jobs = []
+        for i in range(df.shape[0]):
+            path = self.args.remote_dir_pattern.format(
+                library_name=df.iloc[i, 0], date=date
+            )
+            source = df.iloc[i, 2]
+            dest = "{lz}/{path}/{libname}".format(
+                lz=lz_irods_path, path=path, libname=df.iloc[i, 1]
+            )
+            for ext in [("", ""), (".md5sum", ".md5")]:
+                size = 0
+                try:
+                    size = os.path.getsize(source + ext[0])
+                except OSError:  # pragma: nocover
+                    size = 0
+                path_src = source + ext[0]
+                path_dest = dest + ext[1]
+                transfer_jobs.append(
+                    TransferJob(
+                        path_src=path_src,
+                        path_dest=path_dest,
+                        command="irsync -a -K {} {} i:{}".format(
+                            threads, path_src, path_dest
+                        ),
+                        bytes=size,
+                    )
+                )
+        return transfer_jobs
+
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk dkfz ingest-fastq``."""
