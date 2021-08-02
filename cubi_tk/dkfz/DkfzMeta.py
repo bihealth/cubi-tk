@@ -1,268 +1,131 @@
-from datetime import datetime
+import attr
 import re
-import sys
-
 import pandas as pd
+from typing import Dict, List, Tuple
 
-from logzero import logger
+import altamisa.isatab.models
 
-from .models import Assay
-from .models import Material
-from .models import Protocol
-from .models import Characteristics
-from .models import Parameter
-from .models import Comment
+@attr.s(auto_attribs=True, frozen=False)
+class DkfzMetaArc:
+    """Representation of an arc end (i.e. either extremity).
+    The actual connection between ISATAB objects is done
+    through the ordering in the list of DkfzMetaArc.
+    """
+    #: Arc end type (currently supported: Material & Process)
+    type: str
+    #: Name of the object (Material.type or Process.protocol_ref)
+    name: str
 
-import pdb
+@attr.s(auto_attribs=True, frozen=False)
+class DkfzMetaRowSub:
+    """List of meterials & processes from a single Dkfz metafile row, without arcs"""
+    #: Materials (as list)
+    materials: List[altamisa.isatab.models.Material]
+    #: Processes (as list)
+    processes: List[altamisa.isatab.models.Process]
 
+@attr.s(auto_attribs=True, frozen=False)
+class DkfzMetaRowParsed(DkfzMetaRowSub):
+    """Full representation of one single Dkfz metafile row.
+    The connection between objects is in the list of arcs. 
+    This is used when the meta file has been parsed, but mappings
+    between ids has not been done.
+    Note that the description of arcs is ambiguous between rows,
+    but uniquely defined within a row.
+    """
+    #: List of arcs, defined for a single row
+    arcs: List[DkfzMetaArc]
+
+@attr.s(auto_attribs=True, frozen=False)
+class DkfzMetaRowMapped(DkfzMetaRowSub):
+    """Full representation of one single Dkfz metafile row.
+    The arcs represent a connection between two object in
+    the graph, labelled by unique identifier strings.
+    """
+    #: Frozen list of arcs connecting arbitrary elements in the DAG
+    arcs: Tuple[str, str]
+
+@attr.s(auto_attribs=True, frozen=False)
+class DkfzMetaRow:
+    """Storage unit for one Dkfz metafile row, at unparsed, parsed and
+    after id mapping stages.
+    """
+    #: Assay type as labelled in the Dkfz metafile (EXON|RNA|WGS)
+    assay_type: str
+    #: Unparsed row, as a dict with metafile column names as keys
+    row: Dict[str, str]
+    #: Parsed row: data assigned to materials, characteristics, ...
+    parsed: DkfzMetaRowParsed
+    #: Row after id mapping, with references to objects shared by rows
+    mapped: DkfzMetaRowMapped
+
+@attr.s(auto_attribs=True, frozen=False)
 class DkfzMeta:
+    """Representation of the contents of a Dkfz metfile"""
 
-    _token = object()
-    pattern = re.compile("^([A-Z0-9]+-)?(([A-Z0-9]{4,6})-(([BFTM])([0-9]+)))-(([DR])([0-9]+))(-[0-9]+)?$")
-    cubi_naming = {
-        "extract": {"exome": "DNA", "transcriptome": "RNA", "whole genome": "DNA"},
-        "library": {"exome": "WES", "transcriptome": "mRNA_seq", "whole genome": "WGS"}
-    }
+    #: The metafile path. Required to locate fastq files downloaded with the metafile
+    filename: str
+    #: metafile contents as a dict of DkfzMetaRow with md5 checksums as keys
+    content: Dict[str, Dict[str, DkfzMetaRow]]
 
-    def __init__(self, _from_factory=None):
-        if _from_factory is not DkfzMeta._token:
-            raise NotImplementedError("Initialisation only from parser")
-        self.config        = {}
-        self.meta_filename = []
-        self.meta          = []
-        self.assays        = {}
+    @classmethod
+    def getValue(cls, row: DkfzMetaRowSub, Material=None, Process=None, characteristic=None, parameter=None, comment=None, key=None) -> str:
+        """Extract a value from a DkfzMetaRow.
+        The returned value is always a string, even for dates, or when the requested element is a list.
+        In the latter case, the elements are converted to strings and joined by the semicolumn ";".
+        When the requested value is not found in the row (for example no such characteristic), 
+        the function returns None.
+        Usage examples:
 
-    def create_cubi_names(self, mapping=None):
-        for (sequencing_type, assay) in self.assays.items():
-            extract = ""
-            library = ""
-            if sequencing_type == "exome":
-                extract = "DNA1"
-                library = "WES1"
-            elif sequencing_type == "whole genome":
-                extract = "DNA1"
-                library = "WGS1"
-            elif sequencing_type == "transcriptome":
-                extract = "RNA1"
-                library = "mRNA_seq1"
-            else:
-                continue
+        # extract the sample name from the parsed (but unmapped) row:
+        sample_name = DkfzMeta.getValue(row=row.parsed, Material="Sample Name", key="name")
 
-            rename_extract = True
-            rename_library = True
-            if not mapping is None:
-                df = pd.DataFrame(data={
-                    "Sample Name": assay["isatab"].Materials["Sample"].values["name"]
-                })
-                df = df.merge(mapping, on="Sample Name", how="left", validate="many_to_one")
-                assay["isatab"].Materials["Sample"].set_values(df["Sample Name CUBI"].tolist())
-                if "Source Name CUBI" in df.columns:
-                    assay["isatab"].Materials["Source"].set_values(df["Source Name CUBI"].tolist())
-                if "Extract Name CUBI" in df.columns:
-                    assay["isatab"].Materials["Extract"].set_values(df["Extract Name CUBI"].tolist())
-                    rename_extract = False
-                if "Library Name CUBI" in df.columns:
-                    assay["isatab"].Materials["Library"].set_values(df["Library Name CUBI"].tolist())
-                    rename_library = False
-                for x in df.columns:
-                    if x in ["Source Name", "Source Name CUBI", "Sample Name", "Sample Name CUBI", "Extract Name CUBI", "Library Name CUBI"]:
-                        continue
-                    characteristic = Characteristics(x)
-                    characteristic.set_values(df[x].to_list(), category="values")
-                    assay["isatab"].Materials["Sample"].set_characteristic(characteristic)
+        # extract the batch id from the mapped row:
+        batch_id = DkfzMeta.getValue(row=row.mapped, Material="Library Name", characteristic="Batch")
 
-            if rename_extract:
-                assay["isatab"].Materials["Extract"].set_values([x + "-" + extract for x in assay["isatab"].Materials["Sample"].values["name"]])
-            if rename_library:
-                assay["isatab"].Materials["Library"].set_values([x + "-" + library for x in assay["isatab"].Materials["Extract"].values["name"]])
+        # extract the instrument model from the nucleic acid sequencing process:
+        model = DkfzMeta.getValue(row=row.parsed, Process="nucleic acid sequencing EXON", parameter="Instrument Model")
+        # Note that some processes require to add the assay type to be recognized.
+        # Such processes have a "add_assay_type: yes" in the yaml description.
 
-    def get_assay(self, assay_type, drop_assay=True):
-        if not assay_type in self.assays:
-            return None
-        assay = self.assays[assay_type]["isatab"]
-
-        df = pd.concat([
-            pd.DataFrame(data={"Sample Name": assay.Materials["Sample"].values["name"]}),
-            assay.Protocols["Nucleic acid extraction"].get_DataFrame(),
-            assay.Materials["Extract"].get_DataFrame(),
-            assay.Protocols["Library construction"].get_DataFrame(),
-            assay.Materials["Library"].get_DataFrame(),
-            assay.Protocols["Nucleic acid sequencing"].get_DataFrame(),
-            assay.Materials["Assay"].get_DataFrame()
-        ], axis=1)
-
-        if drop_assay:
-            try:
-                i = df.columns.tolist().index("Assay Name")
-                df = df.iloc[range(df.shape[0]),range(i)]
-            except ValueError:
-                pass
-
-        return df.drop_duplicates()
-
-    def get_sample(self):
-        dfs = None
-        for assay_type in self.assays.keys():
-            assay = self.assays[assay_type]["isatab"]
-
-            df = pd.concat([
-                assay.Materials["Source"].get_DataFrame(),
-                assay.Protocols["Sample collection"].get_DataFrame(),
-                assay.Materials["Sample"].get_DataFrame()
-            ], axis=1)
-
-            if not dfs is None:
-                dfs = pd.concat([dfs, df.reset_index(drop=True).drop_duplicates()], axis=0, ignore_index=True)
-            else:
-                dfs = df
-
-        return dfs.drop_duplicates()
-
-    def extend(self, meta):
-        self.meta_filename.extend(meta.meta_filename)
-        self.meta.extend(meta.meta)
-        for (assay_type, assay) in meta.assays.items():
-            if assay_type in self.assays:
-                self.assays[assay_type]["meta"] = self.assays[assay_type]["meta"].append(assay["meta"])
-                for (k, v) in assay["Internals"].items():
-                    if not k in self.assays[assay_type]["Internals"]:
-                        self.assays[assay_type]["Internals"][k] = [None] * self.assays[assay_type]["isatab"].Materials["Sample"].size
-                    self.assays[assay_type]["Internals"][k].extend(v)
-                for (k, v) in self.assays[assay_type]["Internals"].items():
-                    if not k in assay["Internals"]:
-                        self.assays[assay_type]["Internals"][k].extend([None] * assay["isatab"].Materials["Sample"].size)
-                self.assays[assay_type]["isatab"].extend(assay["isatab"])
-            else:
-                self.assays[assay_type] = assay
-
-    @staticmethod
-    def find_sample_nb(df, original="sample_nb", cubi="CUBI_sample_nb"):
-        x = sorted(list(set(df[original].astype(str).tolist())))
-        x = dict(zip([str(y) for y in x], range(len(x))))
-        df.loc[:,cubi] = [x[str(y)]+1 for y in df[original].astype(str).tolist()]
-        return df
-
-    def dktk(self):
-        dfs = None
-        for assay_type in self.assays.keys():
-            assay   = self.assays[assay_type]["isatab"]
-
-            provider_id = Characteristics("Provider sample id")
-            provider_id.set_values(assay.Materials["Sample"].values["name"], category="values")
-            assay.Materials["Sample"].annotations.append(provider_id)
-
-            md5 = None
-            for annotation in assay.Materials["Assay"].annotations:
-                if annotation.name == "Checksum":
-                    md5 = annotation.values["values"]
-                    break
-
-            df = pd.DataFrame(data={
-                "Sample Name": assay.Materials["Sample"].values["name"],
-                "Checksum": md5
-            })
-            df = df.merge(pd.DataFrame(data=self.assays[assay_type]["Internals"]), how="left", on="Checksum")
-
-            is_tumor = None
-            if ("Tissue_type" in df.columns) and (set(df["Tissue_type"].tolist()).issubset({"N", "T"})):
-                is_tumor = Characteristics("Is Tumor")
-                is_tumor.set_values(df["Tissue_type"].tolist(), category="values")
-                assay.Materials["Sample"].annotations.append(is_tumor)
-    
-                is_metastasis = Characteristics("Is Metastasis")
-                v = assay.Materials["Sample"].values["name"]
-                p = DkfzMeta.pattern
-                is_metastasis.set_values([p.match(x).group(5) if p.match else "" for x in v], category="values")
-                verify = list(zip(is_tumor.values["values"], is_metastasis.values["values"]))
-                if not all([(x[0]=="N" and x[1]!="T" and x[1]!="M") or (x[0]=="T" and (x[1]=="T" or x[1]=="M")) for x in verify]):
-                    logger.warning("Can't infer metastasis status for assay {}".format(assay_type))
-                else:
-                    is_metastasis.set_values([x=="M" for x in is_metastasis.values["values"]], category="values")
-                    assay.Materials["Sample"].annotations.append(is_metastasis)
-            else:
-                logger.warning("Can't infer normal/tumor status for assay {}".format(assay_type))
-
-            batch = None
-            if "Batch" in df.columns:
-                batch = Characteristics("Batch")
-                batch.set_values(df["Batch"].astype(int).tolist(), category="values")
-                assay.Materials["Library"].annotations.append(batch)
-            else:
-                logger.warning("Can't set batch number for assay {}".format(assay_type))
-        
-            if is_tumor and batch:
-                dfs = pd.concat([dfs, pd.DataFrame(data={
-                    "Source Name": assay.Materials["Source"].values["name"],
-                    "Sample Name": assay.Materials["Sample"].values["name"],
-                    "Provider ID": provider_id.values["values"],
-                    "Is Tumor": is_tumor.values["values"],
-                    "Batch": batch.values["values"],
-                    "assay_type": [assay_type] * assay.Materials["Sample"].size,
-                })], axis=0, ignore_index=True)
-
-        if not dfs is None:
-            dfs = dfs.reset_index(drop=True).drop_duplicates()
-            
-            p = DkfzMeta.pattern
-            dfs["sample_id"] = [p.match(x).group(2) if p.match(x) else "" for x in dfs["Provider ID"].tolist()]
-            dfs = dfs.sort_values(["Source Name", "assay_type", "Batch"])
-
-            cols = ["Source Name", "Is Tumor"]
-            orig = "sample_id"
-            cubi = "cubi_sample_nb"
-            dfs = dfs.groupby(cols).apply(lambda x: DkfzMeta.find_sample_nb(x, original=orig, cubi=cubi)).reset_index(drop=True)
-
-            cols = ["sample_id", "assay_type"]
-            orig = "Provider ID"
-            cubi = "cubi_extract_nb"
-            dfs = dfs.groupby(cols).apply(lambda x: DkfzMeta.find_sample_nb(x, original=orig, cubi=cubi)).reset_index(drop=True)
-
-            cols = ["sample_id", "assay_type", "cubi_extract_nb"]
-            orig = "Batch"
-            cubi = "cubi_library_nb"
-            dfs = dfs.groupby(cols).apply(lambda x: DkfzMeta.find_sample_nb(x, original=orig, cubi=cubi)).reset_index(drop=True)
-
-            dfs["Sample Name CUBI"] = dfs["Source Name"] + "-" + \
-                dfs["Is Tumor"] + dfs["cubi_sample_nb"].astype(str)
-            dfs["Extract Name CUBI"] = dfs["Sample Name CUBI"] + "-" + \
-                [DkfzMeta.cubi_naming["extract"][x] for x in dfs["assay_type"].tolist()] + dfs["cubi_extract_nb"].astype(str)
-            dfs["Library Name CUBI"] = dfs["Extract Name CUBI"] + "-" + \
-                [DkfzMeta.cubi_naming["library"][x] for x in dfs["assay_type"].tolist()] + dfs["cubi_library_nb"].astype(str)
-            
-            tmp = dfs.groupby("Sample Name CUBI")\
-                .filter(lambda x: any([y>1 for y in x["cubi_library_nb"].tolist()]) or any([y>1 for y in x["cubi_extract_nb"].tolist()]))
-            tmp = tmp.groupby("Sample Name CUBI")\
-                .aggregate({"Library Name CUBI": lambda x: ", ".join(set(x)), "Batch": lambda x: ", ".join(set(x.astype(str)))}).reset_index()
-            for i in range(tmp.shape[0]):
-                logger.warning("Sample {} has snappy-incompatible libraries {} from batches {}".format(tmp.iloc[i,0], tmp.iloc[i,1], tmp.iloc[i,2]))
-
-            dfs = dfs[["Sample Name", "Sample Name CUBI", "Extract Name CUBI", "Library Name CUBI"]].drop_duplicates()
-
-            if any(dfs["Sample Name"].duplicated()) or any(dfs["Library Name CUBI"].duplicated()):
-                logger.error("Creation of CUBI sample ids is not possible, mapping not 1-1")
-                return None
-
-        return dfs
-
-    def filename_mapping(self, assay_type, sodar_path=None, date=str(datetime.date(datetime.now()))):
-        assay = self.assays[assay_type]
-        pattern = re.compile("^.*/?(AS-[0-9]+-LR-[0-9]+)_R([12])\\.fastq\\.gz$")
-
-        df = pd.DataFrame(data={
-            "source_path": assay["Internals"]["fastq_path"],
-            "folder_name": assay["isatab"].Materials["Library"].values["name"],
-            "mate": assay["Internals"]["Mate"],
-            "checksum": assay["Internals"]["Checksum"]
-        })
-
-        df["basename"] = [pattern.match(x).group(1) if pattern.match else None for x in df["source_path"].tolist()]
-
-        df = df\
-            .groupby("folder_name")\
-            .apply(lambda x: DkfzMeta.find_sample_nb(x, original="basename", cubi="library_nb"))\
-            .reset_index(drop=True)
-        library_name = ["%s_%03d_R%d.fastq.gz" % (x[0], x[1], x[2]) for x in list(zip(df["folder_name"].tolist(), df["library_nb"].tolist(), df["mate"].tolist()))]
-        df["library_name"] = library_name
-
-        return df
-
+        The function can be called using **kwargs, when multiple elements are required.
+        """
+        if Material:
+            for m in row.materials:
+                if m.type == Material:
+                    if key:
+                        if key == "name":
+                            return m.name
+                        else:
+                            return None # raise IllegalValueError("No element {} found in material {}".format(key, m.type))
+                    if characteristic:
+                        for c in m.characteristics:
+                            if c.name == characteristic:
+                                return(";".join(map(str, c.value)))
+                        return(None)
+                    if comment:
+                        for c in m.comments:
+                            if c.name == comment:
+                                return(str(c.value))
+                        return(None)
+        if Process:
+            for p in row.processes:
+                if p.protocol_ref == Process:
+                    if key:
+                        if key == "date":
+                            return p.date
+                        elif key == "performer":
+                            return p.performer
+                        else:
+                            return None # raise IllegalValueError("No element {} found in process {}".format(key, p.type))
+                    if parameter:
+                        for x in p.parameter_values:
+                            if x.name == parameter:
+                                return(";".join(map(str, x.value)))
+                        return(None)
+                    if comment:
+                        for c in p.comments:
+                            if c.name == comment:
+                                return(str(c.value))
+                        return(None)
+        return None

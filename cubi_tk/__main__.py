@@ -82,7 +82,9 @@ def setup_argparse():
     setup_argparse_sea_snap(
         subparsers.add_parser("sea-snap", help="Tools for supporting the RNA-SeASnaP pipeline.")
     )
-    setup_argparse_dkfz(subparsers.add_parser("dkfz", help="Tools to import data from the DKFZ sequencing center"))
+    setup_argparse_dkfz(
+        subparsers.add_parser("dkfz", help="Tools to import data from the DKFZ sequencing center")
+    )
 
     return parser, subparsers
 

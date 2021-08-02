@@ -4,21 +4,21 @@ Available Commands
 ------------------
 
 ``prepare-isatab``
-    Check consistency within sample sheet but also between sample sheet and files.
+    Writes the investigation, sample & assay ISATAB files for inspection.
 ``ingest-fastq``
-    Transfer raw data from ``work/input_links`` directory of ``ngs_mapping``.
+    Transfer raw data from the DKFZ download directory structure.
 
 More Information
 ----------------
 
-- Also see ``cubi-tk snappy`` :ref:`cli_main <CLI documentation>` and ``cubi-tk snappy --help`` for more information.
-- `SNAPPY Pipeline GitLab Project <https://cubi-gitlab.bihealth.org/CUBI/Pipelines/snappy>`__.
+- Also see ``cubi-tk dktk`` :ref:`cli_main <CLI documentation>` and ``cubi-tk dktk --help`` for more information.
 
 """
 
 import argparse
 
 from ..common import run_nocmd
+from .common import setup_argparse as setup_argparse_dkfz
 from .prepare_isatab import setup_argparse as setup_argparse_prepare_isatab
 from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 

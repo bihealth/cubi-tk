@@ -1,0 +1,189 @@
+Investigation:
+    Parameters:
+        Units_ontology:
+            - Entry: Term Source Name
+              Value: UO
+            - Entry: Term Source File
+              Value: http://data.bioontology.org/ontologies/UO
+            - Entry: Term Source Version
+              Value: 48
+            - Entry: Term Source Description
+              Value: Units of Measurement Ontology
+        Biomedical_terms_ontology:
+            - Entry: Term Source Name
+              Value: OBI
+            - Entry: Term Source File
+              Value: http://data.bioontology.org/ontologies/OBI
+            - Entry: Term Source Version
+              Value: 35
+        Taxonomy:
+            - Entry: Term Source Name
+              Value: NCBITAXON
+            - Entry: Term Source File
+              Value: http://data.bioontology.org/ontologies/NCBITAXON
+            - Entry: Term Source Version
+              Value: 10
+            - Entry: Term Source Description
+              Value: National Center for Biotechnology Information (NCBI) Organismal Classification
+        Study:
+            - Entry: Study Identifier
+              Value: "{title}"
+            - Entry: Study File Name
+              Value: "s_{title}.txt"
+    Assays:
+        EXON:
+            - Entry: Study Assay File Name
+              Value: "a_{title}_whole_exome_sequencing.txt"
+            - Entry: Study Assay Measurement Type
+              Value: DNA sequencing assay
+            - Entry: Study Assay Measurement Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
+            - Entry: Study Assay Measurement Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Type
+              Value: exome sequencing assay
+            - Entry: Study Assay Technology Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0002118
+            - Entry: Study Assay Technology Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Platform
+              Value: Illumina
+        RNA:
+            - Entry: Study Assay File Name
+              Value: "a_{title}_transcriptome_sequencing.txt"
+            - Entry: Study Assay Measurement Type
+              Value: transcription profiling assay
+            - Entry: Study Assay Measurement Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0000424
+            - Entry: Study Assay Measurement Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Type
+              Value: polyA-selected RNA sequencing assay
+            - Entry: Study Assay Technology Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0002571
+            - Entry: Study Assay Technology Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Platform
+              Value: Illumina
+        WGS:
+            - Entry: Study Assay File Name
+              Value: "a_{title}_whole_genome_sequencing.txt"
+            - Entry: Study Assay Measurement Type
+              Value: DNA sequencing assay
+            - Entry: Study Assay Measurement Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
+            - Entry: Study Assay Measurement Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Type
+              Value: whole genome sequencing assay
+            - Entry: Study Assay Technology Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0002117
+            - Entry: Study Assay Technology Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Platform
+              Value: Illumina
+
+Assay:
+    Material:
+        - type: Source Name
+          meta_columns: ["PATIENT_ID"]
+          characteristics:
+              - name: Sex
+                meta_columns: ["SEX", "GENDER"]
+              - name: Organism
+                meta_columns: ["SPECIES"]
+                processor: get_organism
+          comments: []
+        - type: Sample Name
+          characteristics:
+              - name: isTumor
+                meta_columns: ["TISSUE_TYPE"]
+          comments: []
+        - type: Extract Name
+          characteristics:
+              - name: dkfz_id
+                meta_columns: ["SAMPLE_ID", "SAMPLE_NAME"]
+                enforce_present: yes
+          comments: []
+        - type: Library Name
+          characteristics:
+              - name: orig_id
+                meta_columns: ["SAMPLE_ID", "SAMPLE_NAME"]
+              - name: Batch
+                meta_columns: ["ILSE_NO"]
+          comments: []
+        - type: Raw Data File
+          meta_columns: ["FASTQ_FILE"]
+          characteristics: []
+          comments:
+              - name: Checksum
+                meta_columns: ["MD5"]
+              - name: Lane
+                meta_columns: ["LANE"]
+              - name: Mate
+                meta_columns: ["MATE", "READ"]
+    Process:
+        - type: sample collection
+          date: ~
+          performer: ~
+          parameters: []
+          comments: []
+        - type: nucleic acid extraction
+          add_assay_type: yes
+          date: ~
+          performer: ~
+          parameters: []
+          comments: []
+        - type: library construction
+          add_assay_type: yes
+          date: ~
+          performer: ~
+          parameters: 
+              - name: Library layout
+                meta_columns: ["LIBRARY_LAYOUT", "SEQUENCING_READ_TYPE"]
+              - name: Library kit
+                meta_columns: ["LIBRARY_PREP_KIT"]
+              - name: Barcode kit
+                meta_columns: ["INDEX_TYPE"]
+              - name: Antibody target
+                meta_columns: ["ANTIBODY_TARGET"]
+              - name: Antibody
+                meta_columns: ["ANTIBODY"]
+              - name: Center Name
+                fixed_value: DKFZ Heidelberg
+          comments: []
+        - type: nucleic acid sequencing
+          add_assay_type: yes
+          date: ["RUN_DATE"]
+          performer: ~
+          parameters:
+              - name: Instrument Model
+                meta_columns: ["INSTRUMENT_MODEL"]
+                processor: get_instrument_model
+              - name: Platform
+                meta_columns: ["PLATFORM"]
+              - name: Sequencing kit
+                meta_columns: ["SEQUENCING_KIT"]
+              - name: Center Name
+                fixed_value: DKFZ Heidelberg
+          comments: []
+    Arc:
+        - type: Material
+          name: Source Name
+        - type: Process
+          name: sample collection
+        - type: Material
+          name: Sample Name
+        - type: Process
+          name: nucleic acid extraction
+        - type: Material
+          name: Extract Name
+        - type: Process
+          name: library construction
+        - type: Material
+          name: Library Name
+        - type: Process
+          name: nucleic acid sequencing
+        - type: Material
+          name: Raw Data File
+

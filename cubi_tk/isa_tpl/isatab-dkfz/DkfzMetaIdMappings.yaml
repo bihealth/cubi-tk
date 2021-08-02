@@ -1,0 +1,41 @@
+Source:
+    Material: Extract Name
+    characteristic: dkfz_id
+    pattern: "^ *[A-z0-9_]+-([A-z0-9_]+)-[A-Z][0-9]+-[A-Z][0-9]+(-[0-9]+)? *$"
+Sample:
+    Material: Extract Name
+    characteristic: dkfz_id
+    pattern: "^ *[A-z0-9_]+-[A-z0-9_]+-([A-Z][0-9]+)-[A-Z][0-9]+(-[0-9]+)? *$"
+    replace:
+        Material: Sample Name
+        characteristic: isTumor
+        increment: yes
+Extract:
+    Material: Extract Name
+    characteristic: dkfz_id
+    pattern: "^ *[A-z0-9_]+-[A-z0-9_]+-[A-Z][0-9]+-([A-Z][0-9]+)(-[0-9]+)? *$"
+    replace:
+        Process: library construction
+        parameter: Library source
+        increment: yes
+        mappings:
+            - when: "GENOMIC"
+              replacement: "DNA"
+            - when: "TRANSCRIPTOMIC"
+              replacement: "RNA"
+Library:
+    Material: Library Name
+    characteristic: Batch
+    pattern: "^ *0*([0-9]+) *$"
+    replace:
+        Process: library construction
+        parameter: Library strategy
+        increment: yes
+        mappings:
+            - when: "WXS"
+              replacement: "WES"
+            - when: "RNA-Seq"
+              replacement: "mRNA_seq"
+            - when: "WGS"
+              replacement: "WGS"
+
