@@ -38,6 +38,9 @@ class IdMapper:
         self.schema = schema
         for k, rule in self.schema.items():
             self.schema[k]["pattern"] = re.compile(self.schema[k]["pattern"])
+            if "replace" in self.schema[k].keys() and "mappings" in self.schema[k]["replace"].keys():
+                for i in range(len(self.schema[k]["replace"]["mappings"])):
+                    self.schema[k]["replace"]["mappings"][i]["when"] = re.compile(self.schema[k]["replace"]["mappings"][i]["when"])
         # State variables used for id mapping
         self.mappings = {"items": {}}
         self.metas = list()
@@ -130,7 +133,7 @@ class IdMapper:
             if "mappings" in rule["replace"].keys():
                 cubi = None
                 for x in rule["replace"]["mappings"]:
-                    if repl == x["when"]:
+                    if x["when"].match(repl):
                         cubi = x["replacement"]
                         break
                 if not cubi:

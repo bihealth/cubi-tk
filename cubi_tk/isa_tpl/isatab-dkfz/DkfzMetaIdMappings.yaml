@@ -19,9 +19,9 @@ Extract:
         parameter: Library source
         increment: yes
         mappings:
-            - when: "GENOMIC"
+            - when: "^GENOMIC$"
               replacement: "DNA"
-            - when: "TRANSCRIPTOMIC"
+            - when: "^TRANSCRIPTOMIC$"
               replacement: "RNA"
 Library:
     Material: Library Name
@@ -32,10 +32,10 @@ Library:
         parameter: Library strategy
         increment: yes
         mappings:
-            - when: "WXS"
+            - when: "^WXS$"
               replacement: "WES"
-            - when: "RNA-Seq"
+            - when: "^RNA-Seq$"
               replacement: "mRNA_seq"
-            - when: "WGS"
+            - when: "^WGS$"
               replacement: "WGS"
 
