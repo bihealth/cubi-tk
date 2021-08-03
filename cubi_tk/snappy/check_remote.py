@@ -566,14 +566,16 @@ class Checker:
         """
         # Report same md5
         if len(okay_set) > 0:
-            okay_str = "\n".join(okay_set)
+            okay_str = "\n".join(sorted(okay_set))
             logger.info("Files with SAME MD5 locally and remotely:\n{files}".format(files=okay_str))
         else:
             logger.warn("There is ZERO AGREEMENT between local and remote MD5 files.")
 
         # Report different md5
         if len(different_list) > 0:
-            different_str = "\n".join(["; i:".join(pair) for pair in different_list])
+            different_str = "\n".join(
+                ["; i:".join(pair) for pair in sorted(different_list, key=lambda tup: tup[0])]
+            )
             logger.warn(
                 "Files with DIFFERENT MD5 locally and remotely:\n{files}".format(
                     files=different_str
@@ -589,7 +591,7 @@ class Checker:
             same_checksum_str = ""
             for key_hash, path_list in checksum_dict.items():
                 key_hash_str = ">> " + str(key_hash) + ":\n"
-                paths_str = "\n".join(path_list)
+                paths_str = "\n".join(sorted(path_list))
                 same_checksum_str += key_hash_str + paths_str
             logger.warn("Files with SAME MD5:\n{files}".format(files=same_checksum_str))
         else:
@@ -609,9 +611,9 @@ class Checker:
         :type only_local: set
         """
         # Convert entries to text
-        in_both_str = "\n".join(both_locations)
-        remote_only_str = "\n".join(only_remote)
-        local_only_str = "\n".join(only_local)
+        in_both_str = "\n".join(sorted(both_locations))
+        remote_only_str = "\n".join(sorted(only_remote))
+        local_only_str = "\n".join(sorted(only_local))
 
         # Log
         if len(both_locations) > 0:
