@@ -229,3 +229,20 @@ def test_compare_local_and_remote_files():
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
     assert actual_local == set(expected_only_local)
+
+
+def test_filter_checksum_dict():
+    """Tests Checker::filter_checksum_dict()"""
+    # Create checker object
+    checker = Checker(local_files_dict=None, remote_files_dict=None)
+    # Define input
+    input_checksum = {
+        "1": ["/path/to/should_be_filtered.txt"],
+        "2": ["/path/to/should_be_filtered.txt", "/path/to/should_be_filtered.txt"],
+        "3": ["/path/to/should_be_kept_1.txt", "/path/to/should_be_kept_2.txt"],
+    }
+    # Define expected
+    expected = {"3": ["/path/to/should_be_kept_1.txt", "/path/to/should_be_kept_2.txt"]}
+    # Run and assert
+    actual = checker.filter_checksum_dict(input_checksum)
+    assert actual == expected

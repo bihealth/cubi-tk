@@ -20,6 +20,9 @@ from sodar_cli import api
 from .common import get_biomedsheet_path, load_sheet_tsv
 from ..common import load_toml_config
 
+#: Empty file MD5 hash sum
+EMPTY_FILE_MD5 = "d41d8cd98f00b204e9800998ecf8427e"
+
 
 class FindFilesCommon:
     """Class contains common methods used to find files."""
@@ -364,10 +367,10 @@ class Checker:
 
         # MD5 check
         if self.check_md5:
-            okay_set, different_list = self.compare_md5_files(
+            okay_set, different_list, checksum_dict = self.compare_md5_files(
                 remote_dict=self.remote_files_dict, in_both_set=in_both_set
             )
-            self.report_md5(okay_set, different_list)
+            self.report_md5(okay_set, different_list, checksum_dict)
 
         # Report
         self.report_findings(
@@ -387,12 +390,15 @@ class Checker:
         :param in_both_set: Set with files found both locally and in remote directory.
         :type in_both_set: set
 
-        :return:
+        :return: Returns tuple with: set of files that are present with same checksum locally and remote (local path);
+        list of tuple of files with different checksum (local , remote path); and dictionary of files with the exact
+        same checksum (excluding empty files) - key: checksum; values: list of remote paths.
         """
         # Initialise variables
         same_md5_set = set()
         different_md5_list = []
-        md5_dict = defaultdict(list)
+        md5_files_dict = defaultdict(list)
+        md5_checksum_dict = defaultdict(list)  # used to find same hash across different samples
         temp_directory = tempfile.gettempdir()
 
         # Populate MD5 dictionary - key: local path; value: remote path
@@ -402,10 +408,10 @@ class Checker:
             for library_name in remote_dict:
                 for remote in remote_dict.get(library_name):
                     if local_fname in remote_dict[library_name][remote]:
-                        md5_dict[local].append(remote + "/" + local_fname)
+                        md5_files_dict[local].append(remote + "/" + local_fname)
 
         # Compare
-        for local in md5_dict:
+        for local in md5_files_dict:
             file_name = os.path.basename(local)
             # Read local MD5
             with open(local) as f:
@@ -413,7 +419,7 @@ class Checker:
             # Get and read remote MD5
             tmp_same_md5 = []
             tmp_diff_md5 = []
-            for remote_path in md5_dict.get(local):
+            for remote_path in md5_files_dict.get(local):
                 self.get_remote_files(irods_path=remote_path, dest=temp_directory)
                 tmp_remote = os.path.join(temp_directory, file_name)
                 with open(tmp_remote) as f:
@@ -423,6 +429,11 @@ class Checker:
                     tmp_same_md5.append(local)
                 else:
                     tmp_diff_md5.append((local, remote_path))
+
+                # Add to hash dict - used to find any duplicated same checksum
+                if r_md5 != EMPTY_FILE_MD5:
+                    md5_checksum_dict[r_md5].append(remote_path)
+
             # Only add to different if there is no entry equal,
             # otherwise to verbose - if multiple uploads.
             if len(tmp_same_md5) > 0:
@@ -430,8 +441,31 @@ class Checker:
             else:
                 different_md5_list.extend(tmp_diff_md5)
 
+        # Filter checksum dict
+        filtered_checksum_dict = self.filter_checksum_dict(md5_checksum_dict)
+
         # Return set and list of tuples
-        return same_md5_set, different_md5_list
+        return same_md5_set, different_md5_list, filtered_checksum_dict
+
+    @staticmethod
+    def filter_checksum_dict(md5_checksum_dict):
+        """Filter check sum dictionary.
+
+        :param md5_checksum_dict: Checksum dictionary - key: checksum hash; value: list of remote paths.
+        :type md5_checksum_dict: dict
+
+        :return:
+        """
+        # Initialise variables
+        out_dict = {}
+        # Iterate over input dictionary
+        for hash_key, paths_list in md5_checksum_dict.items():
+            if len(paths_list) > 1:
+                files_set = set([file.split("/")[-1] for file in paths_list])
+                if len(files_set) > 1:
+                    out_dict[hash_key] = paths_list
+        # Return filtered dict
+        return out_dict
 
     @staticmethod
     def get_remote_files(irods_path, dest):
@@ -515,8 +549,8 @@ class Checker:
         return in_both_set, only_remote_set, only_local_set
 
     @staticmethod
-    def report_md5(okay_set, different_list):
-        """Report MD5 findings
+    def report_md5(okay_set, different_list, checksum_dict):
+        """Report MD5 findings.
 
         :param okay_set: Set with all files with the exact same MD5 value - local path.
         :type okay_set: set
@@ -524,17 +558,21 @@ class Checker:
         :param different_list: List of tuples with files that are different locally
         and remotely - (local path, remote path).
         :type different_list: list
+
+        :param checksum_dict: Dictionary with files with same checksum key: checksum;
+        values: list of remote paths.
+        :type checksum_dict: dict
         """
         # Report same md5
-        okay_str = "\n".join(okay_set)
         if len(okay_set) > 0:
+            okay_str = "\n".join(okay_set)
             logger.info("Files with SAME MD5 locally and remotely:\n{files}".format(files=okay_str))
         else:
             logger.warn("There is ZERO AGREEMENT between local and remote MD5 files.")
 
         # Report different md5
-        different_str = "\n".join(["; i:".join(pair) for pair in different_list])
         if len(different_list) > 0:
+            different_str = "\n".join(["; i:".join(pair) for pair in different_list])
             logger.warn(
                 "Files with DIFFERENT MD5 locally and remotely:\n{files}".format(
                     files=different_str
@@ -544,6 +582,17 @@ class Checker:
             logger.info(
                 "There is ZERO DISAGREEMENT between local files and at least on remote MD5 file."
             )
+
+        # Report same checksum for multiple files
+        if len(checksum_dict):
+            same_checksum_str = ""
+            for key_hash, path_list in checksum_dict.items():
+                key_hash_str = ">> " + str(key_hash) + ":\n"
+                paths_str = "\n".join(path_list)
+                same_checksum_str += key_hash_str + paths_str
+            logger.warn("Files with SAME MD5:\n{files}".format(files=same_checksum_str))
+        else:
+            logger.info("No two files have the same MD5 checksum value remotely.")
 
     @staticmethod
     def report_findings(both_locations, only_remote, only_local):
