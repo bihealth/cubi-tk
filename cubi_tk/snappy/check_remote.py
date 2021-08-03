@@ -454,7 +454,8 @@ class Checker:
         :param md5_checksum_dict: Checksum dictionary - key: checksum hash; value: list of remote paths.
         :type md5_checksum_dict: dict
 
-        :return:
+        :return: Returns entries from inputted dictionary that have more than one file associated with a single
+        checksum value.
         """
         # Initialise variables
         out_dict = {}
