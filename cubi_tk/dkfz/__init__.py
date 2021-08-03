@@ -18,7 +18,6 @@ More Information
 import argparse
 
 from ..common import run_nocmd
-from .common import setup_argparse as setup_argparse_dkfz
 from .prepare_isatab import setup_argparse as setup_argparse_prepare_isatab
 from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 
@@ -33,9 +32,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         )
     )
     setup_argparse_ingest_fastq(
-        subparsers.add_parser(
-            "ingest-fastq", help="Transfer FASTQs into iRODS landing zone"
-        )
+        subparsers.add_parser("ingest-fastq", help="Transfer FASTQs into iRODS landing zone")
     )
 
 

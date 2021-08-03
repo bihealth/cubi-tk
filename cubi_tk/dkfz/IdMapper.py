@@ -1,13 +1,14 @@
 import re
 import pandas as pd
-from typing import List, Dict, Tuple, Any
+from typing import Dict, Any
 
 from logzero import logger
 
 import altamisa.isatab.models
 
-from .DkfzMeta import DkfzMeta, DkfzMetaRow, DkfzMetaRowSub, DkfzMetaArc, DkfzMetaRowMapped
-from .DkfzExceptions import MissingValueError, DuplicateValueError, IllegalValueError
+from .DkfzMeta import DkfzMeta, DkfzMetaRowSub, DkfzMetaRowMapped
+from .DkfzExceptions import IllegalValueError
+
 
 class IdMapper:
     """Id mapper, from Dkfz internal ids to ids suitable for snappy & SODAR.
@@ -29,22 +30,33 @@ class IdMapper:
     Once all files from the same project have been reads in included in the
     mapper, the mapper can produce a mapping table between Dkfz & cubi ids
     (IdMapper.mappingsTable), and it can create a altamisa.isatab.models.Assay
-    for each assay type found in any of the Dkfz metafiles. This object 
+    for each assay type found in any of the Dkfz metafiles. This object
     is a faithful represention of the ISATAB DAG of the assay.
 
     The mapper is extensively configurable using the yaml schema.
     """
+
     def __init__(self, schema: Dict[str, Any]):
         self.schema = schema
         for k, rule in self.schema.items():
             self.schema[k]["pattern"] = re.compile(self.schema[k]["pattern"])
-            if "replace" in self.schema[k].keys() and "mappings" in self.schema[k]["replace"].keys():
+            if (
+                "replace" in self.schema[k].keys()
+                and "mappings" in self.schema[k]["replace"].keys()
+            ):
                 for i in range(len(self.schema[k]["replace"]["mappings"])):
-                    self.schema[k]["replace"]["mappings"][i]["when"] = re.compile(self.schema[k]["replace"]["mappings"][i]["when"])
+                    self.schema[k]["replace"]["mappings"][i]["when"] = re.compile(
+                        self.schema[k]["replace"]["mappings"][i]["when"]
+                    )
         # State variables used for id mapping
         self.mappings = {"items": {}}
         self.metas = list()
-        self.unique_materials = {"Source Name": {}, "Sample Name": {}, "Extract Name": {}, "Library Name": {}}
+        self.unique_materials = {
+            "Source Name": {},
+            "Sample Name": {},
+            "Extract Name": {},
+            "Library Name": {},
+        }
         self.unique_processes = {}
         self.protocol_refs_n = {}
         self.df = None
@@ -58,18 +70,28 @@ class IdMapper:
             for md5, row in rows.items():
                 level_data = self.mappings
                 for rule in ["Source", "Sample", "Extract", "Library"]:
-                    level_data = IdMapper._perform_mapping(self.schema[rule], row.parsed, level_data, assay_type)
+                    level_data = IdMapper._perform_mapping(
+                        self.schema[rule], row.parsed, level_data, assay_type
+                    )
                     if level_data is None:
                         continue
-                if not "files" in level_data.keys():
+                if "files" not in level_data.keys():
                     level_data["files"] = []
                 level_data["files"].append(md5)
-                if not "orig" in level_data.keys():
+                if "orig" not in level_data.keys():
                     level_data["orig"] = set()
-                level_data["orig"].add(str(DkfzMeta.getValue(row=row.parsed, Material="Extract Name", characteristic="dkfz_id")))
+                level_data["orig"].add(
+                    str(
+                        DkfzMeta.getValue(
+                            row=row.parsed, Material="Extract Name", characteristic="dkfz_id"
+                        )
+                    )
+                )
 
     @staticmethod
-    def _perform_mapping(rule: Dict[str, Any], row: DkfzMetaRowSub, level_data: Dict[str, Any], assay_type: str) -> Dict[str, Any]:
+    def _perform_mapping(
+        rule: Dict[str, Any], row: DkfzMetaRowSub, level_data: Dict[str, Any], assay_type: str
+    ) -> Dict[str, Any]:
         """Mapping ids at one level (Source/Sample/Extract/Library)
         Each level is inspected, from Source to Library. At every level,
         the Dkfz ID is extracted using a regex pattern applied to a node in the row.
@@ -83,7 +105,7 @@ class IdMapper:
             Material: Extract Name
             characteristic: dkfz_id
             pattern: "^ *[A-z0-9_]+-([A-z0-9_]+)-[A-Z][0-9]+-[A-Z][0-9]+(-[0-9]+)? *$"
- 
+
         # The Dkfz sample id is defined by another pattern extracted from characteristic dkfz_id of Extract.
         # CUBI id = characteristic isTumor from Sample, followed by serial number:
         Sample:
@@ -95,9 +117,9 @@ class IdMapper:
                 characteristic: isTumor
                 increment: yes
 
-        # The Dkfz library id is defined by the batch characteristic, 
-        # The CUBI id is taken from the Library strategy parameter. 
-        # Depending on its value, the CUBI id will take different values, 
+        # The Dkfz library id is defined by the batch characteristic,
+        # The CUBI id is taken from the Library strategy parameter.
+        # Depending on its value, the CUBI id will take different values,
         # incremented when necessary.
         Library:
             Material: Library Name
@@ -123,7 +145,15 @@ class IdMapper:
 
         # Execute replacement
         if "replace" in rule.keys():
-            kwargs = {"row": row, "Material": None, "Process": None, "key": None, "comment": None, "characteristic": None, "parameter": None}
+            kwargs = {
+                "row": row,
+                "Material": None,
+                "Process": None,
+                "key": None,
+                "comment": None,
+                "characteristic": None,
+                "parameter": None,
+            }
             for k in kwargs.keys():
                 if k in rule["replace"].keys():
                     kwargs[k] = rule["replace"][k]
@@ -149,7 +179,7 @@ class IdMapper:
                         n = int(IdMapper.remove_prefix(item["cubi"], cubi))
                         if n > nMax:
                             nMax = n
-                cubi = cubi + str(nMax+1)
+                cubi = cubi + str(nMax + 1)
 
         else:
             cubi = dkfz
@@ -162,7 +192,15 @@ class IdMapper:
         """Extract one value from the row according to the scheme.
         The rule's regular expression pattern is matched to extract the first group.
         """
-        kwargs = {"row": row, "Material": None, "Process": None, "key": None, "comment": None, "characteristic": None, "parameter": None}
+        kwargs = {
+            "row": row,
+            "Material": None,
+            "Process": None,
+            "key": None,
+            "comment": None,
+            "characteristic": None,
+            "parameter": None,
+        }
         for k in kwargs.keys():
             if k in rule.keys():
                 kwargs[k] = rule[k]
@@ -217,29 +255,53 @@ class IdMapper:
                     libraries = extracts[dkfz_extract]["items"]
                     for dkfz_library in libraries.keys():
                         cubi_library = cubi_extract + "-" + libraries[dkfz_library]["cubi"]
-                        files = ";".join(libraries[dkfz_library]["files"])
-                        orig  = ";".join(list(libraries[dkfz_library]["orig"]))
-                        df.append([
-                            dkfz_source + "-" + dkfz_sample + "-" + dkfz_extract + "-" + dkfz_library,
-                            cubi_source, 
-                            cubi_sample,
-                            cubi_extract,
-                            cubi_library,
-                            files,
-                            orig
-                        ])
-        return pd.DataFrame(df, columns=["dkfz_id", "Source Name", "Sample Name", "Extract Name", "Library Name", "Files", "Original ids"])
+                        for md5 in libraries[dkfz_library]["files"]:
+                            df.append(
+                                [
+                                    dkfz_source
+                                    + "-"
+                                    + dkfz_sample
+                                    + "-"
+                                    + dkfz_extract
+                                    + "-"
+                                    + dkfz_library,
+                                    cubi_source,
+                                    cubi_sample,
+                                    cubi_extract,
+                                    cubi_library,
+                                    md5,
+                                ]
+                            )
+        return pd.DataFrame(
+            df,
+            columns=[
+                "dkfz_id",
+                "Source Name",
+                "Sample Name",
+                "Extract Name",
+                "Library Name",
+                "md5",
+            ],
+        )
 
     def apply_mappings(self, meta):
         """Apply the mappings to all rows of a metafile table."""
         df = self.df
-        assert all(x in df.columns for x in ["dkfz_id", "Source Name", "Sample Name", "Extract Name", "Library Name"]), "Missing madatory column"
-        df = df.set_index("dkfz_id")
+        assert all(
+            x in df.columns
+            for x in ["dkfz_id", "Source Name", "Sample Name", "Extract Name", "Library Name"]
+        ), "Missing madatory column"
+        df = df[["dkfz_id", "Source Name", "Sample Name", "Extract Name", "Library Name"]]
+        df = df.drop_duplicates().set_index("dkfz_id")
         for assay_type, rows in meta.content.items():
             for md5, row in rows.items():
-                meta.content[assay_type][md5].mapped = self.apply_mappings_one_row(assay_type, row.parsed, df)
+                meta.content[assay_type][md5].mapped = self.apply_mappings_one_row(
+                    assay_type, row.parsed, df, md5
+                )
 
-    def apply_mappings_one_row(self, assay_type: str, row: DkfzMetaRowSub, df: pd.DataFrame):
+    def apply_mappings_one_row(
+        self, assay_type: str, row: DkfzMetaRowSub, df: pd.DataFrame, md5: str
+    ):
         """Apply the mappings to a single row of a metafile table."""
         # Get the row's unique Dkfz id (with separate parts for the source, sample, ...)
         dkfz = self.extractDkfzId(row, withParts=True)
@@ -250,16 +312,17 @@ class IdMapper:
         try:
             mappings = df.loc[dkfz[0]]
         except KeyError:
-            logger.error("DKFZ id {} for file {} not in mappings table, ignored".format(dkfz[0], md5))
+            logger.error(
+                "DKFZ id {} for file {} not in mappings table, ignored".format(dkfz[0], md5)
+            )
             return None
-        
+
         # Build a dict of the materials in the row with the levels (source, sample, ...) as keys
         # When the material is not already known, create it.
-        # When the material is already known (for example the row refers to a donor for whom 
+        # When the material is already known (for example the row refers to a donor for whom
         # another sample is already present), then the contents of the material is checked
         # against the material already stored. If discrepancies are found, a warning is issued.
         dkfz_id = dkfz.pop(0)
-        unique_name = None
         materials = {}
         for level in ["Source Name", "Sample Name", "Extract Name", "Library Name"]:
             cubi = mappings[level]
@@ -269,12 +332,13 @@ class IdMapper:
                     material = m
                     break
             m = self._get_unique_material(material, cubi)
-            status = self._is_equal_material(m, material)
+            # status = self._is_equal_material(m, material)
+            self._is_equal_material(m, material)
             materials[level] = m
 
         # Complete materials with additional materials in the row (typically the Raw Data File)
         for m in row.materials:
-            if not m.type in materials.keys():
+            if m.type not in materials.keys():
                 materials[m.type] = m
 
         # Make a similar dict for processes in the row
@@ -286,7 +350,7 @@ class IdMapper:
         # The procedure below updates the study-wide collections of materials & processes
         # stored in self.unique_materials & self.unique_processes.
         # The tail of each unmapped arc is checked. If it is a process, then
-        # the arc is simply added to form a path between two materials. 
+        # the arc is simply added to form a path between two materials.
         # If it is a material, then all processes between the former & current materials
         # are obtained from the list of unique processed (created & added if they didn't
         # exist already). This is done by the self._get_unique_process method. Then the
@@ -301,11 +365,14 @@ class IdMapper:
         for a in row.arcs:
             if a[1].type == "Material":
                 if not a[1].name in materials.keys():
-                    raise IllegalValueError("Unknown material {} for arc in {}".format(a[1].name, dkfz_id))
+                    raise IllegalValueError(
+                        "Unknown material {} for arc in {}".format(a[1].name, dkfz_id)
+                    )
                 materialAfter = materials[a[1].name].name
                 for process in processesBetween:
                     p = self._get_unique_process(process, materialBefore, materialAfter)
-                    status = self._is_equal_process(p, process, dkfz_id)
+                    # status = self._is_equal_process(p, process, dkfz_id)
+                    self._is_equal_process(p, process, dkfz_id)
                     processes.append(p)
                     arcTail = p.unique_name
                     arcs.append(altamisa.isatab.models.Arc(head=arcHead, tail=arcTail))
@@ -325,16 +392,18 @@ class IdMapper:
             else:
                 raise IllegalValueError("Unknown arc end-point type {}".format(a[1].type))
 
-        return(DkfzMetaRowMapped(materials=list(materials.values()), processes=processes, arcs=arcs))
+        return DkfzMetaRowMapped(materials=list(materials.values()), processes=processes, arcs=arcs)
 
-    def _get_unique_process(self, process: altamisa.isatab.models.Process, materialBefore: str, materialAfter: str) -> altamisa.isatab.models.Process:
+    def _get_unique_process(
+        self, process: altamisa.isatab.models.Process, materialBefore: str, materialAfter: str
+    ) -> altamisa.isatab.models.Process:
         """Extract from the store self.unique_processes the unique process which corresponds
         to the process argument. If this process is not yet in the store, then create it &
         add it to the store. The process's serial number (stored in self.protocol_refs_n) is updated.
         """
         unique_name = materialBefore + " -> " + process.protocol_ref + " -> " + materialAfter
-        if not unique_name in self.unique_processes.keys():
-            if not process.protocol_ref in self.protocol_refs_n.keys():
+        if unique_name not in self.unique_processes.keys():
+            if process.protocol_ref not in self.protocol_refs_n.keys():
                 self.protocol_refs_n[process.protocol_ref] = 0
             n = self.protocol_refs_n[process.protocol_ref] + 1
             self.protocol_refs_n[process.protocol_ref] = n
@@ -350,7 +419,7 @@ class IdMapper:
                 array_design_ref=process.array_design_ref,
                 first_dimension=process.first_dimension,
                 second_dimension=process.second_dimension,
-                headers=process.headers
+                headers=process.headers,
             )
             self.unique_processes[unique_name] = p
         return self.unique_processes[unique_name]
@@ -360,20 +429,46 @@ class IdMapper:
         status = True
         if p.performer != process.performer:
             status = False
-            logger.warning("Different performer for protocol_ref {} ({}/{}) of {}: Stored = {}, New = {}".format(p.protocol_ref, p.name, process.name, dkfz_id, p.performer, process.performer))
+            logger.warning(
+                "Different performer for protocol_ref {} ({}/{}) of {}: Stored = {}, New = {}".format(
+                    p.protocol_ref, p.name, process.name, dkfz_id, p.performer, process.performer
+                )
+            )
         if p.date != process.date:
             status = False
-            logger.warning("Different performer for protocol_ref {} ({}/{}) of {}: Stored = {}, New = {}".format(p.protocol_ref, p.name, process.name, dkfz_id, str(p.date), str(process.date)))
+            logger.warning(
+                "Different performer for protocol_ref {} ({}/{}) of {}: Stored = {}, New = {}".format(
+                    p.protocol_ref, p.name, process.name, dkfz_id, str(p.date), str(process.date)
+                )
+            )
         if not IdMapper._is_equal_CharactOrParam(p.parameter_values, process.parameter_values):
             status = False
-            logger.warning("Different parameter values for {} ({}/{}) {}".format(p.protocol_ref, p.name, process.name, dkfz_id))
-            logger.warning("    Stored: {}".format(", ".join([str(v.__dict__) for v in p.parameter_values])))
-            logger.warning("    New:    {}".format(", ".join([str(v.__dict__) for v in process.parameter_values])))
+            logger.warning(
+                "Different parameter values for {} ({}/{}) {}".format(
+                    p.protocol_ref, p.name, process.name, dkfz_id
+                )
+            )
+            logger.warning(
+                "    Stored: {}".format(", ".join([str(v.__dict__) for v in p.parameter_values]))
+            )
+            logger.warning(
+                "    New:    {}".format(
+                    ", ".join([str(v.__dict__) for v in process.parameter_values])
+                )
+            )
         if p.comments != process.comments:
             status = False
-            logger.warning("Different comments for {} ({}/{}) {}".format(p.protocol_ref, p.name, process.name, dkfz_id))
-            logger.warning("    Stored: {}".format(", ".join([str(c.__dict__) for c in p.comments])))
-            logger.warning("    New:    {}".format(", ".join([str(c.__dict__) for c in process.comments])))
+            logger.warning(
+                "Different comments for {} ({}/{}) {}".format(
+                    p.protocol_ref, p.name, process.name, dkfz_id
+                )
+            )
+            logger.warning(
+                "    Stored: {}".format(", ".join([str(c.__dict__) for c in p.comments]))
+            )
+            logger.warning(
+                "    New:    {}".format(", ".join([str(c.__dict__) for c in process.comments]))
+            )
         return status
 
     def _get_unique_material(self, material, cubi):
@@ -382,7 +477,7 @@ class IdMapper:
         add it to the store. The newly created material has the CUBI id as name & unique_name.
         """
         level = material.type
-        if not cubi in self.unique_materials[level].keys():
+        if cubi not in self.unique_materials[level].keys():
             m = altamisa.isatab.models.Material(
                 type=material.type,
                 unique_name=cubi,
@@ -392,7 +487,7 @@ class IdMapper:
                 comments=material.comments,
                 factor_values=material.factor_values,
                 material_type=material.material_type,
-                headers=material.headers
+                headers=material.headers,
             )
             self.unique_materials[level][cubi] = m
         return self.unique_materials[level][cubi]
@@ -403,30 +498,46 @@ class IdMapper:
         if not IdMapper._is_equal_CharactOrParam(m.characteristics, material.characteristics):
             status = False
             logger.warning("Different characteristics for {}/{}".format(m.name, material.name))
-            logger.warning("    Stored: {}".format(", ".join([str(c.__dict__) for c in m.characteristics])))
-            logger.warning("    New:    {}".format(", ".join([str(c.__dict__) for c in material.characteristics])))
+            logger.warning(
+                "    Stored: {}".format(", ".join([str(c.__dict__) for c in m.characteristics]))
+            )
+            logger.warning(
+                "    New:    {}".format(
+                    ", ".join([str(c.__dict__) for c in material.characteristics])
+                )
+            )
         if m.factor_values != material.factor_values:
             status = False
             logger.warning("Different factor values for {}/{}".format(m.name, material.name))
-            logger.warning("    Stored: {}".format(", ".join([str(v.__dict__) for v in m.factor_values])))
-            logger.warning("    New:    {}".format(", ".join([str(v.__dict__) for v in material.factor_values])))
+            logger.warning(
+                "    Stored: {}".format(", ".join([str(v.__dict__) for v in m.factor_values]))
+            )
+            logger.warning(
+                "    New:    {}".format(
+                    ", ".join([str(v.__dict__) for v in material.factor_values])
+                )
+            )
         if m.comments != material.comments:
             status = False
             logger.warning("Different comments for {}/{}".format(m.name, material.name))
-            logger.warning("    Stored: {}".format(", ".join([str(c.__dict__) for c in m.comments])))
-            logger.warning("    New:    {}".format(", ".join([str(c.__dict__) for c in material.comments])))
+            logger.warning(
+                "    Stored: {}".format(", ".join([str(c.__dict__) for c in m.comments]))
+            )
+            logger.warning(
+                "    New:    {}".format(", ".join([str(c.__dict__) for c in material.comments]))
+            )
         return status
-    
+
     @staticmethod
     def _is_equal_CharactOrParam(list1, list2):
-        """Test if two characteristics or two parameter values are identical. 
+        """Test if two characteristics or two parameter values are identical.
         Also works for value lists.
         """
         if len(list1) != len(list2):
             return False
         if len(list1) == 0:
             return True
-        if type(list1[0]) != type(list2[0]):
+        if isinstance(list1[0], type(list2[0])):
             return False
         names1 = set([x.name for x in list1])
         names2 = set([x.name for x in list2])
@@ -439,9 +550,8 @@ class IdMapper:
                 if el1.unit != el2.unit or set(el1.value) != set(el2.value):
                     return False
         return True
-        
+
     @staticmethod
     def remove_prefix(text, prefix):
         """Removes a prefix from a string"""
-        return text[text.startswith(prefix) and len(prefix):]
-
+        return text[text.startswith(prefix) and len(prefix) :]

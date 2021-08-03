@@ -9,17 +9,16 @@ import typing
 import hashlib
 from queue import Queue
 from threading import Thread
-from subprocess import check_output, SubprocessError
 import shlex
- 
+
 from pathlib import Path
 from logzero import logger
+from subprocess import SubprocessError, check_output
 
 from . import common
-from .DkfzMeta import DkfzMeta
-from ..sodar.api import landing_zones
 
 DEFAULT_NUM_TRANSFERS = 8
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config(common.Config):
@@ -36,13 +35,14 @@ class Config(common.Config):
     md5_check: bool
     destination: str
 
+
 class DkfzIngestFastqCommand(common.DkfzCommandBase):
     """Implementation of dkfz ingest-fastq command for raw data."""
 
     command_name = "ingest-fastq"
     step_name = "raw_data"
 
-    md5_pattern = re.compile("^[0-9a-f]{32} +(.+)$", re.IGNORECASE)
+    md5_pattern = re.compile("^([0-9a-f]{32}) +(.+)$", re.IGNORECASE)
     filename_pattern = re.compile("^([A-Z0-9-]+)_R[12]\\.fastq\\.gz$")
 
     def __init__(self, config: Config):
@@ -97,20 +97,16 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
         )
 
         parser.add_argument(
-            "--assay-type",
-            default="EXON",
-            help="Assay type to upload to landing zone"
+            "--assay-type", default="EXON", help="Assay type to upload to landing zone"
         )
 
         parser.add_argument(
             "--md5-check",
             action="store_true",
-            help="Compute md5 checksums and verify them against metadata"
+            help="Compute md5 checksums and verify them against metadata",
         )
 
-        parser.add_argument(
-            "destination", help="UUID or iRods path of landing zone to move to."
-        )
+        parser.add_argument("destination", help="UUID or iRods path of landing zone to move to.")
 
     @classmethod
     def run(
@@ -136,14 +132,18 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
         metas = self.read_metas()
         self.map_ids(metas)
 
+        df = self.mapper.df
+        df = df[["Source Name", "Sample Name", "Extract Name", "Library Name", "md5"]]
+        df = df.drop_duplicates().set_index("md5")
+
         files_to_upload = list()
         for meta in metas:
-            if not self.config.assay_type in meta.content.keys():
+            if self.config.assay_type not in meta.content.keys():
                 continue
             prefix = Path(meta.filename).parent
             for md5, row in meta.content[self.config.assay_type].items():
                 run_id = row.row["RUN_ID"]
-                fastq  = row.row["FASTQ_FILE"]
+                fastq = row.row["FASTQ_FILE"]
                 m = DkfzIngestFastqCommand.filename_pattern.match(fastq)
                 if not m:
                     logger.error("Unexpected filename pattern for file {}, ignored".format(fastq))
@@ -154,31 +154,34 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
                 if (not filename.exists()) or (not checkfile.exists()):
                     logger.error("Can't find fastq file {}".format(filename))
                     continue
-                checksum = DkfzIngestFastqCommand._read_companion_md5(checkfile)
+                checksum = DkfzIngestFastqCommand._read_companion_md5(filename)
                 if md5 != checksum:
                     logger.error("MD5 checksum in metafile & in {} are not equal".format(checksum))
                     continue
-                files_to_upload.append((md5, filename, self.mapper.df.loc[md5,"Library Name"]))
+                files_to_upload.append((md5, filename, df.loc[md5, "Library Name"]))
         if len(files_to_upload) == 0:
             logger.warning("No fastq file to upload")
             return 0
 
         if self.config.md5_check:
-            files_to_upload = DkfzIngestFastqCommand._verify_checksums(files_to_upload, threads=self.config.num_parallel_transfers)
+            files_to_upload = DkfzIngestFastqCommand._verify_checksums(
+                files_to_upload, threads=self.config.num_parallel_transfers
+            )
 
-        commands = DkfzIngestFastqCommand._build_commands(
+        commands = self._build_commands(
             files_to_upload=files_to_upload,
             landing_zone=self.config.destination,
             date=self.config.remote_dir_date,
-            pattern=self.config.remote_dir_pattern % self.step_name
+            pattern=self.config.remote_dir_pattern,
         )
 
-        DkfzIngestFastqCommand._execute_commands(commands)
+        self._execute_commands(commands)
 
         return 0
 
     @staticmethod
     def _compute_md5_checksum(filename, buffer_size=1048576):
+        logger.info("Computing md5 hash for {}".format(filename))
         hash = None
         with open(filename, "rb") as f:
             hash = hashlib.md5()
@@ -192,138 +195,13 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
     def _compute_md5_checksum_queue(checksums, queue, buffer_size=1048576):
         while True:
             filename = queue.get()
-            checksums[filename] = DkfzIngestFastqCommand._compute_md5_checksum(filename, buffer_size=buffer_size)
-            queue.task_done()
-
-    @staticmethod
-    def _compute_checksums(filenames, threads=None):
-        checksums = {}
-        if threads and threads > 1:
-            queue = Queue()
-            for f in filenames:
-                queue.put(f)
-            for i in range(threads):
-                worker = Thread(target=DkfzIngestFastqCommand._compute_md5_checksum_queue, args=(checksums, queue))
-                worker.setDaemon(True)
-                worker.start()
-            queue.join()
-        else:
-            for f in filenames:
-                checksums[f] = DkfzIngestFastqCommand.compute_md5_checksum(f)
-        return checksums
-
-    @staticmethod
-    def _read_companion_md5(filename, ext=".md5sum"):
-        lines = None
-        with open(filename + ext, "r") as f:
-            lines = f.readlines()
-        if len(lines) != 1:
-            raise ValueError("Empty or multiple lines in checksum file {}".format(filename + ext))
-        m = DkfzIngestFastqCommand.md5_pattern.match(lines[0])
-        if not m:
-            raise ValueError("MD5 checksum {} in file {} doesn't match expected pattern".format(lines[0], filename + ext))
-        if m.group(2) != Path(filename).name:
-            raise ValueError("Checkum file {} doesn't report matching file (contents is {})".format(filename + ext, lines[0]))
-        return m.group(1).lower()
-
-    @staticmethod
-    def _verify_checksums(files_to_upload, threads=1):
-        filenames = set()
-        for file_to_upload in files_to_upload:
-            md5          = file_to_upload[0]
-            filename     = file_to_upload[1]
-            library_name = file_to_upload[2]
-            if filename in filenames:
-                logger.error("Duplicated file {}".format(filename))
-                continue
-
-        checksums = DkfzIngestFastqCommand.compute_checksums(list(filenames), threads=threads)
-
-        passed_verif = list()
-        for file_to_upload in files_to_upload:
-            md5          = file_to_upload[0]
-            filename     = file_to_upload[1]
-            library_name = file_to_upload[2]
-            if not filename in checksums.keys():
-                logger.error("MD5 sum failed for {}".format(filename))
-                continue
-            if checksums[filename] != md5:
-                logger.error("MD5 checksum in metafile & computed from {} are not equal".format(filename))
-                continue
-            passed_verif.append((md5, filename, library_name))
-
-        return passed_verif
-    
-    @staticmethod
-    def _build_commands(files_to_upload, landing_zone, threads=None, pattern="{library_name}/raw_data/{date}", date=None):
-        if not date:
-            date = str(datetime.date.today())
-        if threads and threads > 1:
-            threads = "-N {}".format(threads)
-        else:
-            threads = ""
-        commands = []
-        for file_to_upload in files_to_upload:
-            md5          = file_to_upload[0]
-            filename     = file_to_upload[1]
-            library_name = file_to_upload[2]
-            cmd = "imkdir -p i:{landing_zone}/{path}".format(
-                landing_zone=landing_zone,
-                path=pattern.format(library_name=library_name, date=date)
-            )
-            commands.append(cmd)
-            target_path = "{landing_zone}/{path}/{filename}".format(
-                landing_zone=landing_zone,
-                path=pattern.format(library_name=library_name, date=date),
-                libname=filename.name
-            )
-            cmd = "iput -aK {threads} {source} i:{target}".format(threads=threads, source=filename, target=target)
-            commands.append(cmd)
-            target_path = "{landing_zone}/{path}/{filename}.md5".format(
-                landing_zone=landing_zone,
-                path=pattern.format(library_name=library_name, date=date),
-                libname=filename.name
-            )
-            cmd = "iput -aK {threads} {source}.md5sum i:{target}".format(threads=threads, source=filename, target=target)
-            commands.append(cmd)
-        return commands
-
-    @staticmethod
-    def _execute_commands(commands):
-        for cmd in commands:
-            try:
-                cmd_str = " ".join(map(shlex.quote, cmd))
-                logger.info("Executing %s", cmd_str)
-                print(cmd)
-                print(cmd_str)
-                check_call(cmd)
-            except SubprocessError as e:  # pragma: nocover
-                logger.error("Problem executing command: %s", e)
-                return 1
-        return 0
-
-    @staticmethod
-    def compute_md5_checksum(filename, buffer_size=1048576):
-        hash = None
-        with open(filename, "rb") as f:
-            hash = hashlib.md5()
-            chunk = f.read(buffer_size)
-            while chunk:
-                hash.update(chunk)
-                chunk = f.read(buffer_size)
-        return hash.hexdigest()
-
-    @staticmethod
-    def _compute_md5_checksum_queue(checksums, queue, buffer_size=1048576):
-        while True:
-            filename = queue.get()
-            checksums[filename] = DkfzIngestFastqCommand.compute_md5_checksum(
+            checksums[filename] = DkfzIngestFastqCommand._compute_md5_checksum(
                 filename, buffer_size=buffer_size
             )
             queue.task_done()
 
     @staticmethod
-    def compute_checksums(filenames, threads=None):
+    def _compute_checksums(filenames, threads=None):
         checksums = {}
         if threads and threads > 1:
             queue = Queue()
@@ -339,18 +217,16 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
             queue.join()
         else:
             for f in filenames:
-                checksums[f] = DkfzIngestFastqCommand.compute_md5_checksum(f)
+                checksums[f] = DkfzIngestFastqCommand._compute_md5_checksum(f)
         return checksums
 
     @staticmethod
-    def read_companion_md5(filename, ext=".md5sum"):
+    def _read_companion_md5(filename, ext=".md5sum"):
         lines = None
-        with open(filename + ext, "r") as f:
+        with open(str(filename) + ext, "r") as f:
             lines = f.readlines()
         if len(lines) != 1:
-            raise ValueError(
-                "Empty or multiple lines in checksum file {}".format(filename + ext)
-            )
+            raise ValueError("Empty or multiple lines in checksum file {}".format(filename + ext))
         m = DkfzIngestFastqCommand.md5_pattern.match(lines[0])
         if not m:
             raise ValueError(
@@ -366,55 +242,94 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
             )
         return m.group(1).lower()
 
-    def build_commands(self, catalog):
-        df = catalog[["folder_name", "library_name", "source_path"]]
+    @staticmethod
+    def _verify_checksums(files_to_upload, threads=1):
+        filenames = set()
+        for file_to_upload in files_to_upload:
+            md5 = file_to_upload[0]
+            filename = file_to_upload[1]
+            library_name = file_to_upload[2]
+            if filename in filenames:
+                logger.error("Duplicated file {}".format(filename))
+                continue
+            filenames.add(filename)
 
-        lz_irods_path = None
-        if "/" in self.args.destination:
-            lz_irods_path = self.args.destination
-        else:
-            lz_irods_path = landing_zones.get(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                landing_zone_uuid=self.args.destination,
-            ).irods_path
-            logger.info("Target iRods path: %s", lz_irods_path)
-        if self.args.remote_dir_date:
-            date = self.args.remote_dir_date
-        else:
-            date = str(datetime.date.today())
-        threads = ""
-        if self.args.num_parallel_transfers and self.args.num_parallel_transfers > 1:
-            threads = "-N {}".format(threads)
+        checksums = DkfzIngestFastqCommand._compute_checksums(list(filenames), threads=threads)
 
-        transfer_jobs = []
-        for i in range(df.shape[0]):
-            path = self.args.remote_dir_pattern.format(
-                library_name=df.iloc[i, 0], date=date
-            )
-            source = df.iloc[i, 2]
-            dest = "{lz}/{path}/{libname}".format(
-                lz=lz_irods_path, path=path, libname=df.iloc[i, 1]
-            )
-            for ext in [("", ""), (".md5sum", ".md5")]:
-                size = 0
-                try:
-                    size = os.path.getsize(source + ext[0])
-                except OSError:  # pragma: nocover
-                    size = 0
-                path_src = source + ext[0]
-                path_dest = dest + ext[1]
-                transfer_jobs.append(
-                    TransferJob(
-                        path_src=path_src,
-                        path_dest=path_dest,
-                        command="irsync -a -K {} {} i:{}".format(
-                            threads, path_src, path_dest
-                        ),
-                        bytes=size,
-                    )
+        passed_verif = list()
+        for file_to_upload in files_to_upload:
+            md5 = file_to_upload[0]
+            filename = file_to_upload[1]
+            library_name = file_to_upload[2]
+            if filename not in checksums.keys():
+                logger.error("MD5 sum failed for {}".format(filename))
+                continue
+            if checksums[filename] != md5:
+                logger.error(
+                    "MD5 checksum in metafile & computed from {} are not equal".format(filename)
                 )
-        return transfer_jobs
+                continue
+            passed_verif.append((md5, filename, library_name))
+
+        return passed_verif
+
+    def _build_commands(
+        self,
+        files_to_upload,
+        landing_zone,
+        threads=None,
+        pattern="{library_name}/raw_data/{date}",
+        date=None,
+    ):
+        if not date:
+            date = str(datetime.date.today())
+        iput_cmd = ["iput", "-aK"]
+        if threads and threads > 1:
+            iput_cmd += ["-N", str(self.config.num_parallel_transfers)]
+        commands = []
+        for file_to_upload in files_to_upload:
+            filename = file_to_upload[1]
+            library_name = file_to_upload[2]
+            cmd = [
+                "imkdir",
+                "-p",
+                "{landing_zone}/{path}".format(
+                    landing_zone=landing_zone,
+                    path=pattern.format(library_name=library_name, date=date),
+                ),
+            ]
+            commands.append(cmd)
+            target_path = "{landing_zone}/{path}/{filename}".format(
+                landing_zone=landing_zone,
+                path=pattern.format(library_name=library_name, date=date),
+                filename=filename.name,
+            )
+            cmd = iput_cmd + [str(filename), target_path]
+            commands.append(cmd)
+            target_path = "{landing_zone}/{path}/{filename}.md5".format(
+                landing_zone=landing_zone,
+                path=pattern.format(library_name=library_name, date=date),
+                filename=filename.name,
+            )
+            cmd = iput_cmd + [str(filename) + ".md5sum", target_path]
+            commands.append(cmd)
+        return commands
+
+    def _execute_commands(self, commands):
+        for cmd in commands:
+            if self.config.dry_run:
+                print(" ".join(cmd))
+                continue
+            try:
+                cmd_str = " ".join(map(shlex.quote, cmd))
+                logger.info("Executing %s", cmd_str)
+                print(cmd)
+                print(cmd_str)
+                check_output(cmd)
+            except SubprocessError as e:  # pragma: nocover
+                logger.error("Problem executing command: %s", e)
+                return 1
+        return 0
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

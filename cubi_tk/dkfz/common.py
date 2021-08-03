@@ -3,31 +3,33 @@
 import argparse
 import attr
 import os
-import textwrap
 import typing
 import yaml
 
-from pathlib import Path
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict
 
 from logzero import logger
 
 import altamisa.isatab.models
 
+from .DkfzExceptions import MissingValueError
 from .DkfzMetaParser import DkfzMetaParser
 from .IdMapper import IdMapper
 from .DkfzMeta import DkfzMeta
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config:
     """Configuration for the pull-raw-data."""
 
     verbose: bool
+    config: str
     sodar_server_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     mapping_config: str
     parsing_config: str
     meta: List[str]
+
 
 class DkfzCommandBase:
     """Implementation of dkfz prepare-isatab command for raw data."""
@@ -51,14 +53,14 @@ class DkfzCommandBase:
             "--mapping-config",
             dest="mapping_config",
             default=os.path.dirname(__file__) + "/../isa_tpl/isatab-dkfz/DkfzMetaIdMappings.yaml",
-            help="Configuration file for the Dkfz id mapper"
+            help="Configuration file for the Dkfz id mapper",
         )
 
         parser.add_argument(
             "--parsing-config",
             dest="parsing_config",
             default=os.path.dirname(__file__) + "/../isa_tpl/isatab-dkfz/DkfzMetaParser.yaml",
-            help="Configuration file for the Dkfz metafile parser"
+            help="Configuration file for the Dkfz metafile parser",
         )
 
         parser.add_argument("meta", nargs="+", help="DKFZ meta file(s)")
@@ -68,7 +70,7 @@ class DkfzCommandBase:
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        return cls(args).execute()
+        raise NotImplementedError("Must be implemented in derived classes")
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
@@ -119,26 +121,22 @@ class DkfzCommandBase:
     def _get_assay(self, metas: List[DkfzMeta], assay_type: str) -> altamisa.isatab.models.Assay:
         materials = {}
         processes = {}
-        arcs      = set()
+        arcs = set()
         for meta in metas:
             if assay_type in meta.content.keys():
                 for md5, row in meta.content[assay_type].items():
                     if row.mapped is None:
                         raise MissingValueError("Unmapped row {}".format(md5))
                     for m in row.mapped.materials:
-                        if not m.unique_name in materials.keys():
+                        if m.unique_name not in materials.keys():
                             materials[m.unique_name] = m
                     for p in row.mapped.processes:
-                        if not p.unique_name in processes.keys():
+                        if p.unique_name not in processes.keys():
                             processes[p.unique_name] = p
                     for a in row.mapped.arcs:
                         arcs.add(a)
         return altamisa.isatab.models.Assay(
-            file=None,
-            header=None,
-            materials=materials,
-            processes=processes,
-            arcs=tuple(list(arcs))
+            file=None, header=None, materials=materials, processes=processes, arcs=tuple(list(arcs))
         )
 
     def get_assays(self) -> Dict[str, altamisa.isatab.models.Assay]:
@@ -148,12 +146,13 @@ class DkfzCommandBase:
         assay_types = set()
         for meta in metas:
             assay_types.update(list(meta.content.keys()))
-        
+
         assays = {}
         for assay_type in list(assay_types):
             assays[assay_type] = self._get_assay(metas=metas, assay_type=assay_type)
 
         return assays
+
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk dkfz``."""

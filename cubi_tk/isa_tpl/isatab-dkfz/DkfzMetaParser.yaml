@@ -16,6 +16,8 @@ Investigation:
               Value: http://data.bioontology.org/ontologies/OBI
             - Entry: Term Source Version
               Value: 35
+            - Entry: Term Source Description
+              Value: Ontology for Biomedical Investigations
         Taxonomy:
             - Entry: Term Source Name
               Value: NCBITAXON
@@ -33,51 +35,51 @@ Investigation:
     Assays:
         EXON:
             - Entry: Study Assay File Name
-              Value: "a_{title}_whole_exome_sequencing.txt"
+              Value: "a_{title}_EXON.txt"
             - Entry: Study Assay Measurement Type
-              Value: DNA sequencing assay
+              Value: exome sequencing
             - Entry: Study Assay Measurement Type Term Accession Number
-              Value: http://purl.obolibrary.org/obo/OBI_0000626
+              Value: http://purl.obolibrary.org/obo/OBI_0002118
             - Entry: Study Assay Measurement Type Term Source REF
               Value: OBI
             - Entry: Study Assay Technology Type
-              Value: exome sequencing assay
+              Value: nucleotide sequencing
             - Entry: Study Assay Technology Type Term Accession Number
-              Value: http://purl.obolibrary.org/obo/OBI_0002118
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
             - Entry: Study Assay Technology Type Term Source REF
               Value: OBI
             - Entry: Study Assay Technology Platform
               Value: Illumina
         RNA:
             - Entry: Study Assay File Name
-              Value: "a_{title}_transcriptome_sequencing.txt"
+              Value: "a_{title}_RNA.txt"
             - Entry: Study Assay Measurement Type
-              Value: transcription profiling assay
+              Value: transcription profiling
             - Entry: Study Assay Measurement Type Term Accession Number
               Value: http://purl.obolibrary.org/obo/OBI_0000424
             - Entry: Study Assay Measurement Type Term Source REF
               Value: OBI
             - Entry: Study Assay Technology Type
-              Value: polyA-selected RNA sequencing assay
+              Value: nucleotide sequencing
             - Entry: Study Assay Technology Type Term Accession Number
-              Value: http://purl.obolibrary.org/obo/OBI_0002571
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
             - Entry: Study Assay Technology Type Term Source REF
               Value: OBI
             - Entry: Study Assay Technology Platform
               Value: Illumina
         WGS:
             - Entry: Study Assay File Name
-              Value: "a_{title}_whole_genome_sequencing.txt"
+              Value: "a_{title}_WGS.txt"
             - Entry: Study Assay Measurement Type
-              Value: DNA sequencing assay
+              Value: genome sequencing
             - Entry: Study Assay Measurement Type Term Accession Number
-              Value: http://purl.obolibrary.org/obo/OBI_0000626
+              Value: http://purl.obolibrary.org/obo/OBI_0002117
             - Entry: Study Assay Measurement Type Term Source REF
               Value: OBI
             - Entry: Study Assay Technology Type
-              Value: whole genome sequencing assay
+              Value: nucleotide sequencing
             - Entry: Study Assay Technology Type Term Accession Number
-              Value: http://purl.obolibrary.org/obo/OBI_0002117
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
             - Entry: Study Assay Technology Type Term Source REF
               Value: OBI
             - Entry: Study Assay Technology Platform

@@ -1,9 +1,8 @@
 import attr
-import re
-import pandas as pd
 from typing import Dict, List, Tuple
 
 import altamisa.isatab.models
+
 
 @attr.s(auto_attribs=True, frozen=False)
 class DkfzMetaArc:
@@ -11,30 +10,36 @@ class DkfzMetaArc:
     The actual connection between ISATAB objects is done
     through the ordering in the list of DkfzMetaArc.
     """
+
     #: Arc end type (currently supported: Material & Process)
     type: str
     #: Name of the object (Material.type or Process.protocol_ref)
     name: str
 
+
 @attr.s(auto_attribs=True, frozen=False)
 class DkfzMetaRowSub:
     """List of meterials & processes from a single Dkfz metafile row, without arcs"""
+
     #: Materials (as list)
     materials: List[altamisa.isatab.models.Material]
     #: Processes (as list)
     processes: List[altamisa.isatab.models.Process]
 
+
 @attr.s(auto_attribs=True, frozen=False)
 class DkfzMetaRowParsed(DkfzMetaRowSub):
     """Full representation of one single Dkfz metafile row.
-    The connection between objects is in the list of arcs. 
+    The connection between objects is in the list of arcs.
     This is used when the meta file has been parsed, but mappings
     between ids has not been done.
     Note that the description of arcs is ambiguous between rows,
     but uniquely defined within a row.
     """
+
     #: List of arcs, defined for a single row
     arcs: List[DkfzMetaArc]
+
 
 @attr.s(auto_attribs=True, frozen=False)
 class DkfzMetaRowMapped(DkfzMetaRowSub):
@@ -42,14 +47,17 @@ class DkfzMetaRowMapped(DkfzMetaRowSub):
     The arcs represent a connection between two object in
     the graph, labelled by unique identifier strings.
     """
+
     #: Frozen list of arcs connecting arbitrary elements in the DAG
     arcs: Tuple[str, str]
+
 
 @attr.s(auto_attribs=True, frozen=False)
 class DkfzMetaRow:
     """Storage unit for one Dkfz metafile row, at unparsed, parsed and
     after id mapping stages.
     """
+
     #: Assay type as labelled in the Dkfz metafile (EXON|RNA|WGS)
     assay_type: str
     #: Unparsed row, as a dict with metafile column names as keys
@@ -58,6 +66,7 @@ class DkfzMetaRow:
     parsed: DkfzMetaRowParsed
     #: Row after id mapping, with references to objects shared by rows
     mapped: DkfzMetaRowMapped
+
 
 @attr.s(auto_attribs=True, frozen=False)
 class DkfzMeta:
@@ -69,11 +78,20 @@ class DkfzMeta:
     content: Dict[str, Dict[str, DkfzMetaRow]]
 
     @classmethod
-    def getValue(cls, row: DkfzMetaRowSub, Material=None, Process=None, characteristic=None, parameter=None, comment=None, key=None) -> str:
+    def getValue(
+        cls,
+        row: DkfzMetaRowSub,
+        Material=None,
+        Process=None,
+        characteristic=None,
+        parameter=None,
+        comment=None,
+        key=None,
+    ) -> str:
         """Extract a value from a DkfzMetaRow.
         The returned value is always a string, even for dates, or when the requested element is a list.
         In the latter case, the elements are converted to strings and joined by the semicolumn ";".
-        When the requested value is not found in the row (for example no such characteristic), 
+        When the requested value is not found in the row (for example no such characteristic),
         the function returns None.
         Usage examples:
 
@@ -97,17 +115,17 @@ class DkfzMeta:
                         if key == "name":
                             return m.name
                         else:
-                            return None # raise IllegalValueError("No element {} found in material {}".format(key, m.type))
+                            return None
                     if characteristic:
                         for c in m.characteristics:
                             if c.name == characteristic:
-                                return(";".join(map(str, c.value)))
-                        return(None)
+                                return ";".join(map(str, c.value))
+                        return None
                     if comment:
                         for c in m.comments:
                             if c.name == comment:
-                                return(str(c.value))
-                        return(None)
+                                return str(c.value)
+                        return None
         if Process:
             for p in row.processes:
                 if p.protocol_ref == Process:
@@ -117,16 +135,15 @@ class DkfzMeta:
                         elif key == "performer":
                             return p.performer
                         else:
-                            return None # raise IllegalValueError("No element {} found in process {}".format(key, p.type))
+                            return None
                     if parameter:
                         for x in p.parameter_values:
                             if x.name == parameter:
-                                return(";".join(map(str, x.value)))
-                        return(None)
+                                return ";".join(map(str, x.value))
+                        return None
                     if comment:
                         for c in p.comments:
                             if c.name == comment:
-                                return(str(c.value))
-                        return(None)
+                                return str(c.value)
+                        return None
         return None
-
