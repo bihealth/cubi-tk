@@ -63,3 +63,6 @@ simplejson
 
 # REST API client for SODAR
 sodar-cli ==0.1.0
+
+# Python iRODS client
+python-irodsclient>=1.0.0, <1.1

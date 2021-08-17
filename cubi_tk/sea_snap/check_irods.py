@@ -77,7 +77,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
 
         # --- get lists
         # files on SODAR
-        files = self.get_files()
+        files = self.get_file_paths()
         files_rel = [f.replace(self.args.irods_path + "/", "") for f in files["files"]]
         logger.info("Files on SODAR (first 20): %s", ", ".join(files_rel[:19]))
 
@@ -117,7 +117,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
                 return None
 
         # generic tests (md5 sums, metadata, #replicas)
-        self.run_tests(files)
+        self.run_checks(files)
 
         logger.info("All done")
         return res
