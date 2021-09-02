@@ -97,7 +97,7 @@ class CreateLandingZoneCommand:
         logger.info("  args: %s", self.args)
 
         existing_lzs = sorted(
-            api.landing_zones.list(
+            api.landingzone.list_(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,
@@ -108,7 +108,7 @@ class CreateLandingZoneCommand:
         if existing_lzs and self.args.unless_exists:
             lz = existing_lzs[-1]
         else:
-            lz = api.landing_zones.create(
+            lz = api.landingzone.create(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,

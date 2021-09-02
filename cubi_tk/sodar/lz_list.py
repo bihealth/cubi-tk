@@ -93,7 +93,7 @@ class ListLandingZoneCommand:
         logger.info("  args: %s", self.args)
 
         existing_lzs = sorted(
-            api.landing_zones.list(
+            api.landingzone.list_(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,
