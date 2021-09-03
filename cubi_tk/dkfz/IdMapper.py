@@ -7,7 +7,7 @@ from logzero import logger
 import altamisa.isatab.models
 
 from .DkfzMeta import DkfzMeta, DkfzMetaRowSub, DkfzMetaRowMapped
-from .DkfzExceptions import IllegalValueError
+from .DkfzExceptions import IllegalValueError, MissingValueError
 
 
 class IdMapper:
@@ -39,15 +39,10 @@ class IdMapper:
     def __init__(self, schema: Dict[str, Any]):
         self.schema = schema
         for k, rule in self.schema.items():
-            self.schema[k]["pattern"] = re.compile(self.schema[k]["pattern"])
-            if (
-                "replace" in self.schema[k].keys()
-                and "mappings" in self.schema[k]["replace"].keys()
-            ):
-                for i in range(len(self.schema[k]["replace"]["mappings"])):
-                    self.schema[k]["replace"]["mappings"][i]["when"] = re.compile(
-                        self.schema[k]["replace"]["mappings"][i]["when"]
-                    )
+            rule["pattern"] = re.compile(rule["pattern"])
+            if "replace" in rule.keys() and "mappings" in rule["replace"].keys():
+                for m in rule["replace"]["mappings"]:
+                    m["when"] = re.compile(m["when"])
         # State variables used for id mapping
         self.mappings = {"items": {}}
         self.metas = list()
@@ -73,20 +68,9 @@ class IdMapper:
                     level_data = IdMapper._perform_mapping(
                         self.schema[rule], row.parsed, level_data, assay_type
                     )
-                    if level_data is None:
-                        continue
                 if "files" not in level_data.keys():
                     level_data["files"] = []
                 level_data["files"].append(md5)
-                if "orig" not in level_data.keys():
-                    level_data["orig"] = set()
-                level_data["orig"].add(
-                    str(
-                        DkfzMeta.getValue(
-                            row=row.parsed, Material="Extract Name", characteristic="dkfz_id"
-                        )
-                    )
-                )
 
     @staticmethod
     def _perform_mapping(
@@ -140,6 +124,7 @@ class IdMapper:
         # Extract Source/Sample/Extract/Library value from the row
         dkfz = IdMapper.extractValue(rule, row)
 
+        # Test if the source/sample/extract/lisrary was already encountered
         if dkfz in level_data["items"].keys():
             return level_data["items"][dkfz]
 
@@ -167,8 +152,9 @@ class IdMapper:
                         cubi = x["replacement"]
                         break
                 if not cubi:
-                    logger.error("No replacement value found for {} from {}".format(repl, kwargs))
-                    return None
+                    raise MissingValueError(
+                        "No replacement value found for {} from {}".format(repl, kwargs)
+                    )
             else:
                 cubi = repl
 
@@ -206,22 +192,16 @@ class IdMapper:
                 kwargs[k] = rule[k]
         value = str(DkfzMeta.getValue(**kwargs))
         if not value:
-            logger.error("No value for element {}".format(kwargs))
-            return None
+            raise MissingValueError("No value for element {}".format(kwargs))
 
         # Extract the sub-part using the pattern
         m = rule["pattern"].match(value)
         if not m:
-            logger.error("Unexpected value {} from element {}".format(value, kwargs))
-            return None
-        return m.group(1)
+            raise IllegalValueError("Unexpected value {} from element {}".format(value, kwargs))
+        return m.group(rule["group"])
 
-    def extractDkfzId(self, row, withParts=False):
-        """Build a unique Dkfz id using the batch number.
-        The routine can return the individual parts (for source/sample/...)
-        if required. They are put in a list, with the full id as element 0,
-        the source as element 1, sample 2, ...
-        """
+    def extractDkfzId(self, row):
+        """Build a unique Dkfz id using all rule elements."""
         parts = []
         for rule in ["Source", "Sample", "Extract", "Library"]:
             v = IdMapper.extractValue(self.schema[rule], row)
@@ -229,12 +209,7 @@ class IdMapper:
                 logger.error("Can't extract {} part of the DKFZ id for file {}".format(rule, row))
                 return None
             parts.append(v)
-        dkfz = "-".join(parts)
-        if withParts:
-            parts.insert(0, dkfz)
-            return parts
-        else:
-            return dkfz
+        return "-".join(parts)
 
     def mappings_table(self):
         """Returns a pandas DataFrame id mapping tables between Dkfz & CUBI ids.
@@ -304,17 +279,15 @@ class IdMapper:
     ):
         """Apply the mappings to a single row of a metafile table."""
         # Get the row's unique Dkfz id (with separate parts for the source, sample, ...)
-        dkfz = self.extractDkfzId(row, withParts=True)
+        dkfz = self.extractDkfzId(row)
         if dkfz is None:
             logger.error("Can't map ids for file {}, ignored".format(md5))
             return None
         mappings = None
         try:
-            mappings = df.loc[dkfz[0]]
+            mappings = df.loc[dkfz]
         except KeyError:
-            logger.error(
-                "DKFZ id {} for file {} not in mappings table, ignored".format(dkfz[0], md5)
-            )
+            logger.error("DKFZ id {} for file {} not in mappings table, ignored".format(dkfz, md5))
             return None
 
         # Build a dict of the materials in the row with the levels (source, sample, ...) as keys
@@ -322,7 +295,6 @@ class IdMapper:
         # When the material is already known (for example the row refers to a donor for whom
         # another sample is already present), then the contents of the material is checked
         # against the material already stored. If discrepancies are found, a warning is issued.
-        dkfz_id = dkfz.pop(0)
         materials = {}
         for level in ["Source Name", "Sample Name", "Extract Name", "Library Name"]:
             cubi = mappings[level]
@@ -366,13 +338,13 @@ class IdMapper:
             if a[1].type == "Material":
                 if not a[1].name in materials.keys():
                     raise IllegalValueError(
-                        "Unknown material {} for arc in {}".format(a[1].name, dkfz_id)
+                        "Unknown material {} for arc in {}".format(a[1].name, dkfz)
                     )
                 materialAfter = materials[a[1].name].name
                 for process in processesBetween:
                     p = self._get_unique_process(process, materialBefore, materialAfter)
-                    # status = self._is_equal_process(p, process, dkfz_id)
-                    self._is_equal_process(p, process, dkfz_id)
+                    # status = self._is_equal_process(p, process, dkfz)
+                    self._is_equal_process(p, process, dkfz)
                     processes.append(p)
                     arcTail = p.unique_name
                     arcs.append(altamisa.isatab.models.Arc(head=arcHead, tail=arcTail))
@@ -537,7 +509,7 @@ class IdMapper:
             return False
         if len(list1) == 0:
             return True
-        if isinstance(list1[0], type(list2[0])):
+        if not isinstance(list1[0], type(list2[0])):
             return False
         names1 = set([x.name for x in list1])
         names2 = set([x.name for x in list2])

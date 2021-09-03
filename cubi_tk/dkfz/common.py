@@ -2,10 +2,10 @@
 
 import argparse
 import attr
-import os
 import typing
 import yaml
 
+from pathlib import Path
 from typing import List, Dict
 
 from logzero import logger
@@ -52,14 +52,18 @@ class DkfzCommandBase:
         parser.add_argument(
             "--mapping-config",
             dest="mapping_config",
-            default=os.path.dirname(__file__) + "/../isa_tpl/isatab-dkfz/DkfzMetaIdMappings.yaml",
+            default=str(
+                (Path(__file__).parent / "../isa_tpl/isatab-dkfz/DkfzMetaIdMappings.yaml").resolve()
+            ),
             help="Configuration file for the Dkfz id mapper",
         )
 
         parser.add_argument(
             "--parsing-config",
             dest="parsing_config",
-            default=os.path.dirname(__file__) + "/../isa_tpl/isatab-dkfz/DkfzMetaParser.yaml",
+            default=str(
+                (Path(__file__).parent / "../isa_tpl/isatab-dkfz/DkfzMetaParser.yaml").resolve()
+            ),
             help="Configuration file for the Dkfz metafile parser",
         )
 

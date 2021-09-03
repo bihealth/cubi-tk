@@ -16,6 +16,7 @@ Manual
     | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
     | :ref:`Upload raw data to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
+    | :ref:`Upload DKFZ data to SODAR <man_dkfz>`
 
 Use cases
     Use cases for common processing tasks.
@@ -49,6 +50,7 @@ Project Info
     man_ingest_fastq
     man_itransfer_results
     man_write_sample_info
+    man_dkfz
 
 .. toctree::
     :caption: Use Cases

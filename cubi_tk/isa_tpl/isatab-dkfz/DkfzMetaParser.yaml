@@ -121,7 +121,7 @@ Assay:
               - name: Checksum
                 meta_columns: ["MD5"]
               - name: Lane
-                meta_columns: ["LANE"]
+                meta_columns: ["LANE", "LANE_NO"]
               - name: Mate
                 meta_columns: ["MATE", "READ"]
     Process:
@@ -163,7 +163,7 @@ Assay:
                 meta_columns: ["INSTRUMENT_MODEL"]
                 processor: get_instrument_model
               - name: Platform
-                meta_columns: ["PLATFORM"]
+                meta_columns: ["INSTRUMENT_PLATFORM", "PLATFORM"]
               - name: Sequencing kit
                 meta_columns: ["SEQUENCING_KIT"]
               - name: Center Name

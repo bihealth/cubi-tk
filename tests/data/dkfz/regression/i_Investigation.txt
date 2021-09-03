@@ -1,0 +1,92 @@
+ONTOLOGY SOURCE REFERENCE
+Term Source Name	UO	OBI	NCBITAXON
+Term Source File	http://data.bioontology.org/ontologies/UO	http://data.bioontology.org/ontologies/OBI	http://data.bioontology.org/ontologies/NCBITAXON
+Term Source Version	48	35	10
+Term Source Description	Units of Measurement Ontology	Ontology for Biomedical Investigations	National Center for Biotechnology Information (NCBI) Organismal Classification
+INVESTIGATION
+Investigation Identifier
+Investigation Title
+Investigation Description
+Investigation Submission Date
+Investigation Public Release Date
+Comment[Created With Configuration]	/home/mkuhring/projects/ODM/ISA/ISAcreator-1.7.11-all/Configurations/bih_cancer
+INVESTIGATION PUBLICATIONS
+Investigation PubMed ID
+Investigation Publication DOI
+Investigation Publication Author List
+Investigation Publication Title
+Investigation Publication Status
+Investigation Publication Status Term Accession Number
+Investigation Publication Status Term Source REF
+INVESTIGATION CONTACTS
+Investigation Person Last Name
+Investigation Person First Name
+Investigation Person Mid Initials
+Investigation Person Email
+Investigation Person Phone
+Investigation Person Fax
+Investigation Person Address
+Investigation Person Affiliation
+Investigation Person Roles
+Investigation Person Roles Term Accession Number
+Investigation Person Roles Term Source REF
+STUDY
+Study Identifier	test
+Study Title
+Study Description
+Study Submission Date
+Study Public Release Date
+Study File Name	s_test.txt
+STUDY DESIGN DESCRIPTORS
+Study Design Type
+Study Design Type Term Accession Number
+Study Design Type Term Source REF
+STUDY PUBLICATIONS
+Study PubMed ID
+Study Publication DOI
+Study Publication Author List
+Study Publication Title
+Study Publication Status
+Study Publication Status Term Accession Number
+Study Publication Status Term Source REF
+STUDY FACTORS
+Study Factor Name
+Study Factor Type
+Study Factor Type Term Accession Number
+Study Factor Type Term Source REF
+STUDY ASSAYS
+Study Assay File Name	a_test_EXON.txt	a_test_RNA.txt
+Study Assay Measurement Type	exome sequencing	transcription profiling
+Study Assay Measurement Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0002118	http://purl.obolibrary.org/obo/OBI_0000424
+Study Assay Measurement Type Term Source REF	OBI	OBI
+Study Assay Technology Type	nucleotide sequencing	nucleotide sequencing
+Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626	http://purl.obolibrary.org/obo/OBI_0000626
+Study Assay Technology Type Term Source REF	OBI	OBI
+Study Assay Technology Platform	Illumina	Illumina
+STUDY PROTOCOLS
+Study Protocol Name	nucleic acid extraction RNA	library construction RNA	nucleic acid sequencing RNA	sample collection	nucleic acid extraction EXON	library construction EXON	nucleic acid sequencing EXON
+Study Protocol Type	nucleic acid extraction RNA	library construction RNA	nucleic acid sequencing RNA	sample collection	nucleic acid extraction EXON	library construction EXON	nucleic acid sequencing EXON
+Study Protocol Type Term Accession Number							
+Study Protocol Type Term Source REF							
+Study Protocol Description							
+Study Protocol URI							
+Study Protocol Version							
+Study Protocol Parameters Name		Library selection;Library strategy;Library source	Center Name;Sequencing kit;Platform;Instrument Model			Library selection;Library strategy;Library source	Center Name;Sequencing kit;Platform;Instrument Model
+Study Protocol Parameters Name Term Accession Number		;;	;;;			;;	;;;
+Study Protocol Parameters Name Term Source REF		;;	;;;			;;	;;;
+Study Protocol Components Name							
+Study Protocol Components Type							
+Study Protocol Components Type Term Accession Number							
+Study Protocol Components Type Term Source REF							
+STUDY CONTACTS
+Study Person Last Name
+Study Person First Name
+Study Person Mid Initials
+Study Person Email
+Study Person Phone
+Study Person Fax
+Study Person Address
+Study Person Affiliation
+Study Person Roles
+Study Person Roles Term Accession Number
+Study Person Roles Term Source REF

@@ -1,0 +1,3 @@
+Source Name	Characteristics[Organism]	Term Source REF	Term Accession Number	Protocol REF	Performer	Date	Sample Name	Characteristics[isTumor]
+A1B2C3	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	sample collection			A1B2C3-N1	N
+A1B2C3	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	sample collection			A1B2C3-T1	T

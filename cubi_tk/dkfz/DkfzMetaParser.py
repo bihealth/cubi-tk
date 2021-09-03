@@ -16,6 +16,7 @@ class DkfzMetaParser:
     The parser is extensively configurable via the schema provided upon creation.
     """
 
+    MD5_PATTERN = re.compile("^[0-9A-F]{32}$", re.IGNORECASE)
     UNDETERMINED_PATTERN = re.compile("^Undetermined_([0-9])+.fastq.gz$")
 
     ILLUMINA_INSTRUMENTS = re.compile(
@@ -46,44 +47,37 @@ class DkfzMetaParser:
         """Parses a Dkfz metafile (as io.TextIO object) according to the schema,
         and returns the contents in DkfzMeta.
         """
-        reader = csv.DictReader(f, delimiter="\t")
+        reader = csv.reader(f, delimiter="\t")
+        column_names = next(reader)
+
+        if len(column_names) < len(set(column_names)):
+            raise DuplicateValueError("Duplicated column names in {}".format(f.name))
+        if not set(["MD5", "FASTQ_FILE", "SEQUENCING_TYPE"]).issubset(set(column_names)):
+            raise MissingValueError("Missing mandatory column in {}".format(f.name))
+
         content = {}
         checksums = []
         for row in reader:
-            if "MD5" not in row.keys():
-                raise MissingValueError('Missing mandatory column "{}"'.format("MD5"))
-            if row["MD5"] in checksums:
-                raise DuplicateValueError(
-                    "MD5 checksum {} appears multiple time".format(row["MD5"])
-                )
-            if ignoreUndetermined:
-                if "FASTQ_FILE" in row.keys():
-                    if DkfzMetaParser.UNDETERMINED_PATTERN.match(row["FASTQ_FILE"]):
-                        continue
-                else:
-                    logger.warning(
-                        'Missing column "{}", can\'t test for file of undetermined origin after demultiplexing'.format(
-                            "FASTQ_FILE"
-                        )
-                    )
+            row = dict(zip(column_names, row))
 
-            if not ("SEQUENCING_TYPE" in row.keys()) or (row["SEQUENCING_TYPE"] is None):
-                logger.warning(
-                    'Missing column "{}", can\'t extract assay type'.format("SEQUENCING_TYPE")
-                )
+            md5 = row["MD5"]
+            if not DkfzMetaParser.MD5_PATTERN.match(md5):
+                raise IllegalValueError("Unexpected md5 value {} in {}".format(md5, f.name))
+            md5 = md5.lower()
+            if md5 in checksums:
+                raise DuplicateValueError("MD5 checksum {} appears multiple time".format(md5))
+            checksums.append(md5)
+
+            if ignoreUndetermined and DkfzMetaParser.UNDETERMINED_PATTERN.match(row["FASTQ_FILE"]):
                 continue
-            if not row["SEQUENCING_TYPE"] in self.schema["Investigation"]["Assays"].keys():
-                logger.warning(
-                    'Unknown assay type "{}", data file ignored'.format(row["SEQUENCING_TYPE"])
-                )
-                continue
+
             assay_type = row["SEQUENCING_TYPE"]
-
-            checksums.append(row["MD5"])
-
+            if assay_type not in self.schema["Investigation"]["Assays"].keys():
+                raise IllegalValueError("Unknow assay type {} in {}".format(assay_type, f.name))
             if assay_type not in content.keys():
                 content[assay_type] = {}
-            content[assay_type][row["MD5"]] = self.meta_to_isa(row, assay_type)
+
+            content[assay_type][md5] = self.meta_to_isa(row, assay_type)
 
         return DkfzMeta(content=content, filename=f.name)
 
@@ -438,7 +432,8 @@ class DkfzMetaParser:
                     species = result
                     break
         if not species:
-            logger.warning("Unknown species {}".format(", ".join(values.values())))
+            species = ";".join(values.values)
+            logger.warning("Unknown species {}".format(species))
         return species
 
     def get_instrument_model(self, values):
@@ -451,5 +446,6 @@ class DkfzMetaParser:
                     raise DuplicateValueError("Multiple Illumina instrument definitions")
                 model = match.group(1).lower().capitalize() + "Seq " + match.group(2)
         if not model:
-            logger.warning("Unknown Illumina instrument(s) {}".format(", ".join(values.values())))
+            model = ";".join(values.values)
+            logger.warning("Unknown Illumina instrument(s) {}".format(model))
         return model

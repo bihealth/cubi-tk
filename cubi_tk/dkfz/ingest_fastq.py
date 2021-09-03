@@ -15,6 +15,8 @@ from pathlib import Path
 from logzero import logger
 from subprocess import SubprocessError, check_output
 
+from ..sodar.api import landing_zones
+
 from . import common
 
 DEFAULT_NUM_TRANSFERS = 8
@@ -168,16 +170,24 @@ class DkfzIngestFastqCommand(common.DkfzCommandBase):
                 files_to_upload, threads=self.config.num_parallel_transfers
             )
 
+        if "/" in self.config.destination:
+            lz_irods_path = self.config.destination
+        else:
+            lz_irods_path = landing_zones.get(
+                sodar_url=self.config.sodar_url,
+                sodar_api_token=self.config.sodar_api_token,
+                landing_zone_uuid=self.config.destination,
+            ).irods_path
+            logger.info("Target iRods path: %s", lz_irods_path)
+
         commands = self._build_commands(
             files_to_upload=files_to_upload,
-            landing_zone=self.config.destination,
+            landing_zone=lz_irods_path,
             date=self.config.remote_dir_date,
             pattern=self.config.remote_dir_pattern,
         )
 
-        self._execute_commands(commands)
-
-        return 0
+        return self._execute_commands(commands)
 
     @staticmethod
     def _compute_md5_checksum(filename, buffer_size=1048576):

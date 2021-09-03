@@ -1,8 +1,7 @@
-"""``cubi-tk dkfz ingest-fastq``: transfer raw FASTQs into iRODS landing zone."""
+"""``cubi-tk dkfz prepare-isatab``: Create template isatab files from DKFZ metafile."""
 
 import argparse
 import attr
-import os
 import re
 import typing
 
@@ -19,7 +18,8 @@ class Config(common.Config):
 
     investigation_template: str
     study_title: str
-    isatab_dir: str
+    mapping_table: str
+    destination: str
 
 
 class DkfzPrepareIsatabCommand(common.DkfzCommandBase):
@@ -43,13 +43,19 @@ class DkfzPrepareIsatabCommand(common.DkfzCommandBase):
         parser.add_argument(
             "--investigation-template",
             dest="investigation_template",
-            default=os.path.dirname(__file__)
-            + "/../isa_tpl/isatab-dkfz/i_Investigation_template.txt",
+            default=str(
+                (
+                    Path(__file__).parent / "../isa_tpl/isatab-dkfz/i_Investigation_template.txt"
+                ).resolve()
+            ),
             help="Configuration file for the Dkfz id mapper",
         )
 
         parser.add_argument("--study-title", default="cancer_study", help="Short study title")
-        parser.add_argument("--isatab-dir", help="Directory to store isatab files")
+        parser.add_argument(
+            "--mapping-table", default=None, help="Path to store the id mapping table"
+        )
+        parser.add_argument("destination", help="Path to the directory to store isatab files.")
 
     @classmethod
     def run(
@@ -86,28 +92,28 @@ class DkfzPrepareIsatabCommand(common.DkfzCommandBase):
             dfs[assay_type] = assay_to_frame.get_data_frame()
             attributes[assay_type] = assay_to_frame.attributes
 
-        Path(self.config.isatab_dir).mkdir(mode=0o750, parents=True, exist_ok=True)
-        filename = "{}/i_Investigation.txt".format(self.config.isatab_dir)
+        Path(self.config.destination).mkdir(mode=0o750, parents=True, exist_ok=True)
+        filename = "{}/i_Investigation.txt".format(self.config.destination)
         with open(filename, "wt") as f:
             for kw, line in self._prepare_investigation(attributes).items():
                 print(line, file=f)
         logger.info("Investigation file written to {}".format(filename))
 
-        filename = "{}/s_{}.txt".format(self.config.isatab_dir, self.config.study_title)
+        filename = "{}/s_{}.txt".format(self.config.destination, self.config.study_title)
         self._prepare_study(dfs).to_csv(filename, sep="\t", index=False)
         logger.info("Study file written to {}".format(filename))
 
         for assay_type, df in dfs.items():
             filename = "{}/a_{}_{}.txt".format(
-                self.config.isatab_dir, self.config.study_title, assay_type
+                self.config.destination, self.config.study_title, assay_type
             )
             self._prepare_assay(df).to_csv(filename, sep="\t", index=False)
             logger.info("Assay {} file written to {}".format(assay_type, filename))
 
-        filename = "{}/mapping_table.txt".format(self.config.isatab_dir)
-        df = self.mapper.df
-        df.to_csv(filename, sep="\t", index=False)
-        logger.info("Mapping table written to {}".format(filename))
+        if self.config.mapping_table:
+            df = self.mapper.df
+            df.to_csv(self.config.mapping_table, sep="\t", index=False)
+            logger.info("Mapping table written to {}".format(self.config.mapping_table))
 
         return 0
 
@@ -119,7 +125,10 @@ class DkfzPrepareIsatabCommand(common.DkfzCommandBase):
 
         protocols = {}
         protocol_refs = []
-        for assay_type, theAttributes in attributes.items():
+        sorted_assay_types = list(attributes.keys())
+        sorted_assay_types.sort()
+        for assay_type in sorted_assay_types:
+            theAttributes = attributes[assay_type]
             for assay_protocol, parameters in theAttributes.items():
                 if "parameters" not in parameters.keys():
                     continue
@@ -180,16 +189,16 @@ class DkfzPrepareIsatabCommand(common.DkfzCommandBase):
         investigation = {}
         for line in template:
             try:
-                id = line[: line.index("\t")]
+                theId = line[: line.index("\t")]
             except ValueError:
-                id = line
-            if id in parameters.keys():
-                line = id + "\t" + "\t".join(parameters[id])
-            if id in study_protocols.keys():
-                line = id + "\t" + "\t".join(study_protocols[id])
-            if id in assays.keys():
-                line = id + "\t" + "\t".join(assays[id])
-            investigation[id] = line
+                theId = line
+            if theId in parameters.keys():
+                line = theId + "\t" + "\t".join(parameters[theId])
+            if theId in study_protocols.keys():
+                line = theId + "\t" + "\t".join(study_protocols[theId])
+            if theId in assays.keys():
+                line = theId + "\t" + "\t".join(assays[theId])
+            investigation[theId] = line
 
         return investigation
 

@@ -1,11 +1,13 @@
 Source:
     Material: Extract Name
     characteristic: dkfz_id
-    pattern: "^ *[A-z0-9_]+-([A-z0-9_]+)-[A-Z][0-9]+-[A-Z][0-9]+(-[0-9]+)? *$"
+    pattern: "^ *([A-z0-9_]+)-([A-z0-9_]+)-([A-Z][0-9]+)-([A-Z][0-9]+)(-[0-9]+)? *$"
+    group: 2
 Sample:
     Material: Extract Name
     characteristic: dkfz_id
-    pattern: "^ *[A-z0-9_]+-[A-z0-9_]+-([A-Z][0-9]+)-[A-Z][0-9]+(-[0-9]+)? *$"
+    pattern: "^ *([A-z0-9_]+)-([A-z0-9_]+)-([A-Z][0-9]+)-([A-Z][0-9]+)(-[0-9]+)? *$"
+    group: 3
     replace:
         Material: Sample Name
         characteristic: isTumor
@@ -13,7 +15,8 @@ Sample:
 Extract:
     Material: Extract Name
     characteristic: dkfz_id
-    pattern: "^ *[A-z0-9_]+-[A-z0-9_]+-[A-Z][0-9]+-([A-Z][0-9]+)(-[0-9]+)? *$"
+    pattern: "^ *([A-z0-9_]+)-([A-z0-9_]+)-([A-Z][0-9]+)-([A-Z][0-9]+)(-[0-9]+)? *$"
+    group: 4
     replace:
         Process: library construction
         parameter: Library source
@@ -27,6 +30,7 @@ Library:
     Material: Library Name
     characteristic: Batch
     pattern: "^ *0*([0-9]+) *$"
+    group: 1
     replace:
         Process: library construction
         parameter: Library strategy
