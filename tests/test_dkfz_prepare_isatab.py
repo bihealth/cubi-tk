@@ -96,6 +96,6 @@ def test_run_dkfz_prepare_isatab_smoke_test(mocker, requests_mock):
     # filecmp & pyfakefs don't play nice together
     for filename in filenames:
         f = os.path.basename(filename)
-        assert f in isatab_dir.contents.keys()
-        fake_file = isatab_dir.contents[f]
+        assert f in isatab_dir.ordered_dirs
+        fake_file = isatab_dir.get_entry(f)
         assert fake_file.contents == Path(filename).read_text()
