@@ -26,6 +26,7 @@ class Config:
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     overwrite: bool
     min_batch: int
+    allow_missing: bool
     dry_run: bool
     irsync_threads: int
     yes: bool
@@ -106,6 +107,13 @@ class PullRawDataCommand:
         parser.add_argument("--min-batch", default=0, type=int, help="Minimal batch number to pull")
 
         parser.add_argument(
+            "--allow-missing",
+            default=False,
+            action="store_true",
+            help="Allow missing data in assay",
+        )
+
+        parser.add_argument(
             "--yes", default=False, action="store_true", help="Assume all answers are yes."
         )
         parser.add_argument(
@@ -171,26 +179,30 @@ class PullRawDataCommand:
                     break
 
         library_to_folder = self._get_library_to_folder(assay)
+
         commands = self._build_commands(assay, library_to_folder)
         if not commands:
             logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
             return 0
+
         return self._executed_commands(commands)
 
     def _build_commands(self, assay, library_to_folder):
         commands = []
         for k, v in library_to_folder.items():
-            commands.append(["irsync", "-r"])
+            cmd = ["irsync", "-r"]
             if self.config.irsync_threads:
-                commands[-1] += ["-N", str(self.config.irsync_threads)]
-            commands[-1] += [
-                "i:%s/%s" % (assay.irods_path, k),
-                "%s/%s" % (self.config.output_dir, v),
-            ]
+                cmd += ["-N", str(self.config.irsync_threads)]
+            src = "%s/%s" % (assay.irods_path, k)
+            target = "%s/%s" % (self.config.output_dir, v)
+            cmd += ["i:" + src, target]
+            commands.append((src, target, cmd))
         return commands
 
     def _executed_commands(self, commands):
-        cmds_txt = "\n".join(["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands])
+        cmds_txt = "\n".join(
+            ["- %s" % " ".join(map(shlex.quote, cmd)) for (src, target, cmd) in commands]
+        )
         logger.info("Pull data using the following commands?\n\n%s\n", cmds_txt)
         if self.config.yes:
             answer = True
@@ -203,17 +215,30 @@ class PullRawDataCommand:
         if not answer:
             logger.info("Answered 'no': NOT pulling files")
         else:
-            for cmd in commands:
+            failed_libs = []
+            for (src, target, cmd) in commands:
                 try:
                     cmd_str = " ".join(map(shlex.quote, cmd))
                     logger.info("Executing %s", cmd_str)
                     print(cmd)
                     print(cmd_str)
                     check_call(cmd)
-                except SubprocessError as e:  # pragma: nocover
-                    logger.error("Problem executing irsync: %s", e)
+                except SubprocessError:  # pragma: nocover
+                    failed_libs.append((src, target, cmd_str))
+            for (src, target, cmd_str) in failed_libs:
+                if not self.config.allow_missing or not self._missing_data_directory(src):
+                    logger.error("Problem executing irsync command: %s", cmd_str)
                     return 1
+                logger.warning("No data for %s", os.path.basename(target))
         return 0
+
+    def _missing_data_directory(self, path):
+        cmd = ["ils", path]
+        try:
+            check_call(cmd)
+        except SubprocessError:
+            return True
+        return False
 
     def _get_library_to_folder(self, assay):
         isa_dict = api.samplesheet.export(
