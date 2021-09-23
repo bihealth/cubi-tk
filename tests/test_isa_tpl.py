@@ -22,7 +22,7 @@ def test_run_cookiecutter_isatab_generic(tmp_path):
 
     assert output_path.exists()
     assert (output_path / "i_Investigation.txt").exists()
-    assert (output_path / "a_output_dir_transcriptome_profiling_nucleotide_sequencing.txt").exists()
+    assert (output_path / "a_output_dir_transcription_profiling_nucleotide_sequencing.txt").exists()
     assert (output_path / "s_output_dir.txt").exists()
 
 
