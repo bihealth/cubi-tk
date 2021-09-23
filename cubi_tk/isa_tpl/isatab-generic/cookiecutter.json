@@ -2,8 +2,22 @@
   "investigation_title": "Investigation Title",
   "sample_names": "alpha,beta,gamma",
   "a_measurement_type": [
-      "transcriptome profiling"
+      "transcription profiling"
   ],
+  "a_measurement_types": {
+      "transcription profiling" : {
+         "accession" : "http://purl.obolibrary.org/obo/OBI_0000424",
+         "source" : "OBI"
+      }
+  },
+  "a_technology_type": "nucleotide sequencing",
+  "a_technology_types": {
+      "nucleotide sequencing" : {
+         "accession" : "http://purl.obolibrary.org/obo/OBI_0000626",
+         "source" : "OBI"
+      }
+  },
+
   "lib_kit": [
     "Illumina TruSeq Stranded mRNA"
   ],
@@ -35,11 +49,10 @@
   "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
   "s_file_name": "{{cookiecutter.i_dir_name}}",
   "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
-  "a_technology_type": "nucleotide sequencing",
-  "a_measurement_abbreviation": "{% if cookiecutter.a_measurement_type == 'transcriptome profiling' %}mRNA_seq{% else %}UNKNOWN{% endif %}",
+  "a_measurement_abbreviation": "{% if cookiecutter.a_measurement_type == 'transcription profiling' %}mRNA_seq{% else %}UNKNOWN{% endif %}",
   "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}",
   "sample_type": "x-charite-medgen-blood-book-id",
   "lib_strategy": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}RNA-seq{% else %}UNKNOWN{% endif %}",
   "lib_selection": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}PolyA{% else %}UNKNOWN{% endif %}",
-  "lib_layout": "PAIRED"
+  "lib_layout": [ "PAIRED", "SINGLE" ]
 }

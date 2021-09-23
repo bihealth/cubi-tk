@@ -9,8 +9,6 @@ Investigation Title	{{cookiecutter.investigation_title}}
 Investigation Description	""
 Investigation Submission Date	""
 Investigation Public Release Date	""
-Comment[Created With Configuration]	/path/to/isa-configurations/bih_studies/bih_germline
-Comment[Last Opened With Configuration]	bih_germline
 INVESTIGATION PUBLICATIONS
 Investigation PubMed ID
 Investigation Publication DOI
@@ -60,11 +58,11 @@ Study Factor Type Term Source REF
 STUDY ASSAYS
 Study Assay File Name	a_{{cookiecutter.assay_prefix}}_{{cookiecutter.assay_name}}.txt
 Study Assay Measurement Type	{{cookiecutter.a_measurement_type}}
-Study Assay Measurement Type Term Accession Number	""
-Study Assay Measurement Type Term Source REF	""
+Study Assay Measurement Type Term Accession Number	{{cookiecutter.a_measurement_types[cookiecutter.a_measurement_type].accession}}
+Study Assay Measurement Type Term Source REF	{{cookiecutter.a_measurement_types[cookiecutter.a_measurement_type].source}}
 Study Assay Technology Type	{{cookiecutter.a_technology_type}}
-Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo/OBI_0000626
-Study Assay Technology Type Term Source REF	OBI
+Study Assay Technology Type Term Accession Number	{{cookiecutter.a_technology_types[cookiecutter.a_technology_type].accession}}
+Study Assay Technology Type Term Source REF	{{cookiecutter.a_technology_types[cookiecutter.a_technology_type].source}}
 Study Assay Technology Platform	Illumina
 STUDY PROTOCOLS
 Study Protocol Name	Sample collection	Nucleic acid extraction {{cookiecutter.a_measurement_abbreviation}}	Library construction {{cookiecutter.a_measurement_abbreviation}}	Nucleic acid sequencing {{cookiecutter.a_measurement_abbreviation}}
