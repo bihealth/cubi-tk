@@ -1,0 +1,106 @@
+"""``cubi-tk archive``: common features"""
+
+import argparse
+import attr
+import os
+import typing
+
+from logzero import logger
+from pathlib import Path
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class Config:
+    """Configuration for common archive subcommands."""
+
+    verbose: bool
+    config: str
+    sodar_url: str
+    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
+    project: str
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class FileAttributes:
+    """Attributes for files & symlinks"""
+
+    relative_path: str
+    resolved: Path
+    symlink: bool
+    dangling: bool
+    outside: bool
+    target: str
+    size: int
+
+
+class ArchiveCommandBase:
+    """Implementation of archive subcommands."""
+
+    command_name = ""
+
+    def __init__(self, config: Config):
+        self.config = config
+        self.project = None
+
+    @classmethod
+    def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
+        """Setup argument parser."""
+        parser.add_argument(
+            "--hidden-cmd", dest="archive_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
+
+        parser.add_argument("project", help="Path of project directory")
+
+    @classmethod
+    def run(
+        cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
+    ) -> typing.Optional[int]:
+        """Entry point into the command."""
+        raise NotImplementedError("Must be implemented in derived classes")
+
+    def check_args(self, args):
+        """Called for checking arguments, override to change behaviour."""
+        res = 0
+        return res
+
+    def execute(self) -> typing.Optional[int]:
+        raise NotImplementedError("Must be implemented in derived classes")
+
+
+def traverse_project_files(directory):
+    root = Path(directory).resolve(strict=True)
+    for path, directories, files in os.walk(root):
+        for filename in files:
+            f = os.path.join(path, filename)
+            resolved = Path(f).resolve(strict=False)
+            symlink = os.path.islink(f)
+            if symlink:
+                target = os.readlink(f)
+                try:
+                    dangling = not resolved.exists()
+                except PermissionError:
+                    dangling = None
+                outside = os.path.relpath(resolved, start=root).startswith("../")
+                if dangling is None or dangling:
+                    size = 0
+                else:
+                    size = resolved.stat().st_size
+            else:
+                dangling = False
+                outside = False
+                target = None
+                size = resolved.stat().st_size
+            yield FileAttributes(
+                relative_path=os.path.relpath(f, start=root),
+                resolved=resolved,
+                symlink=symlink,
+                dangling=dangling,
+                outside=outside,
+                target=target,
+                size=size,
+            )
+
+
+def setup_argparse(parser: argparse.ArgumentParser) -> None:
+    """Setup argument parser for ``cubi-tk archive``."""
+    return ArchiveCommandBase.setup_argparse(parser)

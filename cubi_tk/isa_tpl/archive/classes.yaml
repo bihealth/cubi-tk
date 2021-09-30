@@ -1,0 +1,10 @@
+fastq:
+    min_size: 268435456
+    pattern: ".*[^/]+(\\.f(ast)?q(\\.gz)?)$"
+bam:
+    min_size: 268435456
+    pattern: ".*[^/]+(\\.bam(\\.bai)?)$"
+public:
+    min_size: 268435456
+    pattern: ".*(SRR[0-9]+[^/]*|[^/]+\\.(fa(sta)?|gtf|gff[23]?)(\\.gz)?)$"
+
