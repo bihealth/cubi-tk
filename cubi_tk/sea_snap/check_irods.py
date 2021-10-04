@@ -77,7 +77,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
 
         # --- get lists
         # files on SODAR
-        files = self.get_file_paths()
+        files = self.get_data_objs()
         files_rel = [f.replace(self.args.irods_path + "/", "") for f in files["files"]]
         logger.info("Files on SODAR (first 20): %s", ", ".join(files_rel[:19]))
 

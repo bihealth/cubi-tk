@@ -65,4 +65,5 @@ simplejson
 sodar-cli ==0.1.0
 
 # Python iRODS client
-python-irodsclient>=1.0.0, <1.1
+# python-irodsclient>=1.0.0, <1.1
+-e git+https://github.com/irods/python-irodsclient.git@e00523bcc159d4e55a7d1920a0bb8e345bf38796#egg=python-irodsclient
