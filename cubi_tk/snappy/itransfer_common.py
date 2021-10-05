@@ -374,6 +374,7 @@ class SnappyItransferCommandBase:
         not_project_uuid = False
         create_lz_bool = self.args.yes
         in_destination = self.args.destination
+        assay_uuid = self.args.assay
 
         # Project UUID provided by user
         if is_uuid(in_destination):
@@ -383,7 +384,7 @@ class SnappyItransferCommandBase:
                 # Behavior: search for available LZ; if none,create new LZ.
                 try:
                     lz_uuid, lz_irods_path = self.get_latest_landing_zone(
-                        project_uuid=in_destination, assay_uuid=self.args.assay
+                        project_uuid=in_destination, assay_uuid=assay_uuid
                     )
                     if not lz_irods_path:
                         logger.info(
@@ -391,7 +392,7 @@ class SnappyItransferCommandBase:
                             "a new one will be created..." % lz_uuid
                         )
                         lz_uuid, lz_irods_path = self.create_landing_zone(
-                            project_uuid=in_destination, assay_uuid=self.args.assay
+                            project_uuid=in_destination, assay_uuid=assay_uuid
                         )
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
@@ -406,7 +407,7 @@ class SnappyItransferCommandBase:
                 # Behaviour: get iRODS path from latest active Landing Zone.
                 try:
                     lz_uuid, lz_irods_path = self.get_latest_landing_zone(
-                        project_uuid=in_destination, assay_uuid=self.args.assay
+                        project_uuid=in_destination, assay_uuid=assay_uuid
                     )
                 except requests.exceptions.HTTPError as e:
                     not_project_uuid = True
@@ -451,7 +452,7 @@ class SnappyItransferCommandBase:
                                 .startswith("y")
                             ):
                                 lz_uuid, lz_irods_path = self.create_landing_zone(
-                                    project_uuid=in_destination, assay_uuid=self.args.assay
+                                    project_uuid=in_destination, assay_uuid=assay_uuid
                                 )
                             else:
                                 msg = "Not possible to continue the process without a landing zone path. Breaking..."
@@ -468,7 +469,7 @@ class SnappyItransferCommandBase:
                             .startswith("y")
                         ):
                             lz_uuid, lz_irods_path = self.create_landing_zone(
-                                project_uuid=in_destination, assay_uuid=self.args.assay
+                                project_uuid=in_destination, assay_uuid=assay_uuid
                             )
                         else:
                             msg = "Not possible to continue the process without a landing zone path. Breaking..."
