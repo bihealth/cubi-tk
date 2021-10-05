@@ -183,6 +183,9 @@ class SnappyItransferCommandBase:
             help="After files are transferred to SODAR, it will proceed with validation and move.",
         )
         parser.add_argument(
+            "--assay", dest="assay", default=None, help="UUID of assay to download data for."
+        )
+        parser.add_argument(
             "destination", help="UUID from Landing Zone or Project - where files will be moved to."
         )
 
@@ -380,7 +383,7 @@ class SnappyItransferCommandBase:
                 # Behavior: search for available LZ; if none,create new LZ.
                 try:
                     lz_uuid, lz_irods_path = self.get_latest_landing_zone(
-                        project_uuid=in_destination
+                        project_uuid=in_destination, assay_uuid=self.args.assay
                     )
                     if not lz_irods_path:
                         logger.info(
@@ -388,7 +391,7 @@ class SnappyItransferCommandBase:
                             "a new one will be created..." % lz_uuid
                         )
                         lz_uuid, lz_irods_path = self.create_landing_zone(
-                            project_uuid=in_destination
+                            project_uuid=in_destination, assay_uuid=self.args.assay
                         )
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
@@ -403,7 +406,7 @@ class SnappyItransferCommandBase:
                 # Behaviour: get iRODS path from latest active Landing Zone.
                 try:
                     lz_uuid, lz_irods_path = self.get_latest_landing_zone(
-                        project_uuid=in_destination
+                        project_uuid=in_destination, assay_uuid=self.args.assay
                     )
                 except requests.exceptions.HTTPError as e:
                     not_project_uuid = True
@@ -448,7 +451,7 @@ class SnappyItransferCommandBase:
                                 .startswith("y")
                             ):
                                 lz_uuid, lz_irods_path = self.create_landing_zone(
-                                    project_uuid=in_destination
+                                    project_uuid=in_destination, assay_uuid=self.args.assay
                                 )
                             else:
                                 msg = "Not possible to continue the process without a landing zone path. Breaking..."
@@ -465,7 +468,7 @@ class SnappyItransferCommandBase:
                             .startswith("y")
                         ):
                             lz_uuid, lz_irods_path = self.create_landing_zone(
-                                project_uuid=in_destination
+                                project_uuid=in_destination, assay_uuid=self.args.assay
                             )
                         else:
                             msg = "Not possible to continue the process without a landing zone path. Breaking..."
@@ -523,10 +526,13 @@ class SnappyItransferCommandBase:
         )
         return lz.irods_path
 
-    def create_landing_zone(self, project_uuid):
+    def create_landing_zone(self, project_uuid, assay_uuid=None):
         """
         :param project_uuid: Project UUID.
         :type project_uuid: str
+
+        :param assay_uuid: Assay UUID (optional).
+        :type assay_uuid: str
 
         :return: Returns landing zone UUID and iRODS path to newly created landing zone.
         """
@@ -537,14 +543,18 @@ class SnappyItransferCommandBase:
             sodar_url=self.args.sodar_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
+            assay_uuid=assay_uuid,
         )
         logger.info("done!")
         return lz.sodar_uuid, lz.irods_path
 
-    def get_latest_landing_zone(self, project_uuid):
+    def get_latest_landing_zone(self, project_uuid, assay_uuid=None):
         """
         :param project_uuid: Project UUID.
         :type project_uuid: str
+
+        :param assay_uuid: Assay UUID (optional).
+        :type assay_uuid: str
 
         :return: Returns landing zone UUID and iRODS path in latest active landing zone available.
         If none available, it returns None for both.
@@ -565,6 +575,10 @@ class SnappyItransferCommandBase:
             key=lambda x: x.date_modified,
             reverse=True,
         )
+
+        # Filter for assay
+        if assay_uuid:
+            existing_lzs = list(filter(lambda x: x.assay == assay_uuid, existing_lzs))
 
         # Get the latest active lz
         existing_lzs = list(filter(lambda x: x.status == "ACTIVE", existing_lzs))
