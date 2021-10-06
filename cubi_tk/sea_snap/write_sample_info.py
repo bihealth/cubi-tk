@@ -205,7 +205,7 @@ class Bunch:
 
 
 class SampleInfoTool:
-    """ Tool to generate a sample info file before running sea-snap mapping """
+    """Tool to generate a sample info file before running sea-snap mapping"""
 
     allowed_read_extensions = [".fastq", ".fastq.gz", ".fq", ".fq.gz"]
 
@@ -222,7 +222,7 @@ class SampleInfoTool:
     # ---------------------------------------------------- helper methods ----------------------------------------------------#
 
     def _prepare_in_path_pattern(self):
-        """ read and remove wildcard constraints from in_path_pattern """
+        """read and remove wildcard constraints from in_path_pattern"""
         wildcards = re.findall("{([^{}]+)}", self.in_path_pattern)
         wildcard_constraints = {}
         for wildcard in wildcards:
@@ -233,7 +233,7 @@ class SampleInfoTool:
         return wildcard_constraints
 
     def _wildc_replace(self, matchobj):
-        """ method used with re.sub to generate match pattern from path pattern """
+        """method used with re.sub to generate match pattern from path pattern"""
         wildc_name = matchobj.group(1)
         if wildc_name in self.wildcard_constraints:
             return "({})".format(self.wildcard_constraints[wildc_name].replace("//", "/"))
@@ -243,7 +243,7 @@ class SampleInfoTool:
             return "([^}./]+)"
 
     def _get_wildcard_values_from_read_input(self, unix_style=True):
-        """ go through files in input path and get values matching the wildcards """
+        """go through files in input path and get values matching the wildcards"""
         glob_pattern = re.sub("{[^}./]+}", "*", self.in_path_pattern)
         wildcards = re.findall("{([^}./]+)}", self.in_path_pattern)
         match_pattern = re.sub(
@@ -267,7 +267,7 @@ class SampleInfoTool:
     def _get_wildcard_values_from_file_path(
         self, wildcard_values, filename, wildcards, match_pattern
     ):
-        """ get values matching wildcards from given file path """
+        """get values matching wildcards from given file path"""
         matches = re.match(match_pattern, filename).groups()
         assert len(matches) == len(wildcards)
 
@@ -284,7 +284,7 @@ class SampleInfoTool:
         return wildcard_values
 
     def _get_wildcard_combinations(self, wildcard_values):
-        """ go through wildcard values and get combinations """
+        """go through wildcard values and get combinations"""
 
         combinations = []
         WildcardComb = namedtuple("WildcardComb", wildcard_values)
@@ -297,7 +297,7 @@ class SampleInfoTool:
         return combinations
 
     def _convert_str_entries_to_lists(self, key="paired_end_extensions"):
-        """ for importing lists from table entries """
+        """for importing lists from table entries"""
         for smpl_info in self.sample_info.values():
             smpl_info[key] = [
                 s.replace("'", "").replace('"', "")
@@ -305,7 +305,7 @@ class SampleInfoTool:
             ]
 
     def _add_info_fields(self, add_dict):
-        """ add fields from add_dict to self.sample_info if they are not already present """
+        """add fields from add_dict to self.sample_info if they are not already present"""
         for sample, fields in add_dict.items():
             if sample in self.sample_info:
                 s_info = self.sample_info[sample]
