@@ -5,9 +5,9 @@ Terse project description
 ## Contacts and links
 
 - P.I.: [{{cookiecutter.PI_name}}](mailto:{{cookiecutter.PI_email}})
-- CUBI contact e-mail: [{{cookiecutter.archiver_name}}](mailto:{{cookiecutter.archiver_email}})
+- Client contact: [{{cookiecutter.client_name}}](mailto:{{cookiecutter.client_email}})
+- CUBI contact: [{{cookiecutter.archiver_name}}](mailto:{{cookiecutter.archiver_email}})
 - CUBI project leader: {{cookiecutter.CUBI_name}}
-- Client contact e-mail: [{{cookiecutter.client_name}}](mailto:{{cookiecutter.client_email}})
 - SODAR project UUID: {{cookiecutter.SODAR_UUID}}
 - SODAR URL: {{cookiecutter.SODAR_URL}}
 - CUBI gitlab URL: {{cookiecutter.Gitlab_URL}}

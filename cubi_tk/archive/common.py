@@ -67,38 +67,40 @@ class ArchiveCommandBase:
         raise NotImplementedError("Must be implemented in derived classes")
 
 
+def get_file_attributes(filename, relative_to):
+    resolved = Path(filename).resolve(strict=False)
+    symlink = os.path.islink(filename)
+    if symlink:
+        target = os.readlink(filename)
+        try:
+            dangling = not resolved.exists()
+        except PermissionError:
+            dangling = None
+        outside = os.path.relpath(resolved, start=relative_to).startswith("../")
+        if dangling is None or dangling:
+            size = 0
+        else:
+            size = resolved.stat().st_size
+    else:
+        dangling = False
+        outside = False
+        target = None
+        size = resolved.stat().st_size
+    return FileAttributes(
+        relative_path=os.path.relpath(filename, start=relative_to),
+        resolved=resolved,
+        symlink=symlink,
+        dangling=dangling,
+        outside=outside,
+        target=target,
+        size=size,
+    )
+
 def traverse_project_files(directory):
     root = Path(directory).resolve(strict=True)
     for path, directories, files in os.walk(root):
         for filename in files:
-            f = os.path.join(path, filename)
-            resolved = Path(f).resolve(strict=False)
-            symlink = os.path.islink(f)
-            if symlink:
-                target = os.readlink(f)
-                try:
-                    dangling = not resolved.exists()
-                except PermissionError:
-                    dangling = None
-                outside = os.path.relpath(resolved, start=root).startswith("../")
-                if dangling is None or dangling:
-                    size = 0
-                else:
-                    size = resolved.stat().st_size
-            else:
-                dangling = False
-                outside = False
-                target = None
-                size = resolved.stat().st_size
-            yield FileAttributes(
-                relative_path=os.path.relpath(f, start=root),
-                resolved=resolved,
-                symlink=symlink,
-                dangling=dangling,
-                outside=outside,
-                target=target,
-                size=size,
-            )
+            yield get_file_attributes(os.path.join(path, filename), root)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
