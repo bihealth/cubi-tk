@@ -2,27 +2,22 @@
 
 import argparse
 import attr
-import hashlib
-import json
 import os
 import re
-import subprocess
 import sys
-import tempfile
+import time
 import typing
 import yaml
 
-from cookiecutter.main import cookiecutter
 from logzero import logger
-from pathlib import Path
 
+from ..common import compute_md5_checksum, execute_shell_commands
 from . import common
 
-import pdb
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config(common.Config):
-    """Configuration for find-file."""
+    """Configuration for prepare."""
 
     pass
 
@@ -42,10 +37,17 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         """Setup argument parser."""
         super().setup_argparse(parser)
 
-        parser.add_argument("--rules", "-r", default=os.path.join(os.path.dirname(__file__), "default_rules.yaml"))
+        parser.add_argument(
+            "--rules",
+            "-r",
+            default=os.path.join(
+                os.path.dirname(__file__), "..", "isa_tpl", "archive", "default_rules.yaml"
+            ),
+        )
 
-        parser.add_argument("destination", help="Destination directory (for symlinks and later archival)")
-
+        parser.add_argument(
+            "destination", help="Destination directory (for symlinks and later archival)"
+        )
 
     @classmethod
     def run(
@@ -90,11 +92,31 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             logger.error("Destination directory {} already exists".format(self.dest_dir))
             return 1
 
+        self.start = time.time()
+        self.nInode = 0
+
         self._read_dir_match(self.project_dir, rules)
 
+        sys.stdout.write(" " * 80 + "\r")
+        sys.stdout.flush()
         return 0
 
     def _read_dir_match(self, path, rules):
+        self.nInode += 1
+        if self.nInode % 1000 == 0:
+            delta = int(time.time() - self.start)
+            sys.stdout.write(
+                "\rElapsed time: %02d:%02d:%02d, number of files processed: %d, rate: %.1f [files/sec]\r"
+                % (
+                    delta // 3600,
+                    (delta % 3600) // 60,
+                    delta % 60,
+                    self.nInode,
+                    self.nInode / delta if delta > 0 else 0,
+                )
+            )
+            sys.stdout.flush()
+
         if not os.path.exists(path):
             logger.warning("File or directory {} cannot be read, not archived".format(path))
             return
@@ -115,92 +137,76 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             return
         assert status == "archive"
 
-        if os.path.isdir(path):
+        if os.path.isdir(path) and (
+            not os.path.islink(path)
+            or ArchivePrepareCommand._is_outside(os.path.realpath(path), self.project_dir)
+        ):
             for child in os.listdir(path):
                 self._read_dir_match(os.path.join(path, child), rules)
         else:
             self._archive(path)
 
     def _compress(self, path):
-        if os.path.islink(path):
-            target = os.path.realpath(os.readlink(path))
-        else:
-            target = path
         if os.path.exists(path + ".tar.gz"):
-            logger.error("File or directory {} cannot be compressed".format(path))
-            return
-        fn_path = os.path.basename(path)
-        dn_path = os.path.dirname(path)
-        fn_target = os.path.basename(target)
-        dn_target = os.path.dirname(target)
-        reldir = os.path.relpath(dn_path, start=self.project_dir)
-        dn_tar = os.path.join(self.dest_dir, reldir)
-        fn_tar = os.path.join(dn_tar, fn_path + ".tar.gz")
-        os.makedirs(dn_tar, mode=488, exist_ok=True)
-        command = ["tar", "-zcvf", fn_tar, "--transform=s/^{}/{}/".format(fn_target, fn_path), "-C", dn_target, fn_target]
-        self._execute_commands([command])
+            raise ValueError(
+                "File or directory {} cannot be compressed, compressed file already exists".format(
+                    path
+                )
+            )
+
+        relative = os.path.relpath(path, start=self.project_dir)
+        destination = os.path.join(self.dest_dir, relative)
+
+        os.makedirs(os.path.dirname(destination), mode=488, exist_ok=True)
+        command = [
+            "tar",
+            "-zcvf",
+            destination + ".tar.gz",
+            "--transform=s/^{}/{}/".format(os.path.basename(path), os.path.basename(destination)),
+            "-C",
+            os.path.dirname(path),
+            os.path.basename(path),
+        ]
+        execute_shell_commands([command], verbose=self.config.verbose)
 
     def _squash(self, path):
-        if os.path.islink(path):
-            target = os.path.realpath(os.readlink(path))
-        else:
-            target = path
-        if os.path.isdir(target):
-            logger.error("Directory {} cannot be squashed".format(path))
-            return
-        relname = os.path.relpath(path, start=self.project_dir)
-        squash_path = os.path.join(self.dest_dir, relname)
-        os.makedirs(os.path.dirname(squash_path), mode=488, exist_ok=True)
-        open(os.path.join(self.dest_dir, relname), "w").close()
+        if os.path.isdir(path):
+            raise ValueError("Path {} is a directory and cannot be squashed".format(path))
+
+        relative = os.path.relpath(path, start=self.project_dir)
+        destination = os.path.join(self.dest_dir, relative)
+
+        # Create empty placeholder
+        os.makedirs(os.path.dirname(destination), mode=488, exist_ok=True)
+        open(destination, "w").close()
+
+        # Create checksum if missing
         if not os.path.exists(path + ".md5"):
-            md5 = ArchivePrepareCommand._compute_md5(target)
-            with open(squash_path + ".md5", "w") as f:
-                f.write(md5 + "  " + os.path.basename(path) + "\n")
+            md5 = compute_md5_checksum(os.path.realpath(path), verbose=self.config.verbose)
+            with open(destination + ".md5", "w") as f:
+                f.write(md5 + "  " + os.path.basename(destination))
 
     def _archive(self, path):
-        relname = os.path.relpath(path, start=self.project_dir)
-        archive_path = os.path.join(self.dest_dir, relname)
-        os.makedirs(os.path.dirname(archive_path), mode=488, exist_ok=True)
-        if os.path.islink(path):
-            if os.readlink(path).startswith("/"):
-                target = os.path.realpath(os.readlink(path))
-            else:
-                target = os.path.realpath(os.path.join(self.project_dir, os.path.dirname(path), os.readlink(path)))
-            if ArchivePrepareCommand._is_outside(target, self.project_dir):
-                os.symlink(target, archive_path)
-            else:
-                relpath = os.path.relpath(target, start=os.path.dirname(path))
-                os.symlink(relpath, archive_path)
-        else:
-            os.symlink(path, archive_path)
+        relative = os.path.relpath(path, start=self.project_dir)
+        destination = os.path.join(self.dest_dir, relative)
 
-    def _execute_commands(self, commands):
-        previous = None
-        for command in commands:
-            if previous:
-                current = subprocess.Popen(command, stdin=previous.stdout, stdout=subprocess.PIPE, encoding="utf-8")
-                previous.stdout.close()
+        os.makedirs(os.path.dirname(destination), mode=488, exist_ok=True)
+        if os.path.islink(path):
+            target = os.path.realpath(path)
+            relative_link = os.path.relpath(target, start=self.project_dir)
+            if relative_link.startswith("../") or relative_link.startswith("/"):
+                os.symlink(target, destination)
             else:
-                current = subprocess.Popen(command, stdout=subprocess.PIPE, encoding="utf-8")
-            previous = current
-        return current.communicate()[0]
+                os.symlink(relative_link, destination)
+        else:
+            os.symlink(os.path.realpath(path), destination)
 
     @staticmethod
     def _is_outside(path, directory):
-        relpath = os.path.relpath(path, directory)
-        return (relpath.startswith("../"))
-
-    @staticmethod
-    def _compute_md5(filename, buffer_size=1048576):
-        logger.info("Computing md5 hash for {}".format(filename))
-        hash = None
-        with open(filename, "rb") as f:
-            hash = hashlib.md5()
-            chunk = f.read(buffer_size)
-            while chunk:
-                hash.update(chunk)
-                chunk = f.read(buffer_size)
-        return hash.hexdigest()
+        path = os.path.realpath(path)
+        directory = os.path.realpath(directory)
+        relative = os.path.relpath(path, start=directory)
+        return relative.startswith("../")
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

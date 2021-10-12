@@ -1,0 +1,6 @@
+ignore: []         # Patterns for files or directories to skip
+
+compress:          # Patterns for files or directories to tar-gzip
+    - "^(.*/)?\\.snakemake$"
+
+squash: []         # Patterns for files to squash (compute MD5 checksum, and replace by zero-length placeholder)

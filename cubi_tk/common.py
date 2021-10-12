@@ -3,10 +3,12 @@ import contextlib
 import difflib
 import fcntl
 import glob
+import hashlib
 import os
 import pathlib
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import termios
@@ -56,6 +58,57 @@ class CommonConfig:
                 args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
             ),
         )
+
+
+def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
+    if verbose:
+        logger.info("Computing md5 hash for {}".format(filename))
+    theHash = None
+    with open(filename, "rb") as f:
+        theHash = hashlib.md5()
+        chunk = f.read(buffer_size)
+        while chunk:
+            theHash.update(chunk)
+            chunk = f.read(buffer_size)
+    return theHash.hexdigest()
+
+
+def execute_shell_commands(commands, verbose=True, check=True):
+    if verbose:
+        logger.info(
+            'Executing shell command "'
+            + " | ".join([" ".join(command) for command in commands])
+            + '"'
+        )
+
+    # Single command, use run
+    if len(commands) == 1:
+        return subprocess.run(
+            commands[0], capture_output=True, check=check, encoding="utf-8"
+        ).stdout
+
+    # Pipe the commands
+    previous = None
+    for command in commands:
+        if previous:
+            current = subprocess.Popen(
+                command, stdin=previous.stdout, stdout=subprocess.PIPE, encoding="utf-8"
+            )
+            previous.stdout.close()
+        else:
+            current = subprocess.Popen(command, stdout=subprocess.PIPE, encoding="utf-8")
+        previous = current
+
+    # Check return code of the last command of the pipe
+    if check and current.returncode != 0:
+        raise subprocess.CalledProcessError(
+            'Shell pipe "'
+            + " | ".join([" ".join(command) for command in commands])
+            + '" returned error code {}'.format(current.returncode)
+        )
+
+    # Return stdout
+    return current.communicate()[0]
 
 
 def find_base_path(base_path):

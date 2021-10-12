@@ -2,8 +2,6 @@
 
 import argparse
 import attr
-import glob
-import hashlib
 import os
 import re
 import sys
@@ -49,11 +47,12 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
 
         parser.add_argument(
             "--classes",
-            default=os.path.join(os.path.dirname(__file__), "..", "isa_tpl", "archive", "classes.yaml"),
-            help="Location of the file describing files of interest"
+            default=os.path.join(
+                os.path.dirname(__file__), "..", "isa_tpl", "archive", "classes.yaml"
+            ),
+            help="Location of the file describing files of interest",
         )
         parser.add_argument("table", help="Location of the summary output table")
-
 
     @classmethod
     def run(
@@ -100,7 +99,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             "nInaccessible": 0,
             "nOutside": 0,
             "size_outside": 0,
-            "classes": {}
+            "classes": {},
         }
         for theClass in self.classes:
             stats["classes"][theClass.name] = {
@@ -108,7 +107,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                 "size": 0,
                 "nLost": 0,
                 "nOutside": 0,
-                "size_outside": 0
+                "size_outside": 0,
             }
 
         self.start = time.time()
@@ -157,7 +156,13 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             f = open(f, "rt")
         classes = []
         for (name, params) in yaml.safe_load(f).items():
-            classes.append(StatClass(name=name, min_size=int(params["min_size"]), pattern=re.compile(params["pattern"])))
+            classes.append(
+                StatClass(
+                    name=name,
+                    min_size=int(params["min_size"]),
+                    pattern=re.compile(params["pattern"]),
+                )
+            )
         return classes
 
     def _aggregate(self, file_attr, stats, f):
@@ -211,7 +216,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                     (delta % 3600) // 60,
                     delta % 60,
                     stats["nFile"],
-                    stats["nFile"] / delta if delta > 0 else 0
+                    stats["nFile"] / delta if delta > 0 else 0,
                 )
             )
             sys.stdout.flush()
@@ -229,8 +234,9 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                     str(fn.outside),
                 ]
             ),
-            file=f
+            file=f,
         )
+
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk archive find-file``."""

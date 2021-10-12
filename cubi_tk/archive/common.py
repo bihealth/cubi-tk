@@ -5,7 +5,6 @@ import attr
 import os
 import typing
 
-from logzero import logger
 from pathlib import Path
 
 
@@ -95,6 +94,7 @@ def get_file_attributes(filename, relative_to):
         target=target,
         size=size,
     )
+
 
 def traverse_project_files(directory):
     root = Path(directory).resolve(strict=True)
