@@ -29,7 +29,7 @@ class StatClass:
 
     name: str
     min_size: int
-    pattern: re.Pattern
+    pattern: typing.Any  # re.Pattern breaks in 3.6
 
 
 class ArchiveSummaryCommand(common.ArchiveCommandBase):

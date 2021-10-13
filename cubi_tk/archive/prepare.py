@@ -197,6 +197,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             if relative_link.startswith("../") or relative_link.startswith("/"):
                 os.symlink(target, destination)
             else:
+                relative_link = os.path.relpath(target, start=os.path.dirname(destination))
                 os.symlink(relative_link, destination)
         else:
             os.symlink(os.path.realpath(path), destination)
