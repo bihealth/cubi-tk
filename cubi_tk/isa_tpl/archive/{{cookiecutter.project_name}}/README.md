@@ -18,11 +18,12 @@ Terse project description
 - Project name: {{cookiecutter.project_name}}
 - Start date: {{cookiecutter.start_date}}
 - Current status: {{cookiecutter.current_status}}
-- Total size: {{cookiecutter.total_size}}
-- Total number of files (inodes): {{cookiecutter.inodes_nb}}
+- Total size: {{cookiecutter.size}} (following links: {{cookiecutter.size_follow}})
+- Total number of files (inodes): {{cookiecutter.inodes}} (following links: {{cookiecutter.inodes_follow}})
 - Total number of files in `.snakemake` directories: {{cookiecutter.snakemake_nb}}
 
 ## Public datasets files
 
 List here the provenance of public files that were used during the project life cycle,
 but that should *NOT* be archived with the rest of the project.
+

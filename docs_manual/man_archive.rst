@@ -87,9 +87,18 @@ The module deals with symlinks in the project differently whether their target i
 
 Finally, the contents of the ``.snakemake`` directories are processed differently: the directories are tarred & compressed in the temporary destination, to reduce the number of inodes in the archive. 
 
+A ``README.md`` file is also created by the module, if there isn't one already which contains contact information. Upon creation, the module prompts the user for values that will populate ``REAMDE.md``. These values can also be included on the command line.
+
 **Copy to archive & verifications**
 
-Not yet implemented
+.. code-block:: bash
+
+    $ cubi-tk archive copy \
+        --audit-file audit_file --audit-result audit_result \
+        PROJECT_DIRECTORY DESTINATION
+
+``DESTINATION`` is here the path to the final destination of the archive. It must not exist. ``audit_file`` is the output of ``hashdeep`` run on the temporary directory created with the preparation step, and ``audit_result`` is the result of the ``hashdeep`` audit made on the copy, and comparing it to the contents of the temporary directory. Both these options are mandatory.
+
 
 
 -------------
@@ -193,6 +202,15 @@ The output directory for the ``cubi-tk archive prepare --rules rules_with_ignore
 
 The ``project/ignored_dir`` directory and the files with extension ``*.pattern`` are not in the temporary destination, the ``temp_dest_dir/file.public`` is an empty file with the md5 checksum of ``project/file.public`` in ``temp_dest_dir/file.public.md5``. However, the symlink ``temp_dest_dir/symlinks/to_ignored_dir`` is dangling, because the link itself was not omitted, but its destination was. **This is the expected, but perhaps unwanted behaviour**: symlinks pointing to files or directories within compressed or ignored directories will be dangling in the temporary destination, as the original file exists, but is not part of the temporary destination.
 
+
+----------------------------
+Additional notes and caveats
+----------------------------
+
+- The relative symlinks within a project are **not** listed in the ``hashdeep`` output.
+- Generally, the module doesn't like circular symlinks. It is wise to fix them before any operation, or use the rules facility to ignore them during preparation.
+- The module is untested for symlink corner cases (for example, where a symlink points to a symlink outside of the project, which in turn points to another file in the project).
+- In the archive, relative symlinks within the project are resolved. For example, in the original project one might have ``variants.vcf -> ../work/variants.vcf -> variants.somatic.vcf``. In the archive, the link will be ``variants.vcf -> ../work/variants.somatic.vcf``. 
 
 ----------------
 More Information

@@ -1,0 +1,4 @@
+# Files in 2021-10-15_project
+Class	FileName	Target	ResolvedName	Size	Dangling	Outside
+outside	symlinks/accessible	../../outside/accessible	/fast/work/users/blance_c/Development/saks/archive/tests/data/archive/outside/accessible	11	False	True
+dangling	symlinks/dangling	../files/missing_file	/fast/work/users/blance_c/Development/saks/archive/tests/data/archive/2021-10-15_project/files/missing_file	0	True	False

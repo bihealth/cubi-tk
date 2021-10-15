@@ -51,7 +51,9 @@
     "Archived"
   ],
 
-  "total_size": "0",
-  "inodes_nb": "0",
+  "size": "0",
+  "inodes": "0",
+  "size_follow": "0",
+  "inodes_follow": "0",
   "snakemake_nb": "0"
 }

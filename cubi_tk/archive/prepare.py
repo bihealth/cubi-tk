@@ -13,13 +13,20 @@ from logzero import logger
 
 from ..common import compute_md5_checksum, execute_shell_commands
 from . import common
+from .readme import create_readme
+from .readme import add_readme_parameters
 
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config(common.Config):
     """Configuration for prepare."""
 
-    pass
+    rules: typing.Dict[
+        str, typing.Any
+    ]  # The regular expression string read from the yaml file in compiled into a re.Pattern
+    skip: bool
+    no_readme: bool
+    destination: str
 
 
 class ArchivePrepareCommand(common.ArchiveCommandBase):
@@ -31,6 +38,9 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         super().__init__(config)
         self.project_dir = None
         self.dest_dir = None
+
+        self.start = time.time()
+        self.inode = 0
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -44,6 +54,9 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
                 os.path.dirname(__file__), "..", "isa_tpl", "archive", "default_rules.yaml"
             ),
         )
+        parser.add_argument("--skip", "-s", action="store_true", help="Skip symlinks preparation")
+        parser.add_argument("--no-readme", action="store_true", help="Skip README preparation")
+        add_readme_parameters(parser)
 
         parser.add_argument(
             "destination", help="Destination directory (for symlinks and later archival)"
@@ -67,60 +80,44 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         if res:  # pragma: nocover
             return res
 
-        # extra_context = {}
-        # for name in TEMPLATE.configuration:
-        #     if getattr(self.config, "var_%s" % name, None) is not None:
-        #         extra_context[name] = getattr(self.config, "var_%s" % name)
-
         logger.info("Starting cubi-tk archive prepare")
         logger.info("  args: %s", self.config)
 
-        logger.info("Obtaining archive rules from {}".format(self.config.rules))
-        with open(self.config.rules, "rt") as f:
-            rules = yaml.safe_load(f)
-
-        for (rule, patterns) in rules.items():
-            compiled = []
-            for pattern in patterns:
-                compiled.append(re.compile(pattern))
-            rules[rule] = compiled
-
+        # Remove all symlinks to absolute paths
         self.project_dir = os.path.realpath(self.config.project)
         self.dest_dir = os.path.realpath(self.config.destination)
 
-        if os.path.exists(self.dest_dir):
-            logger.error("Destination directory {} already exists".format(self.dest_dir))
-            return 1
+        if not self.config.skip:
+            if os.path.exists(self.dest_dir):
+                logger.error("Destination directory {} already exists".format(self.dest_dir))
+                return 1
 
-        self.start = time.time()
-        self.nInode = 0
+            rules = ArchivePrepareCommand._get_rules(self.config.rules)
 
-        self._read_dir_match(self.project_dir, rules)
+            # Recursively traverse the project and create archived files & links
+            self._archive_path(self.project_dir, rules)
 
-        sys.stdout.write(" " * 80 + "\r")
-        sys.stdout.flush()
-        return 0
-
-    def _read_dir_match(self, path, rules):
-        self.nInode += 1
-        if self.nInode % 1000 == 0:
-            delta = int(time.time() - self.start)
-            sys.stdout.write(
-                "\rElapsed time: %02d:%02d:%02d, number of files processed: %d, rate: %.1f [files/sec]\r"
-                % (
-                    delta // 3600,
-                    (delta % 3600) // 60,
-                    delta % 60,
-                    self.nInode,
-                    self.nInode / delta if delta > 0 else 0,
-                )
-            )
+            sys.stdout.write(" " * 80 + "\r")
             sys.stdout.flush()
 
+        if not self.config.no_readme:
+            logger.info("Preparing README.md")
+            create_readme(
+                os.path.join(self.dest_dir, "README.md"), self.project_dir, config=self.config
+            )
+
+        return 0
+
+    def _archive_path(self, path, rules):
+        """Recursively archive files in the path, according to the rules"""
+        self._progress()
+
+        # Dangling link
         if not os.path.exists(path):
             logger.warning("File or directory {} cannot be read, not archived".format(path))
             return
 
+        # Check how the path should be processed by regular expression matching
         status = "archive"
         for (rule, patterns) in rules.items():
             for pattern in patterns:
@@ -137,14 +134,32 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             return
         assert status == "archive"
 
-        if os.path.isdir(path) and (
-            not os.path.islink(path)
-            or ArchivePrepareCommand._is_outside(os.path.realpath(path), self.project_dir)
-        ):
-            for child in os.listdir(path):
-                self._read_dir_match(os.path.join(path, child), rules)
-        else:
+        # Archive files
+        if not os.path.isdir(path):
             self._archive(path)
+        else:
+            # Process only true directories (not symlinks) or symlinks pointing outside of project
+            if not os.path.islink(path) or ArchivePrepareCommand._is_outside(
+                os.path.realpath(path), self.project_dir
+            ):
+                for child in os.listdir(path):
+                    self._archive_path(os.path.join(path, child), rules)
+
+    def _progress(self):
+        self.inode += 1
+        if self.inode % 1000 == 0:
+            delta = int(time.time() - self.start)
+            sys.stdout.write(
+                "\rElapsed time: %02d:%02d:%02d, number of files processed: %d, rate: %.1f [files/sec]\r"
+                % (
+                    delta // 3600,
+                    (delta % 3600) // 60,
+                    delta % 60,
+                    self.inode,
+                    self.inode / delta if delta > 0 else 0,
+                )
+            )
+            sys.stdout.flush()
 
     def _compress(self, path):
         if os.path.exists(path + ".tar.gz"):
@@ -158,7 +173,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         destination = os.path.join(self.dest_dir, relative)
 
         os.makedirs(os.path.dirname(destination), mode=488, exist_ok=True)
-        command = [
+        cmd = [
             "tar",
             "-zcvf",
             destination + ".tar.gz",
@@ -167,7 +182,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             os.path.dirname(path),
             os.path.basename(path),
         ]
-        execute_shell_commands([command], verbose=self.config.verbose)
+        execute_shell_commands([cmd], verbose=self.config.verbose)
 
     def _squash(self, path):
         if os.path.isdir(path):
@@ -202,6 +217,20 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             os.symlink(os.path.realpath(path), destination)
 
     @staticmethod
+    def _get_rules(filename):
+        logger.info("Obtaining archive rules from {}".format(filename))
+        with open(filename, "rt") as f:
+            rules = yaml.safe_load(f)
+
+        for (rule, patterns) in rules.items():
+            compiled = []
+            for pattern in patterns:
+                compiled.append(re.compile(pattern))
+            rules[rule] = compiled
+
+        return rules
+
+    @staticmethod
     def _is_outside(path, directory):
         path = os.path.realpath(path)
         directory = os.path.realpath(directory)
@@ -210,5 +239,5 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk archive find-file``."""
+    """Setup argument parser for ``cubi-tk archive prepare``."""
     return ArchivePrepareCommand.setup_argparse(parser)

@@ -1,4 +1,4 @@
-"""``cubi-tk archive raw-data``: Checks for the presence of raw data in the project directory"""
+"""``cubi-tk archive summary``: Creates a summary table of problematic files and files of interest"""
 
 import argparse
 import attr
@@ -20,22 +20,14 @@ from .common import traverse_project_files
 class Config(common.Config):
     """Configuration for find-file."""
 
+    classes: str
     table: str
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class StatClass:
-    """Special cases for reporting files"""
-
-    name: str
-    min_size: int
-    pattern: typing.Any  # re.Pattern breaks in 3.6
 
 
 class ArchiveSummaryCommand(common.ArchiveCommandBase):
     """Implementation of archive summary command."""
 
-    command_name = "find-file"
+    command_name = "summary"
 
     def __init__(self, config: Config):
         super().__init__(config)
@@ -75,10 +67,13 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
         logger.info("Starting cubi-tk archive summary")
         logger.info("  args: %s", self.config)
 
-        self.classes = self._load_classes(self.config.classes)
+        stats = ArchiveSummaryCommand._init_stats(
+            os.path.normpath(os.path.realpath(self.config.classes))
+        )
 
         f = open(self.config.table, "wt") if self.config.table else sys.stdout
 
+        # Print output table title lines
         resolved = Path(self.config.project)
         title = "# Files in {}".format(self.config.project)
         if self.config.project != str(resolved):
@@ -91,35 +86,23 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             file=f,
         )
 
-        stats = {
-            "nFile": 0,
-            "size": 0,
-            "nLink": 0,
-            "nDangling": 0,
-            "nInaccessible": 0,
-            "nOutside": 0,
-            "size_outside": 0,
-            "classes": {},
-        }
-        for theClass in self.classes:
-            stats["classes"][theClass.name] = {
-                "nFile": 0,
-                "size": 0,
-                "nLost": 0,
-                "nOutside": 0,
-                "size_outside": 0,
-            }
-
+        # Traverse the project tree to accumulate statistics and populate the output table
         self.start = time.time()
         for file_attr in traverse_project_files(self.config.project):
-            self._aggregate(file_attr, stats, f)
+            self._aggregate_stats(file_attr, stats, f)
+        f.close()
 
         # Clear the progress line
         if self.config.table:
             sys.stdout.write(" " * 80 + "\r")
             sys.stdout.flush()
-        f.close()
 
+        # Print general overview on the screen
+        self._report_stats(stats)
+
+        return 0
+
+    def _report_stats(self, stats):
         logger.info("Number of files in {}: {}".format(self.config.project, stats["nFile"]))
         logger.info(
             "Number of links: {} ({} dangling, {} inaccessible (permissions), {} outside of project directory)".format(
@@ -131,41 +114,53 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                 stats["size"], stats["size_outside"]
             )
         )
-        for (name, theStat) in stats["classes"].items():
+        for (name, the_stat) in stats["classes"].items():
             logger.info(
                 "Number of {} files: {} (total size: {})".format(
-                    name, theStat["nFile"], theStat["size"]
+                    name, the_stat["nFile"], the_stat["size"]
                 )
             )
             logger.info(
                 "Number of files outside the projects directory: {} (total size: {})".format(
-                    theStat["nOutside"], theStat["size_outside"]
+                    the_stat["nOutside"], the_stat["size_outside"]
                 )
             )
             logger.info(
-                "Number of files lost (dangling or inaccessible): {}".format(theStat["nLost"])
+                "Number of files lost (dangling or inaccessible): {}".format(the_stat["nLost"])
             )
 
-        return 0
-
     @staticmethod
-    def _load_classes(f=None):
+    def _init_stats(f=None):
         if not f:
             f = sys.stdout
         if isinstance(f, str):
             f = open(f, "rt")
-        classes = []
-        for (name, params) in yaml.safe_load(f).items():
-            classes.append(
-                StatClass(
-                    name=name,
-                    min_size=int(params["min_size"]),
-                    pattern=re.compile(params["pattern"]),
-                )
-            )
-        return classes
 
-    def _aggregate(self, file_attr, stats, f):
+        stats = {
+            "nFile": 0,
+            "size": 0,
+            "nLink": 0,
+            "nDangling": 0,
+            "nInaccessible": 0,
+            "nOutside": 0,
+            "size_outside": 0,
+            "classes": {},
+        }
+        for (name, params) in yaml.safe_load(f).items():
+            stats["classes"][name] = {
+                "min_size": int(params["min_size"]),
+                "pattern": re.compile(params["pattern"]),
+                "nFile": 0,
+                "size": 0,
+                "nLost": 0,
+                "nOutside": 0,
+                "size_outside": 0,
+            }
+
+        return stats
+
+    def _aggregate_stats(self, file_attr, stats, f):
+        """Aggregate statistics for one file"""
         save = []
 
         stats["nFile"] += 1
@@ -186,22 +181,22 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                 save.append("outside")
 
         # File classes
-        for theClass in self.classes:
+        for (name, the_class) in stats["classes"].items():
             if (
-                not theClass.pattern.match(file_attr.relative_path)
-                or file_attr.size < theClass.min_size
+                not the_class["pattern"].match(file_attr.relative_path)
+                or file_attr.size < the_class["min_size"]
             ):
                 continue
-            save.append(theClass.name)
-            stats["classes"][theClass.name]["nFile"] += 1
+            save.append(name)
+            the_class["nFile"] += 1
             if file_attr.target:
                 if file_attr.dangling is None or file_attr.dangling:
-                    stats["classes"][theClass.name]["nLost"] += 1
+                    the_class["nLost"] += 1
                 else:
                     if file_attr.outside:
-                        stats["classes"][theClass.name]["nOutside"] += 1
-                        stats["classes"][theClass.name]["size_outside"] += file_attr.size
-            stats["classes"][theClass.name]["size"] += file_attr.size
+                        the_class["nOutside"] += 1
+                        the_class["size_outside"] += file_attr.size
+            the_class["size"] += file_attr.size
 
         if save:
             self._print_file_attr("|".join(save), file_attr, f)
@@ -210,7 +205,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
         if self.config.table and stats["nFile"] % 1000 == 0:
             delta = int(time.time() - self.start)
             sys.stdout.write(
-                "Elapsed time: %02d:%02d:%02d, number of files processed: %d, rate: %.1f [files/sec]\r"
+                "\rElapsed time: %02d:%02d:%02d, number of files processed: %d, rate: %.1f [files/sec]\r"
                 % (
                     delta // 3600,
                     (delta % 3600) // 60,
@@ -221,11 +216,12 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             )
             sys.stdout.flush()
 
-    def _print_file_attr(self, theClass, fn, f):
+    def _print_file_attr(self, the_class, fn, f):
+        """Print one row of the summary table"""
         print(
             "\t".join(
                 [
-                    theClass,
+                    the_class,
                     fn.relative_path,
                     fn.target if fn.target else "",
                     str(fn.resolved),
@@ -239,5 +235,5 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk archive find-file``."""
+    """Setup argument parser for ``cubi-tk archive summary``."""
     return ArchiveSummaryCommand.setup_argparse(parser)
