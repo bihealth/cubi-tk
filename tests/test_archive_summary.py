@@ -71,6 +71,13 @@ def test_run_archive_summary_smoke_test(mocker, requests_mock):
     res = main(argv)
     assert not res
 
-    mocked = [line.rstrip() for line in fake_open(summary_table)]
-    target = [line.rstrip() for line in open(regression, "rt")]
-    assert mocked[1:] == target[1:]
+    mocked = [line.rstrip().split("\t") for line in fake_open(summary_table)][1:]
+    target = [line.rstrip().split("\t") for line in open(regression, "rt")][1:]
+    assert mocked[0] == target[0]
+    assert len(mocked) == len(target)
+    j = target[0].index("ResolvedName")
+    failed = []
+    for i in range(len(target)):
+        if mocked[i][-j] != target[i][-j]:
+            failed.append(i)
+    assert len(failed) == 0

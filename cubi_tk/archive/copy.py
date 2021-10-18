@@ -3,6 +3,7 @@
 import argparse
 import attr
 import os
+import shutil
 import subprocess
 import typing
 
@@ -91,6 +92,9 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         hashdeep = ["hashdeep", "-j", str(self.config.num_threads), "-l", "-r"]
         try:
             if "hashdeep" not in self.skip:
+                if not shutil.which("hashdeep"):
+                    logger.error("hashdeep can't be found")
+                    return 1
                 # Hashdeep on the temporary destination
                 logger.info("Preparing the hashdeep report to {}".format(self.config.audit_file))
                 cmd = hashdeep + ["-o", "fl", "."]
@@ -111,6 +115,9 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
                 subprocess.run(cmd, check=True)
 
             if "audit" not in self.skip:
+                if not shutil.which("hashdeep"):
+                    logger.error("hashdeep can't be found")
+                    return 1
                 # Hashdeep audit
                 logger.info("Audit of copy, results in {}".format(self.config.audit_result))
                 cmd = hashdeep + ["-vvv", "-a", "-k", os.path.realpath(self.config.audit_file), "."]

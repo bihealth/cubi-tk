@@ -5,6 +5,7 @@ We only run some smoke tests here.
 
 import glob
 import os
+import re
 
 import filecmp
 import pytest
@@ -13,7 +14,7 @@ import tempfile
 from cubi_tk.__main__ import setup_argparse, main
 
 
-def test_run_archive_summary_help(capsys):
+def test_run_archive_copy_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["archive", "copy", "--help"])
@@ -25,7 +26,7 @@ def test_run_archive_summary_help(capsys):
     assert not res.err
 
 
-def test_run_archive_summary_nothing(capsys):
+def test_run_archive_copy_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
@@ -38,7 +39,25 @@ def test_run_archive_summary_nothing(capsys):
     assert res.err
 
 
-def test_run_archive_summary_smoke_test(mocker, requests_mock):
+ORIG_PATTERN = re.compile("^(%|#).*$")
+COPY_PATTERN = re.compile("^(hashdeep| ).*$")
+
+
+def _sort_hashdeep_title_and_body(filename, title):
+    titles = []
+    body = []
+    with open(filename, "rt") as f:
+        lines = [x.rstrip() for x in f.readlines()]
+    for line in lines:
+        line.rstrip()
+        if title.match(line):
+            titles.append(line)
+        else:
+            body.append(line)
+    return (sorted(titles), sorted(body))
+
+
+def test_run_archive_copy_smoke_test(mocker, requests_mock):
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
 
@@ -74,12 +93,22 @@ def test_run_archive_summary_smoke_test(mocker, requests_mock):
         ]
         fns = list(set(fns))
 
-        assert filecmp.cmp(
-            os.path.join(repo_dir, "audit.orig"), os.path.join(tmp_dir, "audit.orig")
+        (repo_titles, repo_body) = _sort_hashdeep_title_and_body(
+            os.path.join(repo_dir, "audit.orig"), ORIG_PATTERN
         )
-        assert filecmp.cmp(
-            os.path.join(repo_dir, "audit.copy"), os.path.join(tmp_dir, "audit.copy")
+        (tmp_titles, tmp_body) = _sort_hashdeep_title_and_body(
+            os.path.join(tmp_dir, "audit.orig"), ORIG_PATTERN
         )
+        assert repo_titles == tmp_titles and repo_body == tmp_body
+
+        (repo_titles, repo_body) = _sort_hashdeep_title_and_body(
+            os.path.join(repo_dir, "audit.copy"), COPY_PATTERN
+        )
+        (tmp_titles, tmp_body) = _sort_hashdeep_title_and_body(
+            os.path.join(tmp_dir, "audit.copy"), COPY_PATTERN
+        )
+        assert repo_titles == tmp_titles and repo_body == tmp_body
+
         matches, mismatches, errors = filecmp.cmpfiles(
             os.path.join(repo_dir, "final_dest_verif"),
             os.path.join(tmp_dir, "final_dest"),

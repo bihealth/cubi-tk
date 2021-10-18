@@ -80,7 +80,7 @@ def execute_shell_commands(cmds, verbose=True, check=True):
 
     # Single command, use run
     if len(cmds) == 1:
-        return subprocess.run(cmds[0], capture_output=True, check=check, encoding="utf-8").stdout
+        return subprocess.run(cmds[0], stdout=subprocess.PIPE, check=check, encoding="utf-8").stdout
 
     # Pipe the commands
     previous = None

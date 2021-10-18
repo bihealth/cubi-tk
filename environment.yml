@@ -1,0 +1,14 @@
+channels:
+  - bioconda
+  - defaults
+  - conda-forge
+
+name: cubi_tk
+
+dependencies:
+  - python=3.8
+  - pip
+  - hashdeep
+  - pip:
+      -  -r requirements.txt
+
