@@ -582,7 +582,8 @@ class SnappyItransferCommandBase:
             existing_lzs = list(filter(lambda x: x.assay == assay_uuid, existing_lzs))
 
         # Get the latest active lz
-        existing_lzs = list(filter(lambda x: x.status == "ACTIVE", existing_lzs))
+        allowed_status = ("ACTIVE", "FAILED")
+        existing_lzs = list(filter(lambda x: x.status in allowed_status, existing_lzs))
         if existing_lzs:
             lz = existing_lzs[-1]
             lz_irods_path = lz.irods_path
