@@ -1,0 +1,6 @@
+name: cubi-tk
+
+dependencies:
+  - python
+  - pip
+  - hashdeep
