@@ -99,7 +99,7 @@ def test_run_archive_copy_smoke_test(mocker, requests_mock):
         (tmp_titles, tmp_body) = _sort_hashdeep_title_and_body(
             os.path.join(tmp_dir, "audit.orig"), ORIG_PATTERN
         )
-        assert repo_titles == tmp_titles and repo_body == tmp_body
+        assert repo_body == tmp_body
 
         (repo_titles, repo_body) = _sort_hashdeep_title_and_body(
             os.path.join(repo_dir, "audit.copy"), COPY_PATTERN
