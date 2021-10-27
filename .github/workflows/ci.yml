@@ -35,8 +35,6 @@ jobs:
         run: mamba env update --name root --file /tmp/environment.yaml
       - name: Save time by installing packages via mamba
         run: mamba install -y pysam
-      - name: Install hashdeep for CI
-        run: mamba install -y -c conda-forge hashdeep
       - name: Install test dependencies via pip
         run: pip install -r requirements/test_black.txt
       - name: Run tests
