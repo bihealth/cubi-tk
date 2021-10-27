@@ -26,6 +26,13 @@ jobs:
           lfs: true
       - name: Install mamba.
         run: conda install -y mamba
+      - name: Prepare environment.yaml file.
+        run: >
+          cp environment.yaml /tmp/environment.yaml && sed -i -e
+          's/- python/- python=${{ matrix.python-version }}/'
+          /tmp/environment.yaml
+      - name: Update environment using mamba.
+        run: mamba env update --name root --file /tmp/environment.yaml
       - name: Save time by installing packages via mamba
         run: mamba install -y pysam
       - name: Install test dependencies via pip
