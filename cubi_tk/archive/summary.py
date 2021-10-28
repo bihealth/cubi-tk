@@ -29,9 +29,6 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
 
     command_name = "summary"
 
-    def __init__(self, config: Config):
-        super().__init__(config)
-
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
@@ -56,6 +53,11 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
         res = 0
+
+        if not os.path.exists(self.config.project) or not os.path.isdir(self.config.project):
+            logger.error("Illegal project path : '{}'".format(self.config.project))
+            res = 1
+
         return res
 
     def execute(self) -> typing.Optional[int]:
@@ -67,9 +69,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
         logger.info("Starting cubi-tk archive summary")
         logger.info("  args: %s", self.config)
 
-        stats = ArchiveSummaryCommand._init_stats(
-            os.path.normpath(os.path.realpath(self.config.classes))
-        )
+        stats = self._init_stats(os.path.normpath(os.path.realpath(self.config.classes)))
 
         f = open(self.config.table, "wt") if self.config.table else sys.stdout
 

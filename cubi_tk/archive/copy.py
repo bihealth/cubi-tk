@@ -32,7 +32,6 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         super().__init__(config)
         self.project_dir = None
         self.dest_dir = None
-        self.skip = []
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -61,6 +60,20 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
         res = 0
+
+        if os.path.exists(self.config.destination):
+            logger.error("Destination directory {} already exists".format(self.config.destination))
+            res = 1
+        if not self.config.audit_file or not self.config.audit_result:
+            logger.error("Missing path to either hashdeep output files")
+            res = 1
+
+        if not shutil.which("hashdeep") and (
+            "hashdeep" not in self.config.skip and "audit" not in self.config.skip
+        ):
+            logger.error("hashdeep can't be found")
+            res = 1
+
         return res
 
     def execute(self) -> typing.Optional[int]:
@@ -74,15 +87,6 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
 
         self.project_dir = os.path.realpath(self.config.project)
         self.dest_dir = os.path.realpath(self.config.destination)
-        if self.config.skip:
-            self.skip = self.config.skip
-
-        if os.path.exists(self.dest_dir):
-            logger.error("Destination directory {} already exists".format(self.dest_dir))
-            return 1
-        if not self.config.audit_file or not self.config.audit_result:
-            logger.error("Missing path to either hashdeep output files")
-            return 1
 
         removed = []
         removed = self._remove_relative_symlinks(self.project_dir, removed)
@@ -91,10 +95,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         status = 0
         hashdeep = ["hashdeep", "-j", str(self.config.num_threads), "-l", "-r"]
         try:
-            if "hashdeep" not in self.skip:
-                if not shutil.which("hashdeep"):
-                    logger.error("hashdeep can't be found")
-                    return 1
+            if not self.config.skip or "hashdeep" not in self.config.skip:
                 # Hashdeep on the temporary destination
                 logger.info("Preparing the hashdeep report to {}".format(self.config.audit_file))
                 cmd = hashdeep + ["-o", "fl", "."]
@@ -105,19 +106,18 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
                 p.communicate()
                 if p.returncode != 0:
                     raise OSError(
-                        "Command {} returned error code {}".format(" ".join(cmd), p.returncode)
+                        "Command returned error code '{code}' : '{cmd}'".format(
+                            code=p.returncode, cmd=" ".join(cmd)
+                        )
                     )
 
-            if "rsync" not in self.skip:
+            if not self.config.skip or "rsync" not in self.config.skip:
                 # rsync -a without copy symlinks as symlinks, devices & special files
                 logger.info("Copy files from {} to {}".format(self.project_dir, self.dest_dir))
                 cmd = ["rsync", "-rptgo", "--copy-links", self.project_dir + "/", self.dest_dir]
                 subprocess.run(cmd, check=True)
 
-            if "audit" not in self.skip:
-                if not shutil.which("hashdeep"):
-                    logger.error("hashdeep can't be found")
-                    return 1
+            if not self.config.skip or "audit" not in self.config.skip:
                 # Hashdeep audit
                 logger.info("Audit of copy, results in {}".format(self.config.audit_result))
                 cmd = hashdeep + ["-vvv", "-a", "-k", os.path.realpath(self.config.audit_file), "."]
@@ -142,6 +142,10 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         return status
 
     def _remove_relative_symlinks(self, path, removed):
+        """
+        Recursively traverse a directory (path) to remove relative symbolic links.
+        The removed symlinks (symlink name & relative target) are stored in a list.
+        """
         if os.path.islink(path):
             if not os.readlink(path).startswith("/"):
                 relative = os.path.relpath(path, start=self.project_dir)
@@ -156,6 +160,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         return removed
 
     def _restore_relative_symlinks(self, root, removed, add_dangling=True):
+        """Symlinks from list are added to the destination directory."""
         for (relative, destination) in removed:
             if add_dangling or os.path.exists(
                 os.path.join(root, os.path.dirname(relative), destination)

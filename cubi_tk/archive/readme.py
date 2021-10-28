@@ -58,30 +58,50 @@ COMMANDS = {
 MSG = "**Contents of original `README.md` file**"
 
 
-def _is_readme_valid(filename=None):
-    if filename is None:
-        f = sys.stdin
-    else:
-        if not os.path.exists(filename):
-            return False
-        f = open(filename, "rt")
-    matching = set()
-    for line in f:
-        line = line.rstrip()
-        for (name, pattern) in PATTERNS.items():
-            if pattern.match(line):
-                matching.add(name)
-    f.close()
-    return set(PATTERNS.keys()).issubset(matching)
-
-
-def _create_extra_context(project_dir, config=None):
+def _extra_context_from_config(config=None):
     extra_context = {}
-
     if config:
         for name in TEMPLATE.configuration:
             if getattr(config, "var_%s" % name, None) is not None:
                 extra_context[name] = getattr(config, "var_%s" % name)
+    return extra_context
+
+
+def _get_snakemake_nb(project_dir):
+    cmds = [
+        [
+            "find",
+            project_dir,
+            "-type",
+            "d",
+            "-name",
+            ".snakemake",
+            "-exec",
+            "du",
+            "--inodes",
+            "--max-depth=0",
+            "{}",
+            ";",
+        ],
+        ["cut", "-f", "1"],
+        ["paste", "-sd+"],
+        ["bc"],
+    ]
+    return execute_shell_commands(cmds, check=False, verbose=False)
+
+
+def _get_archiver_name():
+    cmds = [
+        ["pinky", "-l", os.getenv("USER")],
+        ["grep", "In real life:"],
+        ["sed", "-e", "s/.*In real life: *//"],
+    ]
+    output = execute_shell_commands(cmds, check=False, verbose=False)
+    return output.rstrip()
+
+
+def _create_extra_context(project_dir, config=None):
+    extra_context = _extra_context_from_config(config)
 
     logger.info("Collecting size & inodes numbers")
     for (context_name, cmd) in COMMANDS.items():
@@ -90,37 +110,13 @@ def _create_extra_context(project_dir, config=None):
             extra_context[context_name] = DU.match(
                 execute_shell_commands([cmd], check=False, verbose=False)
             ).group(1)
+
     if "snakemake_nb" not in extra_context.keys():
-        cmds = [
-            [
-                "find",
-                project_dir,
-                "-type",
-                "d",
-                "-name",
-                ".snakemake",
-                "-exec",
-                "du",
-                "--inodes",
-                "--max-depth=0",
-                "{}",
-                ";",
-            ],
-            ["cut", "-f", "1"],
-            ["paste", "-sd+"],
-            ["bc"],
-        ]
-        extra_context["snakemake_nb"] = execute_shell_commands(cmds, check=False, verbose=False)
+        extra_context["snakemake_nb"] = _get_snakemake_nb(project_dir)
 
     if "archiver_name" not in extra_context.keys():
-        cmds = [
-            ["pinky", "-l", os.getenv("USER")],
-            ["grep", "In real life:"],
-            ["sed", "-e", "s/.*In real life: *//"],
-        ]
-        extra_context["archiver_name"] = execute_shell_commands(
-            cmds, check=False, verbose=False
-        ).rstrip()
+        extra_context["archiver_name"] = _get_archiver_name()
+
     if "archiver_email" not in extra_context.keys():
         extra_context["archiver_email"] = (
             "{}@bih-charite.de".format(extra_context["archiver_name"]).lower().replace(" ", ".")
@@ -169,10 +165,27 @@ def _copy_readme(src, target):
         f.write("\n".join(lines))
 
 
+def is_readme_valid(filename=None):
+    if filename is None:
+        f = sys.stdin
+    else:
+        if not os.path.exists(filename):
+            return False
+        f = open(filename, "rt")
+    matching = set()
+    for line in f:
+        line = line.rstrip()
+        for (name, pattern) in PATTERNS.items():
+            if pattern.match(line):
+                matching.add(name)
+    f.close()
+    return set(PATTERNS.keys()).issubset(matching)
+
+
 def create_readme(filename, project_dir, config=None, no_input=False):
     # If a valid README.md file already exists in the project, do nothing
-    if os.path.exists(filename) and _is_readme_valid(filename):
-        logger.info("Using existing file, variables ignored")
+    if os.path.exists(filename) and is_readme_valid(filename):
+        logger.info("Using existing file, variables ignored : '{}'".format(filename))
         return
 
     # Fill defaults (emails, size, inodes, ...)

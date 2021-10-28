@@ -59,8 +59,7 @@ class ArchiveCommandBase:
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
-        res = 0
-        return res
+        raise NotImplementedError("Must be implemented in derived classes")
 
     def execute(self) -> typing.Optional[int]:
         raise NotImplementedError("Must be implemented in derived classes")
@@ -98,7 +97,7 @@ def get_file_attributes(filename, relative_to):
 
 def traverse_project_files(directory):
     root = Path(directory).resolve(strict=True)
-    for path, directories, files in os.walk(root):
+    for path, _, files in os.walk(root):
         for filename in files:
             yield get_file_attributes(os.path.join(path, filename), root)
 

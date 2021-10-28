@@ -78,10 +78,6 @@ def execute_shell_commands(cmds, verbose=True, check=True):
     if verbose:
         logger.info('Executing shell command "' + " | ".join([" ".join(cmd) for cmd in cmds]) + '"')
 
-    # Single command, use run
-    if len(cmds) == 1:
-        return subprocess.run(cmds[0], stdout=subprocess.PIPE, check=check, encoding="utf-8").stdout
-
     # Pipe the commands
     previous = None
     for cmd in cmds:
@@ -94,16 +90,19 @@ def execute_shell_commands(cmds, verbose=True, check=True):
             current = subprocess.Popen(cmd, stdout=subprocess.PIPE, encoding="utf-8")
         previous = current
 
-    # Check return code of the last command of the pipe
+    # Run the piped commands
+    output = current.communicate()
+
+    # Check return code if required (only last executed command of the pipe)
     if check and current.returncode != 0:
         raise subprocess.CalledProcessError(
-            'Shell pipe "'
-            + " | ".join([" ".join(cmd) for cmd in cmds])
-            + '" returned error code {}'.format(current.returncode)
+            returncode=current.returncode,
+            cmd=" | ".join([" ".join(cmd) for cmd in cmds]),
+            output=output[0],
         )
 
     # Return stdout
-    return current.communicate()[0]
+    return output[0]
 
 
 def find_base_path(base_path):
@@ -141,7 +140,7 @@ def is_uuid(x):
     """Return True if ``x`` is a string and looks like a UUID."""
     try:
         return str(UUID(x)) == x
-    except:  # noqa: E722
+    except Exception:  # noqa: E722
         return False
 
 

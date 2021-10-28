@@ -72,6 +72,11 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
         res = 0
+
+        if not self.config.skip and os.path.exists(self.config.destination):
+            logger.error("Destination directory {} already exists".format(self.config.destination))
+            res = 1
+
         return res
 
     def execute(self) -> typing.Optional[int]:
@@ -88,11 +93,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         self.dest_dir = os.path.realpath(self.config.destination)
 
         if not self.config.skip:
-            if os.path.exists(self.dest_dir):
-                logger.error("Destination directory {} already exists".format(self.dest_dir))
-                return 1
-
-            rules = ArchivePrepareCommand._get_rules(self.config.rules)
+            rules = self._get_rules(self.config.rules)
 
             # Recursively traverse the project and create archived files & links
             self._archive_path(self.project_dir, rules)
@@ -114,7 +115,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
 
         # Dangling link
         if not os.path.exists(path):
-            logger.warning("File or directory {} cannot be read, not archived".format(path))
+            logger.warning("File or directory cannot be read, not archived : '{}'".format(path))
             return
 
         # Check how the path should be processed by regular expression matching
@@ -139,7 +140,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             self._archive(path)
         else:
             # Process only true directories (not symlinks) or symlinks pointing outside of project
-            if not os.path.islink(path) or ArchivePrepareCommand._is_outside(
+            if not os.path.islink(path) or self._is_outside(
                 os.path.realpath(path), self.project_dir
             ):
                 for child in os.listdir(path):
@@ -164,7 +165,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
     def _compress(self, path):
         if os.path.exists(path + ".tar.gz"):
             raise ValueError(
-                "File or directory {} cannot be compressed, compressed file already exists".format(
+                "File or directory cannot be compressed, compressed file already exists : '{}'".format(
                     path
                 )
             )
@@ -186,7 +187,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
 
     def _squash(self, path):
         if os.path.isdir(path):
-            raise ValueError("Path {} is a directory and cannot be squashed".format(path))
+            raise ValueError("Path is a directory and cannot be squashed : '{}'".format(path))
 
         relative = os.path.relpath(path, start=self.project_dir)
         destination = os.path.join(self.dest_dir, relative)

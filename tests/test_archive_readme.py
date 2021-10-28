@@ -10,7 +10,7 @@ import tempfile
 import cubi_tk.archive.readme
 
 
-def test_run_archive_readme_smoke_test(mocker, requests_mock):
+def test_run_archive_readme_smoke_test():
     with tempfile.TemporaryDirectory() as tmp_dir:
         project_name = "2021-10-15_project"
         project_dir = os.path.join(os.path.dirname(__file__), "data", "archive", project_name)
@@ -29,4 +29,4 @@ def test_run_archive_readme_smoke_test(mocker, requests_mock):
         readme_path = os.path.join(tmp_dir, project_name, "README.md")
         cubi_tk.archive.readme.create_readme(readme_path, project_dir, config=config, no_input=True)
 
-        assert cubi_tk.archive.readme._is_readme_valid(readme_path)
+        assert cubi_tk.archive.readme.is_readme_valid(readme_path)

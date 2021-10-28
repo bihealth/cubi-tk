@@ -35,7 +35,8 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_summary(
         subparsers.add_parser(
-            "summary", help="Collects a summary of files in the project directory"
+            "summary",
+            help="Collects a summary of files in the project directory. The summary can be saved to a file for further inspection",
         )
     )
 

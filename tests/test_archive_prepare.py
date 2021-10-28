@@ -38,7 +38,7 @@ def test_run_archive_prepare_nothing(capsys):
     assert res.err
 
 
-def test_run_archive_prepare_smoke_test(mocker, requests_mock):
+def test_run_archive_prepare_smoke_test():
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
         project_name = "2021-10-15_project"
@@ -52,7 +52,7 @@ def test_run_archive_prepare_smoke_test(mocker, requests_mock):
             os.path.join(repo_dir, project_name),
             os.path.join(tmp_dir, "temp_dest"),
         ]
-        parser, _subparsers = setup_argparse()
+        setup_argparse()
 
         # --- run tests
         res = main(argv)
@@ -62,16 +62,12 @@ def test_run_archive_prepare_smoke_test(mocker, requests_mock):
         prefix = os.path.join(repo_dir, "temp_dest_verif")
         fns = [
             x.replace(prefix + "/", "", 1)
-            for x in filter(
-                lambda y: os.path.isfile(y), glob.glob(prefix + "/**/*", recursive=True)
-            )
+            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
         ]
         prefix = os.path.join(tmp_dir, "temp_dest")
         fns = fns + [
             x.replace(prefix + "/", "", 1)
-            for x in filter(
-                lambda y: os.path.isfile(y), glob.glob(prefix + "/**/*", recursive=True)
-            )
+            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
         ]
         fns = list(set(fns))
 
@@ -81,5 +77,6 @@ def test_run_archive_prepare_smoke_test(mocker, requests_mock):
             common=fns,
             shallow=False,
         )
+        assert len(matches) > 0
         assert len(errors) == 0
         assert len(mismatches) == 0

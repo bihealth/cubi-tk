@@ -14,6 +14,10 @@ import tempfile
 from cubi_tk.__main__ import setup_argparse, main
 
 
+ORIG_PATTERN = re.compile("^(%|#).*$")
+COPY_PATTERN = re.compile("^(hashdeep| ).*$")
+
+
 def test_run_archive_copy_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
@@ -39,10 +43,6 @@ def test_run_archive_copy_nothing(capsys):
     assert res.err
 
 
-ORIG_PATTERN = re.compile("^(%|#).*$")
-COPY_PATTERN = re.compile("^(hashdeep| ).*$")
-
-
 def _sort_hashdeep_title_and_body(filename, title):
     titles = []
     body = []
@@ -57,7 +57,7 @@ def _sort_hashdeep_title_and_body(filename, title):
     return (sorted(titles), sorted(body))
 
 
-def test_run_archive_copy_smoke_test(mocker, requests_mock):
+def test_run_archive_copy_smoke_test():
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
 
@@ -71,7 +71,7 @@ def test_run_archive_copy_smoke_test(mocker, requests_mock):
             os.path.join(repo_dir, "temp_dest"),
             os.path.join(tmp_dir, "final_dest"),
         ]
-        parser, _subparsers = setup_argparse()
+        setup_argparse()
 
         # --- run tests
         res = main(argv)
@@ -80,16 +80,12 @@ def test_run_archive_copy_smoke_test(mocker, requests_mock):
         prefix = os.path.join(repo_dir, "final_dest_verif")
         fns = [
             x.replace(prefix + "/", "", 1)
-            for x in filter(
-                lambda y: os.path.isfile(y), glob.glob(prefix + "/**/*", recursive=True)
-            )
+            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
         ]
         prefix = os.path.join(tmp_dir, "final_dest")
         fns = fns + [
             x.replace(prefix + "/", "", 1)
-            for x in filter(
-                lambda y: os.path.isfile(y), glob.glob(prefix + "/**/*", recursive=True)
-            )
+            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
         ]
         fns = list(set(fns))
 
@@ -109,7 +105,7 @@ def test_run_archive_copy_smoke_test(mocker, requests_mock):
         )
         assert repo_titles == tmp_titles and repo_body == tmp_body
 
-        matches, mismatches, errors = filecmp.cmpfiles(
+        _, mismatches, errors = filecmp.cmpfiles(
             os.path.join(repo_dir, "final_dest_verif"),
             os.path.join(tmp_dir, "final_dest"),
             common=fns,
