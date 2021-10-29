@@ -75,26 +75,54 @@ def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
 
 
 def execute_shell_commands(cmds, verbose=True, check=True):
+    """Executes a list of shell commands provided as a list.
+
+    The contents of stdout are returned to the caller. Because the method stores all output,
+    it is unsuitable for commands expected to produce very large output.
+
+    When an error occurs anywhere in the pipe (more precisely: if any subprocess of the pipe
+    returns an exit status different from 0), a CalledProcessError exception is triggered,
+    unless check is set to False. In that case, the exit codes are ignored, and the contents
+    of stdout is returned as if no error had occured.
+
+    Setting check=False may be useful when the user expects an error status, for example:
+    The pipe: echo "Hello World!" | grep "world" returns status 1 (pattern not found)
+    But the user may be just interested with the lines that have been filtered, without
+    requiring that at least one has been found.
+
+    cmds: List[List[str]]
+        Shell commands to be executed as a pipe.
+    verbose: bool
+        When True, the logger outputs the shell pipe command before executing it
+    check: bool
+        When True, exit codes different from 0 (normal exit) will trigger a CalledProcessError
+        exception. When False, the output of the pipe is returned, and the exit code is ignored.
+    """
     if verbose:
         logger.info('Executing shell command "' + " | ".join([" ".join(cmd) for cmd in cmds]) + '"')
 
     # Pipe the commands
+    process_list = []
     previous = None
     for cmd in cmds:
         if previous:
             current = subprocess.Popen(
                 cmd, stdin=previous.stdout, stdout=subprocess.PIPE, encoding="utf-8"
             )
+            # Required so that SIGPIPE can be propagated
+            # See https://docs.python.org/3/library/subprocess.html#replacing-shell-pipeline
             previous.stdout.close()
         else:
             current = subprocess.Popen(cmd, stdout=subprocess.PIPE, encoding="utf-8")
         previous = current
+        process_list.append(current)
 
     # Run the piped commands
     output = current.communicate()
 
-    # Check return code if required (only last executed command of the pipe)
-    if check and current.returncode != 0:
+    # Check return code of all processes in the pipe (if required)
+    # Tested only when all processes in the pipe are complete
+    if check and any([x.poll() != 0 for x in process_list]):
         raise subprocess.CalledProcessError(
             returncode=current.returncode,
             cmd=" | ".join([" ".join(cmd) for cmd in cmds]),

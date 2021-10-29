@@ -95,6 +95,8 @@ def test_run_archive_copy_smoke_test():
         (tmp_titles, tmp_body) = _sort_hashdeep_title_and_body(
             os.path.join(tmp_dir, "audit.orig"), ORIG_PATTERN
         )
+        print("DEBUG- repo_body = {}".format(repo_body))
+        print("DEBUG- tmp_body = {}".format(tmp_body))
         assert repo_body == tmp_body
 
         (repo_titles, repo_body) = _sort_hashdeep_title_and_body(

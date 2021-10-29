@@ -77,7 +77,21 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         return res
 
     def execute(self) -> typing.Optional[int]:
-        """Execute the upload to sodar."""
+        """Copies the contents of the input directory to the output path, following symlinks.
+        The accuracy of the copy is verified by running hashdeep on the original files, and
+        (in audit mode) on the copy.
+
+        The copy module is meant to be executed after `cubi-tk archive prepare`. The prepare
+        steps creates a temporary directory, with symlinks pointing to absolute paths of the
+        files that must be copied. The copy is done using the `rsync` command, in a mode
+        which follows symlinks.
+
+        After the preparation step, relative symlinks pointing inside the project are retained.
+        Those should not be copied by `rsync`, to avoid duplication of potentially large files.
+        Therefore, the symlinks are deleted from the temporary directory before copy, and
+        re-created after the copy is finished in both the original temporary directory and the
+        final archive copy.
+        """
         res = self.check_args(self.config)
         if res:  # pragma: nocover
             return res
@@ -88,9 +102,11 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         self.project_dir = os.path.realpath(self.config.project)
         self.dest_dir = os.path.realpath(self.config.destination)
 
-        removed = []
-        removed = self._remove_relative_symlinks(self.project_dir, removed)
-        logger.info("Set {} relative symlinks aside".format(len(removed)))
+        # Find relative symlinks that point inside the project directory
+        rel_symlinks = []
+        rel_symlinks = self._find_relative_symlinks(self.project_dir, rel_symlinks)
+        logger.info("Set {} relative symlinks aside".format(len(rel_symlinks)))
+        # print("DEBUG- rel_symlinks = {}".format(rel_symlinks))
 
         status = 0
         hashdeep = ["hashdeep", "-j", str(self.config.num_threads), "-l", "-r"]
@@ -111,11 +127,17 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
                         )
                     )
 
+            # Remove relative symlinks that point within the project to avoid file copy duplication
+            self._remove_relative_symlinks(rel_symlinks)
+
             if not self.config.skip or "rsync" not in self.config.skip:
                 # rsync -a without copy symlinks as symlinks, devices & special files
                 logger.info("Copy files from {} to {}".format(self.project_dir, self.dest_dir))
                 cmd = ["rsync", "-rptgo", "--copy-links", self.project_dir + "/", self.dest_dir]
                 subprocess.run(cmd, check=True)
+
+            # Add relative symlinks to the copy
+            self._restore_relative_symlinks(self.dest_dir, rel_symlinks)
 
             if not self.config.skip or "audit" not in self.config.skip:
                 # Hashdeep audit
@@ -128,40 +150,55 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
                 p.communicate()
                 if p.returncode != 0:
                     logger.error("Audit failed, check {} for errors".format(self.config.audit_file))
-
-            # Add relative symlinks to the copy
-            self._restore_relative_symlinks(self.dest_dir, removed)
         except Exception as e:
             status = 1
             logger.error(e)
         finally:
             # Restore relative symlinks to the original temporary destination
             logger.info("Restoring relative symlinks")
-            self._restore_relative_symlinks(self.project_dir, removed)
+            self._restore_relative_symlinks(self.project_dir, rel_symlinks)
 
         return status
 
-    def _remove_relative_symlinks(self, path, removed):
-        """
-        Recursively traverse a directory (path) to remove relative symbolic links.
-        The removed symlinks (symlink name & relative target) are stored in a list.
+    def _find_relative_symlinks(self, path, rel_symlinks):
+        """Recursively traverse a directory (path) to find all relative symbolic links.
+        The relative symlinks (symlink name & relative target) are stored in a list.
         """
         if os.path.islink(path):
             if not os.readlink(path).startswith("/"):
                 relative = os.path.relpath(path, start=self.project_dir)
                 destination = os.readlink(path)
-                os.remove(path)
-                removed.append((relative, destination))
-                return removed
+                rel_symlinks.append((relative, destination))
+                return rel_symlinks
 
         if os.path.isdir(path):
             for child in os.listdir(path):
-                removed = self._remove_relative_symlinks(os.path.join(path, child), removed)
-        return removed
+                rel_symlinks = self._find_relative_symlinks(os.path.join(path, child), rel_symlinks)
+        return rel_symlinks
 
-    def _restore_relative_symlinks(self, root, removed, add_dangling=True):
-        """Symlinks from list are added to the destination directory."""
-        for (relative, destination) in removed:
+    def _remove_relative_symlinks(self, rel_symlinks):
+        """Remove relative symlinks from the original directory"""
+        for (relative, _) in rel_symlinks:
+            os.remove(os.path.join(self.project_dir, relative))
+
+    def _restore_relative_symlinks(self, root, rel_symlinks, add_dangling=True):
+        """Relative symlinks from list are added to the destination directory.
+
+        root: str
+            path to the root directory from which the symlinks are created
+        rel_symlinks: List[Tuple[str, str]]
+            list of symlinks.
+            The first tuple element is the symlink path, relative to root.
+            The second tuple element is the symlink target.
+        add_dangling: bool
+            controls if dangling symlinks must be created or not.
+            It can happen that some relative symlinks point to missing file,
+            for example if it belonged within a directory which has been squashed or
+            ignored during the preparation step.
+            The symlink should be there, even though the target file is not accessible
+            in the archived copy.
+        """
+        for (relative, destination) in rel_symlinks:
             if add_dangling or os.path.exists(
                 os.path.join(root, os.path.dirname(relative), destination)
             ):

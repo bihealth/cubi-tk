@@ -66,6 +66,19 @@ class ArchiveCommandBase:
 
 
 def get_file_attributes(filename, relative_to):
+    """Returns attributes of the file named `filename`.
+
+    The attributes are:
+    - relative_path: the file path relative to directory `relative_to`
+    - resolved: the resolved path (i.e. normalised absolute path to the file)
+    - symlink: True if the file is a symlink, False otherwise
+    - dangling: True if the symlink's target cannot be read (missing or permissions),
+      False the filename is not a symlink, or if the target can be read
+    - outside: True if the file is not in the `relative_to` directory
+    - target: the symlink target, or None if filename isn't a symlink
+    - size: the size of the file, or of its target if the file is a symlink.
+      If the file is a dangling symlink, the size is set to 0
+    """
     resolved = Path(filename).resolve(strict=False)
     symlink = os.path.islink(filename)
     if symlink:
