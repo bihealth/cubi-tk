@@ -1,0 +1,59 @@
+{
+  "directory": "",
+
+  "PI_name": "",
+  "PI_email": "",
+  "archiver_name": [
+    "Eric Blanc",
+    "Manuela Benary",
+    "Dieter Beule",
+    "Manuel Holtgrewe",
+    "Andranik Ivanov",
+    "Mathias Kuhring",
+    "Mikko Nieminen",
+    "Benedikt Obermayer-Wasserscheid",
+    "Oliver Stolpe",
+    "Nina Thiessen",
+    "Eudes Viera Barbosa",
+    "January Weiner"
+  ],
+  "archiver_email": "",
+  "CUBI_name": [
+    "Kajetan Bentele",
+    "Eric Blanc",
+    "Manuela Benary",
+    "Dieter Beule",
+    "Oliver Drechsel",
+    "Dermot Harnett",
+    "Manuel Holtgrewe",
+    "Andranik Ivanov",
+    "Mathias Kuhring",
+    "Clemens Messerschmidt",
+    "Jose Muino Acuna",
+    "Mikko Nieminen",
+    "Benedikt Obermayer-Wasserscheid",
+    "Oliver Stolpe",
+    "Nina Thiessen",
+    "Eudes Viera Barbosa",
+    "January Weiner"
+  ],
+  "client_name": "",
+  "client_email": "",
+  "SODAR_UUID": "",
+  "SODAR_URL": "",
+  "Gitlab_URL": "",
+  "project_name": "{{cookiecutter.directory}}",
+  "start_date": "",
+  "current_status": [
+    "Active",
+    "Inactive",
+    "Finished",
+    "Archived"
+  ],
+
+  "size": "0",
+  "inodes": "0",
+  "size_follow": "0",
+  "inodes_follow": "0",
+  "snakemake_nb": "0"
+}

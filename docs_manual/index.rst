@@ -17,6 +17,7 @@ Manual
     | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
     | :ref:`Upload raw data to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
+    | :ref:`Tools for archiving old projects <man_archive>`
 
 Use cases
     Use cases for common processing tasks.
@@ -52,6 +53,7 @@ Project Info
     man_ingest_fastq
     man_itransfer_results
     man_write_sample_info
+    man_archive
 
 .. toctree::
     :caption: Use Cases

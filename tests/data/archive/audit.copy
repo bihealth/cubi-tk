@@ -1,0 +1,15 @@
+./files/archived: Ok
+./file.public: Ok
+./README.md: Ok
+./.snakemake.tar.gz: Ok
+./file.public.md5: Ok
+./symlinks/accessible: Ok
+./symlinks/to_archived: Ok
+hashdeep: Audit passed
+   Input files examined: 0
+  Known files expecting: 0
+          Files matched: 7
+Files partially matched: 0
+            Files moved: 0
+        New files found: 0
+  Known files not found: 0
