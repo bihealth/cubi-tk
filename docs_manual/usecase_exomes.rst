@@ -27,7 +27,7 @@ The overall data flow for the Translate-NAMSE use case is depicted below.
 - A CUBI Bioinformatician can now update the sample sheet for the SNAPPY pipeline using "cubi-tk snappy pull-sheets" and update a copy of the raw data sequence with "cubi-tk snappy pull-raw-data" files earlier transferred by LB.
 - Once the data has been pulled from SODAR and iRODS, the CUBI bioinformatician launches the SNAPPY pipeline which processes the data on the BIH HPC.
   The command ``cubi-tk snappy kickoff`` launches the pipeline steps with their dependencies. Inspection of results is based on manual inspection of log files for now.
-- Once this is complete, Manuel uses ``cubi-tk snappy varfish-upload`` and ``cubi-tk snappy itarnsfer-{variant-calling,ngs-mapping}`` to transfer the resulting BAM and VCF files into VarFish via its REST API and iRODS via landing zones (``cubi-tk sodar lz-{create,move}``).
+- Once this is complete, Manuel uses ``cubi-tk snappy varfish-upload`` and ``cubi-tk snappy itransfer-{variant-calling,ngs-mapping}`` to transfer the resulting BAM and VCF files into VarFish via its REST API and iRODS via landing zones (``cubi-tk sodar lz-{create,move}``).
 
 **To summarise more concisely**
 
