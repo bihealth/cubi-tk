@@ -50,8 +50,8 @@ def test_run_archive_summary_smoke_test():
         res = main(argv)
         assert not res
 
-        mocked = [line.rstrip().split("\t") for line in open(mocked_file, "rt")][1:]
-        target = [line.rstrip().split("\t") for line in open(target_file, "rt")][1:]
+        mocked = sorted([line.rstrip().split("\t") for line in open(mocked_file, "rt")][1:])
+        target = sorted([line.rstrip().split("\t") for line in open(target_file, "rt")][1:])
         assert len(mocked) == len(target)
         j = target[0].index("ResolvedName")
         failed = []
