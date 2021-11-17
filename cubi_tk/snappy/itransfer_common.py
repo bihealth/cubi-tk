@@ -116,6 +116,7 @@ class SnappyItransferCommandBase:
     def __init__(self, args):
         #: Command line arguments.
         self.args = args
+        self.step_name = self.__class__.step_name
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -166,7 +167,7 @@ class SnappyItransferCommandBase:
         )
         parser.add_argument(
             "--remote-dir-pattern",
-            default="{library_name}/%s/{date}" % cls.step_name,
+            default="{library_name}/{step}/{date}",
             help="Pattern to use for constructing remote pattern",
         )
         parser.add_argument(
@@ -334,7 +335,9 @@ class SnappyItransferCommandBase:
                 remote_dir = os.path.join(
                     lz_irods_path,
                     self.args.remote_dir_pattern.format(
-                        library_name=library_name, date=self.args.remote_dir_date
+                        library_name=library_name,
+                        step=self.step_name,
+                        date=self.args.remote_dir_date,
                     ),
                 )
                 if not os.path.exists(real_result):  # pragma: nocover
@@ -646,6 +649,17 @@ class SnappyItransferCommandBase:
         # Logger
         logger.info("Starting cubi-tk snappy %s", self.command_name)
         logger.info("  args: %s", self.args)
+
+        # The test below should not be done here, but in check_args.
+        # However, it makes cubi_tk.sodar.ingest_fastq fail, as it
+        # sub-classes SnappyItransferCommandBase, without overriding
+        # check_args.
+        if self.step_name is None and self.args.step is None:
+            logger.error("Snappy step is not defined")
+            return 1
+        # Fix for ngs_mapping & variant_calling vs step
+        if self.step_name is None:
+            self.step_name = self.args.step
 
         # Find biomedsheet file
         biomedsheet_tsv = get_biomedsheet_path(
