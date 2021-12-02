@@ -20,7 +20,7 @@ $ conda create -n cubi-tk python=3.7
 $ conda activate cubi-tk
 ```
 
-Clone CUBI-SAK and install.
+Clone CUBI-TK and install.
 
 ```bash
 $ git clone git@cubi-gitlab.bihealth.org:CUBI/Pipelines/cubi-tk.git

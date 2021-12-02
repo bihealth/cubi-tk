@@ -1,6 +1,6 @@
 .. _manual-main:
 
-Welcome to CUBI-SAK's documentation!
+Welcome to CUBI-TK's documentation!
 ====================================
 
 Installation & Getting Started
