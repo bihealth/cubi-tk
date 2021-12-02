@@ -1,49 +1,49 @@
 """Exceptions for ``cubi-tk``."""
 
 
-class CubiSakWarning(Warning):
+class CubiTkWarning(Warning):
     """Base ``Warning`` class."""
 
 
-class IrodsIcommandsUnavailableWarning(CubiSakWarning):
+class IrodsIcommandsUnavailableWarning(CubiTkWarning):
     """Raised when iRODS icommands are not available."""
 
 
-class CubiSakException(Exception):
+class CubiTkException(Exception):
     """Base ``Exception`` class."""
 
 
-class IrodsIcommandsUnavailableException(CubiSakException):
+class IrodsIcommandsUnavailableException(CubiTkException):
     """Raised when iRODS icommands are not available but required."""
 
 
-class UnsupportedIsaTabFeatureException(CubiSakException):
+class UnsupportedIsaTabFeatureException(CubiTkException):
     """Raised when an unsupported ISA-tab feature occurs."""
 
 
-class InvalidIsaTabException(CubiSakException):
+class InvalidIsaTabException(CubiTkException):
     """Raised when ISA-tab breaks an assumption."""
 
 
-class MissingFileException(CubiSakException):
+class MissingFileException(CubiTkException):
     """Raised on missing file for transfer."""
 
 
-class OverwriteRefusedException(CubiSakException):
+class OverwriteRefusedException(CubiTkException):
     """Raised when refusing to overwrite a file."""
 
 
-class ResourceDownloadError(CubiSakException):
+class ResourceDownloadError(CubiTkException):
     """Raised when something went wrong with a file download error."""
 
 
-class ParameterException(CubiSakException):
+class ParameterException(CubiTkException):
     """Raised in case of problems with parameterisation."""
 
 
-class ParseOutputException(CubiSakException):
+class ParseOutputException(CubiTkException):
     """Problem with parsing output of sub command."""
 
 
-class UserCanceledException(CubiSakException):
+class UserCanceledException(CubiTkException):
     """Raised when user doesn't allow the process to continue."""
