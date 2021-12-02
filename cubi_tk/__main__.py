@@ -1,4 +1,4 @@
-"""Main entry point for CUBI-SAK"""
+"""Main entry point for CUBI-TK"""
 # PYTHON_ARGCOMPLETE_OK
 
 import argparse

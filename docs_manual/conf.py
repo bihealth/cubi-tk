@@ -134,7 +134,7 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass
 # [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "cubi_tk.tex", u"CUBI-SAK Documentation", u"Core Unit Bioinformatics", "manual")
+    (master_doc, "cubi_tk.tex", u"CUBI-TK Documentation", u"Core Unit Bioinformatics", "manual")
 ]
 
 
@@ -142,7 +142,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "cubi_tk", u"CUBI-SAK Documentation", [author], 1)]
+man_pages = [(master_doc, "cubi_tk", u"CUBI-TK Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------
@@ -154,7 +154,7 @@ texinfo_documents = [
     (
         master_doc,
         "cubi_tk",
-        u"CUBI-SAK Documentation",
+        u"CUBI-TK Documentation",
         author,
         "cubi_tk",
         "One line description of project.",
