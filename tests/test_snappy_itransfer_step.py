@@ -26,6 +26,16 @@ def test_run_snappy_itransfer_ngs_mapping_help(capsys):
     assert not res.err
 
 
+def test_run_snappy_itransfer_ngs_mapping_nostep(capsys):
+    sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
+    argv = ["snappy", "itransfer-step", "--sodar-api-token", "XXXX", sodar_uuid, "--tool", "bwa"]
+
+    parser, subparsers = setup_argparse()
+
+    res = main(argv)
+    assert res == 1
+
+
 def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
     parser, subparsers = setup_argparse()
 
@@ -115,14 +125,6 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
 
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
-
-    # # requests mock
-    # return_value = dict(assay="", config_data="", configuration="", date_modified="", description="", irods_path=sodar_path, project="", sodar_uuid="", status="", status_info="", title="", user="")
-    # url_tpl = "%(sodar_url)s/landingzones/api/retrieve/%(landing_zone_uuid)s"
-    # url = url_tpl % {"sodar_url": args.sodar_url, "landing_zone_uuid": args.landing_zone_uuid}
-    # requests_mock.get(url, text=json.dumps(return_value))
-    # #requests_mock.get("resource://biomedsheets//data/std_fields.json", text="dummy")
-    # #requests_mock.get("resource://biomedsheets/data/std_fields.json#/extraInfoDefs/template/ncbiTaxon", text="dummy")
 
     # Actually exercise code and perform test.
     res = main(argv)

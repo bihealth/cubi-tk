@@ -20,10 +20,25 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         super().setup_argparse(parser)
         parser.add_argument(
-            "--step", help="Name of the snappy pipeline step", default="ngs_mapping"
+            "--step",
+            help=(
+                "Name of the snappy pipeline step (step name must be identical to step directory)."
+                "Steps names are available from the snappy command snappy-start-step --help"
+            ),
+            default=None,
         )
         parser.add_argument(
-            "--tool", help="Name of the tool, for example bwa. Tools order in important", nargs="*"
+            "--tool",
+            help=(
+                "Name of the tool, for example bwa. Tools order in important:"
+                "it must match the order used to generate filename prefix."
+                "For example, the variant annotation step requires the mapper, caller and"
+                "the annotator software. In that case, the snappy file prefix is:"
+                "<mapper>.<caller>.<annotator>, so the command would be:"
+                "--tool <mapper> <vcaller> <annotator>. Some steps add more information to their"
+                "prefix, for example 'jannovar_somatic_vcf'"
+            ),
+            nargs="*",
         )
 
     def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
@@ -35,6 +50,16 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
             ),
             "**",
         )
+
+    def check_args(self, args):
+        """Called for checking arguments, override to change behaviour."""
+        res = super().check_args(args)
+
+        if self.step_name is None and self.args.step is None:
+            logger.error("Snappy step is not defined")
+            return 1
+
+        return res
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

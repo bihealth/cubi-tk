@@ -650,13 +650,6 @@ class SnappyItransferCommandBase:
         logger.info("Starting cubi-tk snappy %s", self.command_name)
         logger.info("  args: %s", self.args)
 
-        # The test below should not be done here, but in check_args.
-        # However, it makes cubi_tk.sodar.ingest_fastq fail, as it
-        # sub-classes SnappyItransferCommandBase, without overriding
-        # check_args.
-        if self.step_name is None and self.args.step is None:
-            logger.error("Snappy step is not defined")
-            return 1
         # Fix for ngs_mapping & variant_calling vs step
         if self.step_name is None:
             self.step_name = self.args.step
