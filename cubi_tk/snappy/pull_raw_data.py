@@ -39,6 +39,7 @@ class Config:
     project_uuid: str
     assay: str
     samples: typing.List[str]
+    allow_missing: bool
 
 
 class PullRawDataCommand:
@@ -82,6 +83,13 @@ class PullRawDataCommand:
         )
         parser.add_argument("--min-batch", default=0, type=int, help="Minimal batch number to pull")
         parser.add_argument("--samples", help="Optional list of samples to pull")
+
+        parser.add_argument(
+            "--allow-missing",
+            default=False,
+            action="store_true",
+            help="Allow missing data in assay",
+        )
 
         parser.add_argument(
             "--yes", default=False, action="store_true", help="Assume all answers are yes."
@@ -154,6 +162,7 @@ class PullRawDataCommand:
                 sodar_api_token=self.config.sodar_api_token,
                 overwrite=self.config.overwrite,
                 min_batch=self.config.min_batch,
+                allow_missing=self.config.allow_missing,
                 dry_run=self.config.dry_run,
                 irsync_threads=self.config.irsync_threads,
                 yes=self.config.yes,
