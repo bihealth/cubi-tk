@@ -1,0 +1,21 @@
+./1970-01-01_hashdeep_report.txt: No match
+./file.public.md5: No match
+./.snakemake.tar.gz: No match
+./symlinks/to_archived: Ok
+./symlinks/to_dir/archived: Ok
+./symlinks/to_outside_file: Ok
+./file.public: No match
+./symlinks/to_outside_dir/outside_dir_file: Ok
+./files/archived: Ok
+./symlinks/to_ignored_file: Known file not used
+./file.public: Known file not used
+./ignored_dir/ignored_file: Known file not used
+./.snakemake/snakemake: Known file not used
+hashdeep: Audit failed
+   Input files examined: 0
+  Known files expecting: 0
+          Files matched: 5
+Files partially matched: 0
+            Files moved: 0
+        New files found: 4
+  Known files not found: 4

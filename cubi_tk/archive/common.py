@@ -3,6 +3,8 @@
 import argparse
 import attr
 import os
+import subprocess
+import sys
 import typing
 
 from pathlib import Path
@@ -113,6 +115,29 @@ def traverse_project_files(directory):
     for path, _, files in os.walk(root):
         for filename in files:
             yield get_file_attributes(os.path.join(path, filename), root)
+
+
+def run_hashdeep(directory, out_file=None, num_threads=4, ref_file=None):
+    """Run hashdeep recursively on directory, following symlinks, stores the result in out_file.
+    Hashdeep can be run in normal or audit mode, when ref_file is provided."""
+    # Output of out_file of stdout
+    if out_file:
+        f = open(out_file, "wt")
+    else:
+        f = sys.stdout
+    # hashdeep command for x or for audit
+    cmd = ["hashdeep", "-j", str(num_threads), "-l", "-r"]
+    if ref_file:
+        cmd += ["-vvv", "-a", "-k", ref_file, "."]
+    else:
+        cmd += ["-o", "fl", "."]
+    # Run hashdeep from the directory, storing the output in f
+    p = subprocess.Popen(cmd, cwd=directory, encoding="utf-8", stdout=f, stderr=subprocess.PIPE)
+    p.communicate()
+    # Return hashdeep return value
+    if out_file:
+        f.close()
+    return p.returncode
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

@@ -3,6 +3,7 @@
 We only run some smoke tests here.
 """
 
+import datetime
 import glob
 import os
 import re
@@ -10,12 +11,16 @@ import re
 import filecmp
 import pytest
 import tempfile
+from unittest import mock
 
 from cubi_tk.__main__ import setup_argparse, main
 
 
-ORIG_PATTERN = re.compile("^(%|#).*$")
-COPY_PATTERN = re.compile("^(hashdeep| ).*$")
+HASHDEEP_TITLES_PATTERN = re.compile("^(%|#).*$")
+IGNORE_FILES_PATTERN = re.compile("^(.*/)?(hashdeep|workdir)_(report|audit)\\.txt$")
+IGNORE_LINES_PATTERN = re.compile(
+    "^.+,(.*/)?(\\.snakemake\\.tar\\.gz|1970-01-01_hashdeep_report\\.txt)$"
+)
 
 
 def test_run_archive_copy_help(capsys):
@@ -43,75 +48,92 @@ def test_run_archive_copy_nothing(capsys):
     assert res.err
 
 
-def _sort_hashdeep_title_and_body(filename, title):
+def sort_hashdeep_title_and_body(filename):
     titles = []
     body = []
     with open(filename, "rt") as f:
         lines = [x.rstrip() for x in f.readlines()]
     for line in lines:
         line.rstrip()
-        if title.match(line):
+        if HASHDEEP_TITLES_PATTERN.match(line):
             titles.append(line)
         else:
-            body.append(line)
+            if not IGNORE_LINES_PATTERN.match(line):
+                body.append(line)
     return (sorted(titles), sorted(body))
 
 
-def test_run_archive_copy_smoke_test():
+def test_run_archive_copy_smoke_test(mocker):
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
 
         argv = [
             "archive",
             "copy",
-            "--audit-file",
-            os.path.join(tmp_dir, "audit.orig"),
-            "--audit-result",
-            os.path.join(tmp_dir, "audit.copy"),
-            os.path.join(repo_dir, "temp_dest"),
+            "--keep-workdir-hashdeep",
+            os.path.join(repo_dir, "temp_dest_verif"),
             os.path.join(tmp_dir, "final_dest"),
         ]
         setup_argparse()
+
+        # --- patch the missing README.md
+        mock_check_output = mock.MagicMock(return_value=True)
+        mocker.patch("cubi_tk.archive.readme.is_readme_valid", mock_check_output)
 
         # --- run tests
         res = main(argv)
         assert not res
 
-        prefix = os.path.join(repo_dir, "final_dest_verif")
-        fns = [
-            x.replace(prefix + "/", "", 1)
-            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
-        ]
+        # --- remove timestamps on all hashdeep reports & audits
+        now = datetime.date.today().strftime("%Y-%m-%d")
         prefix = os.path.join(tmp_dir, "final_dest")
-        fns = fns + [
-            x.replace(prefix + "/", "", 1)
-            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
+        for fn in ["hashdeep_audit", "workdir_report", "workdir_audit"]:
+            from_fn = "{}_{}.txt".format(now, fn)
+            to_fn = "{}.txt".format(fn)
+            os.rename(os.path.join(prefix, from_fn), os.path.join(prefix, to_fn))
+
+        # --- check report
+        (repo_titles, repo_body) = sort_hashdeep_title_and_body(
+            os.path.join(repo_dir, "final_dest_verif", "workdir_report.txt")
+        )
+        (tmp_titles, tmp_body) = sort_hashdeep_title_and_body(
+            os.path.join(tmp_dir, "final_dest", "workdir_report.txt")
+        )
+
+        # --- check audits
+        for fn in ["hashdeep_audit", "workdir_audit"]:
+            with open(os.path.join(repo_dir, "final_dest_verif", fn + ".txt"), "r") as f:
+                repo = sorted(f.readlines())
+            with open(os.path.join(tmp_dir, "final_dest", fn + ".txt"), "r") as f:
+                tmp = sorted(f.readlines())
+            assert repo == tmp
+
+        # --- test all copied files, except the hashdeep report & audit, that can differ by line order
+        prefix = os.path.join(repo_dir, "final_dest_verif")
+        ref_fns = [
+            os.path.relpath(x, start=prefix)
+            for x in filter(
+                lambda x: os.path.isfile(x) or os.path.islink(x),
+                glob.glob(prefix + "/**/*", recursive=True),
+            )
         ]
-        fns = list(set(fns))
+        ref_fns = filter(lambda x: not IGNORE_FILES_PATTERN.match(x), ref_fns)
+        prefix = os.path.join(tmp_dir, "final_dest")
+        test_fns = [
+            os.path.relpath(x, start=prefix)
+            for x in filter(
+                lambda x: os.path.isfile(x) or os.path.islink(x),
+                glob.glob(prefix + "/**/*", recursive=True),
+            )
+        ]
+        test_fns = filter(lambda x: not IGNORE_FILES_PATTERN.match(x), test_fns)
 
-        (repo_titles, repo_body) = _sort_hashdeep_title_and_body(
-            os.path.join(repo_dir, "audit.orig"), ORIG_PATTERN
-        )
-        (tmp_titles, tmp_body) = _sort_hashdeep_title_and_body(
-            os.path.join(tmp_dir, "audit.orig"), ORIG_PATTERN
-        )
-        print("DEBUG- repo_body = {}".format(repo_body))
-        print("DEBUG- tmp_body = {}".format(tmp_body))
-        assert repo_body == tmp_body
-
-        (repo_titles, repo_body) = _sort_hashdeep_title_and_body(
-            os.path.join(repo_dir, "audit.copy"), COPY_PATTERN
-        )
-        (tmp_titles, tmp_body) = _sort_hashdeep_title_and_body(
-            os.path.join(tmp_dir, "audit.copy"), COPY_PATTERN
-        )
-        assert repo_titles == tmp_titles and repo_body == tmp_body
-
-        _, mismatches, errors = filecmp.cmpfiles(
+        matches, mismatches, errors = filecmp.cmpfiles(
             os.path.join(repo_dir, "final_dest_verif"),
             os.path.join(tmp_dir, "final_dest"),
-            common=fns,
+            common=ref_fns,
             shallow=False,
         )
-        assert len(errors) == 0
-        assert len(mismatches) == 0
+        assert len(matches) > 0
+        assert errors == ["symlinks/to_ignored_file"]
+        assert mismatches == ["symlinks/to_dir"]

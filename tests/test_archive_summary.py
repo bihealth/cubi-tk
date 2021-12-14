@@ -43,7 +43,7 @@ def test_run_archive_summary_smoke_test():
         target_file = os.path.join(repo_dir, filename)
         mocked_file = os.path.join(tmp_dir, filename)
 
-        argv = ["archive", "summary", os.path.join(repo_dir, "2021-10-15_project"), mocked_file]
+        argv = ["archive", "summary", os.path.join(repo_dir, "project"), mocked_file]
         setup_argparse()
 
         # --- run tests

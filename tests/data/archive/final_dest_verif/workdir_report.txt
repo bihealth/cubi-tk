@@ -1,0 +1,14 @@
+%%%% HASHDEEP-1.0
+%%%% size,md5,sha256,filename
+## Invoked from: /fast/work/users/blance_c/Development/saks/devel/tests/data/archive/temp_dest
+## $ hashdeep -r -l -o fl .
+## 
+177,a369c79a86f7dee44f90f844c14e9671,796ec27666872d5d982db5b549ca10d65cf4ad79985fdbaa03f71660690dbf7d,./.snakemake.tar.gz
+1310,7b00a57682752a9b76d2fbfda06c34e7,fc18605337a5ed0e7ed4a2af9f55d78150faf6ec0052066ced2402112121a6f1,./1970-01-01_hashdeep_report.txt
+52,75d5fe2d437a579a86e3085b962a6183,6bab2f8525704eadcd83c6b73ad7dd9733dfc10a2000e12490cfe37605227706,./symlinks/to_archived
+52,75d5fe2d437a579a86e3085b962a6183,6bab2f8525704eadcd83c6b73ad7dd9733dfc10a2000e12490cfe37605227706,./files/archived
+45,39d3047a77f6f5a087e672e471ba410c,d05cfa9d201c4c995df36383e62c858852557e3089ed890a8c179a578d8ef111,./file.public.md5
+98,70d8094ceb9d84d405ec21ad2f310d39,392afed17249cc5c0ec02bb529d602ed1b6da43f54eed3ae9801c025d13c6879,./symlinks/to_outside_dir/outside_dir_file
+52,75d5fe2d437a579a86e3085b962a6183,6bab2f8525704eadcd83c6b73ad7dd9733dfc10a2000e12490cfe37605227706,./symlinks/to_dir/archived
+74,b8f855669bf3e77a5b7be425de7cf9b3,3f3c7503ee1b5ed1994f3f4f46d237149912255d6d731db08b166def6a3bb0da,./symlinks/to_outside_file
+0,d41d8cd98f00b204e9800998ecf8427e,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,./file.public

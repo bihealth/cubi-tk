@@ -2,6 +2,7 @@
 
 import argparse
 import attr
+import datetime
 import os
 import re
 import sys
@@ -25,6 +26,7 @@ class Config(common.Config):
         str, typing.Any
     ]  # The regular expression string read from the yaml file in compiled into a re.Pattern
     skip: bool
+    num_threads: int
     no_readme: bool
     destination: str
 
@@ -47,6 +49,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         """Setup argument parser."""
         super().setup_argparse(parser)
 
+        parser.add_argument("--num-threads", type=int, default=4, help="Number of parallel threads")
         parser.add_argument(
             "--rules",
             "-r",
@@ -92,6 +95,14 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         self.project_dir = os.path.realpath(self.config.project)
         self.dest_dir = os.path.realpath(self.config.destination)
 
+        os.makedirs(self.dest_dir, mode=488, exist_ok=False)
+
+        if not self.config.no_readme:
+            logger.info("Preparing README.md")
+            create_readme(
+                os.path.join(self.dest_dir, "README.md"), self.project_dir, config=self.config
+            )
+
         if not self.config.skip:
             rules = self._get_rules(self.config.rules)
 
@@ -101,11 +112,18 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             sys.stdout.write(" " * 80 + "\r")
             sys.stdout.flush()
 
-        if not self.config.no_readme:
-            logger.info("Preparing README.md")
-            create_readme(
-                os.path.join(self.dest_dir, "README.md"), self.project_dir, config=self.config
+            # Run hashdeep on original project directory
+            logger.info("Preparing the hashdeep report of {}".format(self.project_dir))
+            res = common.run_hashdeep(
+                directory=self.project_dir,
+                out_file=os.path.join(
+                    self.dest_dir, datetime.date.today().strftime("%Y-%m-%d_hashdeep_report.txt")
+                ),
+                num_threads=self.config.num_threads,
             )
+            if res:
+                logger.error("hashdeep command has failed with return code {}".format(res))
+                return res
 
         return 0
 
@@ -145,6 +163,8 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             ):
                 for child in os.listdir(path):
                     self._archive_path(os.path.join(path, child), rules)
+            else:
+                self._archive(path)
 
     def _progress(self):
         self.inode += 1
