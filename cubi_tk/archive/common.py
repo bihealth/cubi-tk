@@ -89,7 +89,6 @@ def get_file_attributes(filename, relative_to):
             dangling = not resolved.exists()
         except PermissionError:
             dangling = None
-        outside = os.path.relpath(resolved, start=relative_to).startswith("../")
         if dangling is None or dangling:
             size = 0
         else:
@@ -99,6 +98,7 @@ def get_file_attributes(filename, relative_to):
         outside = False
         target = None
         size = resolved.stat().st_size
+    outside = os.path.relpath(resolved, start=relative_to).startswith("../")
     return FileAttributes(
         relative_path=os.path.relpath(filename, start=relative_to),
         resolved=resolved,
@@ -110,9 +110,9 @@ def get_file_attributes(filename, relative_to):
     )
 
 
-def traverse_project_files(directory):
+def traverse_project_files(directory, followlinks=True):
     root = Path(directory).resolve(strict=True)
-    for path, _, files in os.walk(root):
+    for path, _, files in os.walk(root, followlinks=followlinks):
         for filename in files:
             yield get_file_attributes(os.path.join(path, filename), root)
 

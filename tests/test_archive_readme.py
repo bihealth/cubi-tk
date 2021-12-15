@@ -29,7 +29,6 @@ def test_run_archive_readme_smoke_test():
 
         readme_path = os.path.join(tmp_dir, project_name, "README.md")
         cubi_tk.archive.readme.create_readme(readme_path, project_dir, config=config, no_input=True)
-        print("DEBUG- Contents of README.md")
         f = open(readme_path, "r")
         for line in f.readlines():
             print(line.rstrip())

@@ -66,7 +66,7 @@ def _extra_context_from_config(config=None):
             if getattr(config, var_name, None) is not None:
                 extra_context[name] = getattr(config, var_name)
                 continue
-            if var_name in config:
+            if isinstance(config, dict) and var_name in config:
                 extra_context[name] = config[var_name]
     return extra_context
 

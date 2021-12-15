@@ -108,5 +108,5 @@ def test_run_archive_prepare_smoke_test():
             shallow=False,
         )
         assert len(matches) > 0
-        assert errors == ["symlinks/to_ignored_file"]
-        assert sorted(mismatches) == ["1970-01-01_hashdeep_report.txt", "symlinks/to_dir"]
+        assert sorted(errors) == ["extra_data/to_ignored_dir", "extra_data/to_ignored_file"]
+        assert sorted(mismatches) == ["1970-01-01_hashdeep_report.txt", "pipeline/output/sample2"]

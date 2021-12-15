@@ -82,7 +82,7 @@ def test_run_archive_copy_smoke_test(mocker):
 
         # --- run tests
         res = main(argv)
-        assert not res
+        assert res == 0
 
         # --- remove timestamps on all hashdeep reports & audits
         now = datetime.date.today().strftime("%Y-%m-%d")
@@ -135,5 +135,7 @@ def test_run_archive_copy_smoke_test(mocker):
             shallow=False,
         )
         assert len(matches) > 0
-        assert errors == ["symlinks/to_ignored_file"]
-        assert mismatches == ["symlinks/to_dir"]
+        assert sorted(errors) == ["extra_data/to_ignored_dir", "extra_data/to_ignored_file"]
+        assert sorted(mismatches) == ["pipeline/output/sample2"]
+
+        assert os.path.exists(os.path.join(tmp_dir, "final_dest", "archive_copy_complete"))

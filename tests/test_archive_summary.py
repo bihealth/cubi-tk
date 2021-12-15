@@ -43,19 +43,31 @@ def test_run_archive_summary_smoke_test():
         target_file = os.path.join(repo_dir, filename)
         mocked_file = os.path.join(tmp_dir, filename)
 
-        argv = ["archive", "summary", os.path.join(repo_dir, "project"), mocked_file]
+        argv = [
+            "archive",
+            "summary",
+            "--class",
+            os.path.join(repo_dir, "classes.yaml"),
+            os.path.join(repo_dir, "project"),
+            mocked_file,
+        ]
         setup_argparse()
 
         # --- run tests
         res = main(argv)
         assert not res
 
-        mocked = sorted([line.rstrip().split("\t") for line in open(mocked_file, "rt")][1:])
-        target = sorted([line.rstrip().split("\t") for line in open(target_file, "rt")][1:])
+        mocked = [line.rstrip().split("\t") for line in open(mocked_file, "rt")][1:]
+        target = [line.rstrip().split("\t") for line in open(target_file, "rt")][1:]
         assert len(mocked) == len(target)
         j = target[0].index("ResolvedName")
         failed = []
-        for (i, value) in enumerate(target):
-            if mocked[i][-j] != value[-j]:
+        for value in target:
+            found = False
+            for v in mocked:
+                if v[-j] == value[-j]:
+                    found = True
+                    break
+            if not found:
                 failed.append(value)
         assert len(failed) == 0

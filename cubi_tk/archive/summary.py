@@ -41,6 +41,11 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             ),
             help="Location of the file describing files of interest",
         )
+        parser.add_argument(
+            "--dont-follow-links",
+            action="store_true",
+            help="Do not follow symlinks to directories. Required when the project contains circular symlinks",
+        )
         parser.add_argument("table", help="Location of the summary output table")
 
     @classmethod
@@ -88,7 +93,9 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
 
         # Traverse the project tree to accumulate statistics and populate the output table
         self.start = time.time()
-        for file_attr in traverse_project_files(self.config.project):
+        for file_attr in traverse_project_files(
+            self.config.project, followlinks=not self.config.dont_follow_links
+        ):
             self._aggregate_stats(file_attr, stats, f)
         f.close()
 
@@ -166,6 +173,11 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
         stats["nFile"] += 1
         stats["size"] += file_attr.size
 
+        if file_attr.outside:
+            stats["nOutside"] += 1
+            stats["size_outside"] += file_attr.size
+            save.append("outside")
+
         # symlinks
         if file_attr.target:
             stats["nLink"] += 1
@@ -175,10 +187,6 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             if file_attr.dangling is None:
                 stats["nInaccessible"] += 1
                 save.append("inaccessible")
-            if file_attr.outside:
-                stats["nOutside"] += 1
-                stats["size_outside"] += file_attr.size
-                save.append("outside")
 
         # File classes
         for (name, the_class) in stats["classes"].items():
