@@ -110,10 +110,14 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
         return 0
 
     def _report_stats(self, stats):
-        logger.info("Number of files in {}: {}".format(self.config.project, stats["nFile"]))
         logger.info(
-            "Number of links: {} ({} dangling, {} inaccessible (permissions), {} outside of project directory)".format(
-                stats["nLink"], stats["nDangling"], stats["nInaccessible"], stats["nOutside"]
+            "Number of files in {}: {} ({} outside of project directory)".format(
+                self.config.project, stats["nFile"], stats["nOutside"]
+            )
+        )
+        logger.info(
+            "Number of links: {} ({} dangling, {} inaccessible (permissions))".format(
+                stats["nLink"], stats["nDangling"], stats["nInaccessible"]
             )
         )
         logger.info(
@@ -128,12 +132,14 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                 )
             )
             logger.info(
-                "Number of files outside the projects directory: {} (total size: {})".format(
-                    the_stat["nOutside"], the_stat["size_outside"]
+                "Number of {} files outside the projects directory: {} (total size: {})".format(
+                    name, the_stat["nOutside"], the_stat["size_outside"]
                 )
             )
             logger.info(
-                "Number of files lost (dangling or inaccessible): {}".format(the_stat["nLost"])
+                "Number of {} files lost (dangling or inaccessible): {}".format(
+                    name, the_stat["nLost"]
+                )
             )
 
     @staticmethod
@@ -190,20 +196,19 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
 
         # File classes
         for (name, the_class) in stats["classes"].items():
-            if (
-                not the_class["pattern"].match(file_attr.relative_path)
-                or file_attr.size < the_class["min_size"]
-            ):
+            if not the_class["pattern"].match(file_attr.relative_path):
+                continue
+            is_lost = file_attr.target and (file_attr.dangling is None or file_attr.dangling)
+            if file_attr.size < the_class["min_size"] and not is_lost:
                 continue
             save.append(name)
             the_class["nFile"] += 1
-            if file_attr.target:
-                if file_attr.dangling is None or file_attr.dangling:
-                    the_class["nLost"] += 1
-                else:
-                    if file_attr.outside:
-                        the_class["nOutside"] += 1
-                        the_class["size_outside"] += file_attr.size
+            if is_lost:
+                the_class["nLost"] += 1
+            else:
+                if file_attr.outside:
+                    the_class["nOutside"] += 1
+                    the_class["size_outside"] += file_attr.size
             the_class["size"] += file_attr.size
 
         if save:

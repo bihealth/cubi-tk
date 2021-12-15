@@ -55,7 +55,7 @@ Archived projects should contain all **important** files, but not data already s
 
 **The purpose of the module is:**
 
-- to provide a summary of files that require special attention, for example symlinks which targets lie outside of the project, or large files (`*.fastq.gz` or `*.bam` especially)
+- to provide a summary of files that require special attention, for example symlinks which targets lie outside of the project, or large files (``*.fastq.gz`` or ``*.bam`` especially)
 - to create a temporary directory that mimicks the archived files with symlinks,
 - to use this temporary directory as template to copy files on the CEPH filesystem, and
 - to compute checksums on the originals and copies, to ensure accuracy of the copy process.
@@ -65,7 +65,9 @@ Archived projects should contain all **important** files, but not data already s
 Basic usage
 -----------
 
-**Summary of files in project**
+
+Summary of files in project
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -91,7 +93,11 @@ The summary file is a table with the following columns:
 - **Dangling**: ``True`` when the file cannot be read (missing or inaccessible), ``False`` otherwise.
 - **Outside**: ``True`` when the target path is outside of the project directory, ``False`` otherwise. It is always ``False`` for real files (_i.e._ not symlinks).
 
-**Archive preparation: temporary copy**
+The summary step also reports an overview of the results, with the total number of files, the total size of the project, and the number of links to files. Number of dangling links and links inaccessible because of permission issues are listed separately. Likewise, the number of files outside of the projects, which are linked to from within the project by symlinks is also quoted. Finally, for each of the "important files" classes, the number of files, the number of files outside of the project directory and the number of files lost because of symlink failures are reported.
+
+
+Archive preparation: temporary copy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -109,7 +115,9 @@ Additional transformation of the original files are carried out during the prepa
 - The core dump files are not copied to the temporary destination, and therefore won't be copied to the final archive.
 - A ``README.md`` file is also created by the module, if there isn't one already which contains contact information. Upon creation, the module prompts the user for values that will populate ``REAMDE.md``. These values can also be included on the command line.
 
-**Copy to archive & verification**
+
+Copy to archive & verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -142,6 +150,23 @@ Three different archiving options are implemented:
 - **ignore**: the files or directories matching the pattern are simply omitted from the temporary destination. This is useful to ignore remaining temporary files, core dumps or directories containing lists of input symlinks, for example.
 - **compress**: the files or directories matching the pattern will be replaced in the temporary destination by a compressed (gzipped) tar file. This is how ``.snakemake`` or ``sge_log`` directories are treated by default, but patterns for other directories may be added, for example for the Slurm log directories.
 - **squash**: the files matching the pattern will be replaced by zero-length placeholders in the temporary destination. A md5 checksum file will be added next to the original file, to enable verification.
+
+When the user doesn't specify her own set using the ``--rules`` option, the rules applied are the following: core dumps are ignored, ``.snakemake``, ``sge_log``, ``.git``, ``snappy-pipeline`` and ``cubi_wrappers`` directories are compressed, and nothing is squashed. The exact definitions are:
+
+.. code-block:: yaml
+
+    ignore:            # Patterns for files or directories to skip
+        - "^(.*/)?core\\.[0-9]+$"
+        - "^(.*/)?\\.venv$"
+    
+    compress:          # Patterns for files or directories to tar-gzip
+        - "^(.*/)?\\.snakemake$"
+        - "^(.*/)?sge_log$"
+        - "^(.*/)?\\.git$"
+        - "^(.*/)?snappy-pipeline$"
+        - "^(.*/)?cubi_wrappers$"
+
+    squash: []         # Patterns for files to squash (compute MD5 checksum, and replace by zero-length placeholder)
 
 
 --------
@@ -210,7 +235,7 @@ Imagine now that the raw data is already safely archived in SODAR. We don't want
 
 After running the preparation command ``cubi-tk archive prepare --rules my_rules.yaml project temp_dest``, the temporary destination contains the following files::
 
-    tests/data/archive/temp_dest
+    temp_dest
     ├── <today's date>_hashdeep_report.txt
     ├── extra_data
     │   ├── file.public
@@ -224,19 +249,19 @@ After running the preparation command ``cubi-tk archive prepare --rules my_rules
     │   │   └── sample2 -> ../work/sample2
     │   └── work
     │       ├── sample1
-    │       │   └── results -> /data/gpfs-1/work/users/blance_c/Development/saks/devel/tests/data/archive/project/pipeline/work/sample1/results
+    │       │   └── results -> /absolute_path/project/pipeline/work/sample1/results
     │       └── sample2
-    │           └── results -> /data/gpfs-1/work/users/blance_c/Development/saks/devel/tests/data/archive/project/pipeline/work/sample2/results
+    │           └── results -> /absolute_path/project/pipeline/work/sample2/results
     ├── raw_data
     │   ├── batch1
     │   │   ├── sample1.fastq.gz
-    │   │   └── sample1.fastq.gz.md5 -> /data/gpfs-1/work/users/blance_c/Development/saks/devel/tests/data/archive/outside/batch1/sample1.fastq.gz.md5
+    │   │   └── sample1.fastq.gz.md5 -> /absolute_path/outside/batch1/sample1.fastq.gz.md5
     │   ├── batch2
     │   │   ├── sample2.fastq.gz
-    │   │   └── sample2.fastq.gz.md5 -> /data/gpfs-1/work/users/blance_c/Development/saks/devel/tests/data/archive/outside/batch2/sample2.fastq.gz.md5
+    │   │   └── sample2.fastq.gz.md5 -> /absolute_path/outside/batch2/sample2.fastq.gz.md5
     │   └── batch3
     │       ├── sample3.fastq.gz
-    │       └── sample3.fastq.gz.md5 -> /data/gpfs-1/work/users/blance_c/Development/saks/devel/tests/data/archive/project/raw_data/batch3/sample3.fastq.gz.md5
+    │       └── sample3.fastq.gz.md5 -> /absolute_path/project/raw_data/batch3/sample3.fastq.gz.md5
     ├── README.md
     └── .snakemake.tar.gz
 
