@@ -314,7 +314,8 @@ class DkfzMetaParser:
         theProcess = None
         for p in processes:
             if p.protocol_ref == protocol_ref:
-                theProcess = processes.remove(p)
+                theProcess = p
+                processes.remove(p)
                 break
 
         if theProcess is None:
@@ -334,7 +335,7 @@ class DkfzMetaParser:
             )
 
         libraryTypes = {}
-        if assay_type == "EXON":
+        if assay_type == "EXON" or assay_type == "WHOLE_EXOME":
             libraryTypes["Library source"] = "GENOMIC"
             libraryTypes["Library strategy"] = "WXS"
             libraryTypes["Library selection"] = "Hybrid selection"
@@ -342,7 +343,7 @@ class DkfzMetaParser:
             libraryTypes["Library source"] = "TRANSCRIPTOMIC"
             libraryTypes["Library strategy"] = "RNA-Seq"
             libraryTypes["Library selection"] = "PolyA"
-        elif assay_type == "WGS":
+        elif assay_type == "WGS" or assay_type == "WHOLE_GENOME":
             libraryTypes["Library source"] = "GENOMIC"
             libraryTypes["Library strategy"] = "WGS"
             libraryTypes["Library selection"] = "RANDOM"

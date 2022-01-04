@@ -210,19 +210,35 @@ class IsaNodeVisitor:
         logger.debug("end assay %s", assay.file)
 
     def on_traverse_arc(self, arc, node_path, study=None, assay=None):
-        _, _, _, = node_path, study, assay
+        _, _, _, = (
+            node_path,
+            study,
+            assay,
+        )
         logger.debug("traversing arc %s", arc)
 
     def on_visit_node(self, node, node_path, study=None, assay=None):
-        _, _, _, = node_path, study, assay
+        _, _, _, = (
+            node_path,
+            study,
+            assay,
+        )
         logger.debug("visiting node %s", node)
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
-        _, _, _, = node_path, study, assay
+        _, _, _, = (
+            node_path,
+            study,
+            assay,
+        )
         logger.debug("visiting material %s", material)
 
     def on_visit_process(self, process, node_path, study=None, assay=None):
-        _, _, _, = node_path, study, assay
+        _, _, _, = (
+            node_path,
+            study,
+            assay,
+        )
         logger.debug("visiting process %s", process)
 
 

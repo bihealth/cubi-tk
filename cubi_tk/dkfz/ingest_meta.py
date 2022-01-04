@@ -114,17 +114,18 @@ class DkfzIngestMetaCommand(common.DkfzCommandBase):
         self._create_tempdir()
 
         files_to_upload = list()
+
+        # Upload id mapping table
+        filename = os.path.join(self.tempdir, "mapping_table.txt")
+        self.mapper.df.to_csv(filename, sep="\t", index=False)
+        files_to_upload += self._add_to_upload_list(filename)
+
         for meta in metas:
             if self.config.assay_type not in meta.content.keys():
                 continue
 
             # Upload meta file
             files_to_upload += self._add_to_upload_list(meta.filename)
-
-            # Upload id mapping table
-            filename = os.path.join(self.tempdir, "mapping_table.txt")
-            self.mapper.df.to_csv(filename, sep="\t", index=False)
-            files_to_upload += self._add_to_upload_list(filename)
 
             m = DkfzIngestMetaCommand.META_PATTERN.match(meta.filename)
             if m:

@@ -50,6 +50,23 @@ Investigation:
               Value: OBI
             - Entry: Study Assay Technology Platform
               Value: Illumina
+        WHOLE_EXOME:
+            - Entry: Study Assay File Name
+              Value: "a_{title}_WHOLE_EXOME.txt"
+            - Entry: Study Assay Measurement Type
+              Value: exome sequencing
+            - Entry: Study Assay Measurement Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0002118
+            - Entry: Study Assay Measurement Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Type
+              Value: nucleotide sequencing
+            - Entry: Study Assay Technology Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
+            - Entry: Study Assay Technology Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Platform
+              Value: Illumina
         RNA:
             - Entry: Study Assay File Name
               Value: "a_{title}_RNA.txt"
@@ -70,6 +87,23 @@ Investigation:
         WGS:
             - Entry: Study Assay File Name
               Value: "a_{title}_WGS.txt"
+            - Entry: Study Assay Measurement Type
+              Value: genome sequencing
+            - Entry: Study Assay Measurement Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0002117
+            - Entry: Study Assay Measurement Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Type
+              Value: nucleotide sequencing
+            - Entry: Study Assay Technology Type Term Accession Number
+              Value: http://purl.obolibrary.org/obo/OBI_0000626
+            - Entry: Study Assay Technology Type Term Source REF
+              Value: OBI
+            - Entry: Study Assay Technology Platform
+              Value: Illumina
+        WHOLE_GENOME:
+            - Entry: Study Assay File Name
+              Value: "a_{title}_WHOLE_GENOME.txt"
             - Entry: Study Assay Measurement Type
               Value: genome sequencing
             - Entry: Study Assay Measurement Type Term Accession Number
@@ -144,7 +178,7 @@ Assay:
               - name: Library layout
                 meta_columns: ["LIBRARY_LAYOUT", "SEQUENCING_READ_TYPE"]
               - name: Library kit
-                meta_columns: ["LIBRARY_PREP_KIT"]
+                meta_columns: ["LIB_PREP_KIT", "LIBRARY_PREP_KIT"]
               - name: Barcode kit
                 meta_columns: ["INDEX_TYPE"]
               - name: Antibody target

@@ -375,7 +375,12 @@ def _append_assay_line(assay, donor_name, materials, processes, arcs, seen_sampl
                         )
                 continue
 
-            attr_name, prev_attr_name, prev_label, prev_unit_container = _append_assay_line_annotating_column(
+            (
+                attr_name,
+                prev_attr_name,
+                prev_label,
+                prev_unit_container,
+            ) = _append_assay_line_annotating_column(
                 attr_name,
                 col,
                 config,

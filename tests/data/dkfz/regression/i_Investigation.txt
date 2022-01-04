@@ -71,9 +71,9 @@ Study Protocol Type Term Source REF
 Study Protocol Description							
 Study Protocol URI							
 Study Protocol Version							
-Study Protocol Parameters Name		Library selection;Library strategy;Library source	Center Name;Sequencing kit;Platform;Instrument Model			Library selection;Library strategy;Library source	Center Name;Sequencing kit;Platform;Instrument Model
-Study Protocol Parameters Name Term Accession Number		;;	;;;			;;	;;;
-Study Protocol Parameters Name Term Source REF		;;	;;;			;;	;;;
+Study Protocol Parameters Name		Library selection;Library strategy;Library source;Center Name;Barcode kit;Library kit;Library layout	Center Name;Sequencing kit;Platform;Instrument Model			Library selection;Library strategy;Library source;Center Name;Barcode kit;Library kit;Library layout	Center Name;Sequencing kit;Platform;Instrument Model
+Study Protocol Parameters Name Term Accession Number		;;;;;;	;;;			;;;;;;	;;;
+Study Protocol Parameters Name Term Source REF		;;;;;;	;;;			;;;;;;	;;;
 Study Protocol Components Name							
 Study Protocol Components Type							
 Study Protocol Components Type Term Accession Number							

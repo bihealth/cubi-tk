@@ -1,5 +1,7 @@
 import pandas as pd
 
+from logzero import logger
+
 import altamisa.isatab.models
 
 from .DkfzExceptions import MissingValueError, DuplicateValueError, IllegalValueError
@@ -168,7 +170,8 @@ class AssayToFrame:
                     values.insert(0, c.value)
                     break
             if not found:
-                raise MissingValueError("No comment {} in {}".format(element, raw_data_file))
+                logger.warning("No comment {} for data file {}".format(element, raw_data_file))
+                # raise MissingValueError("No comment {} in {}".format(element, raw_data_file))
         return values
 
     @staticmethod
@@ -201,7 +204,10 @@ class AssayToFrame:
                         values.insert(0, ";".join(c.value))
                     break
             if not found:
-                raise MissingValueError("No characteristic {} in {}".format(element, raw_data_file))
+                logger.warning(
+                    "No characteristic {} for data file {}".format(element, raw_data_file)
+                )
+                # raise MissingValueError("No characteristic {} in {}".format(element, raw_data_file))
         return values
 
     @staticmethod
@@ -220,7 +226,8 @@ class AssayToFrame:
                         values.insert(0, ";".join(v.value))
                     break
             if not found:
-                raise MissingValueError("No parameter {} in {}".format(element, raw_data_file))
+                logger.warning("No parameter {} for data file {}".format(element, raw_data_file))
+                # raise MissingValueError("No parameter {} in {}".format(element, raw_data_file))
         return values
 
     @staticmethod
