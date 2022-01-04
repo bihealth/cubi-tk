@@ -214,11 +214,7 @@ class DkfzIngestMetaCommand(common.DkfzCommandBase):
             (md5_file, os.path.join(target_path, os.path.basename(md5_file))),
         ]
 
-    def _build_commands(
-        self,
-        files_to_upload,
-        landing_zone,
-    ):
+    def _build_commands(self, files_to_upload, landing_zone):
         iput_cmd = ["iput", "-aK"]
         imkdir_cmd = ["imkdir", "-p"]
 
