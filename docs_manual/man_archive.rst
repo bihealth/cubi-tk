@@ -11,18 +11,18 @@ This document provides an overview of these commands, and how they can be adapte
 Glossary
 --------
 
-Hot storage: Fast and expensive, therefore usually size restricted.
-Examples:
+Hot storage: Fast and expensive, therefore usually size restricted. For example:
+
 - GPFS by DDN (currently at ``/fast``)
 - Ceph with SSDs
 
-Warm storage: Slower, but with more space and possibly mirroring.
-Examples:
-- SODAR with irods
-- Ceph with HDDs (``/data/ceph-1/``)
+Warm storage: Slower, but with more space and possibly mirroring. For example:
 
-Cold storage: For data that needs to be accessed only rarely.
-Examples:
+- SODAR with irods
+- Ceph with HDDs (``/data/cephfs-2/``)
+
+Cold storage: For data that needs to be accessed only rarely. For example:
+
 - Tape archive
 
 ---------------------------------
