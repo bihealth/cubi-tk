@@ -15,7 +15,7 @@ from logzero import logger
 from . import common
 from . import readme
 from ..common import execute_shell_commands
-from ..exceptions import MissingFileException
+from ..exceptions import InvalidReadmeException, MissingFileException
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -121,6 +121,8 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
 
         status = 0
         try:
+            if not readme.is_readme_valid(os.path.join(self.project_dir, "README.md")):
+                raise InvalidReadmeException("Please check the Readme file")
             if not self.config.skip or "check_work" not in self.config.skip:
                 work_report = os.path.join(
                     tmpdir.name, datetime.date.today().strftime("%Y-%m-%d_workdir_report.txt")
@@ -264,7 +266,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
                 continue
             symlink_dir = os.path.dirname(symlink_path)
             if add_dangling or os.path.exists(os.path.join(symlink_dir, target)):
-                os.makedirs(symlink_dir, mode=488, exist_ok=True)
+                os.makedirs(symlink_dir, mode=488, exist_ok=True)  # 488 is 750 in octal
                 os.symlink(target, symlink_path)
 
 
