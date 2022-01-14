@@ -1,0 +1,19 @@
+%%%% HASHDEEP-1.0
+%%%% size,md5,sha256,filename
+## Invoked from: /data/gpfs-1/work/users/blance_c/Development/saks/devel/tests/data/archive/temp_dest_verif
+## $ hashdeep -r -l -o fl .
+## 
+177,7469393e88ce6e542901dc904537c736,9a59b7bfc96bc28b19e551d56087f1cfa600b6c84cafe10da067b4d23f70f6a2,./.snakemake.tar.gz
+0,d41d8cd98f00b204e9800998ecf8427e,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,./raw_data/batch1/sample1.fastq.gz
+51,fa9e52fd287302e5137bad54909888d5,6e4652e8eb989975b5237762ff9c1558cbe393d0d20f044e30cb2f6df5d54ced,./raw_data/batch1/sample1.fastq.gz.md5
+21,44f16b7a6f135bc9db65bc9963e5fbb6,2b859a0dcaae8362a012fdf1dac4935bacc79b2351d500e0b0f13d671bb7cf43,./pipeline/output/sample2/results
+21,17b9917b9230a4d1814d72b9bd4509ce,3655813873a98d00610325dba6706a4ea1b335e2ef963ecc7c5dfcf6f559938a,./pipeline/output/sample1/results
+21,44f16b7a6f135bc9db65bc9963e5fbb6,2b859a0dcaae8362a012fdf1dac4935bacc79b2351d500e0b0f13d671bb7cf43,./pipeline/work/sample2/results
+21,17b9917b9230a4d1814d72b9bd4509ce,3655813873a98d00610325dba6706a4ea1b335e2ef963ecc7c5dfcf6f559938a,./pipeline/work/sample1/results
+2119,438403254b16f54dc619ca16f3daff7a,4f52a19b66836e44bae60620ff6cfcc9fb8d6a85433bc44a85ff504578720647,./1970-01-01_hashdeep_report.txt
+45,39d3047a77f6f5a087e672e471ba410c,d05cfa9d201c4c995df36383e62c858852557e3089ed890a8c179a578d8ef111,./extra_data/file.public.md5
+0,d41d8cd98f00b204e9800998ecf8427e,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,./extra_data/file.public
+0,d41d8cd98f00b204e9800998ecf8427e,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,./raw_data/batch2/sample2.fastq.gz
+51,1292a7c748d284b1203238cd7ce952d2,a90f1f90a07244323656823c1c91fc54455006897e258d03ccac513c270dc233,./raw_data/batch2/sample2.fastq.gz.md5
+51,a0da9aeb60559c4b4df0f14b3d65a56b,ab503fec49af67a9f97422b9c8e6e3316aa2713f0b9cbf8e3ac18e37d1457ec6,./raw_data/batch3/sample3.fastq.gz.md5
+0,d41d8cd98f00b204e9800998ecf8427e,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855,./raw_data/batch3/sample3.fastq.gz

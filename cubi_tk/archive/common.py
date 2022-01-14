@@ -3,6 +3,8 @@
 import argparse
 import attr
 import os
+import subprocess
+import sys
 import typing
 
 from pathlib import Path
@@ -87,7 +89,6 @@ def get_file_attributes(filename, relative_to):
             dangling = not resolved.exists()
         except PermissionError:
             dangling = None
-        outside = os.path.relpath(resolved, start=relative_to).startswith("../")
         if dangling is None or dangling:
             size = 0
         else:
@@ -97,6 +98,7 @@ def get_file_attributes(filename, relative_to):
         outside = False
         target = None
         size = resolved.stat().st_size
+    outside = os.path.relpath(resolved, start=relative_to).startswith("../")
     return FileAttributes(
         relative_path=os.path.relpath(filename, start=relative_to),
         resolved=resolved,
@@ -108,11 +110,34 @@ def get_file_attributes(filename, relative_to):
     )
 
 
-def traverse_project_files(directory):
+def traverse_project_files(directory, followlinks=True):
     root = Path(directory).resolve(strict=True)
-    for path, _, files in os.walk(root):
+    for path, _, files in os.walk(root, followlinks=followlinks):
         for filename in files:
             yield get_file_attributes(os.path.join(path, filename), root)
+
+
+def run_hashdeep(directory, out_file=None, num_threads=4, ref_file=None):
+    """Run hashdeep recursively on directory, following symlinks, stores the result in out_file.
+    Hashdeep can be run in normal or audit mode, when ref_file is provided."""
+    # Output of out_file of stdout
+    if out_file:
+        f = open(out_file, "wt")
+    else:
+        f = sys.stdout
+    # hashdeep command for x or for audit
+    cmd = ["hashdeep", "-j", str(num_threads), "-l", "-r"]
+    if ref_file:
+        cmd += ["-vvv", "-a", "-k", ref_file, "."]
+    else:
+        cmd += ["-o", "fl", "."]
+    # Run hashdeep from the directory, storing the output in f
+    p = subprocess.Popen(cmd, cwd=directory, encoding="utf-8", stdout=f, stderr=subprocess.PIPE)
+    p.communicate()
+    # Return hashdeep return value
+    if out_file:
+        f.close()
+    return p.returncode
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

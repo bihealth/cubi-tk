@@ -1,6 +1,12 @@
-ignore: []         # Patterns for files or directories to skip
+ignore:            # Patterns for files or directories to skip
+    - "^(.*/)?core\\.[0-9]+$"
+    - "^(.*/)?\\.venv$"
 
 compress:          # Patterns for files or directories to tar-gzip
     - "^(.*/)?\\.snakemake$"
+    - "^(.*/)?sge_log$"
+    - "^(.*/)?\\.git$"
+    - "^(.*/)?snappy-pipeline$"
+    - "^(.*/)?cubi_wrappers$"
 
 squash: []         # Patterns for files to squash (compute MD5 checksum, and replace by zero-length placeholder)

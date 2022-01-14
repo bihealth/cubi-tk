@@ -1,9 +1,9 @@
 ignore:
     - "^(.*/)?ignored_dir$"
-    - "^(.*/)?.+\\.pattern$"
 
 squash:
-    - "^(.*/)?.+\\.public$"
+    - "^(.*/)?[^/]+\\.public$"
+    - "^(.*/)?raw_data/(.*/)?[^/]+\\.fastq.gz$"
 
 compress:
     - "^(.*/)?.snakemake$"

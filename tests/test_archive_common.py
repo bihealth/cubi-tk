@@ -10,16 +10,17 @@ import cubi_tk.archive.common
 
 
 def test_run_archive_get_file_attributes():
-    project = os.path.join(os.path.dirname(__file__), "data", "archive", "2021-10-15_project")
+    project = os.path.join(os.path.dirname(__file__), "data", "archive", "project")
 
-    filename = os.path.join(project, "symlinks", "accessible")
+    relative_path = os.path.join("raw_data", "batch2", "sample2.fastq.gz")
+    filename = os.path.join(project, relative_path)
     attributes = cubi_tk.archive.common.FileAttributes(
-        relative_path="symlinks/accessible",
+        relative_path=relative_path,
         resolved=Path(filename).resolve(),
         symlink=True,
         dangling=False,
         outside=True,
-        target="../../outside/accessible",
-        size=11,
+        target=os.path.join("..", "..", "..", "outside", "batch2", "sample2.fastq.gz"),
+        size=22,
     )
     assert cubi_tk.archive.common.get_file_attributes(filename, project) == attributes

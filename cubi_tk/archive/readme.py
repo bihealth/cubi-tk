@@ -40,7 +40,7 @@ MAIL = (
 
 PATTERNS = {
     "project_name": re.compile("^ *- *Project name: *.+$"),
-    "date": re.compile("^ *- *Start date: *20[0-9]{2}-[01][0-9]-[0-3][0-9].*$"),
+    "date": re.compile("^ *- *Start date: *[0-9]{4}-[0-9]{2}-[0-9]{2}.*$"),
     "status": re.compile("^ *- *Current status: *(Active|Inactive|Finished|Archived) *$"),
     "PI": re.compile("^ *- P.I.: \\[([A-z '-]+)\\]\\(mailto:(" + MAIL + ")\\) *$"),
     "client": re.compile("^ *- *Client contact: \\[([A-z '-]+)\\]\\(mailto:(" + MAIL + ")\\) *$"),
@@ -62,8 +62,12 @@ def _extra_context_from_config(config=None):
     extra_context = {}
     if config:
         for name in TEMPLATE.configuration:
-            if getattr(config, "var_%s" % name, None) is not None:
-                extra_context[name] = getattr(config, "var_%s" % name)
+            var_name = "var_%s" % name
+            if getattr(config, var_name, None) is not None:
+                extra_context[name] = getattr(config, var_name)
+                continue
+            if isinstance(config, dict) and var_name in config:
+                extra_context[name] = config[var_name]
     return extra_context
 
 
@@ -134,9 +138,14 @@ def _create_extra_context(project_dir, config=None):
         )
 
     if "SODAR_UUID" in extra_context.keys() and "SODAR_URL" not in extra_context.keys():
-        extra_context["SODAR_URL"] = "{}/projects/{}".format(
-            config.sodar_server_url, extra_context["SODAR_UUID"]
-        )
+        if getattr(config, "sodar_server_url", None) is not None:
+            extra_context["SODAR_URL"] = "{}/projects/{}".format(
+                config.sodar_server_url, extra_context["SODAR_UUID"]
+            )
+        elif "sodar_server_url" in config:
+            extra_context["SODAR_URL"] = "{}/projects/{}".format(
+                config["sodar_server_url"], extra_context["SODAR_UUID"]
+            )
 
     if "directory" not in extra_context.keys():
         extra_context["directory"] = project_dir

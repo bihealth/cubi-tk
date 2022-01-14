@@ -1,0 +1,30 @@
+./.snakemake.tar.gz: No match
+./1970-01-01_hashdeep_report.txt: No match
+./extra_data/file.public.md5: No match
+./extra_data/file.public: No match
+./raw_data/batch2/sample2.fastq.gz: No match
+./raw_data/batch2/sample2.fastq.gz.md5: Ok
+./raw_data/batch3/sample3.fastq.gz.md5: Ok
+./raw_data/batch3/sample3.fastq.gz: No match
+./raw_data/batch1/sample1.fastq.gz: No match
+./raw_data/batch1/sample1.fastq.gz.md5: Ok
+./pipeline/output/sample2/results: Ok
+./pipeline/output/sample1/results: Ok
+./pipeline/work/sample2/results: Ok
+./pipeline/work/sample1/results: Ok
+./extra_data/to_ignored_file: Known file not used
+./ignored_dir/ignored_file: Known file not used
+./.snakemake/snakemake: Known file not used
+./extra_data/to_ignored_dir/ignored_file: Known file not used
+./extra_data/file.public: Known file not used
+./raw_data/batch2/sample2.fastq.gz: Known file not used
+./raw_data/batch3/sample3.fastq.gz: Known file not used
+./raw_data/batch1/sample1.fastq.gz: Known file not used
+hashdeep: Audit failed
+   Input files examined: 0
+  Known files expecting: 0
+          Files matched: 7
+Files partially matched: 0
+            Files moved: 0
+        New files found: 7
+  Known files not found: 8

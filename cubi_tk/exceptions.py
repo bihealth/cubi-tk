@@ -47,3 +47,7 @@ class ParseOutputException(CubiTkException):
 
 class UserCanceledException(CubiTkException):
     """Raised when user doesn't allow the process to continue."""
+
+
+class InvalidReadmeException(CubiTkException):
+    """Raised if the Readme does not meet the specification."""

@@ -1,0 +1,3 @@
+fastq:
+    min_size: 1
+    pattern: "^(.*/)?[^/]+(\\.f(ast)?q(\\.gz)?)$"

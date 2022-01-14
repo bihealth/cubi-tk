@@ -3,14 +3,21 @@
 We only run some smoke tests here.
 """
 
+import datetime
 import glob
 import os
+import re
 import tempfile
 
 import filecmp
 import pytest
 
 from cubi_tk.__main__ import setup_argparse, main
+from .test_archive_copy import sort_hashdeep_title_and_body
+
+
+SNAKEMAKE = re.compile("^.*\\.snakemake\\.tar\\.gz$")
+HASHDEEP = re.compile("^(([0-9]{4})-([0-9]{2})-([0-9]{2}))_hashdeep_report\\.txt$")
 
 
 def test_run_archive_prepare_help(capsys):
@@ -41,7 +48,7 @@ def test_run_archive_prepare_nothing(capsys):
 def test_run_archive_prepare_smoke_test():
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
-        project_name = "2021-10-15_project"
+        project_name = "project"
 
         argv = [
             "archive",
@@ -58,25 +65,48 @@ def test_run_archive_prepare_smoke_test():
         res = main(argv)
         assert not res
 
-        # --- collect files producted, and those which should have been produced
+        # --- remove hashdeep report filename timestamp
+        os.rename(
+            os.path.join(
+                tmp_dir, "temp_dest", datetime.date.today().strftime("%Y-%m-%d_hashdeep_report.txt")
+            ),
+            os.path.join(tmp_dir, "temp_dest", "1970-01-01_hashdeep_report.txt"),
+        )
+
+        # --- compare hashdeep report with reference
+        (repo_titles, repo_body) = sort_hashdeep_title_and_body(
+            os.path.join(repo_dir, "temp_dest_verif", "1970-01-01_hashdeep_report.txt")
+        )
+        (tmp_titles, tmp_body) = sort_hashdeep_title_and_body(
+            os.path.join(tmp_dir, "temp_dest", "1970-01-01_hashdeep_report.txt")
+        )
+        # No test on gzipped files, timestamp stored on gzip format could be different
+        assert repo_body == tmp_body
+
         prefix = os.path.join(repo_dir, "temp_dest_verif")
-        fns = [
-            x.replace(prefix + "/", "", 1)
-            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
+        ref_fns = [
+            os.path.relpath(x, start=prefix)
+            for x in filter(
+                lambda x: os.path.isfile(x) or os.path.islink(x),
+                glob.glob(prefix + "/**/*", recursive=True),
+            )
         ]
         prefix = os.path.join(tmp_dir, "temp_dest")
-        fns = fns + [
-            x.replace(prefix + "/", "", 1)
-            for x in filter(os.path.isfile, glob.glob(prefix + "/**/*", recursive=True))
+        test_fns = [
+            os.path.relpath(x, start=prefix)
+            for x in filter(
+                lambda x: os.path.isfile(x) or os.path.islink(x),
+                glob.glob(prefix + "/**/*", recursive=True),
+            )
         ]
-        fns = list(set(fns))
+        assert sorted(ref_fns) == sorted(test_fns)
 
         matches, mismatches, errors = filecmp.cmpfiles(
             os.path.join(repo_dir, "temp_dest_verif"),
             os.path.join(tmp_dir, "temp_dest"),
-            common=fns,
+            common=ref_fns,
             shallow=False,
         )
         assert len(matches) > 0
-        assert len(errors) == 0
-        assert len(mismatches) == 0
+        assert sorted(errors) == ["extra_data/to_ignored_dir", "extra_data/to_ignored_file"]
+        assert sorted(mismatches) == ["1970-01-01_hashdeep_report.txt", "pipeline/output/sample2"]
