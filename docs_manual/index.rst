@@ -24,6 +24,7 @@ Use cases
 
     | :ref:`Exome sequencing <usecase_exomes>`
     | :ref:`Clinical single cell pipeline <usecase_single_cell>`
+    | :ref:`Archiving projects <usecase_archive>`
 
 Project Info
     More information on the project, including the changelog, list of contributing authors, and
@@ -63,6 +64,7 @@ Project Info
 
     usecase_exomes
     usecase_single_cell
+    usecase_archive_project
 
 .. toctree::
     :caption: Project Info

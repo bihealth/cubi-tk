@@ -11,7 +11,6 @@ import re
 import filecmp
 import pytest
 import tempfile
-from unittest import mock
 
 from cubi_tk.__main__ import setup_argparse, main
 
@@ -75,10 +74,6 @@ def test_run_archive_copy_smoke_test(mocker):
             os.path.join(tmp_dir, "final_dest"),
         ]
         setup_argparse()
-
-        # --- patch the missing README.md
-        mock_check_output = mock.MagicMock(return_value=True)
-        mocker.patch("cubi_tk.archive.readme.is_readme_valid", mock_check_output)
 
         # --- run tests
         res = main(argv)

@@ -23,7 +23,7 @@ HASHDEEP = re.compile("^(([0-9]{4})-([0-9]{2})-([0-9]{2}))_hashdeep_report\\.txt
 def test_run_archive_prepare_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["archive", "summary", "--help"])
+        parser.parse_args(["archive", "prepare", "--help"])
 
     assert e.value.code == 0
 
@@ -36,7 +36,7 @@ def test_run_archive_prepare_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["archive", "summary"])
+        parser.parse_args(["archive", "prepare"])
 
     assert e.value.code == 2
 
@@ -55,7 +55,8 @@ def test_run_archive_prepare_smoke_test():
             "prepare",
             "--rules",
             os.path.join(repo_dir, "rules.yaml"),
-            "--no-readme",
+            "--readme",
+            os.path.join(repo_dir, "temp_dest_verif", "README.md"),
             os.path.join(repo_dir, project_name),
             os.path.join(tmp_dir, "temp_dest"),
         ]
@@ -109,4 +110,8 @@ def test_run_archive_prepare_smoke_test():
         )
         assert len(matches) > 0
         assert sorted(errors) == ["extra_data/to_ignored_dir", "extra_data/to_ignored_file"]
-        assert sorted(mismatches) == ["1970-01-01_hashdeep_report.txt", "pipeline/output/sample2"]
+        assert sorted(mismatches) == [
+            "1970-01-01_hashdeep_report.txt",
+            "README.md",
+            "pipeline/output/sample2",
+        ]

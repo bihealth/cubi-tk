@@ -7,6 +7,8 @@ Available Commands
     Lists files that might be problematic for archival (symlinks & large files)
 ``prepare``
     prepare archive: checks presence of README, compress .snakemake & others
+``readme``
+    prepare README.md file: creates a valid README.md file with necessary contacts & URLs
 ``copy``
     perform archival: copies the prepared output to its final destination, with hashdeep audit
 
@@ -22,6 +24,7 @@ import argparse
 from ..common import run_nocmd
 from .copy import setup_argparse as setup_argparse_copy
 from .prepare import setup_argparse as setup_argparse_prepare
+from .readme import setup_argparse as setup_argparse_readme
 from .summary import setup_argparse as setup_argparse_summary
 
 
@@ -33,6 +36,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_prepare(
         subparsers.add_parser("prepare", help="Prepare the project directory for archival")
     )
+    setup_argparse_readme(subparsers.add_parser("readme", help="Prepare a valid README.md"))
     setup_argparse_summary(
         subparsers.add_parser(
             "summary",

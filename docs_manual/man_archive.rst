@@ -96,12 +96,41 @@ The summary file is a table with the following columns:
 The summary step also reports an overview of the results, with the total number of files, the total size of the project, and the number of links to files. Number of dangling links and links inaccessible because of permission issues are listed separately. Likewise, the number of files outside of the projects, which are linked to from within the project by symlinks is also quoted. Finally, for each of the "important files" classes, the number of files, the number of files outside of the project directory and the number of files lost because of symlink failures are reported.
 
 
+Archive preparation: README.md file creation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+    $ cubi-tk archive readme PROJECT_DIRECTORY README_FILE
+
+``README_FILE`` is here the path to the README file that will be created. It must not exist.
+
+The README file will be created by filling contact information interactively. Command-line options are also available, but interactive confirmation is needed.
+
+It is possible to test if a generated README file is valid for project archival, using 
+
+.. code-block:: bash
+
+    $ cubi-tk archive readme --is-valid PROJECT_DIRECTORY README_FILE
+
+The module will highlight mandatory records that could not be found in the current file. These mandatory records are lines following the patterns below::
+
+    - P.I.: [Name of the PI, any string](mailto:<valid email address in lowercase>)
+    - Client contact: [Name of our contact in the PI's group](mailto:<valid email address in lowercase>)
+    - CUBI project leader: [Name of the CUBI member leading the project]
+    - CUBI contact: [Name of the archiver](mailto:<valid email address in lowercase>)
+    - Project name: <any string>
+    - Start date: YYYY-MM-DD
+    - Current status: <One of Active, Inactive, Finished, Archived>
+
+
+
 Archive preparation: temporary copy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
-    $ cubi-tk archive prepare PROJECT_DIRECTORY TEMPORARY_DESTINATION
+    $ cubi-tk archive prepare --readme README PROJECT_DIRECTORY TEMPORARY_DESTINATION
 
 ``TEMPORARY_DESTINATION`` is here the path to the temporary directory that will be created. It must not exist.
 
@@ -113,7 +142,8 @@ Additional transformation of the original files are carried out during the prepa
 
 - The contents of the ``.snakemake``, ``sge_log``, ``cubi-wrappers`` & ``snappy-pipeline`` directories are processed differently: the directories are tarred & compressed in the temporary destination, to reduce the number of inodes in the archive.
 - The core dump files are not copied to the temporary destination, and therefore won't be copied to the final archive.
-- A ``README.md`` file is also created by the module, if there isn't one already which contains contact information. Upon creation, the module prompts the user for values that will populate ``REAMDE.md``. These values can also be included on the command line.
+- The ``README.md`` file created by the ``readme`` subcommand must also be included to be put in the temprary's destination top level. 
+  If the original project already contains a ``README.md`` file, it will be appended to the generated one, as the latter is valid (it contains all mandatory information).
 
 
 Copy to archive & verification
