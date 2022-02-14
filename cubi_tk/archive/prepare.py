@@ -59,6 +59,11 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         )
         parser.add_argument("--skip", "-s", action="store_true", help="Skip symlinks preparation")
         parser.add_argument("--no-readme", action="store_true", help="Skip README preparation")
+        parser.add_argument(
+            "--ignore-tar-errors",
+            action="store_true",
+            help="Ignore errors due to access permissions in when compressind folders",
+        )
         add_readme_parameters(parser)
 
         parser.add_argument(
@@ -203,6 +208,8 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
             os.path.dirname(path),
             os.path.basename(path),
         ]
+        if self.config.ignore_tar_errors:
+            cmd.insert(len(cmd) - 1, "--ignore-failed-read")
         execute_shell_commands([cmd], verbose=self.config.verbose)
 
     def _squash(self, path):
