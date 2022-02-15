@@ -122,7 +122,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         status = 0
         try:
             if not readme.is_readme_valid(os.path.join(self.project_dir, "README.md")):
-                raise InvalidReadmeException("Please check the Readme file")
+                raise InvalidReadmeException("README.md file missing or invalid")
             if not self.config.skip or "check_work" not in self.config.skip:
                 work_report = os.path.join(
                     tmpdir.name, datetime.date.today().strftime("%Y-%m-%d_workdir_report.txt")

@@ -111,9 +111,12 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         sys.stdout.flush()
 
         # Copy README.md
-        ArchivePrepareCommand._copy_readme(
-            os.path.realpath(self.config.readme), os.path.join(self.dest_dir, "README.md")
-        )
+        if self.config.readme:
+            ArchivePrepareCommand._copy_readme(
+                os.path.realpath(self.config.readme), os.path.join(self.dest_dir, "README.md")
+            )
+        else:
+            logger.warning("No READ.md file supplied, it may cause problems during copy")
 
         # Run hashdeep on original project directory
         logger.info("Preparing the hashdeep report of {}".format(self.project_dir))
