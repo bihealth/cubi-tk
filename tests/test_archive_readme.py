@@ -64,6 +64,7 @@ def test_run_archive_readme_smoke_test():
             "https://cubi-gitlab.bihealth.org",
             "--var-start-date",
             "1970-01-01",
+            "--no-input",
             project_dir,
             readme_path,
         ]

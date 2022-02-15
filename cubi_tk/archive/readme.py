@@ -60,8 +60,6 @@ COMMANDS = {
     "inodes_follow": ["du", "--dereference", "--inodes", "--max-depth=0"],
 }
 
-NO_INPUT = False
-
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config(common.Config):
@@ -70,6 +68,7 @@ class Config(common.Config):
     filename: str
     skip_collect: bool
     is_valid: bool
+    no_input: bool
 
 
 class ArchiveReadmeCommand(common.ArchiveCommandBase):
@@ -99,6 +98,8 @@ class ArchiveReadmeCommand(common.ArchiveCommandBase):
         parser.add_argument(
             "--is-valid", "-t", action="store_true", help="Test validity of existing README file"
         )
+        # Enable pytest
+        parser.add_argument("--no-input", action="store_true", help=argparse.SUPPRESS)
         add_readme_parameters(parser)
 
         parser.add_argument("filename", help="README.md path & filename")
@@ -146,11 +147,35 @@ class ArchiveReadmeCommand(common.ArchiveCommandBase):
         logger.info("Preparing README.md")
         extra_context = self._create_extra_context(self.project_dir)
 
-        create_readme(self.readme_file, extra_context=extra_context)
+        self.create_readme(self.readme_file, extra_context=extra_context)
 
         if not is_readme_valid(self.readme_file, verbose=True):
             res = 1
         return res
+
+    def create_readme(self, readme_file, extra_context=None):
+        try:
+            tmp = tempfile.mkdtemp()
+
+            # Create the readme file in temp directory
+            cookiecutter(
+                template=TEMPLATE.path,
+                extra_context=extra_context,
+                output_dir=tmp,
+                no_input=self.config.no_input,
+            )
+
+            # Copy it back to destination, including contents of former incomplete README.md
+            os.makedirs(os.path.dirname(readme_file), mode=488, exist_ok=True)
+            shutil.copyfile(
+                os.path.join(tmp, extra_context["project_name"], "README.md"), readme_file
+            )
+        finally:
+            try:
+                shutil.rmtree(tmp)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
 
     def _extra_context_from_config(self):
         extra_context = {}
@@ -168,7 +193,7 @@ class ArchiveReadmeCommand(common.ArchiveCommandBase):
         extra_context = self._extra_context_from_config()
 
         if self.config.skip_collect:
-            for context_name in COMMANDS.keys():
+            for (context_name, _) in COMMANDS.items():
                 extra_context[context_name] = "NA"
             extra_context["snakemake_nb"] = "NA"
         else:
@@ -265,27 +290,6 @@ def add_readme_parameters(parser):
         )
 
 
-def create_readme(readme_file, extra_context=None):
-    try:
-        tmp = tempfile.mkdtemp()
-
-        # Create the readme file in temp directory
-        cookiecutter(
-            template=TEMPLATE.path, extra_context=extra_context, output_dir=tmp, no_input=NO_INPUT
-        )
-
-        # pdb.set_trace()
-        # Copy it back to destination, including contents of former incomplete README.md
-        os.makedirs(os.path.dirname(readme_file), mode=488, exist_ok=True)
-        shutil.copyfile(os.path.join(tmp, extra_context["project_name"], "README.md"), readme_file)
-    finally:
-        try:
-            shutil.rmtree(tmp)
-        except OSError as e:
-            if e.errno != errno.ENOENT:
-                raise
-
-
 def is_readme_valid(filename=None, verbose=False):
     if filename is None:
         f = sys.stdin
@@ -303,7 +307,7 @@ def is_readme_valid(filename=None, verbose=False):
                 matching.add(name)
     f.close()
     if verbose:
-        for name in PATTERNS.keys():
+        for (name, _) in PATTERNS.items():
             if name not in matching:
                 logger.warning("Entry {} missing from README.md file".format(name))
     return set(PATTERNS.keys()).issubset(matching)
