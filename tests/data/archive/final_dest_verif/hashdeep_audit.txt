@@ -1,5 +1,6 @@
 ./.snakemake.tar.gz: No match
 ./1970-01-01_hashdeep_report.txt: No match
+./README.md: No match
 ./extra_data/file.public.md5: No match
 ./extra_data/file.public: No match
 ./raw_data/batch2/sample2.fastq.gz: No match
@@ -26,5 +27,5 @@ hashdeep: Audit failed
           Files matched: 7
 Files partially matched: 0
             Files moved: 0
-        New files found: 7
+        New files found: 8
   Known files not found: 8

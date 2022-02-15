@@ -14,8 +14,10 @@ from logzero import logger
 
 from ..common import compute_md5_checksum, execute_shell_commands
 from . import common
-from .readme import create_readme
-from .readme import add_readme_parameters
+from .readme import is_readme_valid
+
+
+MSG = "**Contents of original `README.md` file**"
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -57,14 +59,12 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
                 os.path.dirname(__file__), "..", "isa_tpl", "archive", "default_rules.yaml"
             ),
         )
-        parser.add_argument("--skip", "-s", action="store_true", help="Skip symlinks preparation")
-        parser.add_argument("--no-readme", action="store_true", help="Skip README preparation")
+        parser.add_argument("--readme", help="Path to README.md created with cubi-tk")
         parser.add_argument(
             "--ignore-tar-errors",
             action="store_true",
             help="Ignore errors due to access permissions in when compressind folders",
         )
-        add_readme_parameters(parser)
 
         parser.add_argument(
             "destination", help="Destination directory (for symlinks and later archival)"
@@ -81,7 +81,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        if not self.config.skip and os.path.exists(self.config.destination):
+        if os.path.exists(self.config.destination):
             logger.error("Destination directory {} already exists".format(self.config.destination))
             res = 1
 
@@ -102,33 +102,34 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
 
         os.makedirs(self.dest_dir, mode=488, exist_ok=False)
 
-        if not self.config.no_readme:
-            logger.info("Preparing README.md")
-            create_readme(
-                os.path.join(self.dest_dir, "README.md"), self.project_dir, config=self.config
+        rules = self._get_rules(self.config.rules)
+
+        # Recursively traverse the project and create archived files & links
+        self._archive_path(self.project_dir, rules)
+
+        sys.stdout.write(" " * 80 + "\r")
+        sys.stdout.flush()
+
+        # Copy README.md
+        if self.config.readme:
+            ArchivePrepareCommand._copy_readme(
+                os.path.realpath(self.config.readme), os.path.join(self.dest_dir, "README.md")
             )
+        else:
+            logger.warning("No READ.md file supplied, it may cause problems during copy")
 
-        if not self.config.skip:
-            rules = self._get_rules(self.config.rules)
-
-            # Recursively traverse the project and create archived files & links
-            self._archive_path(self.project_dir, rules)
-
-            sys.stdout.write(" " * 80 + "\r")
-            sys.stdout.flush()
-
-            # Run hashdeep on original project directory
-            logger.info("Preparing the hashdeep report of {}".format(self.project_dir))
-            res = common.run_hashdeep(
-                directory=self.project_dir,
-                out_file=os.path.join(
-                    self.dest_dir, datetime.date.today().strftime("%Y-%m-%d_hashdeep_report.txt")
-                ),
-                num_threads=self.config.num_threads,
-            )
-            if res:
-                logger.error("hashdeep command has failed with return code {}".format(res))
-                return res
+        # Run hashdeep on original project directory
+        logger.info("Preparing the hashdeep report of {}".format(self.project_dir))
+        res = common.run_hashdeep(
+            directory=self.project_dir,
+            out_file=os.path.join(
+                self.dest_dir, datetime.date.today().strftime("%Y-%m-%d_hashdeep_report.txt")
+            ),
+            num_threads=self.config.num_threads,
+        )
+        if res:
+            logger.error("hashdeep command has failed with return code {}".format(res))
+            return res
 
         return 0
 
@@ -243,6 +244,25 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
                 os.symlink(os.readlink(path), destination)
         else:
             os.symlink(os.path.realpath(path), destination)
+
+    @staticmethod
+    def _copy_readme(src, target):
+        logger.info("Using README file {}".format(src))
+        os.makedirs(os.path.realpath(os.path.dirname(target)), mode=488, exist_ok=True)
+        with open(src, "rt") as f:
+            lines = [x.rstrip() for x in f.readlines()]
+
+        if os.path.exists(target):
+            lines.extend(["", "", "-" * 80, "", "", MSG, "", "", "-" * 80, "", ""])
+            with open(target, "rt") as f:
+                lines.extend([x.rstrip() for x in f.readlines()])
+            os.remove(target)
+
+        with open(os.path.realpath(target), "wt") as f:
+            f.write("\n".join(lines))
+
+        if not is_readme_valid(os.path.realpath(target), verbose=True):
+            logger.warning("Invalid README.md, it may cause problems upon copy")
 
     @staticmethod
     def _get_rules(filename):

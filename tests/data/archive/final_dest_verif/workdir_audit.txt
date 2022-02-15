@@ -7,6 +7,7 @@
 ./pipeline/work/sample2/results: Ok
 ./pipeline/work/sample1/results: Ok
 ./1970-01-01_hashdeep_report.txt: Ok
+./README.md: Ok
 ./extra_data/file.public.md5: Ok
 ./extra_data/file.public: Ok
 ./raw_data/batch2/sample2.fastq.gz: Ok
@@ -15,7 +16,7 @@
 hashdeep: Audit passed
    Input files examined: 0
   Known files expecting: 0
-          Files matched: 14
+          Files matched: 15
 Files partially matched: 0
             Files moved: 0
         New files found: 0
