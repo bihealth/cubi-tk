@@ -39,8 +39,6 @@ def test_run_archive_readme_nothing(capsys):
 
 
 def test_run_archive_readme_smoke_test():
-    cubi_tk.archive.readme.NO_INPUT = True
-
     with tempfile.TemporaryDirectory() as tmp_dir:
         project_name = "project"
         project_dir = os.path.join(os.path.dirname(__file__), "data", "archive", project_name)
