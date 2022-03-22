@@ -1,0 +1,5 @@
+Sample Name	Protocol REF	Parameter Value[Concentration]	Performer	Date	Protocol REF	Parameter Value[Library source]	Parameter Value[Library strategy]	Parameter Value[Library selection]	Parameter Value[Library layout]	Parameter Value[Library kit]	Parameter Value[Target insert size]	Parameter Value[Wet-lab insert size]	Parameter Value[Barcode kit]	Parameter Value[Barcode name]	Performer	Date	Protocol REF	Parameter Value[Platform]	Parameter Value[Instrument model]	Parameter Value[Base quality encoding]	Parameter Value[Library prefix]	Performer	Date	Library Name
+{% set sample_names = cookiecutter.sample_names.split(",") -%}
+{% for sample_name in sample_names -%}
+{{sample_name|replace("-", "_")}}	RNA extraction				Library construction												Nucleic acid sequencing				{{sample_name}}			{{sample_name}}
+{% endfor -%}
