@@ -37,7 +37,9 @@ class Config:
     irsync_threads: int
     yes: bool
     project_uuid: str
+    assay: str
     samples: typing.List[str]
+    allow_missing: bool
 
 
 class PullRawDataCommand:
@@ -83,6 +85,13 @@ class PullRawDataCommand:
         parser.add_argument("--samples", help="Optional list of samples to pull")
 
         parser.add_argument(
+            "--allow-missing",
+            default=False,
+            action="store_true",
+            help="Allow missing data in assay",
+        )
+
+        parser.add_argument(
             "--yes", default=False, action="store_true", help="Assume all answers are yes."
         )
         parser.add_argument(
@@ -93,6 +102,10 @@ class PullRawDataCommand:
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
         )
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
+
+        parser.add_argument(
+            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
+        )
 
         parser.add_argument("project_uuid", help="UUID of project to download data for.")
 
@@ -120,6 +133,7 @@ class PullRawDataCommand:
                 "Could not find configuration key %s in %s", repr("data_sets"), inputf.name
             )
             return 1
+        data_set = {}
         for key, data_set in config["data_sets"].items():
             if (
                 key == self.config.project_uuid
@@ -148,10 +162,12 @@ class PullRawDataCommand:
                 sodar_api_token=self.config.sodar_api_token,
                 overwrite=self.config.overwrite,
                 min_batch=self.config.min_batch,
+                allow_missing=self.config.allow_missing,
                 dry_run=self.config.dry_run,
                 irsync_threads=self.config.irsync_threads,
                 yes=self.config.yes,
                 project_uuid=self.config.project_uuid,
+                assay=self.config.assay,
                 output_dir=download_path,
             )
         ).execute()

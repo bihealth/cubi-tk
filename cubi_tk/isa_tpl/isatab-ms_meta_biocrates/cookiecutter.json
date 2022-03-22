@@ -1,0 +1,81 @@
+{
+  "investigation_title": "Investigation Title",
+  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
+
+  "study_title": "{{cookiecutter.investigation_title}}",
+  "study_id": "{{cookiecutter.study_title|lower|replace(' ', '_')}}",
+  "study_file_name": "{{cookiecutter.study_id}}",
+
+  "sample_names": "alpha,beta,gamma",
+  
+  "organism": [
+    "Homo sapiens",
+    "Mus musculus"
+  ],
+  "organisms": {
+    "Homo sapiens": {
+      "name": "Homo sapiens",
+      "taxon": "9606"
+    },
+    "Mus musculus": {
+      "name": "Mus musculus",
+      "taxon": "10090"
+    }
+  },
+  
+  "assay_measurement_type": [
+    "metabolite profiling"
+  ],
+  "assay_technology_type": [
+    "mass spectrometry"
+  ],
+  "assay_technology_types": {
+    "mass spectrometry": {
+      "term": "mass spectrometry",
+      "source": "OBI",
+      "accession": "http://purl.obolibrary.org/obo/OBI_0000470"
+    }
+  },
+  
+  "biocrates_kit": [
+    "Biocrates MxP Quant 500 Kit",
+    "Biocrates AbsoluteIDQ p400 HR Kit"
+  ],
+
+  "assay_prefix": "{{cookiecutter.study_id}}",
+  "assay_name": "{{cookiecutter.biocrates_kit|replace(' ', '_')}}",
+  "assay_measurement_abbreviation_LC": "B-LC",
+  "assay_measurement_abbreviation_FIA": "B-FIA",
+
+  "biocrates_metidq_version": [
+    "",
+    "7.13.11-DB109-Nitrogen-2850"
+  ],
+  "metaquac_version": [
+    "",
+    "v0.1.1",
+    "v0.1.30"
+  ],
+
+  "instrument": [
+    "Sciex 5500",
+    "TSQ Quantiva"
+  ],
+  "instruments": {
+    "Sciex 5500": {
+      "term": "QTRAP 5500",
+      "source": "MS",
+      "accession": "http://purl.obolibrary.org/obo/MS_1000931"
+    },
+    "TSQ Quantiva": {
+      "term": "TSQ Quantiva",
+      "source": "MS",
+      "accession": "http://purl.obolibrary.org/obo/MS_1002418"
+    }
+  },
+
+  "chromatography_instrument": [
+    "Agilent UHPLC 1290",
+    "Agilent 1290 Infinity II LC System"
+  ]
+}

@@ -7,10 +7,10 @@ import os
 from unittest import mock
 from unittest.mock import ANY
 
-# import json
 import pytest
 from pyfakefs import fake_filesystem
 
+from .conftest import my_exists, my_get_sodar_info
 from cubi_tk.__main__ import setup_argparse, main
 
 
@@ -39,11 +39,12 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
     assert res.err
 
 
-def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
+def test_run_snappy_itransfer_ngs_mapping_smoke_test(
+    mocker, germline_trio_sheet_tsv, minimal_config
+):
     fake_base_path = "/base/path"
-    # landing_zone_uuid = "landing_zone_uuid"
-    sodar_path = "sodar/path/to/landing/zone/landing_zone_uuid"
-    tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
+    dest_path = "/irods/dest"
+    sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "--verbose",
         "snappy",
@@ -52,8 +53,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
         fake_base_path,
         "--sodar-api-token",
         "XXXX",
-        tsv_path,
-        sodar_path,
+        sodar_uuid,
     ]
 
     parser, subparsers = setup_argparse()
@@ -77,8 +77,25 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
             )
             fs.create_file(fake_file_paths[-1])
 
+    # Create sample sheet in fake file system
+    sample_sheet_path = fake_base_path + "/.snappy_pipeline/sheet.tsv"
+    fs.create_file(sample_sheet_path, contents=germline_trio_sheet_tsv, create_missing_dirs=True)
+    # Create config in fake file system
+    config_path = fake_base_path + "/.snappy_pipeline/config.yaml"
+    fs.create_file(config_path, contents=minimal_config, create_missing_dirs=True)
+
+    # Print path to all created files
+    print("\n".join(fake_file_paths + [sample_sheet_path, config_path]))
+
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
+
+    # Set Mocker
+    mocker.patch("pathlib.Path.exists", my_exists)
+    mocker.patch(
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
+        my_get_sodar_info,
+    )
 
     fake_os = fake_filesystem.FakeOsModule(fs)
     mocker.patch("glob.os", fake_os)
@@ -90,6 +107,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
+    mocker.patch("cubi_tk.snappy.common.open", fake_open)
 
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
@@ -125,7 +143,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(mocker):
             path, os.path.join(fake_base_path, "ngs_mapping/output")
         ).split("/", 1)
         _mapper, index = mapper_index.rsplit(".", 1)
-        remote_path = os.path.join(sodar_path, index, "ngs_mapping", args.remote_dir_date, rel_path)
+        remote_path = os.path.join(dest_path, index, "ngs_mapping", args.remote_dir_date, rel_path)
         expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
         expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
         expected_ils_argv = ["ils", os.path.dirname(remote_path)]

@@ -194,27 +194,35 @@ class IsaNodeVisitor:
         logger.debug("end investigation %s", investigation.info.path)
 
     def on_begin_study(self, investigation, study):
+        _ = investigation
         logger.debug("begin study %s", study.file)
 
     def on_end_study(self, investigation, study):
+        _ = investigation
         logger.debug("end study %s", study.file)
 
     def on_begin_assay(self, investigation, study, assay):
+        _, _ = investigation, study
         logger.debug("begin assay %s", assay.file)
 
     def on_end_assay(self, investigation, study, assay):
+        _, _ = investigation, study
         logger.debug("end assay %s", assay.file)
 
     def on_traverse_arc(self, arc, node_path, study=None, assay=None):
+        _, _, _, = node_path, study, assay
         logger.debug("traversing arc %s", arc)
 
     def on_visit_node(self, node, node_path, study=None, assay=None):
+        _, _, _, = node_path, study, assay
         logger.debug("visiting node %s", node)
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
+        _, _, _, = node_path, study, assay
         logger.debug("visiting material %s", material)
 
     def on_visit_process(self, process, node_path, study=None, assay=None):
+        _, _, _, = node_path, study, assay
         logger.debug("visiting process %s", process)
 
 
@@ -229,13 +237,9 @@ class InvestigationTraversal:
         #: Investigation object.
         self.investigation = investigation
         #: Mapping from study name (file name) to Study
-        self.studies = dict(studies)
-        if len(self.studies) > 1:
-            raise Exception("Only one study supported")
+        self.studies = studies
         #: Mapping from assay name (file name) to Assay
         self.assays = assays
-        if len(self.assays) > 1:
-            raise Exception("Only one assay supported")
         # Study traversal objects.
         self._study_traversals = {}
 
@@ -355,7 +359,7 @@ class AssayTraversal:
         visitor.on_begin_assay(self.investigation, self.study, self.assay)
         # Visit all ISA nodes in DFS fashion.  For each node, register it in visitor, and yield
         # information to caller.
-        for node_id, obj_type, obj, node_path in self.isa_graph.dfs(dfs_start):
+        for _node_id, obj_type, obj, node_path in self.isa_graph.dfs(dfs_start):
             new_obj = obj
             for func in func_mapping[obj_type]:
                 tmp_obj = func(obj, node_path=node_path, study=self.study, assay=self.assay)

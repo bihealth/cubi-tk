@@ -1,0 +1,6 @@
+Source Name	Characteristics[UUID]	Characteristics[Organism]	Term Source REF	Term Accession Number	Characteristics[Sex]	Characteristics[Disease type]	Term Source REF	Term Accession Number	Characteristics[Disease status]	Term Source REF	Term Accession Number	Characteristics[Age]	Unit	Term Source REF	Term Accession Number	Characteristics[BMI]	Unit	Term Source REF	Term Accession Number	Characteristics[HPO terms]	Term Source REF	Term Accession Number	Comment[Disease notes]	Protocol REF	Performer	Date	Sample Name	Characteristics[External links]	Characteristics[Visit]	Characteristics[Visit Centrum]	Characteristics[Cell origin]	Term Source REF	Term Accession Number	Characteristics[Cell type]	Term Source REF	Term Accession Number
+{% set sample_names = cookiecutter.sample_names.split(",") -%}																																				
+{%- for sample_name in sample_names -%}																																				
+{{sample_name|replace("-", "_")}}		{{cookiecutter.organisms[cookiecutter.organism].name}}	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/{{cookiecutter.organisms[cookiecutter.organism].taxon}}	UNKNOWN	UNKNOWN			UNKNOWN				year	UO	http://purl.obolibrary.org/obo/UO_0000036		kilogram per square meter	UO	http://purl.obolibrary.org/obo/UO_0000086					Sample collection			{{sample_name|replace("-", "_")}}-N1									
+{% endfor %}
+

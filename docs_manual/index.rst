@@ -1,6 +1,6 @@
 .. _manual-main:
 
-Welcome to CUBI-SAK's documentation!
+Welcome to CUBI-TK's documentation!
 ====================================
 
 Installation & Getting Started
@@ -12,19 +12,23 @@ Installation & Getting Started
 Manual
     This section contains manuals for specific commands.
 
-    | :ref:`Creating ISA-tab folders <man_isa_tpl>`
+    | :ref:`Creating ISA-tab files <man_isa_tpl>`
+    | :ref:`Annotating ISA-tab files <man_isa_tab>`
     | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
     | :ref:`Upload raw data to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
+    | :ref:`Tools for archiving old projects <man_archive>`
 
 Use cases
     Use cases for common processing tasks.
 
     | :ref:`Exome sequencing <usecase_exomes>`
     | :ref:`Clinical single cell pipeline <usecase_single_cell>`
+    | :ref:`Archiving projects <usecase_archive>`
 
 Project Info
-    More information on the project, including the changelog, list of contributing authors, and contribution instructions.
+    More information on the project, including the changelog, list of contributing authors, and
+    contribution instructions.
 
     | :ref:`Authors <authors>`
     | :ref:`History <history>`
@@ -46,9 +50,11 @@ Project Info
     :maxdepth: 1
 
     man_isa_tpl
+    man_isa_tab
     man_ingest_fastq
     man_itransfer_results
     man_write_sample_info
+    man_archive
 
 .. toctree::
     :caption: Use Cases
@@ -58,6 +64,7 @@ Project Info
 
     usecase_exomes
     usecase_single_cell
+    usecase_archive_project
 
 .. toctree::
     :caption: Project Info

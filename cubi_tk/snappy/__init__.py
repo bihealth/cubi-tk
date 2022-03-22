@@ -11,6 +11,8 @@ Available Commands
     Transfer results and logs from ``output`` directory of ``ngs_mapping``.
 ``itransfer-variant-calling``
     Transfer results and logs from ``output`` directory of ``variant_calling``.
+``itransfer-step``
+    Transfer results and logs from ``output`` directory of any snappy pipeline step.
 ``pull-sheet``
     Pull sample sheet from SODAR and write out to BiomedSheet format.
 ``pull-raw-data``
@@ -34,6 +36,7 @@ from .check import setup_argparse as setup_argparse_check
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
+from .itransfer_step import setup_argparse as setup_argparse_itransfer_step
 from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .kickoff import setup_argparse as setup_argparse_kickoff
@@ -62,6 +65,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "itransfer-variant-calling",
             help="Transfer variant_calling results into iRODS landing zone",
+        )
+    )
+    setup_argparse_itransfer_step(
+        subparsers.add_parser(
+            "itransfer-step", help="Transfer snappy step results into iRODS landing zone"
         )
     )
 

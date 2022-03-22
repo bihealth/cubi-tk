@@ -9,8 +9,8 @@ from subprocess import SubprocessError, check_call
 
 import attr
 from logzero import logger
+from sodar_cli import api
 
-from . import api
 from ..common import load_toml_config
 from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
 
@@ -26,10 +26,12 @@ class Config:
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     overwrite: bool
     min_batch: int
+    allow_missing: bool
     dry_run: bool
     irsync_threads: int
     yes: bool
     project_uuid: str
+    assay: str
     output_dir: str
 
 
@@ -55,18 +57,21 @@ class LibraryInfoCollector(IsaNodeVisitor):
             sample = material
             characteristics = {c.name: c for c in source.characteristics}
             comments = {c.name: c for c in source.comments}
-            self.sources[material.name] = {
-                "source_name": source.name,
-                "sample_name": sample.name,
-                "batch_no": characteristics.get("Batch", comments.get("Batch")).value[0],
-            }
+            self.sources[material.name] = {"source_name": source.name, "sample_name": sample.name}
+            batch = characteristics.get("Batch", comments.get("Batch"))
+            self.sources[material.name]["batch_no"] = batch.value[0] if batch else None
+            family = characteristics.get("Family", comments.get("Family"))
+            self.sources[material.name]["family"] = family.value[0] if family else None
         elif material.type == "Library Name":
             library = material
             sample = material_path[0]
+            folder = first_value("Folder name", node_path)
+            if not folder:
+                folder = library.name
             self.samples[sample.name] = {
                 "source": self.sources[sample.name],
                 "library_name": library.name,
-                "folder_name": first_value("Folder name", node_path),
+                "folder_name": folder,
             }
 
 
@@ -102,6 +107,13 @@ class PullRawDataCommand:
         parser.add_argument("--min-batch", default=0, type=int, help="Minimal batch number to pull")
 
         parser.add_argument(
+            "--allow-missing",
+            default=False,
+            action="store_true",
+            help="Allow missing data in assay",
+        )
+
+        parser.add_argument(
             "--yes", default=False, action="store_true", help="Assume all answers are yes."
         )
         parser.add_argument(
@@ -112,6 +124,10 @@ class PullRawDataCommand:
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
         )
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
+
+        parser.add_argument(
+            "--assay", dest="assay", default=None, help="UUID of assay to download data for."
+        )
 
         parser.add_argument("project_uuid", help="UUID of project to download data for.")
         parser.add_argument("output_dir", help="Path to output directory to write the raw data to.")
@@ -147,40 +163,47 @@ class PullRawDataCommand:
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
-        investigation = api.investigations.get(
+        investigation = api.samplesheet.retrieve(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,
         )
         assay = None
         for study in investigation.studies.values():
-            for assay in study.assays.values():
-                break
-            if assay:
-                break
-        else:  # no assay found
-            logger.info("Found no assay")
-            return 1
-        logger.info("Using irods path of first assay: %s", assay.irods_path)
+            for assay_uuid in study.assays.keys():
+                if (self.config.assay is None) and (assay is None):
+                    assay = study.assays[assay_uuid]
+                if (self.config.assay is not None) and (self.config.assay == assay_uuid):
+                    assay = study.assays[assay_uuid]
+                    logger.info("Using irods path of assay %s: %s", assay_uuid, assay.irods_path)
+                    break
 
-        library_to_folder = self._get_library_to_folder()
-        commands = []
-        for k, v in library_to_folder.items():
-            if "12_3456" in k:  # TODO: remove this if block
-                continue  # skip sample line for now
-            commands.append(["irsync", "-r"])
-            if self.config.irsync_threads:
-                commands[-1] += ["-N", str(self.config.irsync_threads)]
-            commands[-1] += [
-                "i:%s/%s" % (assay.irods_path, k),
-                "%s/%s" % (self.config.output_dir, v),
-            ]
+        library_to_folder = self._get_library_to_folder(assay)
+
+        commands = self._build_commands(assay, library_to_folder)
         if not commands:
             logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
             return 0
 
-        cmds_txt = "\n".join(["- %s" % " ".join(map(shlex.quote, cmd)) for cmd in commands])
-        logger.info("Pull data using the following commands?\n\n%s\n" % cmds_txt)
+        return self._executed_commands(commands)
+
+    def _build_commands(self, assay, library_to_folder):
+        commands = []
+        for k, v in library_to_folder.items():
+            cmd = ["irsync", "-r"]
+            if self.config.irsync_threads:
+                cmd += ["-N", str(self.config.irsync_threads)]
+            src = "%s/%s" % (assay.irods_path, k)
+            target = "%s/%s" % (self.config.output_dir, v)
+            cmd += ["i:" + src, target]
+            commands.append((src, target, cmd))
+        return commands
+
+    def _executed_commands(self, commands):
+        cmds_txt = "\n".join(
+            ["- %s" % " ".join(map(shlex.quote, cmd)) for (src, target, cmd) in commands]
+        )
+        logger.info("Pull data using the following commands?\n\n%s\n", cmds_txt)
         if self.config.yes:
             answer = True
         else:
@@ -192,34 +215,59 @@ class PullRawDataCommand:
         if not answer:
             logger.info("Answered 'no': NOT pulling files")
         else:
-            for cmd in commands:
+            failed_libs = []
+            for (src, target, cmd) in commands:
                 try:
                     cmd_str = " ".join(map(shlex.quote, cmd))
                     logger.info("Executing %s", cmd_str)
                     print(cmd)
                     print(cmd_str)
                     check_call(cmd)
-                except SubprocessError as e:  # pragma: nocover
-                    logger.error("Problem executing irsync: %s", e)
+                except SubprocessError:  # pragma: nocover
+                    failed_libs.append((src, target, cmd_str))
+            for (src, target, cmd_str) in failed_libs:
+                if not self.config.allow_missing or not self._missing_data_directory(src):
+                    logger.error("Problem executing irsync command: %s", cmd_str)
                     return 1
+                logger.warning("No data for %s", os.path.basename(target))
         return 0
 
-    def _get_library_to_folder(self):
-        isa_dict = api.samplesheets.get(
+    def _missing_data_directory(self, path):
+        cmd = ["ils", path]
+        try:
+            check_call(cmd)
+        except SubprocessError:
+            return True
+        return False
+
+    def _get_library_to_folder(self, assay):
+        isa_dict = api.samplesheet.export(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,
         )
         isa = isa_dict_to_isa_data(isa_dict)
 
+        assays = {}
+        if assay:
+            if self.config.assay is None:
+                logger.info("Using irods path of first assay: %s", assay.irods_path)
+            assays = {k: v for (k, v) in isa.assays.items() if k == assay.file_name}
+        else:  # no assay found
+            logger.info("Found no assay")
+            return 1
+
         collector = LibraryInfoCollector()
-        iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
+        iwalker = InvestigationTraversal(isa.investigation, isa.studies, assays)
         iwalker.run(collector)
         return {
             sample["library_name"]: sample["folder_name"]
             for sample in collector.samples.values()
-            if sample["source"]["batch_no"]
-            and int(sample["source"]["batch_no"]) >= self.config.min_batch
+            if (
+                not sample["source"].get("batch_no")
+                or int(sample["source"]["batch_no"]) >= self.config.min_batch
+            )
+            and (not sample["source"]["family"] or not sample["source"]["family"].startswith("#"))
         }
 
 

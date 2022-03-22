@@ -1,0 +1,11 @@
+channels:
+  - bioconda
+  - defaults
+  - conda-forge
+
+name: cubi-tk
+
+dependencies:
+  - python
+  - pip
+  - hashdeep

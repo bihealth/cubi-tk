@@ -9,6 +9,7 @@ from unittest import mock
 import pytest
 from pyfakefs import fake_filesystem
 
+from .conftest import my_exists, my_get_sodar_info
 from cubi_tk.__main__ import setup_argparse, main
 
 
@@ -37,10 +38,10 @@ def test_run_snappy_itransfer_raw_data_nothing(capsys):
     assert res.err
 
 
-def test_run_snappy_itransfer_raw_data_smoke_test(mocker):
+def test_run_snappy_itransfer_raw_data_smoke_test(mocker, minimal_config, germline_trio_sheet_tsv):
     fake_base_path = "/base/path"
     dest_path = "/irods/dest"
-    tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
+    sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "snappy",
         "itransfer-raw-data",
@@ -50,8 +51,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(mocker):
         fake_base_path,
         "--sodar-api-token",
         "XXXX",
-        tsv_path,
-        dest_path,
+        sodar_uuid,
     ]
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
@@ -67,10 +67,27 @@ def test_run_snappy_itransfer_raw_data_smoke_test(mocker):
             )
             fs.create_file(fake_file_paths[-1])
 
+    # Create sample sheet in fake file system
+    sample_sheet_path = fake_base_path + "/.snappy_pipeline/sheet.tsv"
+    fs.create_file(sample_sheet_path, contents=germline_trio_sheet_tsv, create_missing_dirs=True)
+    # Create config in fake file system
+    config_path = fake_base_path + "/.snappy_pipeline/config.yaml"
+    fs.create_file(config_path, contents=minimal_config, create_missing_dirs=True)
+
+    # Set Mocker
+    mocker.patch("pathlib.Path.exists", my_exists)
+    mocker.patch(
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
+        my_get_sodar_info,
+    )
+
     fake_os = fake_filesystem.FakeOsModule(fs)
     mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_raw_data.os", fake_os)
+
+    fake_open = fake_filesystem.FakeFileOpen(fs)
+    mocker.patch("cubi_tk.snappy.common.open", fake_open)
 
     mock_check_output = mock.mock_open()
     mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)

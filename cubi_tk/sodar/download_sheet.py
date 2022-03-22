@@ -7,8 +7,8 @@ from pathlib import Path
 
 import attr
 from logzero import logger
+from sodar_cli import api
 
-from . import api
 from ..common import overwrite_helper, load_toml_config
 from ..exceptions import OverwriteRefusedException
 
@@ -125,7 +125,7 @@ class DownloadSheetCommand:
         if not out_path.exists() and self.config.makedirs:
             out_path.mkdir(parents=True)
 
-        isa_dict = api.samplesheets.get(
+        isa_dict = api.samplesheet.export(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,

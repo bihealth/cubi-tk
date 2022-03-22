@@ -1,0 +1,10 @@
+ignore:
+    - "^(.*/)?ignored_dir$"
+
+squash:
+    - "^(.*/)?[^/]+\\.public$"
+    - "^(.*/)?raw_data/(.*/)?[^/]+\\.fastq.gz$"
+
+compress:
+    - "^(.*/)?.snakemake$"
+

@@ -3,6 +3,9 @@
 # Vim
 .*.sw?
 
+# Emacs
+*~
+
 # VS Code
 .vscode/
 
@@ -113,3 +116,4 @@ ENV/
 
 # Pytest
 .pytest_cache/
+sample_info.yaml

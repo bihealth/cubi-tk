@@ -8,8 +8,8 @@ from pathlib import Path
 
 import attr
 from logzero import logger
+from sodar_cli import api
 
-from . import api
 from .. import isa_support
 from ..common import overwrite_helper, load_toml_config
 from ..exceptions import OverwriteRefusedException
@@ -95,7 +95,7 @@ class UploadSheetCommand:
 
         logger.info("Uploading files: \n%s", "\n".join(map(str, file_paths)))
 
-        api.samplesheets.upload(
+        api.samplesheet.upload(
             sodar_url=self.config.sodar_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,

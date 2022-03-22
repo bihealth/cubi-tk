@@ -10,11 +10,12 @@ from unittest.mock import ANY
 import pytest
 from pyfakefs import fake_filesystem
 
+from .conftest import my_exists, my_get_sodar_info
 from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_snappy_itransfer_variant_calling_help(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["snappy", "itransfer-variant-calling", "--help"])
 
@@ -26,7 +27,7 @@ def test_run_snappy_itransfer_variant_calling_help(capsys):
 
 
 def test_run_snappy_itransfer_variant_calling_nothing(capsys):
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["snappy", "itransfer-variant-calling"])
@@ -38,10 +39,12 @@ def test_run_snappy_itransfer_variant_calling_nothing(capsys):
     assert res.err
 
 
-def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
+def test_run_snappy_itransfer_variant_calling_smoke_test(
+    mocker, minimal_config, germline_trio_sheet_tsv
+):
     fake_base_path = "/base/path"
     dest_path = "/irods/dest"
-    tsv_path = os.path.join(os.path.dirname(__file__), "data", "germline.out")
+    sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "--verbose",
         "snappy",
@@ -50,8 +53,8 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
         fake_base_path,
         "--sodar-api-token",
         "XXXX",
-        tsv_path,
-        dest_path,
+        # tsv_path,
+        sodar_uuid,
     ]
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
@@ -76,11 +79,25 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
                 % (fake_base_path, member, member, ext)
             )
             fs.create_file(fake_file_paths[-1])
+    # Create sample sheet in fake file system
+    sample_sheet_path = fake_base_path + "/.snappy_pipeline/sheet.tsv"
+    fs.create_file(sample_sheet_path, contents=germline_trio_sheet_tsv, create_missing_dirs=True)
+    # Create config in fake file system
+    config_path = fake_base_path + "/.snappy_pipeline/config.yaml"
+    fs.create_file(config_path, contents=minimal_config, create_missing_dirs=True)
 
-    print("\n".join(fake_file_paths))
+    # Print path to all created files
+    print("\n".join(fake_file_paths + [sample_sheet_path, config_path]))
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
+
+    # Set Mocker
+    mocker.patch("pathlib.Path.exists", my_exists)
+    mocker.patch(
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
+        my_get_sodar_info,
+    )
 
     fake_os = fake_filesystem.FakeOsModule(fs)
     mocker.patch("glob.os", fake_os)
@@ -92,12 +109,13 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(mocker):
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
+    mocker.patch("cubi_tk.snappy.common.open", fake_open)
 
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
 
     # Actually exercise code and perform test.
-    parser, subparsers = setup_argparse()
+    parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     res = main(argv)
 

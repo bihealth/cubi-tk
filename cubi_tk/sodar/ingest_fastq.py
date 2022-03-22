@@ -9,10 +9,11 @@ import typing
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError
-from pathlib import Path
-from glob import iglob
+import pathlib
+import glob
 
 from logzero import logger
+from sodar_cli import api
 import tqdm
 
 from ..exceptions import MissingFileException
@@ -140,7 +141,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     TransferJob(path_src="i:" + src, path_dest=self.args.tmp, bytes=1)
                 )
                 tmp_folder = f"tmp_folder_{len(download_jobs)}"
-                Path(tmp_folder).mkdir(parents=True, exist_ok=True)
+                pathlib.Path(tmp_folder).mkdir(parents=True, exist_ok=True)
             else:
                 folders.append(src)
 
@@ -169,21 +170,19 @@ class SodarIngestFastq(SnappyItransferCommandBase):
     def build_jobs(self, library_names=None) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         if library_names:
-            logger.warn(
+            logger.warning(
                 "will ignore parameter 'library_names' = %s in build_jobs()", str(library_names)
             )
 
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            from ..sodar.api import landing_zones
-
-            lz_irods_path = landing_zones.get(
+            lz_irods_path = api.landingzone.retrieve(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
-                landing_zone_uuid=self.args.destination,
+                landingzone_uuid=self.args.destination,
             ).irods_path
-            logger.info(f"Target iRods path: {lz_irods_path}")
+            logger.info("Target iRods path: %s", lz_irods_path)
 
         transfer_jobs = []
 
@@ -193,16 +192,16 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             logger.info("Searching for fastq files in folder: %s", folder)
 
             # assuming folder is local directory
-            if not Path(folder).is_dir():
+            if not pathlib.Path(folder).is_dir():
                 logger.error("Problem when processing input paths")
                 raise MissingFileException("Missing folder %s" % folder)
 
-            for path in iglob(f"{folder}/**/*", recursive=True):
+            for path in glob.iglob(f"{folder}/**/*", recursive=True):
                 real_path = os.path.realpath(path)
 
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
-                elif real_path.endswith(".md5"):
+                if real_path.endswith(".md5"):
                     continue  # skip, will be added automatically
 
                 if not os.path.exists(real_path):  # pragma: nocover
@@ -222,8 +221,8 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         for item in m.groupdict(default="").items()
                         if item[0] in self.dest_pattern_fields
                     )
-                    remote_file = Path(lz_irods_path) / self.args.remote_dir_pattern.format(
-                        filename=Path(path).name + self.args.add_suffix,
+                    remote_file = pathlib.Path(lz_irods_path) / self.args.remote_dir_pattern.format(
+                        filename=pathlib.Path(path).name + self.args.add_suffix,
                         date=self.args.remote_dir_date,
                         **match_wildcards,
                     )

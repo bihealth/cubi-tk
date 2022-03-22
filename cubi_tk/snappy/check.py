@@ -57,7 +57,7 @@ class GermlineSheetChecker:
         for name in fathers:
             sex = name_to_sex.get(name, "unknown")
             if sex != "male":
-                logger.warn(
+                logger.warning(
                     "Donor %s is father of %s but sex is % and not male",
                     name,
                     ", ".join(sorted(father_of[name])),
@@ -67,7 +67,7 @@ class GermlineSheetChecker:
         for name in mothers:
             sex = name_to_sex.get(name, "unknown")
             if sex != "female":
-                logger.warn(
+                logger.warning(
                     "Donor %s is mother of %s but sex is % and not female",
                     name,
                     ", ".join(sorted(mother_of[name])),
@@ -85,10 +85,10 @@ class GermlineSheetChecker:
         donor_names = {donor.name for donor in sheet.donors}
         for donor in sheet.donors:
             if donor.father and donor.father.name not in donor_names:
-                logger.warn("Father of %s is not known: %s", donor.father.name, donor.name)
+                logger.warning("Father of %s is not known: %s", donor.father.name, donor.name)
                 ok = False
             if donor.mother and donor.mother.name not in donor_names:
-                logger.warn("Mother of %s is not known: %s", donor.father.name, donor.name)
+                logger.warning("Mother of %s is not known: %s", donor.father.name, donor.name)
                 ok = False
 
         return ok
@@ -103,12 +103,12 @@ class GermlineSheetChecker:
             if pedigree.index.extra_infos.get("familyId"):
                 if pedigree.index.extra_infos.get("familyId") in seen_family_ids:
                     # TODO: in the future this will be OK once we do not need linking fake entries for snappy any more.
-                    logger.warn("Family seen for two unconnected pedigrees")
+                    logger.warning("Family seen for two unconnected pedigrees")
                     ok = False
             family_ids = {donor.extra_infos.get("familyId") for donor in pedigree.donors}
             seen_family_ids |= family_ids
             if len(family_ids) != 1:
-                logger.warn(
+                logger.warning(
                     "Seen multiple family IDs within one pedigree: %s",
                     ", ".join(sorted(family_ids)),
                 )
@@ -118,7 +118,7 @@ class GermlineSheetChecker:
             donor for donor in sheet.donors if not donor.extra_infos.get("familyId")
         }
         if no_family_donors:
-            logger.warn(
+            logger.warning(
                 "Found donors without family ID: %s",
                 ", ".join(sorted([donor.name for donor in no_family_donors])),
             )
@@ -175,7 +175,8 @@ class PedFileCheck(FileCheckBase):
 
     file_globs = ("*/work/write_pedigree.*/**/*.ped",)
 
-    def check_file(self, ped_path):
+    def check_file(self, path):
+        ped_path = path
         results = []
 
         with open(ped_path, "rt") as pedf:
@@ -185,7 +186,7 @@ class PedFileCheck(FileCheckBase):
                 results.append(False)
                 return False
             else:
-                ped_names = set([donor.name for donor in donors])
+                ped_names = {donor.name for donor in donors}
                 pedigree = self.donor_ngs_library_to_pedigree.get(donors[0].name)
                 if not pedigree:
                     logger.error(
@@ -199,13 +200,9 @@ class PedFileCheck(FileCheckBase):
                     )
                     results.append(False)
                     return False
-                pedigree_names = set(
-                    [
-                        donor.dna_ngs_library.name
-                        for donor in pedigree.donors
-                        if donor.dna_ngs_library
-                    ]
-                )
+                pedigree_names = {
+                    donor.dna_ngs_library.name for donor in pedigree.donors if donor.dna_ngs_library
+                }
                 if ped_names != pedigree_names:
                     logger.error(
                         (
@@ -252,13 +249,12 @@ class PedFileCheck(FileCheckBase):
         for tmp in sheet_pedigree.donors:
             if tmp.dna_ngs_library and tmp.dna_ngs_library.name == ped_donor.name:
                 return tmp
-        else:  # if not break-out
-            logger.error(
-                "Member in PED not found in sample sheet.\n\nPED donor: %s\nPED file:  %s\n",
-                ped_donor.name,
-                os.path.relpath(ped_path, self.base_dir),
-            )
-            return None
+        logger.error(
+            "Member in PED not found in sample sheet.\n\nPED donor: %s\nPED file:  %s\n",
+            ped_donor.name,
+            os.path.relpath(ped_path, self.base_dir),
+        )
+        return None
 
     def _check_parent(self, ped_donor, sheet_donor, key, ped_path):
         if (getattr(sheet_donor, key) is None) != (getattr(ped_donor, "%s_name" % key) == "0"):
@@ -296,6 +292,7 @@ class PedFileCheck(FileCheckBase):
                     os.path.relpath(ped_path, self.base_dir),
                 )
                 return False
+            return True
         else:
             return True
 
@@ -332,7 +329,8 @@ class VcfFileCheck(FileCheckBase):
         ]
         return result
 
-    def check_file(self, vcf_path):
+    def check_file(self, path):
+        vcf_path = path
         real_path = os.path.realpath(vcf_path)
         if not os.path.exists(real_path):
             logger.error(
@@ -360,13 +358,9 @@ class VcfFileCheck(FileCheckBase):
                     )
                     return False
                 vcf_names = set(vcf_names)
-                pedigree_names = set(
-                    [
-                        donor.dna_ngs_library.name
-                        for donor in pedigree.donors
-                        if donor.dna_ngs_library
-                    ]
-                )
+                pedigree_names = {
+                    donor.dna_ngs_library.name for donor in pedigree.donors if donor.dna_ngs_library
+                }
                 if vcf_names != pedigree_names:
                     logger.error(
                         (

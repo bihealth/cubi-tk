@@ -8,8 +8,8 @@ import json
 
 import cattr
 from logzero import logger
+from sodar_cli import api
 
-from . import api
 from ..common import load_toml_config
 
 
@@ -84,10 +84,10 @@ class MoveLandingZoneCommand:
         logger.info("Starting cubi-tk sodar landing-zone-move")
         logger.info("  args: %s", self.args)
 
-        landing_zone = api.landing_zones.move(
+        landing_zone = api.landingzone.submit_move(
             sodar_url=self.args.sodar_url,
             sodar_api_token=self.args.sodar_api_token,
-            landing_zone_uuid=self.args.landing_zone_uuid,
+            landingzone_uuid=self.args.landing_zone_uuid,
         )
         values = cattr.unstructure(landing_zone)
         if self.args.format_string:

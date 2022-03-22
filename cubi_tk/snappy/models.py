@@ -9,7 +9,7 @@ from logzero import logger
 import yaml
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class SearchPattern:
     """Represent an entry in the ``search_patterns`` list."""
 
@@ -19,7 +19,7 @@ class SearchPattern:
     right: typing.Optional[str] = None
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class DataSet:
     """Represent a data set in the ``config.yaml`` file."""
 
@@ -37,6 +37,8 @@ class DataSet:
     sodar_uuid: typing.Optional[str] = None
     #: The optional SODAR title.
     sodar_title: typing.Optional[str] = None
+    #: Field to be used to define pedigrees.
+    pedigree_field: typing.Optional[str] = None
 
 
 def load_config_yaml(path: pathlib.Path) -> typing.Any:
@@ -65,7 +67,7 @@ def load_datasets(path: pathlib.Path) -> typing.Dict[str, DataSet]:
     filtered = {key: ds for key, ds in data_sets.items() if ds.sodar_uuid}
     logger.info("Loaded %d data sets, %d with SODAR UUID", len(data_sets), len(filtered))
 
-    for key, ds in sorted(filtered.items()):
+    for _key, ds in sorted(filtered.items()):
         logger.debug("  - %s%s", ds.sodar_uuid, ": %s" % ds.sodar_title if ds.sodar_title else "")
 
     return filtered

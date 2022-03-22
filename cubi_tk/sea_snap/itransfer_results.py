@@ -5,7 +5,7 @@ import sys
 import argparse
 import typing
 import re
-from pathlib import Path
+import pathlib
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from subprocess import check_output, SubprocessError
@@ -77,25 +77,27 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
-        bp_mod_time = Path(blueprint).stat().st_mtime
+        bp_mod_time = pathlib.Path(blueprint).stat().st_mtime
 
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            from ..sodar.api import landing_zones
+            from sodar_cli.api import landing_zones
 
             lz_irods_path = landing_zones.get(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
                 landing_zone_uuid=self.args.destination,
             ).irods_path
-            logger.info(f"Target iRods path: {lz_irods_path}")
+            logger.info("Target iRods path: %s", lz_irods_path)
 
         for cmd_block in (cb for cb in command_blocks if cb):
             sources = [
-                word for word in re.split("[\n ]", cmd_block) if Path(word).exists() and word != ""
+                word
+                for word in re.split(r"[\n ]", cmd_block)
+                if pathlib.Path(word).exists() and word != ""
             ]
-            dests = re.findall("i:(__SODAR__/\S+)", cmd_block)  # noqa: W605
+            dests = re.findall(r"i:(__SODAR__/\S+)", cmd_block)  # noqa: W605
             for f_type, f in {"source": sources, "dest": dests}.items():
                 if len(set(f)) != 1:
                     raise ValueError(
@@ -108,10 +110,10 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             dest = dest.replace("__SODAR__", lz_irods_path)
             cmd_block = cmd_block.replace("__SODAR__", lz_irods_path)
 
-            if Path(source).suffix == ".md5":
+            if pathlib.Path(source).suffix == ".md5":
                 continue  # skip, will be added automatically
 
-            if Path(source).stat().st_mtime > bp_mod_time:
+            if pathlib.Path(source).stat().st_mtime > bp_mod_time:
                 raise ValueError(
                     "Blueprint %s was created before %s. "
                     "Please update the blueprint." % (blueprint, source)
@@ -194,4 +196,7 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 
     with counter.get_lock():
         counter.value += job.bytes
-        t.update(counter.value)
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other

@@ -1,5 +1,18 @@
 # History
 
+## v0.3.0
+
+- Moving SODAR REST API calls to package `sodar-cli`.
+- Switching to Github actions for CI tests.
+- More templates for `cubi-tk isa-tpl`.
+- Improvements and fixes to `cubi-tk sea-snap`.
+- Adding `isa-tab add-ped` command.
+- More tools for `cubi-tk sodar`.
+- Temporarily working around SODAR REST API not returning sodar\_uuid where we expect it to.
+- Using library\_ name as an alternative to folder\_name.
+- Adding `cubi-tk isa-tab annotate` command.
+- Various small fixes and adjustments.
+
 ## v0.2.0
 
 - Adjusting package meta data in `setup.py`.

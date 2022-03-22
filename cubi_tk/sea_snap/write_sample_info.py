@@ -118,7 +118,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument(
         "in_path_pattern",
-        help="Path pattern to use for extracting input file information. See https://cubi-gitlab.bihealth.org/CUBI/Pipelines/sea-snap/blob/master/documentation/prepare_input.md#fastq-files-folder-structure.",
+        help="Path pattern to use for extracting input file information. See "
+        "https://cubi-gitlab.bihealth.org/CUBI/Pipelines/sea-snap/blob/master/"
+        "documentation/prepare_input.md#fastq-files-folder-structure.",
     )
 
     parser.add_argument(
@@ -158,7 +160,7 @@ def check_args(args) -> int:
                 )
                 any_error = True
             else:
-                logger.warn(
+                logger.warning(
                     "Output folder %s exists but --allow-overwrite given.", args.output_folder
                 )
 
@@ -174,7 +176,7 @@ def check_args(args) -> int:
 
     # Check options --isa-assay vs. --from_file
     if args.from_file:
-        logger.warn("Option --from_file is set, in-path-pattern will be ignored.")
+        logger.warning("Option --from_file is set, in-path-pattern will be ignored.")
         if args.isa_assay:
             logger.error("Both --isa-assay and --from_file are set, choose one.")
             any_error = True
@@ -192,7 +194,7 @@ def check_args(args) -> int:
             )
             any_error = True
         else:
-            logger.warn("Output path %s exists but --allow-overwrite given.", args.output_file)
+            logger.warning("Output path %s exists but --allow-overwrite given.", args.output_file)
 
     return int(any_error)
 
@@ -203,7 +205,7 @@ class Bunch:
 
 
 class SampleInfoTool:
-    """ Tool to generate a sample info file before running sea-snap mapping """
+    """Tool to generate a sample info file before running sea-snap mapping"""
 
     allowed_read_extensions = [".fastq", ".fastq.gz", ".fq", ".fq.gz"]
 
@@ -220,7 +222,7 @@ class SampleInfoTool:
     # ---------------------------------------------------- helper methods ----------------------------------------------------#
 
     def _prepare_in_path_pattern(self):
-        """ read and remove wildcard constraints from in_path_pattern """
+        """read and remove wildcard constraints from in_path_pattern"""
         wildcards = re.findall("{([^{}]+)}", self.in_path_pattern)
         wildcard_constraints = {}
         for wildcard in wildcards:
@@ -231,7 +233,7 @@ class SampleInfoTool:
         return wildcard_constraints
 
     def _wildc_replace(self, matchobj):
-        """ method used with re.sub to generate match pattern from path pattern """
+        """method used with re.sub to generate match pattern from path pattern"""
         wildc_name = matchobj.group(1)
         if wildc_name in self.wildcard_constraints:
             return "({})".format(self.wildcard_constraints[wildc_name].replace("//", "/"))
@@ -241,7 +243,7 @@ class SampleInfoTool:
             return "([^}./]+)"
 
     def _get_wildcard_values_from_read_input(self, unix_style=True):
-        """ go through files in input path and get values matching the wildcards """
+        """go through files in input path and get values matching the wildcards"""
         glob_pattern = re.sub("{[^}./]+}", "*", self.in_path_pattern)
         wildcards = re.findall("{([^}./]+)}", self.in_path_pattern)
         match_pattern = re.sub(
@@ -252,8 +254,8 @@ class SampleInfoTool:
             match_pattern = re.sub(r"\\\*\\\*", "[^{}]*", match_pattern)
             match_pattern = re.sub(r"(?<!\[\^{}\]\*)\\\*", "[^{}./]*", match_pattern)
 
-        logger.info("\ninput files:\n{}".format("\n".join(input_files)))
-        logger.info(f"\nmatch pattern:\n{match_pattern}")
+        logger.info("\ninput files:\n%s", "\n".join(input_files))
+        logger.info("\nmatch pattern:\n%s", match_pattern)
 
         wildcard_values = {w: [] for w in wildcards}
         wildcard_values["read_extension"] = []
@@ -265,7 +267,7 @@ class SampleInfoTool:
     def _get_wildcard_values_from_file_path(
         self, wildcard_values, filename, wildcards, match_pattern
     ):
-        """ get values matching wildcards from given file path """
+        """get values matching wildcards from given file path"""
         matches = re.match(match_pattern, filename).groups()
         assert len(matches) == len(wildcards)
 
@@ -282,10 +284,10 @@ class SampleInfoTool:
         return wildcard_values
 
     def _get_wildcard_combinations(self, wildcard_values):
-        """ go through wildcard values and get combinations """
+        """go through wildcard values and get combinations"""
 
         combinations = []
-        WildcardComb = namedtuple("WildcardComb", [s for s in wildcard_values])
+        WildcardComb = namedtuple("WildcardComb", wildcard_values)
         wildcard_comb_num = len(wildcard_values["sample"])
         assert all([len(val) == wildcard_comb_num for val in wildcard_values.values()])
         for index in range(wildcard_comb_num):
@@ -295,15 +297,15 @@ class SampleInfoTool:
         return combinations
 
     def _convert_str_entries_to_lists(self, key="paired_end_extensions"):
-        """ for importing lists from table entries """
+        """for importing lists from table entries"""
         for smpl_info in self.sample_info.values():
             smpl_info[key] = [
                 s.replace("'", "").replace('"', "")
-                for s in re.findall("[^\[\]\s,]+", smpl_info[key])  # noqa: W605
+                for s in re.findall(r"[^\[\]\s,]+", smpl_info[key])  # noqa: W605
             ]
 
     def _add_info_fields(self, add_dict):
-        """ add fields from add_dict to self.sample_info if they are not already present """
+        """add fields from add_dict to self.sample_info if they are not already present"""
         for sample, fields in add_dict.items():
             if sample in self.sample_info:
                 s_info = self.sample_info[sample]
@@ -327,9 +329,8 @@ class SampleInfoTool:
             if comb.read_extension in self.allowed_read_extensions
         ]
         logger.info(
-            "\nextracted combinations:\n{}".format(
-                "\n".join("\t".join(i) for i in [wildcard_combs[0]._fields] + wildcard_combs)
-            )
+            "\nextracted combinations:\n%s",
+            "\n".join("\t".join(i) for i in [wildcard_combs[0]._fields] + wildcard_combs),
         )
 
         sample_info = {}
@@ -421,47 +422,48 @@ class SampleInfoTool:
                         "Library construction [a-z]*RNA[-_]?[Ss]eq",
                         assay.processes.get(key, dummy).protocol_ref,
                     ):
-                        for p in assay.processes[key].parameter_values:
-                            if p.name == "Library layout":
-                                sample_info[sample_name]["paired"] = (
-                                    True if p.value == "PAIRED" else False
-                                )
-                            elif p.name == "Library strand-specificity":
-                                sample_info[sample_name]["stranded"] = p.value.lower()
-                            elif p.name == "Library name mRNA" and p.value[0]:
-                                if "lib_types" not in sample_info[sample_name]:
-                                    sample_info[sample_name]["lib_types"] = []
-                                sample_info[sample_name]["lib_types"].append(
-                                    (",".join(p.value), "Gene Expression")
-                                )
-                            elif p.name == "Library name sample tag" and p.value[0]:
-                                if "lib_types" not in sample_info[sample_name]:
-                                    sample_info[sample_name]["lib_types"] = []
-                                sample_info[sample_name]["lib_types"].append(
-                                    (",".join(p.value), "Antibody Capture")
-                                )
+                        self._parse_isatab_library_construction(
+                            assay, key, sample_info, sample_name
+                        )
 
                     elif re.match(
                         "Nucleic acid sequencing [a-z]*RNA[-_]?[Ss]eq",
                         assay.processes.get(key, dummy).protocol_ref,
                     ):
-                        for p in assay.processes[key].parameter_values:
-                            if p.name == "Instrument model":
-                                sample_info[sample_name]["instrument"] = ",".join(p.value)
-                            if p.name == "Sequencing kit":
-                                sample_info[sample_name]["sequencing_kit"] = ",".join(p.value)
-                            elif (
-                                p.name == "Platform"
-                                and "instrument" not in sample_info[sample_name]
-                            ):
-                                sample_info[sample_name]["instrument"] = ",".join(p.value)
-                            elif p.name == "Target read length":
-                                sample_info[sample_name]["read_length"] = p.value
+                        self._parse_isatab_sequencing(assay, key, sample_info, sample_name)
 
         logger.info("Samples in ISA assay:\n%s", ", ".join(sample_info))
         logger.debug(sample_info)
 
         self.sample_info = sample_info
+
+    def _parse_isatab_sequencing(self, assay, key, sample_info, sample_name):
+        for p in assay.processes[key].parameter_values:
+            if p.name == "Instrument model":
+                sample_info[sample_name]["instrument"] = ",".join(p.value)
+            if p.name == "Sequencing kit":
+                sample_info[sample_name]["sequencing_kit"] = ",".join(p.value)
+            elif p.name == "Platform" and "instrument" not in sample_info[sample_name]:
+                sample_info[sample_name]["instrument"] = ",".join(p.value)
+            elif p.name == "Target read length":
+                sample_info[sample_name]["read_length"] = p.value
+
+    def _parse_isatab_library_construction(self, assay, key, sample_info, sample_name):
+        for p in assay.processes[key].parameter_values:
+            if p.name == "Library layout":
+                sample_info[sample_name]["paired"] = p.value == "PAIRED"
+            elif p.name == "Library strand-specificity":
+                sample_info[sample_name]["stranded"] = p.value.lower()
+            elif p.name == "Library name mRNA" and p.value[0]:
+                if "lib_types" not in sample_info[sample_name]:
+                    sample_info[sample_name]["lib_types"] = []
+                sample_info[sample_name]["lib_types"].append((",".join(p.value), "Gene Expression"))
+            elif p.name == "Library name sample tag" and p.value[0]:
+                if "lib_types" not in sample_info[sample_name]:
+                    sample_info[sample_name]["lib_types"] = []
+                sample_info[sample_name]["lib_types"].append(
+                    (",".join(p.value), "Antibody Capture")
+                )
 
 
 def pull_isa(args) -> typing.Optional[int]:
@@ -496,7 +498,6 @@ def pull_isa(args) -> typing.Optional[int]:
             print(all_data["assays"][assay]["tsv"], file=f)
 
     logger.debug("Done pulling ISA files.")
-    return None
 
 
 def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
@@ -518,9 +519,8 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
                 return 1
             elif len(assay_files) > 1:
                 logger.info(
-                    "Several assay files were pulled, choose one.\n{}".format(
-                        "\n".join(f"[{i}] {assay_files[i]}" for i in range(len(assay_files)))
-                    )
+                    "Several assay files were pulled, choose one.\n%s",
+                    "\n".join(f"[{i}] {assay_files[i]}" for i in range(len(assay_files))),
                 )
                 args.isa_assay = open(assay_files[int(input("choice: "))], "rt")
             else:
@@ -624,7 +624,7 @@ def run(
 
         # Write to output file if not --dry-run is given
         if hasattr(args.output_file, "name") and args.dry_run:
-            logger.warn("Not changing %s as we are in --dry-run mode", args.output_file.name)
+            logger.warning("Not changing %s as we are in --dry-run mode", args.output_file.name)
         else:
             if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
                 action = (
@@ -638,7 +638,7 @@ def run(
                 args.output_file.truncate()
             shutil.copyfileobj(sample_info_file, args.output_file)
 
-        logger.warn(
+        logger.warning(
             "in_path_pattern: %s --> Use the same in your mapping_config.yaml!",
             args.in_path_pattern,
         )

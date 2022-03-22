@@ -20,13 +20,14 @@ Available Templates
 
 The `Cookiecutter`_ directories are located in this module's directory.  Currently available templates are:
 
-- ``generic``
-- ``germline``
-- ``tumor_normal_dna``
-- ``tumor_normal_triplets``
-- ``single_cell_rnaseq``
-- ``bulk_rnaseq``
-- ``microarray``
+- ``isatab-generic``
+- ``isatab-germline``
+- ``isatab-microarray``
+- ``isatab-ms_meta_biocrates``
+- ``isatab-single_cell_rnaseq``
+- ``isatab-bulk_rnaseq``
+- ``isatab-tumor_normal_dna``
+- ``isatab-tumor_normal_triplets``
 
 Adding Templates
 ----------------
@@ -48,6 +49,7 @@ Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` fo
 """
 
 import argparse
+from functools import partial
 import json
 import os
 import typing
@@ -97,7 +99,7 @@ _TEMPLATES = (
         name="single_cell_rnaseq",
         path=os.path.join(_BASE_DIR, "isatab-single_cell_rnaseq"),
         description="single cell RNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-generic"),
+        configuration=load_variables("isatab-single_cell_rnaseq"),
     ),
     IsaTabTemplate(
         name="bulk_rnaseq",
@@ -135,6 +137,12 @@ _TEMPLATES = (
         description="microarray ISA-tab template",
         configuration=load_variables("isatab-microarray"),
     ),
+    IsaTabTemplate(
+        name="ms_meta_biocrates",
+        path=os.path.join(_BASE_DIR, "isatab-ms_meta_biocrates"),
+        description="MS Metabolomics Biocrates kit ISA-tab template",
+        configuration=load_variables("isatab-ms_meta_biocrates"),
+    ),
 )
 
 #: Known ISA-tab templates.
@@ -142,7 +150,7 @@ TEMPLATES = {tpl.name: tpl for tpl in _TEMPLATES}
 
 
 @curry
-def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
+def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     """Run cookiecutter, ``tpl`` will be bound with ``toolz.curry``."""
     extra_context = {}
     for name in tpl.configuration:  # pragma: nocover
@@ -176,6 +184,7 @@ def run_cookiecutter(tpl, args, _parser, _subparser, no_input=False):
         "- %s" % path for path in yield_files_recursively(args.output_dir)
     ]
     logger.info("Resulting structure is:\n%s", "\n".join(listing))
+    return 0
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -195,7 +204,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--hidden-cmd",
             dest="isa_tpl_cmd",
-            default=run_cookiecutter(tpl),
+            default=partial(run_cookiecutter, tpl),
             help=argparse.SUPPRESS,
         )
         parser.add_argument("output_dir", help="Path to output directory")

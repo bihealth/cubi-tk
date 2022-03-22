@@ -3,10 +3,12 @@ import contextlib
 import difflib
 import fcntl
 import glob
+import hashlib
 import os
 import pathlib
 import shutil
 import struct
+import subprocess
 import sys
 import tempfile
 import termios
@@ -22,6 +24,7 @@ from logzero import logger
 from termcolor import colored
 
 from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
+
 
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
@@ -56,6 +59,78 @@ class CommonConfig:
                 args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
             ),
         )
+
+
+def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
+    if verbose:
+        logger.info("Computing md5 hash for {}".format(filename))
+    the_hash = None
+    with open(filename, "rb") as f:
+        the_hash = hashlib.md5()
+        chunk = f.read(buffer_size)
+        while chunk:
+            the_hash.update(chunk)
+            chunk = f.read(buffer_size)
+    return the_hash.hexdigest()
+
+
+def execute_shell_commands(cmds, verbose=True, check=True):
+    """Executes a list of shell commands provided as a list.
+
+    The contents of stdout are returned to the caller. Because the method stores all output,
+    it is unsuitable for commands expected to produce very large output.
+
+    When an error occurs anywhere in the pipe (more precisely: if any subprocess of the pipe
+    returns an exit status different from 0), a CalledProcessError exception is triggered,
+    unless check is set to False. In that case, the exit codes are ignored, and the contents
+    of stdout is returned as if no error had occured.
+
+    Setting check=False may be useful when the user expects an error status, for example:
+    The pipe: echo "Hello World!" | grep "world" returns status 1 (pattern not found)
+    But the user may be just interested with the lines that have been filtered, without
+    requiring that at least one has been found.
+
+    cmds: List[List[str]]
+        Shell commands to be executed as a pipe.
+    verbose: bool
+        When True, the logger outputs the shell pipe command before executing it
+    check: bool
+        When True, exit codes different from 0 (normal exit) will trigger a CalledProcessError
+        exception. When False, the output of the pipe is returned, and the exit code is ignored.
+    """
+    if verbose:
+        logger.info('Executing shell command "' + " | ".join([" ".join(cmd) for cmd in cmds]) + '"')
+
+    # Pipe the commands
+    process_list = []
+    previous = None
+    for cmd in cmds:
+        if previous:
+            current = subprocess.Popen(
+                cmd, stdin=previous.stdout, stdout=subprocess.PIPE, encoding="utf-8"
+            )
+            # Required so that SIGPIPE can be propagated
+            # See https://docs.python.org/3/library/subprocess.html#replacing-shell-pipeline
+            previous.stdout.close()
+        else:
+            current = subprocess.Popen(cmd, stdout=subprocess.PIPE, encoding="utf-8")
+        previous = current
+        process_list.append(current)
+
+    # Run the piped commands
+    output = current.communicate()
+
+    # Check return code of all processes in the pipe (if required)
+    # Tested only when all processes in the pipe are complete
+    if check and any([x.poll() != 0 for x in process_list]):
+        raise subprocess.CalledProcessError(
+            returncode=current.returncode,
+            cmd=" | ".join([" ".join(cmd) for cmd in cmds]),
+            output=output[0],
+        )
+
+    # Return stdout
+    return output[0]
 
 
 def find_base_path(base_path):
@@ -93,7 +168,7 @@ def is_uuid(x):
     """Return True if ``x`` is a string and looks like a UUID."""
     try:
         return str(UUID(x)) == x
-    except:  # noqa: E722
+    except Exception:  # noqa: E722
         return False
 
 
@@ -162,51 +237,9 @@ def overwrite_helper(
 
         # Compare sheet with output if exists and --show-diff given.
         if show_diff:
-            if out_path != "-" and out_path_obj.exists():
-                with out_path_obj.open("rt") as inputf:
-                    old_lines = inputf.read().splitlines(keepends=False)
-            else:
-                old_lines = []
-
-            if not show_diff_side_by_side:
-                lines = list(
-                    difflib.unified_diff(
-                        old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path)
-                    )
-                )
-                for line in lines:
-                    if line.startswith(("+++", "---")):
-                        print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
-                    elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
-                    elif line.startswith("+"):
-                        print(colored(line, color="green", attrs=("bold",)), file=out_file)
-                    elif line.startswith("-"):
-                        print(colored(line, color="red", attrs=("bold",)), file=out_file)
-                    else:
-                        print(line, file=out_file)
-            else:
-                cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
-                lines = list(
-                    cd.make_table(
-                        old_lines,
-                        new_lines,
-                        fromdesc=str(out_path),
-                        todesc=str(out_path),
-                        context=True,
-                        numlines=3,
-                    )
-                )
-                for line in lines:
-                    line = "%s\n" % line
-                    if hasattr(out_file, "buffer"):
-                        out_file.buffer.write(line.encode("utf-8"))  # type: ignore
-                    else:
-                        out_file.write(line)
-
-            out_file.flush()
-            if not lines:
-                logger.info("File %s not changed, no diff...", out_path)
+            lines = _overwrite_helper_show_diff(
+                lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
+            )
 
         # Actually copy the file contents.
         if (not show_diff or lines) and do_write:
@@ -220,6 +253,53 @@ def overwrite_helper(
                 if answer_yes or input("Is this OK? [yN] ").lower().startswith("y"):
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
+
+
+def _overwrite_helper_show_diff(
+    lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
+):
+    if out_path != "-" and out_path_obj.exists():
+        with out_path_obj.open("rt") as inputf:
+            old_lines = inputf.read().splitlines(keepends=False)
+    else:
+        old_lines = []
+    if not show_diff_side_by_side:
+        lines = list(
+            difflib.unified_diff(old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path))
+        )
+        for line in lines:
+            if line.startswith(("+++", "---")):
+                print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
+            elif line.startswith("@@"):
+                print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
+            elif line.startswith("+"):
+                print(colored(line, color="green", attrs=("bold",)), file=out_file)
+            elif line.startswith("-"):
+                print(colored(line, color="red", attrs=("bold",)), file=out_file)
+            else:
+                print(line, file=out_file)
+    else:
+        cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
+        lines = list(
+            cd.make_table(
+                old_lines,
+                new_lines,
+                fromdesc=str(out_path),
+                todesc=str(out_path),
+                context=True,
+                numlines=3,
+            )
+        )
+        for line in lines:
+            line = "%s\n" % line
+            if hasattr(out_file, "buffer"):
+                out_file.buffer.write(line.encode("utf-8"))  # type: ignore
+            else:
+                out_file.write(line)
+    out_file.flush()
+    if not lines:
+        logger.info("File %s not changed, no diff...", out_path)
+    return lines
 
 
 @contextlib.contextmanager
@@ -245,7 +325,7 @@ class UnionFind:
         self._sz = [1] * len(vertex_names)
 
     def find(self, v):
-        assert type(v) is int
+        assert isinstance(v, int)
         j = v
 
         while j != self._id[j]:
@@ -261,8 +341,8 @@ class UnionFind:
         self.union(self.find_by_name(v_name), self.find_by_name(w_name))
 
     def union(self, v, w):
-        assert type(v) is int
-        assert type(w) is int
+        assert isinstance(v, int)
+        assert isinstance(w, int)
         i = self.find(v)
         j = self.find(w)
 
@@ -290,6 +370,5 @@ def load_toml_config(config):
         if os.path.exists(config_path):
             with open(config_path, "rt") as tomlf:
                 return toml.load(tomlf)
-    else:
-        logger.info("Could not find any of the global configuration files %s.", config_paths)
-        return None
+    logger.info("Could not find any of the global configuration files %s.", config_paths)
+    return None

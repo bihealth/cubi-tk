@@ -6,11 +6,11 @@ import os
 import pathlib
 import typing
 
-from biomedsheets import io_tsv, shortcuts
-from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+from biomedsheets import shortcuts
 from logzero import logger
 from varfish_cli.__main__ import main as varfish_cli_main
 
+from .common import load_sheet_tsv
 from ..common import find_base_path
 from .models import DataSet, load_datasets
 
@@ -39,23 +39,34 @@ PREFIXES = (
 )
 
 
-def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
-    """Load sample sheet."""
-    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
-    with open(path_tsv, "rt") as f:
-        return load_tsv(f, naming_scheme=NAMING_ONLY_SECONDARY_ID)
+def yield_ngs_library_names(sheet, min_batch=None, batch_key="batchNo", pedigree_field=None):
+    """Yield DNA NGS library names for indexes.
 
+    :param sheet: Sample sheet.
+    :type sheet: biomedsheets.models.Sheet
 
-def yield_ngs_library_names(sheet, min_batch=None, batch_key="batchNo"):
-    shortcut_sheet = shortcuts.GermlineCaseSheet(sheet)
+    :param min_batch: Minimum batch number to be extracted from the sheet. All samples in batches below this values
+    will be skipped.
+    :type min_batch: int
+
+    :param batch_key: Batch number key in sheet. Default: 'batchNo'.
+    :type batch_key: str
+
+    :param pedigree_field: Field that should be used to define a pedigree. If none is provided pedigree will be defined
+    based on information in the sample sheets rows alone.
+    """
+    kwargs = {}
+    if pedigree_field:
+        kwargs = {"join_by_field": pedigree_field}
+    shortcut_sheet = shortcuts.GermlineCaseSheet(sheet, **kwargs)
     for pedigree in shortcut_sheet.cohort.pedigrees:
         max_batch = max(donor.extra_infos.get(batch_key, 0) for donor in pedigree.donors)
-        if min_batch is None or min_batch <= max_batch:
+        if (min_batch is None or min_batch <= max_batch) and pedigree.index.dna_ngs_library:
             yield pedigree.index.dna_ngs_library.name
 
 
 class SnappyVarFishUploadCommand:
-    """Implementation of snappy itransfer command for variant calling results."""
+    """Implementation of snappy varfish-upload command for variant calling results."""
 
     def __init__(self, args):
         #: Command line arguments.
@@ -143,7 +154,7 @@ class SnappyVarFishUploadCommand:
                 elif x.startswith("-"):
                     steps.discard(x[1:])
                 else:
-                    logger.warn("Does not start with +/-: %s", x)
+                    logger.warning("Does not start with +/-: %s", x)
         args.steps = tuple(sorted(steps))
 
         if not os.path.exists(args.base_path):  # pragma: nocover
@@ -175,11 +186,16 @@ class SnappyVarFishUploadCommand:
         if ds.sodar_uuid is None:
             raise TypeError("ds.sodar_uuid must not be null")
         sodar_uuid: str = ds.sodar_uuid
+        pedigree_field: str = ds.pedigree_field
         name = "%s (%s)" % (ds.sodar_title, sodar_uuid) if ds.sodar_title else sodar_uuid
         logger.info("Processing Dataset %s", name)
         logger.info("  loading from %s", self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
-        sheet = load_sheet_tsv(self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
-        for library in yield_ngs_library_names(sheet, self.args.min_batch):
+        sheet_path = self.args.base_path / ".snappy_pipeline" / ds.sheet_file
+        sheet = load_sheet_tsv(path_tsv=sheet_path)
+        ngs_library_names_list = yield_ngs_library_names(
+            sheet=sheet, min_batch=self.args.min_batch, pedigree_field=pedigree_field
+        )
+        for library in ngs_library_names_list:
             if self.args.samples and not library.split("-")[0] in self.args.samples.split(","):
                 logger.info("Skipping library %s as it is not included in --samples", library)
                 continue
