@@ -59,7 +59,7 @@ class IrodsCheckCommand:
         )
 
         parser.add_argument(
-            "-n",
+            "-p",
             "--num-parallel-tests",
             type=int,
             default=NUM_PARALLEL_TESTS,
