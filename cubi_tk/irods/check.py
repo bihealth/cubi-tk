@@ -17,7 +17,11 @@ from multiprocessing.pool import ThreadPool
 MIN_NUM_REPLICAS = 2
 NUM_PARALLEL_TESTS = 4
 NUM_DISPLAY_FILES = 20
-MD5_RE = re.compile(r"[0-9a-fA-F]{32}")
+HASH_SCHEMES = {
+    "MD5": {"regex": re.compile(r"[0-9a-fA-F]{32}")},
+    "SHA256": {"regex": re.compile(r"[0-9a-fA-F]{64}")},
+}
+DEFAULT_HASH_SCHEME = "MD5"
 
 
 class IrodsCheckCommand:
@@ -88,6 +92,14 @@ class IrodsCheckCommand:
             help="Number of files listed when checking, defaults to %s" % NUM_DISPLAY_FILES,
         )
 
+        parser.add_argument(
+            "-s",
+            "--hash-scheme",
+            type=str,
+            default=DEFAULT_HASH_SCHEME,
+            help="Hash scheme used to verify checksums, defaults to %s" % DEFAULT_HASH_SCHEME,
+        )
+
         parser.add_argument("irods_path", help="Path to an iRODS collection.")
 
     @classmethod
@@ -98,16 +110,31 @@ class IrodsCheckCommand:
 
     def get_data_objs(self, root_coll: iRODSCollection):
         """Get data objects recursively under the given iRODS path."""
-        data_objs = dict(files=[], md5s={})
+        data_objs = dict(files=[], checksums={})
+        ignore_schemes = [
+            k.lower() for k in HASH_SCHEMES.keys() if k != self.args.hash_scheme.upper()
+        ]
         for res in root_coll.walk():
             for obj in res[2]:
-                if obj.path.endswith(".md5"):
-                    data_objs["md5s"][obj.path] = obj
-                else:
+                if obj.path.endswith("." + self.args.hash_scheme.lower()):
+                    data_objs["checksums"][obj.path] = obj
+                elif obj.path.split(".")[-1] not in ignore_schemes:
                     data_objs["files"].append(obj)
         return data_objs
 
     def check_args(self, _args):
+        # Check hash scheme
+        if _args.hash_scheme.upper() not in HASH_SCHEMES.keys():
+            logger.error(
+                'Invalid hash scheme "{}"; accepted values: {}'.format(
+                    _args.hash_scheme.upper(), ", ".join(HASH_SCHEMES.keys())
+                )
+            )
+            raise ValueError
+        # Check environment file
+        if not os.path.isfile(self.irods_env_path):
+            logger.error("iRODS environment not found in %s", self.irods_env_path)
+            raise FileNotFoundError
         return None
 
     @classmethod
@@ -125,10 +152,7 @@ class IrodsCheckCommand:
         logger.info("Starting cubi-tk irods %s", self.command_name)
         logger.info("Args: %s", self.args)
 
-        # Check for environment file
-        if not os.path.isfile(self.irods_env_path):
-            logger.error("iRODS environment not found in %s", self.irods_env_path)
-            raise FileNotFoundError
+        # Load iRODS environment
         with open(self.irods_env_path, "r") as f:
             irods_env = json.load(f)
         logger.info("iRODS environment: %s", irods_env)
@@ -173,7 +197,13 @@ class IrodsCheckCommand:
         with tqdm.tqdm(total=num_files, unit="files", unit_scale=False) as t:
             if self.args.num_parallel_tests < 2:
                 for obj in data_objs["files"]:
-                    check_file(obj, data_objs["md5s"], self.args.req_num_reps, t)
+                    check_file(
+                        obj,
+                        data_objs["checksums"],
+                        self.args.req_num_reps,
+                        self.args.hash_scheme.upper(),
+                        t,
+                    )
                 return
 
             if num_files < self.args.num_parallel_tests:
@@ -184,7 +214,14 @@ class IrodsCheckCommand:
             s_idx = 0
             for obj in data_objs["files"]:
                 pool.apply_async(
-                    check_file, args=(obj, data_objs["md5s"], self.args.req_num_reps, t)
+                    check_file,
+                    args=(
+                        obj,
+                        data_objs["checksums"],
+                        self.args.req_num_reps,
+                        self.args.hash_scheme.upper(),
+                        t,
+                    ),
                 )
                 if s_idx == self.args.num_parallel_tests - 1:
                     s_idx = 0
@@ -194,26 +231,29 @@ class IrodsCheckCommand:
             pool.join()
 
 
-def check_file(data_obj: iRODSDataObject, md5s: dict, req_num_reps: int, t):
+def check_file(data_obj: iRODSDataObject, checksums: dict, req_num_reps: int, hash_scheme: str, t):
     """Perform checks for a single file."""
-    md5_obj = md5s.get(data_obj.path + ".md5")
+    chk_obj = checksums.get(data_obj.path + "." + hash_scheme.lower())
 
-    # 1) MD5 sum file exists?
-    if not md5_obj:
-        e_msg = f"No md5 sum file for: {data_obj.path}"
+    # 1) Checksum file exists?
+    if not chk_obj:
+        e_msg = f"No checksum file for: {data_obj.path}"
         logger.error(e_msg)
 
-    # 2) Checksums of all replicas consistent with .md5 file?
+    # 2) Checksums of all replicas consistent with checksum file?
     else:
-        with md5_obj.open("r") as f:
-            file_sum = re.search(MD5_RE, f.read().decode("utf-8")).group(0)
+        with chk_obj.open("r") as f:
+            file_sum = re.search(
+                HASH_SCHEMES[hash_scheme]["regex"], f.read().decode("utf-8")
+            ).group(0)
         for replica in data_obj.replicas:
             if replica.checksum != file_sum:
                 logger.error(
-                    "iRODS metadata checksum not consistent with MD5 file...\n"
-                    "File: %s\nMD5 file checksum: %s\n"
+                    "iRODS metadata checksum not consistent with chcksum file...\n"
+                    "File: %s\n%s file checksum: %s\n"
                     "Metadata checksum: %s\nResource: %s",
                     data_obj.path,
+                    hash_scheme,
                     file_sum,
                     replica.checksum,
                     replica.resource_name,
