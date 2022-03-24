@@ -7,6 +7,7 @@ import re
 import tqdm
 import typing
 
+from contextlib import contextmanager
 from irods.collection import iRODSCollection
 from irods.data_object import iRODSDataObject
 from irods.session import iRODSSession
@@ -33,15 +34,28 @@ class IrodsCheckCommand:
         )
 
         #: iRODS sessions for parallel execution
-        self.irods_sessions = []
+        # self.irods_sessions = []
 
         #: iRODS environment
         self.irods_env = None
 
-    def __del__(self):
-        # Ensure cleanup of iRODS sessions
-        for irods in self.irods_sessions:
-            irods.cleanup()
+    def _init_irods(self):
+        """Connect to iRODS."""
+        try:
+            return iRODSSession(irods_env_file=self.irods_env_path)
+        except Exception as e:
+            logger.error("iRODS connection failed: %s", self.get_irods_error(e))
+            logger.error("Are you logged in? try 'iinit'")
+            raise
+
+    @contextmanager
+    def _get_irods_sessions(self, count=NUM_PARALLEL_TESTS):
+        irods_sessions = [self._init_irods() for _ in range(count)]
+        try:
+            yield irods_sessions
+        finally:
+            for irods in irods_sessions:
+                irods.cleanup()
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -74,19 +88,8 @@ class IrodsCheckCommand:
         es = str(e)
         return es if es != "None" else e.__class__.__name__
 
-    def connect(self):
-        """Connect to iRODS."""
-        try:
-            return iRODSSession(irods_env_file=self.irods_env_path)
-        except Exception as e:
-            logger.error("iRODS connection failed: %s", self.get_irods_error(e))
-            logger.error("Are you logged in? try 'iinit'")
-            raise
-
     def get_data_objs(self, root_coll: iRODSCollection):
         """Get data objects recursively under the given iRODS path."""
-        # NOTE: We shouldn't use walk() as it's extremely inefficient, but
-        #       calling SpecificQuery with a rodsuser results in SYS_NO_API_PRIV
         data_objs = dict(files=[], md5s={})
         for res in root_coll.walk():
             for obj in res[2]:
@@ -123,21 +126,25 @@ class IrodsCheckCommand:
         logger.info("iRODS environment: %s", irods_env)
 
         # Connect to iRODS
-        irods = self.connect()
-        try:
-            root_coll = irods.collections.get(self.args.irods_path)
-            logger.info("iRODS connection initialized")
-        except Exception as e:
-            logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
-            raise
+        with self._get_irods_sessions(self.args.num_parallel_tests) as irods_sessions:
+            try:
+                root_coll = irods_sessions[0].collections.get(self.args.irods_path)
+                logger.info(
+                    "{} iRODS connection{} initialized".format(
+                        len(irods_sessions), "s" if len(irods_sessions) != 1 else ""
+                    )
+                )
+            except Exception as e:
+                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
+                raise
 
-        # Get files and run checks
-        logger.info("Querying for data objects")
-        data_objs = self.get_data_objs(root_coll)
-        self.run_checks(irods, data_objs)
-        logger.info("All done")
+            # Get files and run checks
+            logger.info("Querying for data objects")
+            data_objs = self.get_data_objs(root_coll)
+            self.run_checks(irods_sessions, data_objs)
+            logger.info("All done")
 
-    def run_checks(self, irods: iRODSSession, data_objs: dict):
+    def run_checks(self, irods_sessions: list, data_objs: dict):
         """Run checks on files, in parallel if enabled."""
         num_files = len(data_objs["files"])
         lst_files = "\n".join([f.path for f in data_objs["files"]][:19])
@@ -151,8 +158,6 @@ class IrodsCheckCommand:
 
         # counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=num_files, unit="files", unit_scale=False) as t:
-            self.irods_sessions = [irods]
-
             if self.args.num_parallel_tests < 2:
                 for obj in data_objs["files"]:
                     check_file(obj, data_objs["md5s"], self.args.req_num_reps, t)
@@ -162,7 +167,6 @@ class IrodsCheckCommand:
                 s_count = num_files
             else:
                 s_count = self.args.num_parallel_tests
-            self.irods_sessions += [self.connect() for _ in range(s_count - 1)]
             pool = ThreadPool(processes=self.args.num_parallel_tests)
             s_idx = 0
             for obj in data_objs["files"]:
