@@ -48,6 +48,8 @@ class IrodsCheckCommand:
 
     @contextmanager
     def _get_irods_sessions(self, count=NUM_PARALLEL_TESTS):
+        if count < 1:
+            count = 1
         irods_sessions = [self._init_irods() for _ in range(count)]
         try:
             yield irods_sessions
