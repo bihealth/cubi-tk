@@ -16,6 +16,7 @@ from multiprocessing.pool import ThreadPool
 
 MIN_NUM_REPLICAS = 2
 NUM_PARALLEL_TESTS = 4
+NUM_DISPLAY_FILES = 20
 MD5_RE = re.compile(r"[0-9a-fA-F]{32}")
 
 
@@ -32,9 +33,6 @@ class IrodsCheckCommand:
         self.irods_env_path = os.path.join(
             os.path.expanduser("~"), ".irods", "irods_environment.json"
         )
-
-        #: iRODS sessions for parallel execution
-        # self.irods_sessions = []
 
         #: iRODS environment
         self.irods_env = None
@@ -78,6 +76,14 @@ class IrodsCheckCommand:
             type=int,
             default=NUM_PARALLEL_TESTS,
             help="Number of parallel tests, defaults to %s" % NUM_PARALLEL_TESTS,
+        )
+
+        parser.add_argument(
+            "-d",
+            "--num-display-files",
+            type=int,
+            default=NUM_DISPLAY_FILES,
+            help="Number of files listed when checking, defaults to %s" % NUM_DISPLAY_FILES,
         )
 
         parser.add_argument("irods_path", help="Path to an iRODS collection.")
@@ -147,12 +153,17 @@ class IrodsCheckCommand:
     def run_checks(self, irods_sessions: list, data_objs: dict):
         """Run checks on files, in parallel if enabled."""
         num_files = len(data_objs["files"])
-        lst_files = "\n".join([f.path for f in data_objs["files"]][:19])
+        dsp_files = data_objs["files"]
+        if self.args.num_display_files > 0:
+            dsp_files = dsp_files[: self.args.num_display_files]
+        lst_files = "\n".join([f.path for f in dsp_files])
         logger.info(
             "Checking %s file%s%s:\n%s",
             num_files,
             "s" if num_files != 1 else "",
-            " (first 20 shown)" if num_files > 20 else "",
+            " (first {} shown)".format(self.args.num_display_files)
+            if self.args.num_display_files > 0 and num_files > self.args.num_display_files
+            else "",
             lst_files,
         )
 
