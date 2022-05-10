@@ -9,10 +9,10 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - 3.6
-          - 3.7
-          - 3.8
-#         - 3.9  # no pysam binaries yet
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          # - "3.10"  # `pysam` is incompatible with python v3.10
 
     steps:
       - name: Install Python via conda.
@@ -53,6 +53,6 @@ jobs:
         if: ${{ (matrix.python-version == '3.7') && (github.ref == 'refs/heads/master') }}
       - name: Check style with black
         run: black --check --line-length 100 .
-        if: ${{ matrix.python-version < '3.9' }}
+        if: ${{ matrix.python-version < '3.10' }}
       - name: Check style with flake8
         run: flake8 .
