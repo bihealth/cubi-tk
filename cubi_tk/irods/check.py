@@ -206,10 +206,6 @@ class IrodsCheckCommand:
                     )
                 return
 
-            if num_files < self.args.num_parallel_tests:
-                s_count = num_files
-            else:
-                s_count = self.args.num_parallel_tests
             pool = ThreadPool(processes=self.args.num_parallel_tests)
             s_idx = 0
             for obj in data_objs["files"]:
