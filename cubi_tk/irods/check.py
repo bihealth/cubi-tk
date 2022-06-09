@@ -66,7 +66,6 @@ class IrodsCheckCommand:
         parser.add_argument(
             "--hidden-cmd", dest="irods_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
         parser.add_argument(
             "-r",
             "--num-replicas",
@@ -75,7 +74,6 @@ class IrodsCheckCommand:
             default=MIN_NUM_REPLICAS,
             help="Minimum number of replicas, defaults to %s" % MIN_NUM_REPLICAS,
         )
-
         parser.add_argument(
             "-p",
             "--num-parallel-tests",
@@ -83,7 +81,6 @@ class IrodsCheckCommand:
             default=NUM_PARALLEL_TESTS,
             help="Number of parallel tests, defaults to %s" % NUM_PARALLEL_TESTS,
         )
-
         parser.add_argument(
             "-d",
             "--num-display-files",
@@ -91,7 +88,6 @@ class IrodsCheckCommand:
             default=NUM_DISPLAY_FILES,
             help="Number of files listed when checking, defaults to %s" % NUM_DISPLAY_FILES,
         )
-
         parser.add_argument(
             "-s",
             "--hash-scheme",
@@ -99,7 +95,6 @@ class IrodsCheckCommand:
             default=DEFAULT_HASH_SCHEME,
             help="Hash scheme used to verify checksums, defaults to %s" % DEFAULT_HASH_SCHEME,
         )
-
         parser.add_argument("irods_path", help="Path to an iRODS collection.")
 
     @classmethod
@@ -111,9 +106,7 @@ class IrodsCheckCommand:
     def get_data_objs(self, root_coll: iRODSCollection):
         """Get data objects recursively under the given iRODS path."""
         data_objs = dict(files=[], checksums={})
-        ignore_schemes = [
-            k.lower() for k in HASH_SCHEMES.keys() if k != self.args.hash_scheme.upper()
-        ]
+        ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
         for res in root_coll.walk():
             for obj in res[2]:
                 if obj.path.endswith("." + self.args.hash_scheme.lower()):
@@ -124,7 +117,7 @@ class IrodsCheckCommand:
 
     def check_args(self, _args):
         # Check hash scheme
-        if _args.hash_scheme.upper() not in HASH_SCHEMES.keys():
+        if _args.hash_scheme.upper() not in HASH_SCHEMES:
             logger.error(
                 'Invalid hash scheme "{}"; accepted values: {}'.format(
                     _args.hash_scheme.upper(), ", ".join(HASH_SCHEMES.keys())
@@ -153,7 +146,7 @@ class IrodsCheckCommand:
         logger.info("Args: %s", self.args)
 
         # Load iRODS environment
-        with open(self.irods_env_path, "r") as f:
+        with open(self.irods_env_path, "r", encoding="utf-8") as f:
             irods_env = json.load(f)
         logger.info("iRODS environment: %s", irods_env)
 
@@ -173,10 +166,10 @@ class IrodsCheckCommand:
             # Get files and run checks
             logger.info("Querying for data objects")
             data_objs = self.get_data_objs(root_coll)
-            self.run_checks(irods_sessions, data_objs)
+            self.run_checks(data_objs)
             logger.info("All done")
 
-    def run_checks(self, irods_sessions: list, data_objs: dict):
+    def run_checks(self, data_objs: dict):
         """Run checks on files, in parallel if enabled."""
         num_files = len(data_objs["files"])
         dsp_files = data_objs["files"]
@@ -263,8 +256,6 @@ def check_file(data_obj: iRODSDataObject, checksums: dict, req_num_reps: int, ha
         )
         logger.error(e_msg)
 
-    # with counter.get_lock():
-    #    counter.value += 1
     t.update()
 
 
