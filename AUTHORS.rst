@@ -2,7 +2,7 @@
 Credits
 =======
 
-- Eudes Bargos
+- Eudes Barbosa
 - Johannes Helmuth
 - Manuel Holtgrewe
 - Patrick Pett

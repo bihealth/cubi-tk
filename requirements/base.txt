@@ -5,7 +5,7 @@ attrs
 cattrs
 
 # Cookiecutter for templating ISA-tab directories.
-cookiecutter
+cookiecutter >=1.7.3
 
 # Easy logging.
 logzero
