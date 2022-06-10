@@ -1,10 +1,10 @@
-"""``cubi-tk irods``: iRods command line interface.
+"""``cubi-tk irods``: iRODS command line interface.
 
 Sub Commands
 ------------
 
 ``check``
-    Check target iRods collection (all md5 files? metadata md5 consistent? enough replicas?).
+    Check target iRODS collection (all md5 files? metadata md5 consistent? enough replicas?).
 
 More Information
 ----------------
@@ -26,13 +26,13 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_check(
         subparsers.add_parser(
             "check",
-            help="Check target iRods collection (all md5 files? metadata md5 consistent? enough replicas?).",
+            help="Check target iRODS collection (all MD5 files? metadata MD5 consistent? enough replicas?).",
         )
     )
 
 
 def run(args, parser, subparser):
-    """Main entry point for irods command."""
+    """Main entry point for iRODS command."""
     if not args.irods_cmd:  # pragma: nocover
         return run_nocmd(args, parser, subparser)
     else:

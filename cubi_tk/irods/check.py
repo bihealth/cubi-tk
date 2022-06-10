@@ -1,25 +1,31 @@
-"""``cubi-tk irods check``: Check target iRods collection (all md5 files? metadata md5 consistent? enough replicas?)."""
+"""``cubi-tk irods check``: Check target iRODS collection (all md5 files? metadata md5 consistent? enough replicas?)."""
 
-import os
-import sys
 import argparse
+import json
+import os
 import re
-import typing
-import uuid
-from multiprocessing.pool import ThreadPool
-from subprocess import check_output, SubprocessError
-from retrying import retry
-
-from logzero import logger
 import tqdm
+import typing
 
+from contextlib import contextmanager
+from irods.collection import iRODSCollection
+from irods.data_object import iRODSDataObject
+from irods.session import iRODSSession
+from logzero import logger
+from multiprocessing.pool import ThreadPool
 
 MIN_NUM_REPLICAS = 2
-NUM_PARALLEL_TESTS = 8
+NUM_PARALLEL_TESTS = 4
+NUM_DISPLAY_FILES = 20
+HASH_SCHEMES = {
+    "MD5": {"regex": re.compile(r"[0-9a-fA-F]{32}")},
+    "SHA256": {"regex": re.compile(r"[0-9a-fA-F]{64}")},
+}
+DEFAULT_HASH_SCHEME = "MD5"
 
 
 class IrodsCheckCommand:
-    """Implementation of irods check command."""
+    """Implementation of iRDOS check command."""
 
     command_name = "check"
 
@@ -27,49 +33,101 @@ class IrodsCheckCommand:
         #: Command line arguments.
         self.args = args
 
+        #: Path to iRODS environment file
+        self.irods_env_path = os.path.join(
+            os.path.expanduser("~"), ".irods", "irods_environment.json"
+        )
+
+        #: iRODS environment
+        self.irods_env = None
+
+    def _init_irods(self):
+        """Connect to iRODS."""
+        try:
+            return iRODSSession(irods_env_file=self.irods_env_path)
+        except Exception as e:
+            logger.error("iRODS connection failed: %s", self.get_irods_error(e))
+            logger.error("Are you logged in? try 'iinit'")
+            raise
+
+    @contextmanager
+    def _get_irods_sessions(self, count=NUM_PARALLEL_TESTS):
+        if count < 1:
+            count = 1
+        irods_sessions = [self._init_irods() for _ in range(count)]
+        try:
+            yield irods_sessions
+        finally:
+            for irods in irods_sessions:
+                irods.cleanup()
+
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--hidden-cmd", dest="irods_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
         parser.add_argument(
+            "-r",
             "--num-replicas",
+            dest="req_num_reps",
             type=int,
             default=MIN_NUM_REPLICAS,
             help="Minimum number of replicas, defaults to %s" % MIN_NUM_REPLICAS,
         )
-
         parser.add_argument(
+            "-p",
             "--num-parallel-tests",
             type=int,
             default=NUM_PARALLEL_TESTS,
             help="Number of parallel tests, defaults to %s" % NUM_PARALLEL_TESTS,
         )
+        parser.add_argument(
+            "-d",
+            "--num-display-files",
+            type=int,
+            default=NUM_DISPLAY_FILES,
+            help="Number of files listed when checking, defaults to %s" % NUM_DISPLAY_FILES,
+        )
+        parser.add_argument(
+            "-s",
+            "--hash-scheme",
+            type=str,
+            default=DEFAULT_HASH_SCHEME,
+            help="Hash scheme used to verify checksums, defaults to %s" % DEFAULT_HASH_SCHEME,
+        )
+        parser.add_argument("irods_path", help="Path to an iRODS collection.")
 
-        parser.add_argument("irods_path", help="Path to an iRods collection.")
+    @classmethod
+    def get_irods_error(cls, e: Exception):
+        """Return logger friendly iRODS exception."""
+        es = str(e)
+        return es if es != "None" else e.__class__.__name__
 
-    def get_files(self):
-        """get files on iRods."""
-        try:
-            ils_out = check_output(["ils", "-r", self.args.irods_path]).decode(sys.stdout.encoding)
-        except SubprocessError as e:  # pragma: nocover
-            logger.error("Something went wrong: %s\nAre you logged in? try 'iinit'", e)
-            raise
-        files = dict(files=[], md5=[])
-        base_path = None
-        for line in ils_out.split("\n"):
-            m = re.fullmatch(r"(\s+)?(C-\s)?(\S+)\s*", line)
-            if m:
-                g = m.groups()
-                if not g[0]:
-                    base_path = g[2][:-1]
-                elif not g[1]:
-                    ftype = "files" if g[2][-4:] != ".md5" else "md5"
-                    files[ftype].append(os.path.join(base_path, g[2]))
-        return files
+    def get_data_objs(self, root_coll: iRODSCollection):
+        """Get data objects recursively under the given iRODS path."""
+        data_objs = dict(files=[], checksums={})
+        ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
+        for res in root_coll.walk():
+            for obj in res[2]:
+                if obj.path.endswith("." + self.args.hash_scheme.lower()):
+                    data_objs["checksums"][obj.path] = obj
+                elif obj.path.split(".")[-1] not in ignore_schemes:
+                    data_objs["files"].append(obj)
+        return data_objs
 
     def check_args(self, _args):
+        # Check hash scheme
+        if _args.hash_scheme.upper() not in HASH_SCHEMES:
+            logger.error(
+                'Invalid hash scheme "{}"; accepted values: {}'.format(
+                    _args.hash_scheme.upper(), ", ".join(HASH_SCHEMES.keys())
+                )
+            )
+            raise ValueError
+        # Check environment file
+        if not os.path.isfile(self.irods_env_path):
+            logger.error("iRODS environment not found in %s", self.irods_env_path)
+            raise FileNotFoundError
         return None
 
     @classmethod
@@ -84,90 +142,120 @@ class IrodsCheckCommand:
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
-
         logger.info("Starting cubi-tk irods %s", self.command_name)
-        logger.info("  args: %s", self.args)
+        logger.info("Args: %s", self.args)
 
-        self.run_tests(self.get_files())
+        # Load iRODS environment
+        with open(self.irods_env_path, "r", encoding="utf-8") as f:
+            irods_env = json.load(f)
+        logger.info("iRODS environment: %s", irods_env)
 
-        logger.info("All done")
-        return None
+        # Connect to iRODS
+        with self._get_irods_sessions(self.args.num_parallel_tests) as irods_sessions:
+            try:
+                root_coll = irods_sessions[0].collections.get(self.args.irods_path)
+                logger.info(
+                    "{} iRODS connection{} initialized".format(
+                        len(irods_sessions), "s" if len(irods_sessions) != 1 else ""
+                    )
+                )
+            except Exception as e:
+                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
+                raise
 
-    def run_tests(self, files):
-        """Run tests in parallel."""
-        num_files = len(files["files"])
-        lst_files = "\n".join(files["files"][:19])
-        logger.info("Checking %s files (first 20 shown):\n%s", num_files, lst_files)
+            # Get files and run checks
+            logger.info("Querying for data objects")
+            data_objs = self.get_data_objs(root_coll)
+            self.run_checks(data_objs)
+            logger.info("All done")
+
+    def run_checks(self, data_objs: dict):
+        """Run checks on files, in parallel if enabled."""
+        num_files = len(data_objs["files"])
+        dsp_files = data_objs["files"]
+        if self.args.num_display_files > 0:
+            dsp_files = dsp_files[: self.args.num_display_files]
+        lst_files = "\n".join([f.path for f in dsp_files])
+        logger.info(
+            "Checking %s file%s%s:\n%s",
+            num_files,
+            "s" if num_files != 1 else "",
+            " (first {} shown)".format(self.args.num_display_files)
+            if self.args.num_display_files > 0 and num_files > self.args.num_display_files
+            else "",
+            lst_files,
+        )
 
         # counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=num_files, unit="files", unit_scale=False) as t:
-            if self.args.num_parallel_tests == 0:
-                for file in files["files"]:
-                    check_file(file, files["md5"], self.args.num_replicas, t)
-            else:
-                pool = ThreadPool(processes=self.args.num_parallel_tests)
-                for file in files["files"]:
-                    pool.apply_async(
-                        check_file, args=(file, files["md5"], self.args.num_replicas, t)
+            if self.args.num_parallel_tests < 2:
+                for obj in data_objs["files"]:
+                    check_file(
+                        obj,
+                        data_objs["checksums"],
+                        self.args.req_num_reps,
+                        self.args.hash_scheme.upper(),
+                        t,
                     )
-                pool.close()
-                pool.join()
+                return
+
+            pool = ThreadPool(processes=self.args.num_parallel_tests)
+            s_idx = 0
+            for obj in data_objs["files"]:
+                pool.apply_async(
+                    check_file,
+                    args=(
+                        obj,
+                        data_objs["checksums"],
+                        self.args.req_num_reps,
+                        self.args.hash_scheme.upper(),
+                        t,
+                    ),
+                )
+                if s_idx == self.args.num_parallel_tests - 1:
+                    s_idx = 0
+                else:
+                    s_idx += 1
+            pool.close()
+            pool.join()
 
 
-@retry(wait_fixed=1000, stop_max_attempt_number=3)
-def check_file(file, md5s, req_num_reps, t):
+def check_file(data_obj: iRODSDataObject, checksums: dict, req_num_reps: int, hash_scheme: str, t):
     """Perform checks for a single file."""
+    chk_obj = checksums.get(data_obj.path + "." + hash_scheme.lower())
 
-    # 1) md5 sum file exists?
-    if file + ".md5" not in md5s:
-        e_msg = f"No md5 sum file for: {file}"
+    # 1) Checksum file exists?
+    if not chk_obj:
+        e_msg = f"No checksum file for: {data_obj.path}"
         logger.error(e_msg)
-        # raise FileNotFoundError(e_msg)
 
-    # 2) enough replicas?
-    try:
-        isysmeta_out = check_output(["isysmeta", "-l", "ls", "{file}"]).decode(sys.stdout.encoding)
-    except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing isysmeta: %s (probably retrying)", e)
-        raise
-    meta_info = [
-        {
-            lst[0]: lst[1:]
-            for lst in (entry.split(": ") for entry in repl.splitlines())
-            if len(lst) > 0
-        }
-        for repl in isysmeta_out.split("----")
-    ]
-    if len(meta_info) < req_num_reps:
-        e_msg = f"Not enough ({req_num_reps}) replicates for file: {file}"
-        logger.error(e_msg)
-        # raise FileNotFoundError(e_msg)
+    # 2) Checksums of all replicas consistent with checksum file?
+    else:
+        with chk_obj.open("r") as f:
+            file_sum = re.search(
+                HASH_SCHEMES[hash_scheme]["regex"], f.read().decode("utf-8")
+            ).group(0)
+        for replica in data_obj.replicas:
+            if replica.checksum != file_sum:
+                logger.error(
+                    "iRODS metadata checksum not consistent with chcksum file...\n"
+                    "File: %s\n%s file checksum: %s\n"
+                    "Metadata checksum: %s\nResource: %s",
+                    data_obj.path,
+                    hash_scheme,
+                    file_sum,
+                    replica.checksum,
+                    replica.resource_name,
+                )
 
-    # 3) checksum consistent with .md5 file?
-    try:
-        temp_file = f"./temp_{str(uuid.uuid4())}.md5"
-        check_output(["irsync", "-aK", "i:{file}.md5", temp_file])
-    except SubprocessError as e:  # pragma: nocover
-        logger.error("Could not fetch file for md5 sum check: %s.md5: %s", temp_file, e)
-        raise
-
-    with open(temp_file, "r") as f:
-        md5sum = re.match(r"\S+", f.read()).group(0)
-    os.remove(temp_file)
-
-    if not all(repl["data_checksum"][0] == md5sum for repl in meta_info):
-        logger.error(
-            "File checksum not consistent with md5 file...\n"
-            "file: %s\n.md5-file checksum: %s\n"
-            "metadata checksum: %s",
-            file,
-            md5sum,
-            meta_info[0]["data_checksum"],
+    # 3) Enough replicas?
+    if len(data_obj.replicas) < req_num_reps:
+        e_msg = (
+            f"Not enough replicas ({len(data_obj.replicas)} < "
+            f"{req_num_reps}) for file: {data_obj.path}"
         )
-        # raise ValueError(e_msg)
+        logger.error(e_msg)
 
-    # with counter.get_lock():
-    #    counter.value += 1
     t.update()
 
 
