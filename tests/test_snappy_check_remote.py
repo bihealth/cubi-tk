@@ -1,5 +1,6 @@
 """Tests for ``cubi_tk.snappy.check_remote``."""
 import pathlib
+from types import SimpleNamespace
 
 import pytest
 
@@ -85,48 +86,19 @@ def test_findrawdata_run(germline_trio_sheet_object):
 def test_parse_sample_sheet(germline_trio_sheet_object):
     """Tests FindRemoteFiles::parse_sample_sheet()"""
     # Initialise object
+    pseudo_args = SimpleNamespace(hash_scheme="MD5")
     find_obj = FindRemoteFiles(
-        sheet=germline_trio_sheet_object, sodar_url="", sodar_api_token="", project_uuid=""
+        args=pseudo_args,
+        sheet=germline_trio_sheet_object,
+        sodar_url="",
+        sodar_api_token="",
+        project_uuid="",
     )  # noqa: B106
     # Define expected
     expected = ["index-N1-DNA1-WES1", "father-N1-DNA1-WES1", "mother-N1-DNA1-WES1"]
     # Get actual
     actual = find_obj.parse_sample_sheet()
     assert actual == expected
-
-
-def test_parse_ils_stdout():
-    """Tests FindRemoteFiles::parse_ils_stdout()"""
-    # Initialise object
-    find_obj = FindRemoteFiles(
-        sheet=None, sodar_url="", sodar_api_token="", project_uuid=""
-    )  # noqa: B106
-
-    # Define expected number of files per directory
-    expected = {
-        "ngs_mapping/bwa.P001-N1-DNA1-WES1/log": 6,
-        "ngs_mapping/bwa.P001-N1-DNA1-WES1/out": 4,
-        "ngs_mapping/bwa.P001-N1-DNA1-WES1/report/bam_qc": 8,
-        "variant_calling/bwa.gatk_hc.P001-N1-DNA1-WES1/report/bcftools_stats": 6,
-    }
-
-    # Load test file (bytes)
-    test_file_path = pathlib.Path(__file__).resolve().parent / "data" / "ils_out_str.txt"
-    test_file = open(test_file_path, "r")
-    data = test_file.read()
-    test_file.close()
-    data_bytes = str.encode(data)
-
-    # Run and assert
-    result = find_obj.parse_ils_stdout(data_bytes)
-    for directory in result:
-        for test_dir in expected:
-            if directory.endswith(test_dir):
-                expected_count = expected.get(test_dir)
-                msg = "Directory '{dir}' should contain {count} files.".format(
-                    dir=directory, count=expected_count
-                )
-                assert len(result.get(directory)) == expected_count, msg
 
 
 # Tests Checker ========================================================================================================
@@ -138,16 +110,29 @@ def test_compare_local_and_remote_files():
     checker = Checker(local_files_dict=None, remote_files_dict=None)
 
     # Define input
-    remote_path = (
-        "/remote/path/P001-N1-DNA1-WES1/GRCh37/2019-07-11/ngs_mapping/bwa.P001-N1-DNA1-WES1/out"
-    )
+    file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
+    replicas_md5sum = [file_md5sum] * 3
     in_remote_dict = {
-        remote_path: [
-            "bwa.P001-N1-DNA1-WES1.bam",
-            "bwa.P001-N1-DNA1-WES1.bam.bai",
-            "bwa.P001-N1-DNA1-WES1.bam.bai.md5",
-            "bwa.P001-N1-DNA1-WES1.bam.md5",
-        ]
+        "bwa.P001-N1-DNA1-WES1.bam": {
+            "irods_path": "/sodar_path/bwa.P001-N1-DNA1-WES1.bam",
+            "file_md5sum": file_md5sum,
+            "replicas_md5sum": replicas_md5sum,
+        },
+        "bwa.P001-N1-DNA1-WES1.bam.bai": {
+            "irods_path": "/sodar_path/bwa.P001-N1-DNA1-WES1.bam.bai",
+            "file_md5sum": file_md5sum,
+            "replicas_md5sum": replicas_md5sum,
+        },
+        "bwa.P002-N1-DNA1-WES1.bam": {
+            "irods_path": "/sodar_path/bwa.P002-N1-DNA1-WES1.bam",
+            "file_md5sum": file_md5sum,
+            "replicas_md5sum": replicas_md5sum,
+        },
+        "bwa.P002-N1-DNA1-WES1.bam.bai": {
+            "irods_path": "/sodar_path/bwa.P002-N1-DNA1-WES1.bam.bai",
+            "file_md5sum": file_md5sum,
+            "replicas_md5sum": replicas_md5sum,
+        },
     }
     local_path = "/local/path/P001-N1-DNA1-WES1/GRCh37/2019-07-11/ngs_mapping/output/bwa.P001-N1-DNA1-WES1/out"
     in_local_dict = {
@@ -164,8 +149,8 @@ def test_compare_local_and_remote_files():
         for file in ["bwa.P001-N1-DNA1-WES1.bam", "bwa.P001-N1-DNA1-WES1.bam.bai"]
     ]
     expected_only_remote = [
-        remote_path + "/" + file
-        for file in ["bwa.P001-N1-DNA1-WES1.bam.bai.md5", "bwa.P001-N1-DNA1-WES1.bam.md5"]
+        "/sodar_path/" + file
+        for file in ["bwa.P002-N1-DNA1-WES1.bam.bai", "bwa.P002-N1-DNA1-WES1.bam"]
     ]
     expected_only_local = [local_path + "/" + file for file in ["bwa.P001-N1-DNA1-WES1.fastq"]]
 
@@ -173,6 +158,7 @@ def test_compare_local_and_remote_files():
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
         local_dict=in_local_dict, remote_dict=in_remote_dict
     )
+
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
     assert actual_local == set(expected_only_local)
@@ -192,15 +178,16 @@ def test_compare_local_and_remote_files():
     # Test extra path in remote #
     # ========================= #
     # Update input and expected results
-    extra_remote_path = (
-        "/remote/path/P001-N1-DNA1-WES1/GRCh37/2019-07-11/ngs_mapping/bwa.P001-N1-DNA1-WES1/log"
-    )
-    extra_remote_files = [
-        "bwa.P001-N1-DNA1-WES1.conda_info.txt",
-        "bwa.P001-N1-DNA1-WES1.conda_info.txt.md5",
-    ]
-    in_remote_dict.update({extra_remote_path: extra_remote_files})
-    expected_only_remote += [extra_remote_path + "/" + file for file in extra_remote_files]
+    extra_remote_files_dict = {
+        "bwa.P001-N1-DNA1-WES1.conda_info.txt": {
+            "irods_path": "/sodar_path/bwa.P001-N1-DNA1-WES1.conda_info.txt",
+            "file_md5sum": file_md5sum,
+            "replicas_md5sum": replicas_md5sum,
+        }
+    }
+
+    in_remote_dict.update(extra_remote_files_dict)
+    expected_only_remote += ["/sodar_path/bwa.P001-N1-DNA1-WES1.conda_info.txt"]
     # Run and assert
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
         local_dict=in_local_dict, remote_dict=in_remote_dict
@@ -216,12 +203,8 @@ def test_compare_local_and_remote_files():
     extra_local_path = (
         "/local/path/P001-N1-DNA1-WES1/GRCh37/2019-07-11/ngs_mapping/bwa.P001-N1-DNA1-WES1/report"
     )
-    extra_local_files = [
-        "bwa.P001-N1-DNA1-WES1.bam.bamstats.html",
-        "bwa.P001-N1-DNA1-WES1.bam.bamstats.html.md5",
-    ]
-    in_local_dict.update({extra_local_path: extra_local_files})
-    expected_only_local += [extra_local_path + "/" + file for file in extra_local_files]
+    in_local_dict.update({extra_local_path: ["bwa.P001-N1-DNA1-WES1.bam.bamstats.html"]})
+    expected_only_local += [extra_local_path + "/" + "bwa.P001-N1-DNA1-WES1.bam.bamstats.html"]
     # Run and assert
     actual_both, actual_remote, actual_local = checker.compare_local_and_remote_files(
         local_dict=in_local_dict, remote_dict=in_remote_dict
@@ -229,20 +212,3 @@ def test_compare_local_and_remote_files():
     assert actual_both == set(expected_both)
     assert actual_remote == set(expected_only_remote)
     assert actual_local == set(expected_only_local)
-
-
-def test_filter_checksum_dict():
-    """Tests Checker::filter_checksum_dict()"""
-    # Create checker object
-    checker = Checker(local_files_dict=None, remote_files_dict=None)
-    # Define input
-    input_checksum = {
-        "1": ["/path/to/should_be_filtered.txt"],
-        "2": ["/path/to/should_be_filtered.txt", "/path/to/should_be_filtered.txt"],
-        "3": ["/path/to/should_be_kept_1.txt", "/path/to/should_be_kept_2.txt"],
-    }
-    # Define expected
-    expected = {"3": ["/path/to/should_be_kept_1.txt", "/path/to/should_be_kept_2.txt"]}
-    # Run and assert
-    actual = checker.filter_checksum_dict(input_checksum)
-    assert actual == expected

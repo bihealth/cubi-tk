@@ -8,10 +8,9 @@ import argparse
 from collections import defaultdict
 import os
 from pathlib import Path
-import shlex
-import tempfile
+import re
+from types import SimpleNamespace
 import typing
-from subprocess import SubprocessError, check_output
 
 from biomedsheets import shortcuts
 from logzero import logger
@@ -19,9 +18,11 @@ from sodar_cli import api
 
 from .common import get_biomedsheet_path, load_sheet_tsv
 from ..common import load_toml_config
+from ..irods.check import IrodsCheckCommand, HASH_SCHEMES
 
-#: Empty file MD5 hash sum
-EMPTY_FILE_MD5 = "d41d8cd98f00b204e9800998ecf8427e"
+
+#: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
+DEFAULT_HASH_SCHEME = "MD5"
 
 
 class FindFilesCommon:
@@ -79,7 +80,6 @@ class FindLocalRawdataFiles(FindFilesCommon):
         with list of files (values) per directory (key).
         """
         logger.info("Starting raw data files search ...")
-        logger.info("...this may a few minutes...")
 
         # Initialise variables
         rawdata_structure_dict = defaultdict(dict)
@@ -87,9 +87,7 @@ class FindLocalRawdataFiles(FindFilesCommon):
         # Validate input
         if not self.inlink_dir_path.exists():
             logger.error(
-                "Path to directory linked to raw data does not exist. Expected: {path}".format(
-                    path=self.inlink_dir_path
-                )
+                f"Path to directory linked to raw data does not exist. Expected: {self.inlink_dir_path}"
             )
             return None
 
@@ -169,9 +167,7 @@ class FindLocalFiles(FindFilesCommon):
                 canonical_paths.update({step: tmp_path})
             else:
                 logger.warn(
-                    "Canonical path for step '{step}' does not exist. Expected: {path}".format(
-                        step=step, path=str(tmp_path)
-                    )
+                    f"Canonical path for step '{step}' does not exist. Expected: {str(tmp_path)}"
                 )
 
         # Iterate over all directories
@@ -202,10 +198,10 @@ class FindLocalFiles(FindFilesCommon):
         return step_to_file_structure_dict
 
 
-class FindRemoteFiles(FindFilesCommon):
+class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
     """Class finds and lists remote files associated with samples."""
 
-    def __init__(self, sheet, sodar_url, sodar_api_token, project_uuid):
+    def __init__(self, args, sheet, sodar_url, sodar_api_token, project_uuid):
         """Constructor.
 
         :param sodar_url: SODAR url.
@@ -217,35 +213,28 @@ class FindRemoteFiles(FindFilesCommon):
         :param project_uuid: Project UUID.
         :type project_uuid: str
         """
-        super().__init__(sheet)
+        IrodsCheckCommand.__init__(self, args=args)
+        FindFilesCommon.__init__(self, sheet=sheet)
         self.sodar_url = sodar_url
         self.sodar_api_token = sodar_api_token
         self.project_uuid = project_uuid
 
-    def run(self):
-        """Runs class routines.
+    def perform(self):
+        """Perform class routines.
 
         :return: Returns dictionary of dictionaries: key: library name (e.g., 'P001-N1-DNA1-WES1'); value: dictionary
         with list of files (values) per remote directory (key).
         """
         logger.info("Starting remote files search ...")
-        # Initialise variables
-        library_remote_files_dict = {}
 
-        # Get assay irods path
+        # Get assay iRODS path
         assay_path = self.get_assay_irods_path()
 
-        # Get all libraries - iterate over to get remote files
-        library_names = self.parse_sample_sheet()
-        for library in library_names:
-            ils_stdout = self.find_remote_files(library_name=library, irods_path=assay_path)
-            parsed_ils = self.parse_ils_stdout(ils_bytes=ils_stdout)
-            library_remote_files_dict[library] = parsed_ils
+        # Get iRODS collection
+        irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path)
 
         logger.info("... done with remote files search.")
-
-        # Return dict of dicts
-        return library_remote_files_dict
+        return irods_collection_dict
 
     def get_assay_irods_path(self):
         """Get Assay iRODS path.
@@ -264,52 +253,57 @@ class FindRemoteFiles(FindFilesCommon):
                 return assay.irods_path
         return None
 
+    def retrieve_irods_data_objects(self, irods_path):
+        """Retrieve data objects from iRODS.
+
+        :param irods_path:
+        :return:
+        """
+        # Connect to iRODS
+        with self._get_irods_sessions() as irods_sessions:
+            try:
+                root_coll = irods_sessions[0].collections.get(irods_path)
+                s_char = "s" if len(irods_sessions) != 1 else ""
+                logger.info(f"{len(irods_sessions)} iRODS connection{s_char} initialized")
+            except Exception as e:
+                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
+                raise
+
+            # Get files and run checks
+            logger.info("Querying for data objects")
+            irods_collection = self.get_data_objs(root_coll)
+            return self.parse_irods_collection(irods_collection=irods_collection)
+
     @staticmethod
-    def parse_ils_stdout(ils_bytes):
-        """Parses `ils` call stdout.
+    def parse_irods_collection(irods_collection):
+        """
 
-        :param ils_bytes: ils command call stdout.
-        :type ils_bytes: bytes
+        :param irods_collection: iRODS collection.
+        :type irods_collection: dict
 
-        :return: Returns dictionary with remote files and directories as found in `ils` call. Key: remote directory
-        path; Value: list of files in remote directory.
+        :return: Returns dictionary version of iRODS collection information. Key: File path in iRODS (str);
+        Value: nested dict (Keys:  'irods_path', 'file_md5sum', 'replicas_md5sum').
         """
         # Initialise variables
-        dir_to_files_dict = defaultdict(list)  # key: iRODS directory path; value: list of files
-        # Convert bytes to str
-        ils_str = str(ils_bytes.decode())
-        lines = ils_str.splitlines()
-        # Remove directories with no files, just subdirectories.
-        # Example: '  C- /sodarZone/projects/17/99999999-aaaa-bbbb-cccc-999999999999/sample_data/...'
-        lines = [line for line in lines if not line.startswith("  C- ")]
-        # Populate dictionary with iRODS content
-        current_directory = None
-        for line in lines:
-            if line.startswith("/"):
-                current_directory = line.replace(":", "")
-                continue
-            dir_to_files_dict[current_directory].append(line.replace(" ", ""))
-        return dir_to_files_dict
+        output_dict = {}
+        checksums = irods_collection["checksums"]
 
-    @staticmethod
-    def find_remote_files(library_name, irods_path):
-        """Find files in iRODS.
-
-        :param library_name: Sample's library name. Example: 'P001-N1-DNA1-WES1'.
-        :type library_name: str
-
-        :param irods_path: Path to Assay in iRODS.
-        :type irods_path: str
-
-        :return: Returns `ils` call stdout.
-        """
-        cmd = "ils", "-r", "%s/%s" % (irods_path, library_name)
-        try:
-            cmd_str = " ".join(map(shlex.quote, cmd))
-            logger.info("Executing %s", cmd_str)
-            return check_output(cmd)
-        except SubprocessError as e:  # pragma: nocover
-            logger.error("Problem executing `ils`: %s", e)
+        # Extract relevant info from iRODS collection: file and replicates MD5SUM
+        for data_obj in irods_collection["files"]:
+            chk_obj = checksums.get(data_obj.path + "." + DEFAULT_HASH_SCHEME.lower())
+            with chk_obj.open("r") as f:
+                file_sum = re.search(
+                    HASH_SCHEMES[DEFAULT_HASH_SCHEME]["regex"], f.read().decode("utf-8")
+                ).group(0)
+                _tmp_dict = {
+                    data_obj.name: {
+                        "irods_path": data_obj.path,
+                        "file_md5sum": file_sum,
+                        "replicas_md5sum": [replica.checksum for replica in data_obj.replicas],
+                    }
+                }
+                output_dict.update(_tmp_dict)
+        return output_dict
 
 
 class Checker:
@@ -345,32 +339,35 @@ class Checker:
 
         # Validate input
         if not self.local_files_dict:
-            logger.error("Dictionary is empty for step '{step}'.".format(step=check_name))
+            logger.error(f"Dictionary is empty for step '{check_name}'")
             return False
 
-        # Iterate over libraries
-        for library_name in self.remote_files_dict:
-            # Restrict dictionary to directories associated with step
-            subset_remote_files_dict = {}
-            for key, value in self.remote_files_dict.get(library_name).items():
-                if check_name in key:
-                    subset_remote_files_dict[key] = value
-            # Find local files
-            subset_local_files_dict = self.local_files_dict.get(library_name)
-            # Compare dictionaries
-            i_both, i_remote, i_local = self.compare_local_and_remote_files(
-                local_dict=subset_local_files_dict, remote_dict=subset_remote_files_dict
-            )
-            in_both_set.update(i_both)
-            remote_only_set.update(i_remote)
-            local_only_set.update(i_local)
+        # Restrict dictionary to directories associated with step
+        subset_remote_files_dict = {}
+        for key in self.remote_files_dict:
+            path_ = self.remote_files_dict[key].get("irods_path")
+            if check_name in path_:
+                subset_remote_files_dict[key] = self.remote_files_dict.get(key)
 
-        # MD5 check
+        # Parse local files - remove library reference
+        parsed_local_files_dict = dict(
+            (key, val) for k in self.local_files_dict.values() for key, val in k.items()
+        )
+
+        # Compare dictionaries
+        i_both, i_remote, i_local = self.compare_local_and_remote_files(
+            local_dict=parsed_local_files_dict, remote_dict=subset_remote_files_dict
+        )
+        in_both_set.update(i_both)
+        remote_only_set.update(i_remote)
+        local_only_set.update(i_local)
+
+        # MD5 check and report
         if self.check_md5:
-            okay_set, different_list, checksum_dict = self.compare_md5_files(
-                remote_dict=self.remote_files_dict, in_both_set=in_both_set
+            okay_list, different_list = self.compare_md5_files(
+                remote_dict=subset_remote_files_dict, in_both_set=in_both_set
             )
-            self.report_md5(okay_set, different_list, checksum_dict)
+            self.report_md5(okay_list, different_list)
 
         # Report
         self.report_findings(
@@ -380,7 +377,8 @@ class Checker:
         # Return all okay
         return True
 
-    def compare_md5_files(self, remote_dict, in_both_set):
+    @staticmethod
+    def compare_md5_files(remote_dict, in_both_set):
         """Compares remote and local MD5 files.
 
         :param remote_dict: Dictionary with remote file structure. Key: remote directory path; Value: list of file
@@ -395,104 +393,55 @@ class Checker:
         same checksum (excluding empty files) - key: checksum; values: list of remote paths.
         """
         # Initialise variables
-        same_md5_set = set()
+        same_md5_list = []
         different_md5_list = []
-        md5_files_dict = defaultdict(list)
-        md5_checksum_dict = defaultdict(list)  # used to find same hash across different samples
-        temp_directory = tempfile.gettempdir()
 
-        # Populate MD5 dictionary - key: local path; value: remote path
-        all_local_md5 = [file for file in in_both_set if file.endswith(".md5")]
-        for local in all_local_md5:
-            local_fname = local.split("/")[-1]
-            for library_name in remote_dict:
-                for remote in remote_dict.get(library_name):
-                    if local_fname in remote_dict[library_name][remote]:
-                        md5_files_dict[local].append(remote + "/" + local_fname)
+        # Define expected MD5 files - report files where missing
+        all_expected_local_md5 = [file_ + ".md5" for file_ in in_both_set]
+        all_local_md5 = [file_ for file_ in all_expected_local_md5 if os.path.isfile(file_)]
+        missing_list = set(all_expected_local_md5) - set(all_local_md5)
+
+        if len(missing_list) > 0:
+            missing_str = "\n".join(missing_list)
+            logger.warn(
+                f"Comparison was not possible for the case(s) below, MD5 file(s) expected but not "
+                f"found locally:\n{missing_str}"
+            )
 
         # Compare
-        for local in md5_files_dict:
-            file_name = os.path.basename(local)
+        for md5_file in all_local_md5:
+            file_name = os.path.basename(md5_file)
+            original_file_name = file_name.replace(".md5", "")
             # Read local MD5
-            with open(local) as f:
-                l_md5 = f.readline()
-            # Get and read remote MD5
-            tmp_same_md5 = []
-            tmp_diff_md5 = []
-            for remote_path in md5_files_dict.get(local):
-                self.get_remote_files(irods_path=remote_path, dest=temp_directory)
-                tmp_remote = os.path.join(temp_directory, file_name)
-                with open(tmp_remote) as f:
-                    r_md5 = f.readline()
-                # Check
-                if l_md5 == r_md5:
-                    tmp_same_md5.append(local)
-                else:
-                    tmp_diff_md5.append((local, remote_path))
-
-                # Add to hash dict - used to find any duplicated same checksum
-                if r_md5 != EMPTY_FILE_MD5:
-                    md5_checksum_dict[r_md5].append(remote_path)
-
-            # Only add to different if there is no entry equal,
-            # otherwise to verbose - if multiple uploads.
-            if len(tmp_same_md5) > 0:
-                same_md5_set.update(tmp_same_md5)
+            with open(md5_file) as f:
+                local_md5 = f.readline()
+                # Expected format example:
+                # `459db8f7cb0d3a23a38fdc98286a9a9b  out.vcf.gz`
+                local_md5 = local_md5.split(" ")[0]
+            # Compare to remote MD5
+            remote_md5_dict = remote_dict.get(original_file_name)
+            remote_md5 = remote_md5_dict.get("file_md5sum")
+            if local_md5 != remote_md5:
+                different_md5_list.append(
+                    (md5_file.replace(".md5", ""), remote_md5_dict.get("irods_path"))
+                )
             else:
-                different_md5_list.extend(tmp_diff_md5)
+                same_md5_list.append(md5_file.replace(".md5", ""))
+            # BONUS - check remote replicas
+            if not all(
+                [
+                    replica_md5 == remote_md5
+                    for replica_md5 in remote_md5_dict.get("replicas_md5sum")
+                ]
+            ):
+                logger.error(
+                    f"iRODS metadata checksum not consistent with checksum file...\n"
+                    f"File: {remote_md5_dict.get('irods_path')}\n"
+                    f"File checksum: {remote_md5_dict.get('file_md5sum')}\n"
+                    f"Metadata checksum: {', '.join(remote_md5_dict.get('replicas_md5sum'))}\n"
+                )
 
-        # Filter checksum dict
-        filtered_checksum_dict = self.filter_checksum_dict(md5_checksum_dict)
-
-        # Return set and list of tuples
-        return same_md5_set, different_md5_list, filtered_checksum_dict
-
-    @staticmethod
-    def filter_checksum_dict(md5_checksum_dict):
-        """Filter check sum dictionary.
-
-        :param md5_checksum_dict: Checksum dictionary - key: checksum hash; value: list of remote paths.
-        :type md5_checksum_dict: dict
-
-        :return: Returns entries from inputted dictionary that have more than one file associated with a single
-        checksum value.
-        """
-        # Initialise variables
-        out_dict = {}
-        # Iterate over input dictionary
-        for hash_key, paths_list in md5_checksum_dict.items():
-            if len(paths_list) > 1:
-                files_set = set([file.split("/")[-1] for file in paths_list])
-                if len(files_set) > 1:
-                    out_dict[hash_key] = paths_list
-        # Return filtered dict
-        return out_dict
-
-    @staticmethod
-    def get_remote_files(irods_path, dest):
-        """Get iRODS file content.
-
-        :param irods_path: Path to file in iRODS.
-        :type irods_path: str
-
-        :param dest: Path to destiny, where to store file.
-        :type dest: str
-
-        :return: Returns call check.
-        """
-        cmd = (
-            "iget",
-            "-k",
-            "-f",
-            irods_path,
-            dest,
-        )  # arguments: k to checksum, and f to force overwrite
-        try:
-            cmd_str = " ".join(map(shlex.quote, cmd))
-            logger.info("Executing %s", cmd_str)
-            return check_output(cmd)
-        except SubprocessError as e:  # pragma: nocover
-            logger.error("Problem executing `iget`: %s", e)
+        return same_md5_list, different_md5_list
 
     @staticmethod
     def compare_local_and_remote_files(local_dict, remote_dict):
@@ -510,92 +459,63 @@ class Checker:
         only found remotely; and, one for files only found locally.
         """
         # Initialise variables
-        all_remote_files_set = set()
         all_local_files_set = set()
         in_both_set = set()
         only_remote_set = set()
         only_local_set = set()
-        file_to_remote_path_dict = defaultdict(list)
         file_to_local_path_dict = defaultdict(list)
 
         # Get all files remote
-        for remote in remote_dict:
-            for file in remote_dict.get(remote):
-                file_to_remote_path_dict[file].append(remote)
-                all_remote_files_set.add(file)
+        all_remote_files_set = set(remote_dict.keys())
 
         # Get all files local
-        for local in local_dict:
-            for file in local_dict.get(local):
-                file_to_local_path_dict[file].append(local)
-                all_local_files_set.add(file)
+        for local_dir in local_dict:
+            for file_ in local_dict.get(local_dir):
+                if file_.endswith(".md5"):
+                    continue
+                file_to_local_path_dict[file_].append(local_dir)
+                all_local_files_set.add(file_)
 
         # Present in both - stores only local path
-        for file in all_remote_files_set.intersection(all_local_files_set):
-            in_both_set.update([local + "/" + file for local in file_to_local_path_dict.get(file)])
+        for file_ in all_remote_files_set.intersection(all_local_files_set):
+            in_both_set.update(
+                [local + "/" + file_ for local in file_to_local_path_dict.get(file_)]
+            )
 
         # Only remote
-        for file in all_remote_files_set - all_local_files_set:
-            only_remote_set.update(
-                [remote + "/" + file for remote in file_to_remote_path_dict.get(file)]
-            )
+        for file_ in all_remote_files_set - all_local_files_set:
+            only_remote_set.add(remote_dict[file_].get("irods_path"))
 
         # Only local
-        for file in all_local_files_set - all_remote_files_set:
+        for file_ in all_local_files_set - all_remote_files_set:
             only_local_set.update(
-                [local + "/" + file for local in file_to_local_path_dict.get(file)]
+                [local + "/" + file_ for local in file_to_local_path_dict.get(file_)]
             )
 
-        # Return
         return in_both_set, only_remote_set, only_local_set
 
     @staticmethod
-    def report_md5(okay_set, different_list, checksum_dict):
+    def report_md5(okay_list, different_list):
         """Report MD5 findings.
 
-        :param okay_set: Set with all files with the exact same MD5 value - local path.
-        :type okay_set: set
+        :param okay_list: Set with all files with the exact same MD5 value - local path.
+        :type okay_list: list
 
         :param different_list: List of tuples with files that are different locally
         and remotely - (local path, remote path).
         :type different_list: list
-
-        :param checksum_dict: Dictionary with files with same checksum key: checksum;
-        values: list of remote paths.
-        :type checksum_dict: dict
         """
         # Report same md5
-        if len(okay_set) > 0:
-            okay_str = "\n".join(sorted(okay_set))
-            logger.info("Files with SAME MD5 locally and remotely:\n{files}".format(files=okay_str))
-        else:
-            logger.warn("There is ZERO AGREEMENT between local and remote MD5 files.")
+        if len(okay_list) > 0:
+            okay_str = "\n".join(sorted(okay_list))
+            logger.info(f"Files with SAME MD5 locally and remotely:\n{okay_str}")
 
         # Report different md5
         if len(different_list) > 0:
             different_str = "\n".join(
                 ["; i:".join(pair) for pair in sorted(different_list, key=lambda tup: tup[0])]
             )
-            logger.warn(
-                "Files with DIFFERENT MD5 locally and remotely:\n{files}".format(
-                    files=different_str
-                )
-            )
-        else:
-            logger.info(
-                "There is ZERO DISAGREEMENT between local files and at least on remote MD5 file."
-            )
-
-        # Report same checksum for multiple files
-        if len(checksum_dict):
-            same_checksum_str = ""
-            for key_hash, path_list in checksum_dict.items():
-                key_hash_str = ">> " + str(key_hash) + ":\n"
-                paths_str = "\n".join(sorted(path_list))
-                same_checksum_str += key_hash_str + paths_str
-            logger.warn("Files with SAME MD5:\n{files}".format(files=same_checksum_str))
-        else:
-            logger.info("No two files have the same MD5 checksum value remotely.")
+            logger.warn(f"Files with DIFFERENT MD5 locally and remotely:\n{different_str}")
 
     @staticmethod
     def report_findings(both_locations, only_remote, only_local):
@@ -614,20 +534,21 @@ class Checker:
         in_both_str = "\n".join(sorted(both_locations))
         remote_only_str = "\n".join(sorted(only_remote))
         local_only_str = "\n".join(sorted(only_local))
+        dashed_line = "-" * 25
 
         # Log
         if len(both_locations) > 0:
-            logger.info("Files found BOTH locally and remotely:\n{files}".format(files=in_both_str))
+            logger.info(f"Files found BOTH locally and remotely:\n{in_both_str}")
         else:
             logger.warn("No file was found both locally and remotely.")
         if len(only_remote) > 0:
-            logger.warn("Files found ONLY REMOTELY:\n{files}".format(files=remote_only_str))
+            logger.warn(f"Files found ONLY REMOTELY:\n{remote_only_str}")
         else:
             logger.info("No file found only remotely.")
         if len(only_local) > 0:
-            logger.warn("Files found ONLY LOCALLY:\n{files}".format(files=local_only_str))
+            logger.warn(f"Files found ONLY LOCALLY:\n{local_only_str}\n{dashed_line}")
         else:
-            logger.info("No file found only locally.")
+            logger.info(f"No file found only locally.\n{dashed_line}")
 
 
 class RawDataChecker(Checker):
@@ -790,16 +711,15 @@ class SnappyCheckRemoteCommand:
         logger.info("Starting cubi-tk snappy check-remote")
         logger.info("  args: %s", self.args)
 
-        if self.args.md5:
-            logger.info("Note that MD5 for raw data files will not be checked.")
-
         # Find all remote files (iRODS)
+        pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
         library_remote_files_dict = FindRemoteFiles(
+            pseudo_args,
             self.shortcut_sheet,
             self.args.sodar_url,
             self.args.sodar_api_token,
             self.args.project_uuid,
-        ).run()
+        ).perform()
 
         # Find all local files (canonical paths)
         library_local_files_dict = FindLocalFiles(
@@ -815,7 +735,7 @@ class SnappyCheckRemoteCommand:
                 base_path=self.args.base_path,
                 remote_files_dict=library_remote_files_dict,
                 local_files_dict={},  # special case: dict correctly defined inside class
-                check_md5=False,  # special case: it will never check MD5 for raw data
+                check_md5=self.args.md5,
             ).run(),
             NgsMappingChecker(
                 remote_files_dict=library_remote_files_dict,
