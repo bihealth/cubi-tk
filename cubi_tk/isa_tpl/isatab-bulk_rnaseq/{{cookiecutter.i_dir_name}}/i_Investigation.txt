@@ -9,8 +9,8 @@ Investigation Title	{{cookiecutter.investigation_title}}
 Investigation Description	""
 Investigation Submission Date	""
 Investigation Public Release Date	""
-Comment[Created With Configuration]	/path/to/isa-configurations/bih_studies/bih_single_cell
-Comment[Last Opened With Configuration]	bih_single_cell
+Comment[Created With Configuration]	/path/to/isa-configurations/bih_studies/bih_bulk_RNAseq
+Comment[Last Opened With Configuration]	bih_bulk_RNAseq
 INVESTIGATION PUBLICATIONS
 Investigation PubMed ID
 Investigation Publication DOI
@@ -67,16 +67,16 @@ Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo
 Study Assay Technology Type Term Source REF	OBI
 Study Assay Technology Platform	Illumina
 STUDY PROTOCOLS
-Study Protocol Name	Sample collection	Dissociation	Library construction	Nucleic acid sequencing
-Study Protocol Type	Sample collection	Dissociation	Library construction	Nucleic acid sequencing
+Study Protocol Name	Sample collection	RNA extraction	Library construction	Nucleic acid sequencing
+Study Protocol Type	Sample collection	RNA extraction	Library construction	Nucleic acid sequencing
 Study Protocol Type Term Accession Number	""	""	""	""
 Study Protocol Type Term Source REF	""	""	""	""
 Study Protocol Description	""	""	""	""
 Study Protocol URI	""	""	""	""
 Study Protocol Version	""	""	""	""
-Study Protocol Parameters Name	Method	Dissociation method;Removal debris;Removal dead cell;Removal ab cell;Cell fixation;Cell count;Cell viability	Library kit;QC cell load recovery;QC tape fragment size bp;QC kappa size corrected nM;Multiplex genotype;Multiplex sample;Multiplex oligo;Library type;Barcode kit;Barcode name	Platform;Instrument model;Sequencing kit;RNA amount pg;Library prefix
-Study Protocol Parameters Name Term Accession Number	""	";;;;;;"	";;;;;;;;;"	";;;;"
-Study Protocol Parameters Name Term Source REF	""	";;;;;;"	";;;;;;;;;"	";;;;"
+Study Protocol Parameters Name	Method	Concentration	Library source;Library strategy;Library selection;Library layout;Library kit;Target insert size;Wet-lab insert size;Barcode kit;Barcode name	Platform;Instrument model;Base quality encoding;Library prefix
+Study Protocol Parameters Name Term Accession Number	""	""	";;;;;;;;"	";;;"
+Study Protocol Parameters Name Term Source REF	""	""	";;;;;;;;"	";;;"
 Study Protocol Components Name	""	""	""	""
 Study Protocol Components Type	""	""	""	""
 Study Protocol Components Type Term Accession Number	""	""	""	""

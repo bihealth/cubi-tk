@@ -4,14 +4,6 @@
   "a_measurement_type": [
       "transcription profiling"
   ],
-  "lib_kit": [
-    "SC3Pv3",
-    "SC3Pv2",
-    "SC5P-PE",
-    "SC5P-R2",
-    "threeprime",
-    "fiveprime"
-  ],
   "instrument": "Illumina NextSeq 500",
   "center_name": "",
   "center_contact": "",
