@@ -107,7 +107,7 @@ Archive preparation: README.md file creation
 
 The README file will be created by filling contact information interactively. Command-line options are also available, but interactive confirmation is needed.
 
-It is possible to test if a generated README file is valid for project archival, using 
+It is possible to test if a generated README file is valid for project archival, using
 
 .. code-block:: bash
 
@@ -142,7 +142,7 @@ Additional transformation of the original files are carried out during the prepa
 
 - The contents of the ``.snakemake``, ``sge_log``, ``cubi-wrappers`` & ``snappy-pipeline`` directories are processed differently: the directories are tarred & compressed in the temporary destination, to reduce the number of inodes in the archive.
 - The core dump files are not copied to the temporary destination, and therefore won't be copied to the final archive.
-- The ``README.md`` file created by the ``readme`` subcommand must also be included to be put in the temprary's destination top level. 
+- The ``README.md`` file created by the ``readme`` subcommand must also be included to be put in the temprary's destination top level.
   If the original project already contains a ``README.md`` file, it will be appended to the generated one, as the latter is valid (it contains all mandatory information).
 
 
@@ -171,7 +171,7 @@ The files reported in the summary are under user control, through the ``--classe
 
 
 The files larger than 256MB, with extension ``*.fastq``, ``*.fq``, ``*.fastq.gz`` or ``*.fq.gz`` will be reported with the class ``fastq``.
-Any number of file class can be defined. The default classes configuration is in ``cubi-tk/isa_tpl/archive/classes.yaml``
+Any number of file class can be defined. The default classes configuration is in ``cubi_tk/archive/classes.yaml``
 
 The behaviour of the archive preparation can also be changed using the ``--rules`` option. The rules are also described in a yaml file by regular expression patterns.
 
@@ -188,7 +188,7 @@ When the user doesn't specify her own set using the ``--rules`` option, the rule
     ignore:            # Patterns for files or directories to skip
         - "^(.*/)?core\\.[0-9]+$"
         - "^(.*/)?\\.venv$"
-    
+
     compress:          # Patterns for files or directories to tar-gzip
         - "^(.*/)?\\.snakemake$"
         - "^(.*/)?sge_log$"
@@ -206,7 +206,7 @@ Examples
 Consider an example project. It contains:
 
 - raw data in a ``raw_data`` directory, some of which is stored outside of the project's directory,
-- processing results in the ``pipeline`` directory, 
+- processing results in the ``pipeline`` directory,
 - additional data files & scripts in ``extra_data``,
 - a ``.snakemake`` directory that can potentially contain many files in conda environments, for example, and
 - a bunch on temporary & obsolete files that shouldn't be archived, conveniently grouped into the ``ignored_dir`` directory.
@@ -317,7 +317,7 @@ When the ``README.md`` editing is complete, the copy to the final destination on
 The copy step writes in the final destination the hashdeep audit of the copy against the original project. This audit is expected to fail, because files & directories are ignored, compressed or squashed. The option ``--keep-workdir--hashdeep``, the programme also outputs the hashdeep report of the temporary destination, and the audit of the final copy against the temporary destination. Both the report and the audit are also stored in the final copy directory. The audit of the copy against the temporary destination should be successful, as the copy doesn't re-process files, it only follows symlinks.
 
 If all steps have been completed successfully (including checking the ``README.md`` for validity), then a marker file named ``archive_copy_complete`` is created. The final step is to remove write permissions if the ``--read-only`` option was selected.
- 
+
 
 ----------------------------
 Additional notes and caveats

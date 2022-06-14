@@ -55,9 +55,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         parser.add_argument(
             "--rules",
             "-r",
-            default=os.path.join(
-                os.path.dirname(__file__), "..", "isa_tpl", "archive", "default_rules.yaml"
-            ),
+            default=os.path.join(os.path.dirname(__file__), "default_rules.yaml"),
         )
         parser.add_argument("--readme", help="Path to README.md created with cubi-tk")
         parser.add_argument(
