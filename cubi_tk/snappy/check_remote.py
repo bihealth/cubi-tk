@@ -247,11 +247,28 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
             project_uuid=self.project_uuid,
         )
         for study in investigation.studies.values():
-            for assay_uuid in study.assays.keys():
-                # TODO: Naive assumption that there is only one assay per study - review it.
+            # Assumption: there is only one assay per study for `snappy` projects.
+            # If multi-assay project it will only consider the first one and throw a warning.
+            assays_ = list(study.assays.keys())
+            if len(assays_) > 1:
+                self.multi_assay_warning(assays=assays_)
+            for assay_uuid in assays_:
                 assay = study.assays[assay_uuid]
                 return assay.irods_path
         return None
+
+    @staticmethod
+    def multi_assay_warning(assays):
+        """Display warning for multi-assay study.
+
+        :param assays: Assays UUIDs as found in Studies.
+        :type assays: list
+        """
+        multi_assay_str = "\n".join(assays)
+        logger.warn(
+            f"Project contains multiple Assays, will only consider UUID '{assays[0]}'.\n"
+            f"All available UUIDs:\n{multi_assay_str}"
+        )
 
     def retrieve_irods_data_objects(self, irods_path):
         """Retrieve data objects from iRODS.
