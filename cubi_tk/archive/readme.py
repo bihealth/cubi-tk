@@ -17,15 +17,15 @@ from logzero import logger
 from . import common
 from ..common import execute_shell_commands
 from ..isa_tpl import IsaTabTemplate
-from ..isa_tpl import load_variables
 
 
-_BASE_DIR = os.path.dirname(__file__)
+_TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
+
 TEMPLATE = IsaTabTemplate(
     name="archive",
-    path=os.path.join(os.path.dirname(_BASE_DIR), "isa_tpl", "archive"),
+    path=_TEMPLATE_DIR,
     description="Prepare project for archival",
-    configuration=load_variables("archive"),
+    configuration=common.load_variables(template_dir=_TEMPLATE_DIR),
 )
 
 DU = re.compile("^ *([0-9]+)[ \t]+[^ \t]+.*$")

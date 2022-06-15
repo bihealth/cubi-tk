@@ -2,6 +2,7 @@
 
 import argparse
 import attr
+import json
 import os
 import subprocess
 import sys
@@ -115,6 +116,19 @@ def traverse_project_files(directory, followlinks=True):
     for path, _, files in os.walk(root, followlinks=followlinks):
         for filename in files:
             yield get_file_attributes(os.path.join(path, filename), root)
+
+
+def load_variables(template_dir):
+    """
+    :param template_dir: Path to cookiecutter directory.
+    :type template_dir: str
+
+    :return: Returns load variables found in the cokiecutter template directory.
+    """
+    config_path = os.path.join(template_dir, "cookiecutter.json")
+    with open(config_path, "rt") as inputf:
+        result = json.load(inputf)
+    return result
 
 
 def run_hashdeep(directory, out_file=None, num_threads=4, ref_file=None):
