@@ -92,6 +92,7 @@ def test_parse_sample_sheet(germline_trio_sheet_object):
         sheet=germline_trio_sheet_object,
         sodar_url="",
         sodar_api_token="",
+        assay_uuid="",
         project_uuid="",
     )  # noqa: B106
     # Define expected

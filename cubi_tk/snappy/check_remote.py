@@ -201,7 +201,7 @@ class FindLocalFiles(FindFilesCommon):
 class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
     """Class finds and lists remote files associated with samples."""
 
-    def __init__(self, args, sheet, sodar_url, sodar_api_token, project_uuid):
+    def __init__(self, args, sheet, sodar_url, sodar_api_token, assay_uuid, project_uuid):
         """Constructor.
 
         :param sodar_url: SODAR url.
@@ -210,6 +210,9 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
         :param sodar_api_token: SODAR API token.
         :type sodar_api_token: str
 
+        :param assay_uuid: Assay UUID.
+        :type assay_uuid: str
+
         :param project_uuid: Project UUID.
         :type project_uuid: str
         """
@@ -217,6 +220,7 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
         FindFilesCommon.__init__(self, sheet=sheet)
         self.sodar_url = sodar_url
         self.sodar_api_token = sodar_api_token
+        self.assay_uuid = assay_uuid
         self.project_uuid = project_uuid
 
     def perform(self):
@@ -228,7 +232,7 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
         logger.info("Starting remote files search ...")
 
         # Get assay iRODS path
-        assay_path = self.get_assay_irods_path()
+        assay_path = self.get_assay_irods_path(assay_uuid=self.assay_uuid)
 
         # Get iRODS collection
         irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path)
@@ -236,8 +240,11 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
         logger.info("... done with remote files search.")
         return irods_collection_dict
 
-    def get_assay_irods_path(self):
+    def get_assay_irods_path(self, assay_uuid=None):
         """Get Assay iRODS path.
+
+        :param assay_uuid: Assay UUID.
+        :type assay_uuid: str [optional]
 
         :return: Returns Assay iRODS path - extracted via SODAR API.
         """
@@ -247,14 +254,23 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
             project_uuid=self.project_uuid,
         )
         for study in investigation.studies.values():
-            # Assumption: there is only one assay per study for `snappy` projects.
-            # If multi-assay project it will only consider the first one and throw a warning.
-            assays_ = list(study.assays.keys())
-            if len(assays_) > 1:
-                self.multi_assay_warning(assays=assays_)
-            for assay_uuid in assays_:
-                assay = study.assays[assay_uuid]
-                return assay.irods_path
+            if assay_uuid:
+                logger.info(f"Using provided Assay UUID: {assay_uuid}")
+                try:
+                    assay = study.assays[assay_uuid]
+                    return assay.irods_path
+                except KeyError:
+                    logger.error("Provided Assay UUID is not present in the Study.")
+                    raise
+            else:
+                # Assumption: there is only one assay per study for `snappy` projects.
+                # If multi-assay project it will only consider the first one and throw a warning.
+                assays_ = list(study.assays.keys())
+                if len(assays_) > 1:
+                    self.multi_assay_warning(assays=assays_)
+                for _assay_uuid in assays_:
+                    assay = study.assays[_assay_uuid]
+                    return assay.irods_path
         return None
 
     @staticmethod
@@ -430,7 +446,7 @@ class Checker:
             file_name = os.path.basename(md5_file)
             original_file_name = file_name.replace(".md5", "")
             # Read local MD5
-            with open(md5_file) as f:
+            with open(md5_file, "r", encoding="utf8") as f:
                 local_md5 = f.readline()
                 # Expected format example:
                 # `459db8f7cb0d3a23a38fdc98286a9a9b  out.vcf.gz`
@@ -691,7 +707,13 @@ class SnappyCheckRemoteCommand:
             action="store_true",
             help="Flag to indicate if local and remote MD5 files should be compared.",
         )
-        parser.add_argument("project_uuid", type=str, help="UUID from project to check.")
+        parser.add_argument(
+            "--assay-uuid",
+            default=None,
+            type=str,
+            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
+        )
+        parser.add_argument("project_uuid", type=str, help="UUID from Project to check.")
 
     @classmethod
     def run(
@@ -735,6 +757,7 @@ class SnappyCheckRemoteCommand:
             self.shortcut_sheet,
             self.args.sodar_url,
             self.args.sodar_api_token,
+            self.args.assay_uuid,
             self.args.project_uuid,
         ).perform()
 
