@@ -462,10 +462,10 @@ class Checker:
                 same_md5_list.append(md5_file.replace(".md5", ""))
             # BONUS - check remote replicas
             if not all(
-                [
+                (
                     replica_md5 == remote_md5
                     for replica_md5 in remote_md5_dict.get("replicas_md5sum")
-                ]
+                )
             ):
                 logger.error(
                     f"iRODS metadata checksum not consistent with checksum file...\n"
