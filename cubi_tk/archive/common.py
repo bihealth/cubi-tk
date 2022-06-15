@@ -126,7 +126,7 @@ def load_variables(template_dir):
     :return: Returns load variables found in the cokiecutter template directory.
     """
     config_path = os.path.join(template_dir, "cookiecutter.json")
-    with open(config_path, "rt") as inputf:
+    with open(config_path, "rt", encoding="utf8") as inputf:
         result = json.load(inputf)
     return result
 
