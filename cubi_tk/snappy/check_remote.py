@@ -32,7 +32,7 @@ class FindFilesCommon:
         """Constructor.
 
         :param sheet: Sample sheet.
-        :type sheet: biomedsheets.shortcuts.GermlineCaseSheet
+        :type sheet: biomedsheets.shortcuts.GermlineCaseSheet or biomedsheets.shortcuts.CancerCaseSheet
         """
         self.sheet = sheet
 
@@ -44,10 +44,24 @@ class FindFilesCommon:
         # Initialise variables
         library_names = []
         # Iterate over sample sheet
-        for pedigree in self.sheet.cohort.pedigrees:
-            for donor in pedigree.donors:
-                library_names.append(donor.dna_ngs_library.name)
-        # Return list of identifiers
+        if isinstance(self.sheet, shortcuts.GermlineCaseSheet):  # Germline
+            for pedigree in self.sheet.cohort.pedigrees:
+                for donor in pedigree.donors:
+                    library_names.append(donor.dna_ngs_library.name)
+        elif isinstance(self.sheet, shortcuts.CancerCaseSheet):  # Cancer
+            for sample_pair in self.sheet.all_sample_pairs:
+                if not (
+                    sample_pair.tumor_sample.dna_ngs_library
+                    and sample_pair.normal_sample.dna_ngs_library
+                ):
+                    logger.info(
+                        f"Sample pair for cancer bio sample {sample_pair.tumor_sample.name} has is missing primary"
+                        f"normal or primary cancer NGS library."
+                    )
+                    continue
+                library_names.append(sample_pair.tumor_sample.dna_ngs_library.name)
+                library_names.append(sample_pair.normal_sample.dna_ngs_library.name)
+        # Return list of library names
         return library_names
 
     @staticmethod
@@ -137,7 +151,7 @@ class FindLocalFiles(FindFilesCommon):
         self.base_path = base_path
         if step_list is None or len(step_list) == 0:
             raise ValueError(
-                "Step list cannot be empty. Expected input: ['ngs_mapping', 'variant_calling']"
+                "Step list cannot be empty. Example of expected input: ['ngs_mapping', 'variant_calling']"
             )
         self.step_list = step_list
 
@@ -655,20 +669,41 @@ class VariantCallingChecker(Checker):
         return out_flag
 
 
+class SomaticVariantCallingChecker(Checker):
+    """Check for somatic variant calling results being present without checking content"""
+
+    #: Step name being checked.
+    check_name = "somatic_variant_calling"
+
+    def __init__(self, *args, **kwargs):
+        """ Constructor."""
+        super().__init__(*args, **kwargs)
+
+    def run(self):
+        """Executes checks for Somatic Variant Calling files."""
+        logger.info("Starting somatic_variant_calling checks ...")
+        out_flag = self.coordinate_run(check_name=self.check_name)
+        logger.info("... done with somatic_variant_calling checks.")
+        return out_flag
+
+
 class SnappyCheckRemoteCommand:
     """Implementation of the ``check-remote`` command."""
 
     def __init__(self, args):
-        #: Command line arguments.
+        # Command line arguments.
         self.args = args
         # Find biomedsheet file
         self.biomedsheet_tsv = get_biomedsheet_path(
             start_path=self.args.base_path, uuid=args.project_uuid
         )
-        #: Raw sample sheet.
+        # Raw sample sheet.
         self.sheet = load_sheet_tsv(self.biomedsheet_tsv, args.tsv_shortcut)
-        #: Shortcut sample sheet.
-        self.shortcut_sheet = shortcuts.GermlineCaseSheet(self.sheet)
+        # Shortcut sample sheet.
+        if args.tsv_shortcut == "cancer":
+            self.shortcut_sheet = shortcuts.CancerCaseSheet(self.sheet)
+        else:  # germline
+            self.shortcut_sheet = shortcuts.GermlineCaseSheet(self.sheet)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -750,6 +785,14 @@ class SnappyCheckRemoteCommand:
         logger.info("Starting cubi-tk snappy check-remote")
         logger.info("  args: %s", self.args)
 
+        # Split execution between Cancer and Germline
+        if self.args.tsv_shortcut == "cancer":
+            variant_call_type = "somatic_variant_calling"
+            variant_caller_class = SomaticVariantCallingChecker
+        else:
+            variant_call_type = "variant_calling"
+            variant_caller_class = VariantCallingChecker
+
         # Find all remote files (iRODS)
         pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
         library_remote_files_dict = FindRemoteFiles(
@@ -765,7 +808,7 @@ class SnappyCheckRemoteCommand:
         library_local_files_dict = FindLocalFiles(
             sheet=self.shortcut_sheet,
             base_path=self.args.base_path,
-            step_list=["ngs_mapping", "variant_calling"],
+            step_list=["ngs_mapping", variant_call_type],
         ).run()
 
         # Run checks
@@ -782,9 +825,9 @@ class SnappyCheckRemoteCommand:
                 local_files_dict=library_local_files_dict.get("ngs_mapping"),
                 check_md5=self.args.md5,
             ).run(),
-            VariantCallingChecker(
+            variant_caller_class(
                 remote_files_dict=library_remote_files_dict,
-                local_files_dict=library_local_files_dict.get("variant_calling"),
+                local_files_dict=library_local_files_dict.get(variant_call_type),
                 check_md5=self.args.md5,
             ).run(),
         ]
