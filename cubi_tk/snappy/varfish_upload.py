@@ -180,12 +180,24 @@ class SnappyVarFishUploadCommand:
 
         datasets = load_datasets(self.args.base_path / ".snappy_pipeline/config.yaml")
         logger.debug("projects = %s", self.args.project)
+        considered_uuid_list = []
         for dataset in datasets.values():
             logger.debug("Considering %s", dataset.sodar_uuid)
+            considered_uuid_list.append(str(dataset.sodar_uuid))
             if dataset.sodar_uuid in self.args.project:
                 self._process_dataset(dataset)
 
-        logger.info("All done")
+        # Test that the UUID was found
+        if len(set(considered_uuid_list) & set(self.args.project)) > 0:
+            logger.info("All done")
+        else:
+            input_uuid_str = ",".join(self.args.project)
+            considered_uuid_str = ", ".join(considered_uuid_list)
+            logger.warning(
+                f"None of the considered UUIDs corresponded to the input.\n"
+                f"- Requested UUID: {input_uuid_str}\n"
+                f"- Considered UUID list: {considered_uuid_str}"
+            )
         return None
 
     def _process_dataset(self, ds: DataSet):
