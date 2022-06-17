@@ -132,7 +132,13 @@ class SnappyVarFishUploadCommand:
         )
 
         parser.add_argument(
-            "--samples", help="The samples to limit the submission for, if any", default=""
+            "--samples",
+            help=(
+                "Limits the submission to the listed sample names. Don't include the full library name just the "
+                "sample name (e.g., 'P001' instead of 'P001-N1-DNA1-WES1'). Separate the sample with comma for "
+                "multiple samples, example: 'P001,P002,P003'."
+            ),
+            default="",
         )
 
         parser.add_argument(
