@@ -61,6 +61,16 @@ class FindFilesCommon:
                     continue
                 library_names.append(sample_pair.tumor_sample.dna_ngs_library.name)
                 library_names.append(sample_pair.normal_sample.dna_ngs_library.name)
+                # Check for RNA
+                if sample_pair.tumor_sample.rna_ngs_library:
+                    library_names.append(sample_pair.tumor_sample.rna_ngs_library.name)
+                if sample_pair.normal_sample.rna_ngs_library:
+                    library_names.append(sample_pair.normal_sample.rna_ngs_library.name)
+        elif isinstance(self.sheet, shortcuts.GenericSampleSheet):  # Generic|RNA
+            for ngs_library in self.sheet.all_ngs_libraries:
+                extraction_type = ngs_library.test_sample.extra_infos["extractionType"]
+                if extraction_type.lower() == "rna":
+                    library_names.append(ngs_library.name)
         # Return list of library names
         return library_names
 
@@ -702,8 +712,10 @@ class SnappyCheckRemoteCommand:
         # Shortcut sample sheet.
         if args.tsv_shortcut == "cancer":
             self.shortcut_sheet = shortcuts.CancerCaseSheet(self.sheet)
-        else:  # germline
+        elif args.tsv_shortcut == "germline":
             self.shortcut_sheet = shortcuts.GermlineCaseSheet(self.sheet)
+        else:  # generic
+            self.shortcut_sheet = shortcuts.GenericSampleSheet(self.sheet)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -724,7 +736,7 @@ class SnappyCheckRemoteCommand:
         parser.add_argument(
             "--tsv-shortcut",
             default="germline",
-            choices=("germline", "cancer"),
+            choices=("cancer", "generic", "germline"),
             help="The shortcut TSV schema to use.",
         )
         parser.add_argument(
