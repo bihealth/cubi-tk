@@ -1,5 +1,9 @@
 # History
 
+## HEAD (unreleased)
+
+- Fixing microarray isa-tab template (#100)
+
 ## v0.3.0
 
 - Moving SODAR REST API calls to package `sodar-cli`.
