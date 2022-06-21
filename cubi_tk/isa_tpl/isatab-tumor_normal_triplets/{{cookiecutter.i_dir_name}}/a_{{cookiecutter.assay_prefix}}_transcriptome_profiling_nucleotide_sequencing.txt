@@ -2,4 +2,4 @@ Sample Name	Protocol REF	Parameter Value[Concentration measurement]	Performer	Da
 {% set sample_names = cookiecutter.sample_names.split(",") -%}																																																			
 {%- for sample_name in sample_names -%}																																																			
 {{sample_name|replace("-", "_")}}-N1	Nucleic acid extraction RNA-Seq				{{sample_name|replace("-", "_")}}-N1-RNA1					Library construction RNA-Seq										TRANSCRIPTOMIC	RNA-Seq	PolyA	PAIRED	Illumina TruSeq Stranded mRNA	REVERSE										{{sample_name|replace("-", "_")}}-N1-RNA1-RNA-Seq1	{{sample_name}}					Nucleic acid sequencing RNA-Seq	ILLUMINA	Illumina HiSeq 4000			Phred+33					
-{% endfor %}																																																			
+{% endfor %}
