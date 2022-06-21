@@ -36,9 +36,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
 
         parser.add_argument(
             "--classes",
-            default=os.path.join(
-                os.path.dirname(__file__), "..", "isa_tpl", "archive", "classes.yaml"
-            ),
+            default=os.path.join(os.path.dirname(__file__), "classes.yaml"),
             help="Location of the file describing files of interest",
         )
         parser.add_argument(
