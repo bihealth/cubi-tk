@@ -2,4 +2,4 @@ Source Name	Characteristics[UUID]	Characteristics[External links]	Characteristic
 {% set sample_names = cookiecutter.sample_names.split(",") -%}																																																													
 {%- for sample_name in sample_names -%}																																																													
 {{sample_name|replace("-", "_")}}		{{cookiecutter.sample_type}}:{{sample_name}}		Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606																					none										Sample collection			{{sample_name|replace("-", "_")}}-N1													Y/N	True/False							
-{% endfor %}																																																													
+{% endfor %}
