@@ -12,8 +12,7 @@ from subprocess import check_output, SubprocessError, check_call, STDOUT
 import sys
 
 import attr
-from biomedsheets import io_tsv, shortcuts
-from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+from biomedsheets import shortcuts
 from logzero import logger
 import requests
 from retrying import retry
@@ -83,22 +82,6 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     _ = args
-
-
-def load_sheets_tsv(args):
-    """Load multiple sample sheets."""
-    result = []
-
-    for path in args.biomedsheet_tsv:
-        logger.info(
-            "Loading %s sample sheet from %s.",
-            args.tsv_shortcut,
-            getattr(args.biomedsheet_tsv, "name", "stdin"),
-        )
-        load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % args.tsv_shortcut)
-        result.append(load_tsv(path, naming_scheme=NAMING_ONLY_SECONDARY_ID))
-
-    return result
 
 
 class SnappyItransferCommandBase:

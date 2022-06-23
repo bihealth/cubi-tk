@@ -1,4 +1,4 @@
-"""``cubi-tk snappy check``: check within sample sheet and between sample sheet and files."""
+"""``cubi-tk snappy check-local``: check within sample sheet and between sample sheet and files."""
 
 import argparse
 import glob
@@ -11,7 +11,7 @@ from biomedsheets import shortcuts
 from logzero import logger
 import vcfpy
 
-from .itransfer_common import load_sheets_tsv
+from .common import get_biomedsheet_path, get_all_biomedsheet_paths, load_sheet_tsv
 from .. import parse_ped
 
 
@@ -379,20 +379,29 @@ class VcfFileCheck(FileCheckBase):
         return True
 
 
-class SnappyCheckCommand:
-    """Implementation of the ``check`` command."""
+class SnappyCheckLocalCommand:
+    """Implementation of the ``check-local`` command."""
 
     def __init__(self, args):
         #: Command line arguments.
         self.args = args
+        # Find biomedsheet file
+        self.biomedsheet_tsvs = None
+        if self.args.project_uuids:
+            self.biomedsheet_tsvs = [
+                get_biomedsheet_path(start_path=self.args.base_path, uuid=uuid)
+                for uuid in self.args.project_uuids
+            ]
+        else:
+            self.biomedsheet_tsvs = get_all_biomedsheet_paths(start_path=self.args.base_path)
         #: Raw sample sheet.
-        self.sheets = load_sheets_tsv(self.args)
+        self.sheets = [load_sheet_tsv(tsv, args.tsv_shortcut) for tsv in self.biomedsheet_tsvs]
         #: Shortcut sample sheet.
         self.shortcut_sheets = [shortcuts.GermlineCaseSheet(sheet) for sheet in self.sheets]
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup common arguments for itransfer commands."""
+        """Setup arguments for ``check-local`` command."""
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -405,19 +414,18 @@ class SnappyCheckCommand:
         )
         parser.add_argument(
             "--base-path",
-            default=None,
+            default=os.getcwd(),
             required=False,
             help=(
                 "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
                 "back to current working directory by default."
             ),
         )
-
         parser.add_argument(
-            "biomedsheet_tsv",
-            nargs="+",
-            type=argparse.FileType("rt"),
-            help="Path to biomedsheets TSV file to load.",
+            "project_uuids",
+            type=str,
+            nargs="*",
+            help="UUID(s) from project(s) to check. Use all if not given.",
         )
 
     @classmethod
@@ -428,10 +436,10 @@ class SnappyCheckCommand:
         return cls(args).execute()
 
     def check_args(self, args):
-        """Called for checking arguments, override to change behaviour."""
+        """Called for checking arguments."""
         res = 0
 
-        for tsv_file in args.biomedsheet_tsv:
+        for tsv_file in self.biomedsheet_tsvs:
             if args.base_path:
                 break
             base_path = pathlib.Path(tsv_file.name).parent
@@ -455,7 +463,7 @@ class SnappyCheckCommand:
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk snappy check")
+        logger.info("Starting cubi-tk snappy check-local")
         logger.info("  args: %s", self.args)
 
         results = [
@@ -469,5 +477,5 @@ class SnappyCheckCommand:
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk snappy itransfer-raw-data``."""
-    return SnappyCheckCommand.setup_argparse(parser)
+    """Setup argument parser for ``cubi-tk snappy check-local``."""
+    return SnappyCheckLocalCommand.setup_argparse(parser)

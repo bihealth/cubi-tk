@@ -238,7 +238,7 @@ def check_file(data_obj: iRODSDataObject, checksums: dict, req_num_reps: int, ha
         for replica in data_obj.replicas:
             if replica.checksum != file_sum:
                 logger.error(
-                    "iRODS metadata checksum not consistent with chcksum file...\n"
+                    "iRODS metadata checksum not consistent with checksum file...\n"
                     "File: %s\n%s file checksum: %s\n"
                     "Metadata checksum: %s\nResource: %s",
                     data_obj.path,
