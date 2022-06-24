@@ -12,6 +12,7 @@ import re
 from types import SimpleNamespace
 import typing
 
+import attr
 from biomedsheets import shortcuts
 from logzero import logger
 from sodar_cli import api
@@ -23,6 +24,16 @@ from ..irods.check import IrodsCheckCommand, HASH_SCHEMES
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
 DEFAULT_HASH_SCHEME = "MD5"
+
+
+@attr.s(frozen=True, auto_attribs=True)
+class IrodsDataObject:
+    """iRODS data object - simplified version of data provided in iRODS Collections."""
+
+    file_name: str
+    irods_path: str
+    file_md5sum: str
+    replicas_md5sum: list
 
 
 class FindFilesCommon:
@@ -338,11 +349,11 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
         :param irods_collection: iRODS collection.
         :type irods_collection: dict
 
-        :return: Returns dictionary version of iRODS collection information. Key: File path in iRODS (str);
-        Value: nested dict (Keys:  'irods_path', 'file_md5sum', 'replicas_md5sum').
+        :return: Returns dictionary version of iRODS collection information. Key: File name in iRODS (str);
+        Value: list of IrodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
         """
         # Initialise variables
-        output_dict = {}
+        output_dict = defaultdict(list)
         checksums = irods_collection["checksums"]
 
         # Extract relevant info from iRODS collection: file and replicates MD5SUM
@@ -352,14 +363,14 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
                 file_sum = re.search(
                     HASH_SCHEMES[DEFAULT_HASH_SCHEME]["regex"], f.read().decode("utf-8")
                 ).group(0)
-                _tmp_dict = {
-                    data_obj.name: {
-                        "irods_path": data_obj.path,
-                        "file_md5sum": file_sum,
-                        "replicas_md5sum": [replica.checksum for replica in data_obj.replicas],
-                    }
-                }
-                output_dict.update(_tmp_dict)
+                output_dict[data_obj.name].append(
+                    IrodsDataObject(
+                        file_name=data_obj.name,
+                        irods_path=data_obj.path,
+                        file_md5sum=file_sum,
+                        replicas_md5sum=[replica.checksum for replica in data_obj.replicas],
+                    )
+                )
         return output_dict
 
 
@@ -402,8 +413,7 @@ class Checker:
         # Restrict dictionary to directories associated with step
         subset_remote_files_dict = {}
         for key in self.remote_files_dict:
-            path_ = self.remote_files_dict[key].get("irods_path")
-            if check_name in path_:
+            if all((check_name in dat.irods_path for dat in self.remote_files_dict[key])):
                 subset_remote_files_dict[key] = self.remote_files_dict.get(key)
 
         # Parse local files - remove library reference
@@ -419,17 +429,17 @@ class Checker:
         remote_only_set.update(i_remote)
         local_only_set.update(i_local)
 
-        # MD5 check and report
-        if self.check_md5:
+        # Report
+        self.report_multiple_file_versions_in_sodar(remote_dict=subset_remote_files_dict)
+        if self.check_md5:  # md5 check report
             okay_list, different_list = self.compare_md5_files(
                 remote_dict=subset_remote_files_dict, in_both_set=in_both_set
             )
-            self.report_md5(okay_list, different_list)
-
-        # Report
-        self.report_findings(
-            both_locations=in_both_set, only_local=local_only_set, only_remote=remote_only_set
-        )
+            self.report_findings_md5(okay_list, different_list)
+        else:  # simple report
+            self.report_findings(
+                both_locations=in_both_set, only_local=local_only_set, only_remote=remote_only_set
+            )
 
         # Return all okay
         return True
@@ -476,27 +486,24 @@ class Checker:
                 # `459db8f7cb0d3a23a38fdc98286a9a9b  out.vcf.gz`
                 local_md5 = local_md5.split(" ")[0]
             # Compare to remote MD5
-            remote_md5_dict = remote_dict.get(original_file_name)
-            remote_md5 = remote_md5_dict.get("file_md5sum")
-            if local_md5 != remote_md5:
-                different_md5_list.append(
-                    (md5_file.replace(".md5", ""), remote_md5_dict.get("irods_path"))
-                )
-            else:
-                same_md5_list.append(md5_file.replace(".md5", ""))
-            # BONUS - check remote replicas
-            if not all(
-                (
-                    replica_md5 == remote_md5
-                    for replica_md5 in remote_md5_dict.get("replicas_md5sum")
-                )
-            ):
-                logger.error(
-                    f"iRODS metadata checksum not consistent with checksum file...\n"
-                    f"File: {remote_md5_dict.get('irods_path')}\n"
-                    f"File checksum: {remote_md5_dict.get('file_md5sum')}\n"
-                    f"Metadata checksum: {', '.join(remote_md5_dict.get('replicas_md5sum'))}\n"
-                )
+            for irods_dat in remote_dict.get(original_file_name):
+                if local_md5 != irods_dat.file_md5sum:
+                    different_md5_list.append((md5_file.replace(".md5", ""), irods_dat.irods_path))
+                else:
+                    same_md5_list.append(md5_file.replace(".md5", ""))
+                # BONUS - check remote replicas
+                if not all(
+                    (
+                        replica_md5 == irods_dat.file_md5sum
+                        for replica_md5 in irods_dat.replicas_md5sum
+                    )
+                ):
+                    logger.error(
+                        f"iRODS metadata checksum not consistent with checksum file...\n"
+                        f"File: {irods_dat.irods_path}\n"
+                        f"File checksum: {irods_dat.file_md5sum}\n"
+                        f"Metadata checksum: {', '.join(irods_dat.replicas_md5sum)}\n"
+                    )
 
         return same_md5_list, different_md5_list
 
@@ -508,8 +515,7 @@ class Checker:
         in dictionary are expected to have an extra `output` subdirectory.
         :type local_dict: dict
 
-        :param remote_dict: Dictionary with remote file structure. Key: remote directory path; Value: list of file
-        names.
+        :param remote_dict: Dictionary with remote file structure. Key: file name; Value: list of IRodsDataObject.
         :type remote_dict: dict
 
         :return: Returns tuple with three sets: one for files that are found both locally and remotely; one for files
@@ -541,7 +547,8 @@ class Checker:
 
         # Only remote
         for file_ in all_remote_files_set - all_local_files_set:
-            only_remote_set.add(remote_dict[file_].get("irods_path"))
+            for irods_dat in remote_dict[file_]:
+                only_remote_set.add(irods_dat.irods_path)
 
         # Only local
         for file_ in all_local_files_set - all_remote_files_set:
@@ -552,7 +559,33 @@ class Checker:
         return in_both_set, only_remote_set, only_local_set
 
     @staticmethod
-    def report_md5(okay_list, different_list):
+    def report_multiple_file_versions_in_sodar(remote_dict):
+        """Report if a file has multiple verions in SODAR.
+
+        Relevant if raw file if for example there is an error in one of the sequences, same name but different dates:
+        - raw_data/2022-01-25/<SAMPLE_ID>_R2_001.fastq.gz
+        - raw_data/2022-05-06/<SAMPLE_ID>_R2_001.fastq.gz
+
+
+        :param remote_dict: Dictionary with remote file structure. Key: file name; Value: list of IRodsDataObject.
+        :type remote_dict: dict
+        """
+        # Build inner dictionary with relevant information to be displayed
+        inner_dict = {}
+        for file_, irods_list in remote_dict.items():
+            if len(irods_list) > 1:
+                inner_dict[file_] = [dat.irods_path for dat in irods_list]
+        # Format and display information - if any
+        if len(inner_dict) > 0:
+            pairs_str = ""
+            for key, value in inner_dict.items():
+                irods_paths_str = '\n'.join(value)
+                _tmp_str = f"\n>> {key}\n{irods_paths_str}"
+                pairs_str += _tmp_str
+            logger.warn(f"Files with different versions in SODAR:{pairs_str}")
+
+    @staticmethod
+    def report_findings_md5(okay_list, different_list):
         """Report MD5 findings.
 
         :param okay_list: Set with all files with the exact same MD5 value - local path.
