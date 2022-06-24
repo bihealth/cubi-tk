@@ -579,7 +579,7 @@ class Checker:
         if len(inner_dict) > 0:
             pairs_str = ""
             for key, value in inner_dict.items():
-                irods_paths_str = '\n'.join(value)
+                irods_paths_str = "\n".join(value)
                 _tmp_str = f"\n>> {key}\n{irods_paths_str}"
                 pairs_str += _tmp_str
             logger.warn(f"Files with different versions in SODAR:{pairs_str}")
