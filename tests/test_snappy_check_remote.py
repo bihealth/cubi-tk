@@ -9,6 +9,7 @@ from cubi_tk.snappy.check_remote import (
     FindLocalFiles,
     FindLocalRawdataFiles,
     FindRemoteFiles,
+    IrodsDataObject,
 )
 
 
@@ -16,7 +17,7 @@ from cubi_tk.snappy.check_remote import (
 
 
 def test_findlocal_run(germline_trio_sheet_object):
-    """Tests FindLocalFiles::run()"""
+    """Tests FindLocalFiles.run()"""
     # Define expected
     expected = {
         "tests/data/find_snappy/output/index-N1-DNA1-WES1/out": [
@@ -55,7 +56,7 @@ def test_findlocal_run(germline_trio_sheet_object):
 
 
 def test_findrawdata_run(germline_trio_sheet_object):
-    """Tests FindLocalRawdataFiles::run()"""
+    """Tests FindLocalRawdataFiles.run()"""
     # Define expected
     expected = {
         "tests/data/find_snappy/ngs_mapping/work/input_links/index-N1-DNA1-WES1": [
@@ -84,7 +85,7 @@ def test_findrawdata_run(germline_trio_sheet_object):
 
 
 def test_parse_sample_sheet(germline_trio_sheet_object):
-    """Tests FindRemoteFiles::parse_sample_sheet()"""
+    """Tests FindRemoteFiles.parse_sample_sheet()"""
     # Initialise object
     pseudo_args = SimpleNamespace(hash_scheme="MD5")
     find_obj = FindRemoteFiles(
@@ -106,7 +107,7 @@ def test_parse_sample_sheet(germline_trio_sheet_object):
 
 
 def test_compare_local_and_remote_files():
-    """Tests Checker::compare_local_and_remote_files()"""
+    """Tests Checker.compare_local_and_remote_files()"""
     # Create checker object
     checker = Checker(local_files_dict=None, remote_files_dict=None)
 
@@ -114,26 +115,38 @@ def test_compare_local_and_remote_files():
     file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
     replicas_md5sum = [file_md5sum] * 3
     in_remote_dict = {
-        "bwa.P001-N1-DNA1-WES1.bam": {
-            "irods_path": "/sodar_path/bwa.P001-N1-DNA1-WES1.bam",
-            "file_md5sum": file_md5sum,
-            "replicas_md5sum": replicas_md5sum,
-        },
-        "bwa.P001-N1-DNA1-WES1.bam.bai": {
-            "irods_path": "/sodar_path/bwa.P001-N1-DNA1-WES1.bam.bai",
-            "file_md5sum": file_md5sum,
-            "replicas_md5sum": replicas_md5sum,
-        },
-        "bwa.P002-N1-DNA1-WES1.bam": {
-            "irods_path": "/sodar_path/bwa.P002-N1-DNA1-WES1.bam",
-            "file_md5sum": file_md5sum,
-            "replicas_md5sum": replicas_md5sum,
-        },
-        "bwa.P002-N1-DNA1-WES1.bam.bai": {
-            "irods_path": "/sodar_path/bwa.P002-N1-DNA1-WES1.bam.bai",
-            "file_md5sum": file_md5sum,
-            "replicas_md5sum": replicas_md5sum,
-        },
+        "bwa.P001-N1-DNA1-WES1.bam": [
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1.bam",
+                irods_path="/sodar_path/bwa.P001-N1-DNA1-WES1.bam",
+                file_md5sum=file_md5sum,
+                replicas_md5sum=replicas_md5sum,
+            )
+        ],
+        "bwa.P001-N1-DNA1-WES1.bam.bai": [
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1.bam.bai",
+                irods_path="/sodar_path/bwa.P001-N1-DNA1-WES1.bam.bai",
+                file_md5sum=file_md5sum,
+                replicas_md5sum=replicas_md5sum,
+            )
+        ],
+        "bwa.P002-N1-DNA1-WES1.bam": [
+            IrodsDataObject(
+                file_name="bwa.P002-N1-DNA1-WES1.bam",
+                irods_path="/sodar_path/bwa.P002-N1-DNA1-WES1.bam",
+                file_md5sum=file_md5sum,
+                replicas_md5sum=replicas_md5sum,
+            )
+        ],
+        "bwa.P002-N1-DNA1-WES1.bam.bai": [
+            IrodsDataObject(
+                file_name="bwa.P002-N1-DNA1-WES1.bam.bai",
+                irods_path="/sodar_path/bwa.P002-N1-DNA1-WES1.bam.bai",
+                file_md5sum=file_md5sum,
+                replicas_md5sum=replicas_md5sum,
+            )
+        ],
     }
     local_path = "/local/path/P001-N1-DNA1-WES1/GRCh37/2019-07-11/ngs_mapping/output/bwa.P001-N1-DNA1-WES1/out"
     in_local_dict = {
@@ -180,11 +193,14 @@ def test_compare_local_and_remote_files():
     # ========================= #
     # Update input and expected results
     extra_remote_files_dict = {
-        "bwa.P001-N1-DNA1-WES1.conda_info.txt": {
-            "irods_path": "/sodar_path/bwa.P001-N1-DNA1-WES1.conda_info.txt",
-            "file_md5sum": file_md5sum,
-            "replicas_md5sum": replicas_md5sum,
-        }
+        "bwa.P001-N1-DNA1-WES1.conda_info.txt": [
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1.conda_info.txt",
+                irods_path="/sodar_path/bwa.P001-N1-DNA1-WES1.conda_info.txt",
+                file_md5sum=file_md5sum,
+                replicas_md5sum=replicas_md5sum,
+            )
+        ]
     }
 
     in_remote_dict.update(extra_remote_files_dict)
