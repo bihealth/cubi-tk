@@ -23,7 +23,7 @@ $ conda activate cubi-tk
 Clone CUBI-TK and install.
 
 ```bash
-$ git clone git@cubi-gitlab.bihealth.org:CUBI/Pipelines/cubi-tk.git
+$ git clone git@github.com:bihealth/cubi-tk.git
 $ cd cubi-tk
 $ pip install -e .
 ```
