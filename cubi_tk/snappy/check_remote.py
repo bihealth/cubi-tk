@@ -58,7 +58,10 @@ class FindFilesCommon:
         if isinstance(self.sheet, shortcuts.GermlineCaseSheet):  # Germline
             for pedigree in self.sheet.cohort.pedigrees:
                 for donor in pedigree.donors:
-                    library_names.append(donor.dna_ngs_library.name)
+                    if donor.dna_ngs_library:
+                        library_names.append(donor.dna_ngs_library.name)
+                    else:
+                        logger.warn(f"Skipping - no NGS library associated with {donor.name}")
         elif isinstance(self.sheet, shortcuts.CancerCaseSheet):  # Cancer
             for sample_pair in self.sheet.all_sample_pairs:
                 if not (
