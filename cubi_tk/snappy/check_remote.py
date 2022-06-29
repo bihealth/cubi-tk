@@ -362,18 +362,22 @@ class FindRemoteFiles(IrodsCheckCommand, FindFilesCommon):
         # Extract relevant info from iRODS collection: file and replicates MD5SUM
         for data_obj in irods_collection["files"]:
             chk_obj = checksums.get(data_obj.path + "." + DEFAULT_HASH_SCHEME.lower())
-            with chk_obj.open("r") as f:
-                file_sum = re.search(
-                    HASH_SCHEMES[DEFAULT_HASH_SCHEME]["regex"], f.read().decode("utf-8")
-                ).group(0)
-                output_dict[data_obj.name].append(
-                    IrodsDataObject(
-                        file_name=data_obj.name,
-                        irods_path=data_obj.path,
-                        file_md5sum=file_sum,
-                        replicas_md5sum=[replica.checksum for replica in data_obj.replicas],
+            if not chk_obj:
+                logger.error(f"No checksum file for: {data_obj.path}")
+                continue
+            else:
+                with chk_obj.open("r") as f:
+                    file_sum = re.search(
+                        HASH_SCHEMES[DEFAULT_HASH_SCHEME]["regex"], f.read().decode("utf-8")
+                    ).group(0)
+                    output_dict[data_obj.name].append(
+                        IrodsDataObject(
+                            file_name=data_obj.name,
+                            irods_path=data_obj.path,
+                            file_md5sum=file_sum,
+                            replicas_md5sum=[replica.checksum for replica in data_obj.replicas],
+                        )
                     )
-                )
         return output_dict
 
 
