@@ -1,9 +1,7 @@
 {
   "investigation_title": "Investigation Title",
   "sample_names": "sample1,sample2",
-  "a_measurement_type": [
-      "transcription profiling"
-  ],
+  "a_measurement_type": "transcription profiling",
   "lib_kit": [
     "SC3Pv3",
     "SC3Pv2",
@@ -12,10 +10,11 @@
     "threeprime",
     "fiveprime"
   ],
-  "instrument": "Illumina NextSeq 500",
-  "center_name": "",
-  "center_contact": "",
-
+  "source_meta": "Source type,External reference,Group",
+  "sample_meta": "Origin,Condition,Treatment",
+  "dissociation_meta": "Removal debris,Removal dead cell,Removal ab cell,Cell fixation,Cell viability",
+  "library_construction_meta": "QC cell load recovery,QC tape fragment size",
+  "sequencing_meta": "Platform,Instrument model,Sequencing kit,RNA amount",
   "study_title": "{{cookiecutter.investigation_title}}",
   "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
   "s_file_name": "{{cookiecutter.i_dir_name}}",
