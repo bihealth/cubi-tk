@@ -67,6 +67,11 @@ Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo
 Study Assay Technology Type Term Source REF	OBI
 Study Assay Technology Platform	Illumina
 STUDY PROTOCOLS
+{% set source_meta = cookiecutter.source_meta.split(",") -%}
+{% set sample_meta = cookiecutter.sample_meta.split(",") -%}
+{% set dissociation_meta = cookiecutter.dissociation_meta.split(",") -%}
+{% set library_construction_meta = cookiecutter.library_construction_meta.split(",") -%}
+{% set sequencing_meta = cookiecutter.sequencing_meta.split(",") -%}
 Study Protocol Name	Sample collection	Dissociation	Library construction	Nucleic acid sequencing
 Study Protocol Type	Sample collection	Dissociation	Library construction	Nucleic acid sequencing
 Study Protocol Type Term Accession Number	""	""	""	""
@@ -74,9 +79,9 @@ Study Protocol Type Term Source REF	""	""	""	""
 Study Protocol Description	""	""	""	""
 Study Protocol URI	""	""	""	""
 Study Protocol Version	""	""	""	""
-Study Protocol Parameters Name	Method	Dissociation method;Removal debris;Removal dead cell;Removal ab cell;Cell fixation;Cell count;Cell viability	Library kit;QC cell load recovery;QC tape fragment size bp;QC kappa size corrected nM;Multiplex genotype;Multiplex sample;Multiplex oligo;Library type;Barcode kit;Barcode name	Platform;Instrument model;Sequencing kit;RNA amount pg;Library prefix
-Study Protocol Parameters Name Term Accession Number	""	";;;;;;"	";;;;;;;;;"	";;;;"
-Study Protocol Parameters Name Term Source REF	""	";;;;;;"	";;;;;;;;;"	";;;;"
+Study Protocol Parameters Name	Method	Dissociation method;Cell count{% for meta in dissociation_meta -%};{{meta}}{% endfor %}	Library kit;Library type;Multiplex genotype;Multiplex sample;Multiplex oligo{% for meta in library_construction_meta -%};{{meta}}{% endfor %}	Sequencing run;Library prefix;Barcode kit;Barcode name{% for meta in sequencing_meta -%};{{meta}}{% endfor %}
+Study Protocol Parameters Name Term Accession Number	""	";{% for meta in dissociation_meta -%};{% endfor %}"	";;;;{% for meta in library_construction_meta -%};{% endfor %}"	";;;{% for meta in sequencing_meta -%};{% endfor %}"
+Study Protocol Parameters Name Term Source REF	""	";{% for meta in dissociation_meta -%};{% endfor %}"	";;;;{% for meta in library_construction_meta -%};{% endfor %}"	";;;{% for meta in sequencing_meta -%};{% endfor %}"
 Study Protocol Components Name	""	""	""	""
 Study Protocol Components Type	""	""	""	""
 Study Protocol Components Type Term Accession Number	""	""	""	""
