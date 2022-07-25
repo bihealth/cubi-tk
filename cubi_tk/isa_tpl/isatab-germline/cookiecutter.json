@@ -7,10 +7,11 @@
       "panel sequencing"
   ],
   "lib_kit": [
+    "Agilent SureSelect Human All Exon V8",
+    "Agilent SureSelect Human All Exon V7",
     "Agilent SureSelect Human All Exon V6r2",
     "Agilent SureSelect Human All Exon V5",
     "Agilent SureSelect Human All Exon V4",
-    "Agilent SureSelect Human All Exon V7",
     "IDT xGen Exome Research Panel V1.0",
     "IDT xGen Exome Research Panel V1.0 with YCGA 620kbp spike-in",
     "Illumina TruSeq PCR-free",
@@ -18,6 +19,10 @@
   ],
   "batch": "1",
   "lib_kits": {
+      "Agilent SureSelect Human All Exon V8": {
+      "name": "Agilent SureSelect Human All Exon V8",
+      "cat_id": "S33266436"
+    },
     "Agilent SureSelect Human All Exon V6r2": {
       "name": "Agilent SureSelect Human All Exon V6r2",
       "cat_id": "S04380110"
