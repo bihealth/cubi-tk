@@ -146,6 +146,21 @@ class DownloadSheetCommand:
         return 0
 
     def _write_file(self, out_path, file_name, text):
+        """Write file.
+
+        :param out_path: Path to output directory.
+        :type out_path: str
+
+        :param file_name: File name as provided in SODAR. If input includes more than file name, extra information
+        is removed. File should be created in output path root.
+        Example: 'PROJECT/i_Investigation.txt' -> 'i_Investigation.txt'.
+        :type file_name: str
+
+        :param text: Text to be written in file.
+        :type text: str
+        """
+        # Remove extra info - use basename only
+        file_name = file_name.split('/')[-1]
         out_path = out_path / file_name
         if out_path.exists() and not self.config.overwrite and not self.config.dry_run:
             raise OverwriteRefusedException(
