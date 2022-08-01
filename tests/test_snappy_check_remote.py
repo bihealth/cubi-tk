@@ -81,28 +81,6 @@ def test_findrawdata_run(germline_trio_sheet_object):
                 assert actual_sorted == expected_sorted
 
 
-# Tests FindRemoteFiles ================================================================================================
-
-
-def test_parse_sample_sheet(germline_trio_sheet_object):
-    """Tests FindRemoteFiles.parse_sample_sheet()"""
-    # Initialise object
-    pseudo_args = SimpleNamespace(hash_scheme="MD5")
-    find_obj = FindRemoteFiles(
-        args=pseudo_args,
-        sheet=germline_trio_sheet_object,
-        sodar_url="",
-        sodar_api_token="",
-        assay_uuid="",
-        project_uuid="",
-    )  # noqa: B106
-    # Define expected
-    expected = ["index-N1-DNA1-WES1", "father-N1-DNA1-WES1", "mother-N1-DNA1-WES1"]
-    # Get actual
-    actual = find_obj.parse_sample_sheet()
-    assert actual == expected
-
-
 # Tests Checker ========================================================================================================
 
 
