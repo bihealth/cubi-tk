@@ -51,8 +51,8 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
     def perform(self):
         """Perform class routines.
 
-        :return: Returns dictionary of dictionaries: key: library name (e.g., 'P001-N1-DNA1-WES1'); value: dictionary
-        with list of files (values) per remote directory (key).
+        :return: Returns iRODS collection represented as dictionary: key: file name as string (e.g.,
+        'P001-N1-DNA1-WES1'); value: iRODS data (``IrodsDataObject``).
         """
         logger.info("Starting remote files search ...")
 
@@ -114,8 +114,11 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
     def retrieve_irods_data_objects(self, irods_path):
         """Retrieve data objects from iRODS.
 
-        :param irods_path:
-        :return:
+        :param irods_path: iRODS path.
+        :type irods_path: str
+
+        :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
+        Value: list of IrodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
         """
         # Connect to iRODS
         with self._get_irods_sessions() as irods_sessions:
@@ -134,12 +137,12 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
 
     @staticmethod
     def parse_irods_collection(irods_collection):
-        """
+        """Parse iRODS collection
 
         :param irods_collection: iRODS collection.
         :type irods_collection: dict
 
-        :return: Returns dictionary version of iRODS collection information. Key: File name in iRODS (str);
+        :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
         Value: list of IrodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
         """
         # Initialise variables
