@@ -1,11 +1,7 @@
 """Tests for ``cubi_tk.snappy.pull_processed_data``.
 """
 
-import os
-
 import pytest
-import filecmp
-import glob
 
 from cubi_tk.snappy.pull_processed_data import PullProcessedDataCommand
 from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject

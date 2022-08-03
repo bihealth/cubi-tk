@@ -3,7 +3,6 @@ import os
 from types import SimpleNamespace
 import typing
 
-from biomedsheets import shortcuts
 from irods.exception import OVERWRITE_WITHOUT_FORCE_FLAG
 from logzero import logger
 from pathlib import Path
