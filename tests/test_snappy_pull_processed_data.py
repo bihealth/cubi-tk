@@ -5,7 +5,7 @@ import pytest
 
 from cubi_tk.snappy.pull_processed_data import PullProcessedDataCommand
 from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
-from cubi_tk.__main__ import setup_argparse, main
+from cubi_tk.__main__ import setup_argparse
 
 
 @pytest.fixture
