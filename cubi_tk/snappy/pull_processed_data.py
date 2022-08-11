@@ -201,7 +201,7 @@ class PullProcessedDataCommand(IrodsCheckCommand):
                 ellipsis_ = ""
                 remote_files_str = "\n".join([*remote_files_dict])
 
-            logger.warn(
+            logger.warning(
                 f"No file was found using the selected criteria.\n"
                 f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
             )
@@ -247,7 +247,7 @@ class PullProcessedDataCommand(IrodsCheckCommand):
                     )
                     _out_dir = os.path.join(output_dir, irods_dir_structure)
                 except IndexError:
-                    logger.warn(
+                    logger.warning(
                         f"Provided Assay UUID '{assay_uuid}' is not present in SODAR path, "
                         f"hence directory structure won't be preserved.\n"
                         f"All files will be stored in root of output directory: {output_list}"
