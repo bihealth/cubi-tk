@@ -282,6 +282,7 @@ class PullProcessedDataCommand(IrodsCheckCommand):
         # Iterate
         for key, value in remote_files_dict.items():
             # Check for common links
+            # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
             in_common_links = False
             for irods_obj in value:
                 in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
