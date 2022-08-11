@@ -342,17 +342,20 @@ class PullProcessedDataCommand(IrodsCheckCommand):
                     file_name = pair[0].split("/")[-1]
                     irods_path = pair[0]
                     out_dir = pair[1]
+                    logger.info(f"Retrieving '{file_name}' from: {irods_path}")
                     # Create output directory if necessary
                     Path(out_dir).mkdir(parents=True, exist_ok=True)
                     # Get file
                     irods_sessions[0].data_objects.get(irods_path, out_dir)
-                    logger.info(f"Retrieved '{file_name}' from: {irods_path}")
+
             except OVERWRITE_WITHOUT_FORCE_FLAG:
                 logger.error(
                     f"Failed to retrieve '{file_name}', it already exists in output directory: {out_dir}"
                 )
             except Exception as e:
-                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
+                logger.error(f"Failed to retrieve iRODS path: {irods_path}")
+                logger.error(f"Attempted to copy file to directory: {out_dir}")
+                logger.error(self.get_irods_error(e))
                 raise
 
 
