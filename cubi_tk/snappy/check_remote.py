@@ -332,22 +332,22 @@ class Checker:
                 local_md5 = local_md5.split(" ")[0]
             # Compare to remote MD5
             for irods_dat in remote_dict.get(original_file_name):
-                if local_md5 != irods_dat.file_md5sum:
+                if local_md5 != irods_dat.FILE_MD5SUM:
                     different_md5_list.append((md5_file.replace(".md5", ""), irods_dat.irods_path))
                 else:
                     same_md5_list.append(md5_file.replace(".md5", ""))
                 # BONUS - check remote replicas
                 if not all(
                     (
-                        replica_md5 == irods_dat.file_md5sum
-                        for replica_md5 in irods_dat.replicas_md5sum
+                        replica_md5 == irods_dat.FILE_MD5SUM
+                        for replica_md5 in irods_dat.REPLICAS_MD5SUM
                     )
                 ):
                     logger.error(
                         f"iRODS metadata checksum not consistent with checksum file...\n"
                         f"File: {irods_dat.irods_path}\n"
-                        f"File checksum: {irods_dat.file_md5sum}\n"
-                        f"Metadata checksum: {', '.join(irods_dat.replicas_md5sum)}\n"
+                        f"File checksum: {irods_dat.FILE_MD5SUM}\n"
+                        f"Metadata checksum: {', '.join(irods_dat.REPLICAS_MD5SUM)}\n"
                     )
 
         return same_md5_list, different_md5_list

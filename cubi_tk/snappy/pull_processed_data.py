@@ -276,14 +276,40 @@ class PullProcessedDataCommand(IrodsCheckCommand):
         """
         # Initialise variables
         filtered_dict = {}
+
         extensions_tuple = self.file_type_to_extensions_dict.get(file_type)
 
-        # Iterate and filter
+        # Iterate
         for key, value in remote_files_dict.items():
-            if any(id_ in key for id_ in identifiers) and key.endswith(extensions_tuple):
+            # Check for common links
+            in_common_links = False
+            for irods_obj in value:
+                in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
+                if in_common_links:
+                    break
+
+            # Filter
+            if (
+                any(id_ in key for id_ in identifiers)  # presence of identifiers
+                and key.endswith(extensions_tuple)  # correct file extension
+                and not in_common_links  # not in common links
+            ):
                 filtered_dict[key] = value
 
         return filtered_dict
+
+    @staticmethod
+    def _irods_path_in_common_links(irods_path):
+        """Checks if iRODS path is from common links, i.e., in 'ResultsReports', 'MiscFiles', 'TrackHubs'.
+
+        :param irods_path: iRODS path
+        :type irods_path: str
+
+        :return: Return True if path is in common links; otherwise, False.
+        """
+        common_links = {"ResultsReports", "MiscFiles", "TrackHubs"}
+        path_part_set = set(irods_path.split("/"))
+        return len(common_links.intersection(path_part_set)) > 0
 
     def get_assay_uuuid(self):
         """Get assay UUID.

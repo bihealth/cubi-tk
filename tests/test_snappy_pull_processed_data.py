@@ -7,6 +7,12 @@ from cubi_tk.snappy.pull_processed_data import PullProcessedDataCommand
 from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
 from cubi_tk.__main__ import setup_argparse
 
+# Empty file MD5 checksum
+FILE_MD5SUM = "d41d8cd98f00b204e9800998ecf8427e"
+
+# Arbitrary replicas MD5 checksum value
+REPLICAS_MD5SUM = [FILE_MD5SUM] * 3
+
 
 @pytest.fixture
 def pull_processed_data():
@@ -16,45 +22,43 @@ def pull_processed_data():
 @pytest.fixture
 def remote_files_bam():
     """Returns iRODS collection example for BAM files and two samples, P001 and P002"""
-    file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
     p0001_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
     )
     p0002_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P002-N1-DNA1-WES1/1999-09-09"
     )
-    replicas_md5sum = [file_md5sum] * 3
     return {
         "bwa.P001-N1-DNA1-WES1.bam": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.bam",
                 irods_path=f"{p0001_sodar_path}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P001-N1-DNA1-WES1.bam.bai": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.bam.bai",
                 irods_path=f"{p0001_sodar_path}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam.bai",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P002-N1-DNA1-WES1.bam": [
             IrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.bam",
                 irods_path=f"{p0002_sodar_path}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P002-N1-DNA1-WES1.bam.bai": [
             IrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.bam.bai",
                 irods_path=f"{p0002_sodar_path}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam.bai",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
     }
@@ -63,45 +67,43 @@ def remote_files_bam():
 @pytest.fixture
 def remote_files_vcf():
     """Returns iRODS collection example for VCF files and two samples, P001 and P002"""
-    file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
     p0001_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
     )
     p0002_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P002-N1-DNA1-WES1/1999-09-09"
     )
-    replicas_md5sum = [file_md5sum] * 3
     return {
         "bwa.P001-N1-DNA1-WES1.vcf.gz": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.vcf.gz",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.vcf.gz",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P001-N1-DNA1-WES1.vcf.gz.tbi": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.vcf.gz.tbi",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.vcf.gz.tbi",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P002-N1-DNA1-WES1.vcf.gz": [
             IrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.vcf.gz",
                 irods_path=f"{p0002_sodar_path}/variant_calling/bwa.P002-N1-DNA1-WES1.vcf.gz",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P002-N1-DNA1-WES1.vcf.gz.tbi": [
             IrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.vcf.gz.tbi",
                 irods_path=f"{p0002_sodar_path}/variant_calling/bwa.P002-N1-DNA1-WES1.vcf.gz.tbi",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
     }
@@ -110,34 +112,32 @@ def remote_files_vcf():
 @pytest.fixture
 def remote_files_log():
     """Returns iRODS collection example for LOG files and one samples, P001."""
-    file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
     p0001_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
     )
-    replicas_md5sum = [file_md5sum] * 3
     return {
         "bwa.P001-N1-DNA1-WES1.conda_info.txt": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.conda_info.txt",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.conda_info.txt",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P001-N1-DNA1-WES1.conda_list.txt": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.conda_list.txt",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.conda_list.txt",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
         "bwa.P001-N1-DNA1-WES1.log": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.log",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.log",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ],
     }
@@ -146,18 +146,16 @@ def remote_files_log():
 @pytest.fixture
 def remote_files_txt():
     """Returns iRODS collection example for TXT files and one samples, P001."""
-    file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
     p0001_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
     )
-    replicas_md5sum = [file_md5sum] * 3
     return {
         "bwa.P001-N1-DNA1-WES1.txt": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.txt",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.txt",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ]
     }
@@ -166,20 +164,52 @@ def remote_files_txt():
 @pytest.fixture
 def remote_files_csv():
     """Returns iRODS collection example for CSV files and one samples, P001."""
-    file_md5sum = "d41d8cd98f00b204e9800998ecf8427e"
     p0001_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
     )
-    replicas_md5sum = [file_md5sum] * 3
     return {
         "bwa.P001-N1-DNA1-WES1.csv": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.csv",
                 irods_path=f"{p0001_sodar_path}/variant_calling/bwa.P001-N1-DNA1-WES1.csv",
-                file_md5sum=file_md5sum,
-                replicas_md5sum=replicas_md5sum,
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
             )
         ]
+    }
+
+
+@pytest.fixture
+def remote_files_common_links_txt():
+    """Returns iRODS collection example for TXT files and one samples, P001.
+    All files are stored in common links, i.e., 'ResultsReports', 'MiscFiles', and 'TrackHubs'.
+    """
+    sodar_path = "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999"
+    return {
+        "bwa.P001-N1-DNA1-WES1_MiscFiles.txt": [
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1.txt",
+                irods_path=f"{sodar_path}/MiscFiles/bwa.P001-N1-DNA1-WES1_MiscFiles.txt",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            )
+        ],
+        "bwa.P001-N1-DNA1-WES1_ResultsReports.txt": [
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1_ResultsReports.txt",
+                irods_path=f"{sodar_path}/ResultsReports/bwa.P001-N1-DNA1-WES1_ResultsReports.txt",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            )
+        ],
+        "bwa.P001-N1-DNA1-WES1_TrackHubs.txt": [
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1_TrackHubs.txt",
+                irods_path=f"{sodar_path}/TrackHubs/bwa.P001-N1-DNA1-WES1_TrackHubs.txt",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            )
+        ],
     }
 
 
@@ -389,6 +419,29 @@ def test_pull_processed_data_filter_irods_collection_txt(pull_processed_data, re
         identifiers=library_name_list, remote_files_dict=remote_files_all, file_type=file_type
     )
     assert all([key in expected_keys for key in actual.keys()])
+
+
+def test_pull_processed_data_filter_irods_collection_txt_ignore_common_links(
+    pull_processed_data, remote_files_txt, remote_files_common_links_txt
+):
+    """Tests PullProcessedDataCommand.filter_irods_collection() - TXT files, igore common links"""
+    # Define input
+    samples_list = ["P001"]
+    library_name_list = ["P001-N1-DNA1-WES1"]
+    file_type = "txt"
+    remote_files_combined = {**remote_files_txt, **remote_files_common_links_txt}
+
+    # Call with samples id as identifiers
+    actual = pull_processed_data.filter_irods_collection(
+        identifiers=samples_list, remote_files_dict=remote_files_combined, file_type=file_type
+    )
+    assert actual == remote_files_txt
+
+    # Call with library names as identifiers
+    actual = pull_processed_data.filter_irods_collection(
+        identifiers=library_name_list, remote_files_dict=remote_files_combined, file_type=file_type
+    )
+    assert actual == remote_files_txt
 
 
 def test_pull_processed_data_pair_ipath_with_outdir_bam(pull_processed_data, remote_files_bam):
