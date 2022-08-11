@@ -195,11 +195,11 @@ class PullProcessedDataCommand(IrodsCheckCommand):
             if len(remote_files_dict) > 50:
                 limited_str = " (limited to first 50)"
                 ellipsis_ = "..."
-                remote_files_str = "\n".join(remote_files_dict.keys()[50])
+                remote_files_str = "\n".join([*remote_files_dict][:50])
             else:
                 limited_str = ""
                 ellipsis_ = ""
-                remote_files_str = "\n".join(remote_files_dict.keys())
+                remote_files_str = "\n".join([*remote_files_dict])
 
             logger.warn(
                 f"No file was found using the selected criteria.\n"
