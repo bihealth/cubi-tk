@@ -39,3 +39,6 @@ mypy
 bandit
 pyflakes
 prospector
+
+# Pin version to avoid python 2 to 3 breaks (prospector)
+setuptools ==58.0.0

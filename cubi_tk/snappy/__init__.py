@@ -39,6 +39,7 @@ from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ng
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
 from .itransfer_step import setup_argparse as setup_argparse_itransfer_step
 from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
+from .pull_processed_data import setup_argparse as setup_argparse_pull_processed_data
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .kickoff import setup_argparse as setup_argparse_kickoff
 from .varfish_upload import setup_argparse as setup_argparse_varfish_upload
@@ -54,6 +55,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
             help="Check consistency within local sample sheet and between local sheets and files",
         )
     )
+
     setup_argparse_check_remote(
         subparsers.add_parser(
             "check-remote", help="Check consistency within remote sample sheet and files"
@@ -63,17 +65,20 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_itransfer_raw_data(
         subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")
     )
+
     setup_argparse_itransfer_ngs_mapping(
         subparsers.add_parser(
             "itransfer-ngs-mapping", help="Transfer ngs_mapping results into iRODS landing zone"
         )
     )
+
     setup_argparse_itransfer_variant_calling(
         subparsers.add_parser(
             "itransfer-variant-calling",
             help="Transfer variant_calling results into iRODS landing zone",
         )
     )
+
     setup_argparse_itransfer_step(
         subparsers.add_parser(
             "itransfer-step", help="Transfer snappy step results into iRODS landing zone"
@@ -83,6 +88,14 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_pull_sheets(
         subparsers.add_parser("pull-sheets", help="Pull SODAR sample sheets into biomedsheet")
     )
+
+    setup_argparse_pull_processed_data(
+        subparsers.add_parser(
+            "pull-processed-data",
+            help="Pull processed data from SODAR to specified output directory",
+        )
+    )
+
     setup_argparse_pull_raw_data(
         subparsers.add_parser(
             "pull-raw-data", help="Pull raw data from SODAR to SNAPPY dataset raw data directory"

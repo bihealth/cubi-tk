@@ -1,16 +1,10 @@
 """Tests for ``cubi_tk.snappy.check_remote``."""
 import pathlib
-from types import SimpleNamespace
 
 import pytest
 
-from cubi_tk.snappy.check_remote import (
-    Checker,
-    FindLocalFiles,
-    FindLocalRawdataFiles,
-    FindRemoteFiles,
-    IrodsDataObject,
-)
+from cubi_tk.snappy.check_remote import Checker, FindLocalFiles, FindLocalRawdataFiles
+from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
 
 
 # Tests FindLocalFiles =================================================================================================
@@ -79,28 +73,6 @@ def test_findrawdata_run(germline_trio_sheet_object):
                 actual_sorted = sorted(actual["index-N1-DNA1-WES1"][actual_dir])
                 expected_sorted = sorted(expected.get(expected_dir))
                 assert actual_sorted == expected_sorted
-
-
-# Tests FindRemoteFiles ================================================================================================
-
-
-def test_parse_sample_sheet(germline_trio_sheet_object):
-    """Tests FindRemoteFiles.parse_sample_sheet()"""
-    # Initialise object
-    pseudo_args = SimpleNamespace(hash_scheme="MD5")
-    find_obj = FindRemoteFiles(
-        args=pseudo_args,
-        sheet=germline_trio_sheet_object,
-        sodar_url="",
-        sodar_api_token="",
-        assay_uuid="",
-        project_uuid="",
-    )  # noqa: B106
-    # Define expected
-    expected = ["index-N1-DNA1-WES1", "father-N1-DNA1-WES1", "mother-N1-DNA1-WES1"]
-    # Get actual
-    actual = find_obj.parse_sample_sheet()
-    assert actual == expected
 
 
 # Tests Checker ========================================================================================================
