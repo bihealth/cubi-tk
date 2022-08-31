@@ -145,10 +145,10 @@ _TEMPLATES = (
         configuration=load_variables("isatab-ms_meta_biocrates"),
     ),
     IsaTabTemplate(
-    name="stem_cell_core",
-    path=os.path.join(_BASE_DIR, "isatab-stem_cell_core"),
-    description="RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
-    configuration=load_variables("isatab-stem_cell_core"),
+        name="stem_cell_core",
+        path=os.path.join(_BASE_DIR, "isatab-stem_cell_core"),
+        description="RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
+        configuration=load_variables("isatab-stem_cell_core"),
     ),
 )
 
