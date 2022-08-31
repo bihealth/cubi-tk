@@ -1,0 +1,8 @@
+{% set sample_names = cookiecutter.sample_names.split(",") -%}
+{% set dissociation_meta = cookiecutter.dissociation_meta.split(",") -%}
+{% set library_construction_meta = cookiecutter.library_construction_meta.split(",") -%}
+{% set sequencing_meta = cookiecutter.sequencing_meta.split(",") -%}
+Sample Name	Protocol REF	Parameter Value[Passed]	Protocol REF	Parameter Value[Dissociation method]{%+ for meta in dissociation_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Protocol REF	Parameter Value[Library kit]	Parameter Value[Library type]	Parameter Value[Multiplex genotype]	Parameter Value[Multiplex sample]	Parameter Value[Multiplex oligo]{%+ for meta in library_construction_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Extract Name	Protocol REF	Parameter Value[Sequencing run]	Parameter Value[Library prefix]	Parameter Value[Barcode kit]	Parameter Value[Barcode name]{%+ for meta in sequencing_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Library Name
+{% for sample_name in sample_names -%}
+{{sample_name|replace("-", "_")}}	OverallQC		Dissociation	{%+ for meta in dissociation_meta %}	{% endfor %}			Library construction	{{cookiecutter.library_kit}}	{{cookiecutter.library_type}} Gene Expression				{%+ for meta in library_construction_meta %}	{% endfor %}		{{sample_name}}_GEX	Nucleic acid sequencing		{{sample_name}}_GEX		{%+ for meta in sequencing_meta %}	{% endfor %}			{{sample_name}}
+{% endfor -%}
