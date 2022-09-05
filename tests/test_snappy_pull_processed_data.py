@@ -456,27 +456,38 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam(pull_processed_data, rem
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P00{i}-N1-DNA1-WES1/1999-09-09/ngs_mapping/"
         "bwa.P00{i}-N1-DNA1-WES1.{ext}"
     )
-    full_out_dir = "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/ngs_mapping"
+    full_out_dir = (
+        "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/ngs_mapping/bwa.P00{i}-N1-DNA1-WES1.{ext}"
+    )
     irods_files_list = [
         irods_path.format(i=i, ext=ext)
         for i in (1, 2)
         for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
     ]
-    output_dir_list = [full_out_dir.format(i=1)] * 4 + [full_out_dir.format(i=2)] * 4
+    correct_uuid_output_dir_list = [
+        full_out_dir.format(i=i, ext=ext)
+        for i in (1, 2)
+        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+    ]
+    wrong_uuid_output_dir_list = [
+        "out_dir/bwa.P00{i}-N1-DNA1-WES1.{ext}".format(i=i, ext=ext)
+        for i in (1, 2)
+        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+    ]
     correct_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
         correct_uuid_expected.append((_irods_path, _out_path))
     wrong_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, [out_dir] * 8):
+    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list):
         wrong_uuid_expected.append((_irods_path, _out_path))
 
-    # Test with correct assay UUID
+    # Test with correct assay UUID - directory structure same as in SODAR
     actual = pull_processed_data.pair_ipath_with_outdir(
         remote_files_dict=remote_files_bam, output_dir=out_dir, assay_uuid=assay_uuid
     )
     assert sorted(actual) == sorted(correct_uuid_expected)
 
-    # Test with wrong assay UUID
+    # Test with wrong assay UUID - all files copied to root of output directory
     actual = pull_processed_data.pair_ipath_with_outdir(
         remote_files_dict=remote_files_bam, output_dir=out_dir, assay_uuid=wrong_assay_uuid
     )
@@ -495,27 +506,38 @@ def test_pull_processed_data_pair_ipath_with_outdir_vcf(pull_processed_data, rem
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P00{i}-N1-DNA1-WES1/1999-09-09/variant_calling/"
         "bwa.P00{i}-N1-DNA1-WES1.{ext}"
     )
-    full_out_dir = "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/variant_calling"
+    full_out_dir = (
+        "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/variant_calling/bwa.P00{i}-N1-DNA1-WES1.{ext}"
+    )
     irods_files_list = [
         irods_path.format(i=i, ext=ext)
         for i in (1, 2)
         for ext in ("vcf.gz", "vcf.gz.tbi", "vcf.gz.md5", "vcf.gz.tbi.md5")
     ]
-    output_dir_list = [full_out_dir.format(i=1)] * 4 + [full_out_dir.format(i=2)] * 4
+    correct_uuid_output_dir_list = [
+        full_out_dir.format(i=i, ext=ext)
+        for i in (1, 2)
+        for ext in ("vcf.gz", "vcf.gz.tbi", "vcf.gz.md5", "vcf.gz.tbi.md5")
+    ]
+    wrong_uuid_output_dir_list = [
+        "out_dir/bwa.P00{i}-N1-DNA1-WES1.{ext}".format(i=i, ext=ext)
+        for i in (1, 2)
+        for ext in ("vcf.gz", "vcf.gz.tbi", "vcf.gz.md5", "vcf.gz.tbi.md5")
+    ]
     correct_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
         correct_uuid_expected.append((_irods_path, _out_path))
     wrong_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, [out_dir] * 8):
+    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list):
         wrong_uuid_expected.append((_irods_path, _out_path))
 
-    # Test with correct assay UUID
+    # Test with correct assay UUID - directory structure same as in SODAR
     actual = pull_processed_data.pair_ipath_with_outdir(
         remote_files_dict=remote_files_vcf, output_dir=out_dir, assay_uuid=assay_uuid
     )
     assert sorted(actual) == sorted(correct_uuid_expected)
 
-    # Test with wrong assay UUID
+    # Test with wrong assay UUID - all files copied to root of output directory
     actual = pull_processed_data.pair_ipath_with_outdir(
         remote_files_dict=remote_files_vcf, output_dir=out_dir, assay_uuid=wrong_assay_uuid
     )

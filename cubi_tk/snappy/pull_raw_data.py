@@ -9,16 +9,21 @@ More Information
 """
 
 import argparse
+from collections import defaultdict
 import os
 import pathlib
+from types import SimpleNamespace
 import typing
 
 import attr
 from logzero import logger
 import yaml
 
-from .common import find_snappy_root_dir
-from ..sodar import pull_raw_data as sodar_pull_raw_data
+from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
+from ..common import load_toml_config
+from .parse_sample_sheet import ParseSampleSheet
+from .pull_data_common import PullDataCommon
+from .retrieve_irods_collection import RetrieveIrodsCollection, DEFAULT_HASH_SCHEME
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -26,26 +31,28 @@ class Config:
     """Configuration for the pull-raw-data."""
 
     base_path: str
-    config: str
     verbose: bool
     sodar_server_url: str
     sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
+    tsv_shortcut: str
     overwrite: bool
-    min_batch: int
     dry_run: bool
-    irsync_threads: int
-    yes: bool
-    project_uuid: str
-    assay: str
+    first_batch: int
+    last_batch: int
     samples: typing.List[str]
-    allow_missing: bool
+    assay_uuid: str
+    project_uuid: str
 
 
-class PullRawDataCommand:
+class PullRawDataCommand(PullDataCommon):
     """Implementation of the ``snappy pull-raw-data`` command."""
 
+    #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
+    file_type_to_extensions_dict = {"fastq": ("fastq.gz",)}
+
     def __init__(self, config: Config):
+        PullDataCommon.__init__(self)
         #: Command line arguments.
         self.config = config
 
@@ -55,7 +62,6 @@ class PullRawDataCommand:
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
         parser.add_argument(
             "--base-path",
             default=os.getcwd(),
@@ -65,7 +71,6 @@ class PullRawDataCommand:
                 "work directory and falls back to current working directory by default."
             ),
         )
-
         group_sodar = parser.add_argument_group("SODAR-related")
         group_sodar.add_argument(
             "--sodar-url",
@@ -77,36 +82,35 @@ class PullRawDataCommand:
             default=os.environ.get("SODAR_API_TOKEN", None),
             help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
-
-        parser.add_argument(
-            "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
-        )
-        parser.add_argument("--min-batch", default=0, type=int, help="Minimal batch number to pull")
-        parser.add_argument("--samples", help="Optional list of samples to pull")
-
-        parser.add_argument(
-            "--allow-missing",
-            default=False,
-            action="store_true",
-            help="Allow missing data in assay",
-        )
-
-        parser.add_argument(
-            "--yes", default=False, action="store_true", help="Assume all answers are yes."
-        )
         parser.add_argument(
             "--dry-run",
             "-n",
             default=False,
             action="store_true",
-            help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
+            help="Perform a dry run, i.e., just displays the files that would be downloaded.",
         )
-        parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
-
         parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
+            "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
         )
-
+        parser.add_argument(
+            "--tsv-shortcut",
+            default="germline",
+            choices=("cancer", "generic", "germline"),
+            help="The shortcut TSV schema to use.",
+        )
+        parser.add_argument(
+            "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
+        )
+        parser.add_argument(
+            "--last-batch", type=int, required=False, help="Last batch to be transferred."
+        )
+        parser.add_argument("--samples", help="Optional list of samples to pull")
+        parser.add_argument(
+            "--assay-uuid",
+            dest="assay_uuid",
+            default=None,
+            help="UUID of assay to create landing zone for.",
+        )
         parser.add_argument("project_uuid", help="UUID of project to download data for.")
 
     @classmethod
@@ -114,26 +118,36 @@ class PullRawDataCommand:
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
+        # If SODAR info not provided, fetch from user's toml file
+        toml_config = load_toml_config(args)
+        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
+        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
+            "sodar_api_token"
+        )
         args = vars(args)
+        # Adjust `base_path` to snappy root
+        args["base_path"] = find_snappy_root_dir(args["base_path"])
+        # Remove unnecessary arguments
+        args.pop("config", None)
         args.pop("cmd", None)
         args.pop("snappy_cmd", None)
-        args["base_path"] = find_snappy_root_dir(args["base_path"])
         return cls(Config(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         logger.info("Loading configuration file and look for dataset")
 
+        # Find snappy config
         with (pathlib.Path(self.config.base_path) / ".snappy_pipeline" / "config.yaml").open(
             "rt"
         ) as inputf:
             config = yaml.safe_load(inputf)
+        # Parse available datasets in config
         if "data_sets" not in config:
             logger.error(
-                "Could not find configuration key %s in %s", repr("data_sets"), inputf.name
+                f"Could not find configuration key '{repr('data_sets')}' in {inputf.name}."
             )
             return 1
-        data_set = {}
         for key, data_set in config["data_sets"].items():
             if (
                 key == self.config.project_uuid
@@ -142,41 +156,204 @@ class PullRawDataCommand:
                 break
         else:  # no "break" out of for-loop
             logger.error(
-                "Could not find dataset with key/sodar_uuid entry of %s", self.config.project_uuid
+                f"Could not find dataset with key/sodar_uuid entry of {self.config.project_uuid}"
             )
             return 1
         if not data_set.get("search_paths"):
-            logger.error("data set has no attribute %s", repr("search_paths"))
+            logger.error(f"Data set has no attribute {repr('search_paths')}")
             return 1
 
         download_path = data_set["search_paths"][-1]
-        logger.info("=> will download to %s", download_path)
+        logger.info(f"=> will download to {download_path}")
 
-        logger.info("Using cubi-tk sodar pull-raw-data to actually download data")
-        res = sodar_pull_raw_data.PullRawDataCommand(
-            sodar_pull_raw_data.Config(
-                config=self.config.config,
-                verbose=self.config.verbose,
-                sodar_server_url=self.config.sodar_server_url,
+        # Find biomedsheet file
+        biomedsheet_tsv = get_biomedsheet_path(
+            start_path=self.config.base_path, uuid=self.config.project_uuid
+        )
+        # Raw sample sheet.
+        sheet = load_sheet_tsv(biomedsheet_tsv, self.config.tsv_shortcut)
+
+        # Filter requested samples and folder directories
+        parser = ParseSampleSheet()
+        selected_identifiers_tuples = list(
+            parser.yield_sample_and_folder_names(
+                sheet=sheet, min_batch=self.config.first_batch, max_batch=self.config.last_batch
+            )
+        )
+        selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
+
+        # Get assay UUID if not provided
+        assay_uuid = None
+        if not self.config.assay_uuid:
+            assay_uuid = self.get_assay_uuid(
                 sodar_url=self.config.sodar_url,
                 sodar_api_token=self.config.sodar_api_token,
-                overwrite=self.config.overwrite,
-                min_batch=self.config.min_batch,
-                allow_missing=self.config.allow_missing,
-                dry_run=self.config.dry_run,
-                irsync_threads=self.config.irsync_threads,
-                yes=self.config.yes,
                 project_uuid=self.config.project_uuid,
-                assay=self.config.assay,
-                output_dir=download_path,
             )
-        ).execute()
 
-        if res:
-            logger.error("cubi-tk sodar pull-raw-data failed")
+        # Find all remote files (iRODS)
+        pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
+        remote_files_dict = RetrieveIrodsCollection(
+            pseudo_args,
+            self.config.sodar_url,
+            self.config.sodar_api_token,
+            self.config.assay_uuid,
+            self.config.project_uuid,
+        ).perform()
+
+        # Filter based on identifiers and file type
+        filtered_remote_files_dict = self.filter_irods_collection(
+            identifiers=selected_identifiers, remote_files_dict=remote_files_dict, file_type="fastq"
+        )
+        if len(filtered_remote_files_dict) == 0:
+            extensions = self.file_type_to_extensions_dict.get("fastq")
+            remote_files_fastq = [
+                file_ for file_ in remote_files_dict if file_.endswith(extensions)
+            ]
+            remote_files_fastq = sorted(remote_files_fastq)
+            if len(remote_files_dict) > 50:
+                limited_str = " (limited to first 50)"
+                ellipsis_ = "..."
+                remote_files_str = "\n".join(remote_files_fastq[:50])
+            else:
+                limited_str = ""
+                ellipsis_ = ""
+                remote_files_str = "\n".join(remote_files_fastq)
+            logger.warning(
+                f"No file was found using the selected criteria.\n"
+                f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+            )
+            return 0
+
+        # Pair iRODS path with output path
+        library_to_irods_dict = self.get_library_to_irods_dict(
+            identifiers=selected_identifiers, remote_files_dict=filtered_remote_files_dict
+        )
+        path_pair_list = self.pair_ipath_with_outdir(
+            library_to_irods_dict=library_to_irods_dict,
+            identifiers_tuples=selected_identifiers_tuples,
+            output_dir=download_path,
+            assay_uuid=self.config.assay_uuid or assay_uuid,
+        )
+
+        # Retrieve files from iRODS or print
+        if not self.config.dry_run:
+            self.get_irods_files(
+                irods_local_path_pairs=path_pair_list, force_overwrite=self.config.overwrite
+            )
         else:
-            logger.info("All done. Have a nice day!")
-        return res
+            self._report_files(
+                irods_local_path_pairs=path_pair_list, identifiers=selected_identifiers
+            )
+
+        logger.info("All done. Have a nice day!")
+        return 0
+
+    @staticmethod
+    def pair_ipath_with_outdir(library_to_irods_dict, identifiers_tuples, assay_uuid, output_dir):
+        """Pair iRODS path with local output directory
+
+        :param library_to_irods_dict: Dictionary with iRODS collection information by sample. Key: sample name as
+        string (e.g., 'P001'); Value: iRODS data (``IrodsDataObject``).
+        :type library_to_irods_dict: dict
+
+        :param identifiers_tuples: List of tuples (sample name, folder name) as defined in the sample sheet.
+        :type identifiers_tuples: List[Tuple[str, str]]
+
+        :param output_dir: Output directory path.
+        :type output_dir: str
+
+        :param assay_uuid: Assay UUID - used as a hack to get the directory structure in SODAR.
+        :type assay_uuid: str
+
+        :return: Return list of tuples (iRODS path [str], local output directory [str]).
+        """
+        # Initiate output
+        output_list = []
+        # Iterate over samples and iRODS objects
+        for pair in identifiers_tuples:
+            id_ = pair[0]
+            folder_name = pair[1]
+            irods_obj_list = library_to_irods_dict.get(id_)
+            if not irods_obj_list:
+                logger.warning(f"No files found for sample '{id_}'.")
+                continue
+            for irods_obj in irods_obj_list:
+                # Keeps iRODS directory structure if assay UUID is provided.
+                # Assumption is that SODAR directories follow the logic below:
+                # /sodarZone/projects/../<PROJECT_UUID>/sample_data/study_<STUDY_UUID>/assay_<ASSAY_UUID>/<LIBRARY_NAME>
+                try:
+                    irods_dir_structure = os.path.dirname(
+                        str(irods_obj.irods_path).split(f"assay_{assay_uuid}/")[1]
+                    )
+                    _out_path = os.path.join(
+                        output_dir, folder_name, irods_dir_structure, irods_obj.file_name
+                    )
+                except IndexError:
+                    logger.warning(
+                        f"Provided Assay UUID '{assay_uuid}' is not present in SODAR path, "
+                        f"hence directory structure won't be preserved.\n"
+                        f"All files will be stored in root of output directory: {output_list}"
+                    )
+                    _out_path = os.path.join(output_dir, folder_name, irods_obj.file_name)
+                # Update output
+                output_list.append((irods_obj.irods_path, _out_path))
+                output_list.append((irods_obj.irods_path + ".md5", _out_path + ".md5"))
+
+        return output_list
+
+    @staticmethod
+    def get_library_to_irods_dict(identifiers, remote_files_dict):
+        """Get dictionary library name to iRODS object
+
+        :param identifiers: List of selected identifiers, sample name.
+        :type identifiers: list
+
+        :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
+        'P001_R1_001.fastq.gz'); Value: iRODS data (``IrodsDataObject``).
+        :type remote_files_dict: dict
+
+        :return: Returns dictionary: Key: identifier (sample name [str]); Value: list of iRODS objects.
+        """
+        out_dict = {}
+        for id_ in identifiers:
+            out_dict[id_] = sum(
+                [remote_files_dict.get(key) for key in remote_files_dict if id_ in key], []
+            )
+        return out_dict
+
+    @staticmethod
+    def _report_files(irods_local_path_pairs, identifiers):
+        """Report iRODS files associated with identifiers (dry-run).
+
+        :param irods_local_path_pairs: List of tuples (iRODS path [str], local output directory [str]).
+        :type irods_local_path_pairs: List[Tuple[str, str]]
+
+        :param identifiers: List of selected identifiers (sample names).
+        :type identifiers: list
+        """
+        # Initiate variable
+        library_to_irods_file = defaultdict(list)
+        report_str = "Download files from SODAR (dry-run)\n\n"
+        # Iterate over pairs
+        for pair in irods_local_path_pairs:
+            file_name = pair[0].split("/")[-1]
+            for library_name in identifiers:
+                if library_name in file_name:
+                    library_to_irods_file[library_name].append(file_name)
+                    break
+        # Build string
+        for library_name in identifiers:
+            _template_str = f"- Library '{library_name}' has {{n_files}} files{{punctuation}}\n"
+            file_list = library_to_irods_file.get(library_name, None)
+            if not file_list:
+                report_str += _template_str.format(n_files=0, punctuation=".")
+            else:
+                report_str += _template_str.format(n_files=len(file_list), punctuation=":")
+                for file_ in sorted(file_list):
+                    report_str += f"\t{file_}\n"
+        # Report
+        logger.info(report_str)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
