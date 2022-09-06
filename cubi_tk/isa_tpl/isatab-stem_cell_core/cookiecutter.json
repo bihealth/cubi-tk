@@ -3,7 +3,7 @@
   "sample_names": "sample1,sample2",
   "a_measurement_type": "transcription profiling",
   "source_type": ["hiPSC", "tissue"],
-  "source_meta": "Genetic modfications,Passage",
+  "source_meta": "Genetic modfications,Passage,Expansion ID",
   "model_type": ["3D", "2D"],
   "sample_meta": "Tissue type,Differentiation duration,Condition,Treatment,Treatment duration",
   "library_type": ["Single-Cell", "Bulk"],
