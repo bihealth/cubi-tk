@@ -37,7 +37,7 @@ class PullDataCommon(IrodsCheckCommand):
         :param file_type: File type, example: 'bam' or 'vcf'.
         :type file_type: str
 
-        :return: Returns filtered iRODS collection dictionary.
+        :return: Returns dictionary: Key: identifier (sample name [str]); Value: list of iRODS objects.
         """
         # Initialise variables
         filtered_dict = {}
@@ -45,6 +45,11 @@ class PullDataCommon(IrodsCheckCommand):
 
         # Iterate
         for key, value in remote_files_dict.items():
+
+            # Simplify criteria: must have the correct file extension
+            if not key.endswith(extensions_tuple):
+                continue
+
             # Check for common links
             # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
             in_common_links = False
@@ -56,7 +61,6 @@ class PullDataCommon(IrodsCheckCommand):
             # Filter
             if (
                 any(id_ in key for id_ in identifiers)  # presence of identifiers
-                and key.endswith(extensions_tuple)  # correct file extension
                 and not in_common_links  # not in common links
             ):
                 filtered_dict[key] = value
