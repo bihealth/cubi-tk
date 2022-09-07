@@ -3,8 +3,10 @@
 Available Commands
 ------------------
 
-``check``
+``check-local``
     Check consistency within sample sheet but also between sample sheet and files.
+``check-remote``
+    Check consistency between local files and files stored in SODAR.
 ``itransfer-raw-data``
     Transfer raw data from ``work/input_links`` directory of ``ngs_mapping``.
 ``itransfer-ngs-mapping``
@@ -15,8 +17,12 @@ Available Commands
     Transfer results and logs from ``output`` directory of any snappy pipeline step.
 ``pull-sheet``
     Pull sample sheet from SODAR and write out to BiomedSheet format.
+``pull-all-data``
+    Download all data from SODAR.
+``pull-processed-data``
+    Download processed data (e.g., BAM or VCF files) from SODAR.
 ``pull-raw-data``
-    Download raw data from SODAR.
+    Download raw data (i.e., FASTQ files) from SODAR.
 ``varfish-upload``
     Upload data into VarFish.
 
@@ -39,6 +45,7 @@ from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ng
 from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
 from .itransfer_step import setup_argparse as setup_argparse_itransfer_step
 from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
+from .pull_all_data import setup_argparse as setup_argparse_pull_all_data
 from .pull_processed_data import setup_argparse as setup_argparse_pull_processed_data
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .kickoff import setup_argparse as setup_argparse_kickoff
@@ -87,6 +94,12 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_pull_sheets(
         subparsers.add_parser("pull-sheets", help="Pull SODAR sample sheets into biomedsheet")
+    )
+
+    setup_argparse_pull_all_data(
+        subparsers.add_parser(
+            "pull-all-data", help="Pull all data from SODAR to specified output directory"
+        )
     )
 
     setup_argparse_pull_processed_data(
