@@ -36,6 +36,7 @@ class Config:
     sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     tsv_shortcut: str
+    sodar_directory: str
     overwrite: bool
     dry_run: bool
     first_batch: int
@@ -106,6 +107,12 @@ class PullRawDataCommand(PullDataCommon):
         )
         parser.add_argument("--samples", help="Optional list of samples to pull")
         parser.add_argument(
+            "--sodar-directory",
+            default=None,
+            required=False,
+            help="SODAR directory name expected for raw data path, e.g.: 'raw_data'.",
+        )
+        parser.add_argument(
             "--assay-uuid",
             dest="assay_uuid",
             default=None,
@@ -137,49 +144,32 @@ class PullRawDataCommand(PullDataCommon):
         """Execute the download."""
         logger.info("Loading configuration file and look for dataset")
 
-        # Find snappy config
-        with (pathlib.Path(self.config.base_path) / ".snappy_pipeline" / "config.yaml").open(
-            "rt"
-        ) as inputf:
-            config = yaml.safe_load(inputf)
-        # Parse available datasets in config
-        if "data_sets" not in config:
-            logger.error(
-                f"Could not find configuration key '{repr('data_sets')}' in {inputf.name}."
-            )
+        # Find download path
+        download_path = self._get_download_path()
+        if not download_path:
             return 1
-        for key, data_set in config["data_sets"].items():
-            if (
-                key == self.config.project_uuid
-                or data_set.get("sodar_uuid") == self.config.project_uuid
-            ):
-                break
-        else:  # no "break" out of for-loop
-            logger.error(
-                f"Could not find dataset with key/sodar_uuid entry of {self.config.project_uuid}"
-            )
-            return 1
-        if not data_set.get("search_paths"):
-            logger.error(f"Data set has no attribute {repr('search_paths')}")
-            return 1
-
-        download_path = data_set["search_paths"][-1]
         logger.info(f"=> will download to {download_path}")
 
-        # Find biomedsheet file
+        # Get sample sheet
         biomedsheet_tsv = get_biomedsheet_path(
             start_path=self.config.base_path, uuid=self.config.project_uuid
         )
-        # Raw sample sheet.
         sheet = load_sheet_tsv(biomedsheet_tsv, self.config.tsv_shortcut)
 
         # Filter requested samples and folder directories
         parser = ParseSampleSheet()
-        selected_identifiers_tuples = list(
-            parser.yield_sample_and_folder_names(
-                sheet=sheet, min_batch=self.config.first_batch, max_batch=self.config.last_batch
+        if self.config.sodar_directory:
+            selected_identifiers_tuples = list(
+                parser.yield_ngs_library_and_folder_names(
+                    sheet=sheet, min_batch=self.config.first_batch, max_batch=self.config.last_batch
+                )
             )
-        )
+        else:
+            selected_identifiers_tuples = list(
+                parser.yield_sample_and_folder_names(
+                    sheet=sheet, min_batch=self.config.first_batch, max_batch=self.config.last_batch
+                )
+            )
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
 
         # Get assay UUID if not provided
@@ -202,27 +192,25 @@ class PullRawDataCommand(PullDataCommon):
         ).perform()
 
         # Filter based on identifiers and file type
-        filtered_remote_files_dict = self.filter_irods_collection(
-            identifiers=selected_identifiers, remote_files_dict=remote_files_dict, file_type="fastq"
-        )
+        if self.config.sodar_directory:
+            filtered_remote_files_dict = self.filter_irods_collection_plus_dir_name(
+                identifiers=selected_identifiers,
+                directory_name=self.config.sodar_directory,
+                remote_files_dict=remote_files_dict,
+                file_type="fastq",
+            )
+        else:
+            filtered_remote_files_dict = self.filter_irods_collection(
+                identifiers=selected_identifiers,
+                remote_files_dict=remote_files_dict,
+                file_type="fastq",
+            )
         if len(filtered_remote_files_dict) == 0:
             extensions = self.file_type_to_extensions_dict.get("fastq")
             remote_files_fastq = [
                 file_ for file_ in remote_files_dict if file_.endswith(extensions)
             ]
-            remote_files_fastq = sorted(remote_files_fastq)
-            if len(remote_files_dict) > 50:
-                limited_str = " (limited to first 50)"
-                ellipsis_ = "..."
-                remote_files_str = "\n".join(remote_files_fastq[:50])
-            else:
-                limited_str = ""
-                ellipsis_ = ""
-                remote_files_str = "\n".join(remote_files_fastq)
-            logger.warning(
-                f"No file was found using the selected criteria.\n"
-                f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
-            )
+            self.report_no_file_found(available_files=remote_files_fastq)
             return 0
 
         # Pair iRODS path with output path
@@ -248,6 +236,62 @@ class PullRawDataCommand(PullDataCommon):
 
         logger.info("All done. Have a nice day!")
         return 0
+
+    def filter_irods_collection_plus_dir_name(
+        self, identifiers, directory_name, remote_files_dict, file_type
+    ):
+        """Filter iRODS collection based on identifiers, directory name, and file type/extension.
+
+        :param identifiers: List of sample identifiers or library names.
+        :type identifiers: list
+
+        :param directory_name: Directory name as defined in arguments.
+        :type directory_name: str
+
+        :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
+        :type remote_files_dict: dict
+
+        :param file_type: File type, example: 'fastq'.
+        :type file_type: str
+
+        :return: Returns filtered iRODS collection dictionary.
+        """
+        # Initialise variables
+        output_dict = defaultdict(list)
+        extensions_tuple = self.file_type_to_extensions_dict.get(file_type)
+
+        # Iterate
+        for key, value in remote_files_dict.items():
+            # Initialise variables
+            _irods_path_list = []
+            # Simplify criteria: must have the correct file extension
+            if not key.endswith(extensions_tuple):
+                continue
+
+            # Check for common links
+            # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
+            in_common_links = False
+            for irods_obj in value:
+                # Piggyback loop for dir check
+                _irods_path_list.append(irods_obj.irods_path)
+                # Actual check
+                in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
+                if in_common_links:
+                    break
+
+            # Check if requested directory is in iRODS path
+            directory_in_path = directory_name in sum(
+                [path_.split("/") for path_ in _irods_path_list], []
+            )
+
+            # Filter: not in common links; directory must be part of path
+            if directory_in_path and not in_common_links:
+                for id_ in identifiers:
+                    if any([id_ in path_ for path_ in _irods_path_list]):
+                        output_dict[id_].extend(value)
+
+        return output_dict
 
     @staticmethod
     def pair_ipath_with_outdir(library_to_irods_dict, identifiers_tuples, assay_uuid, output_dir):
@@ -354,6 +398,39 @@ class PullRawDataCommand(PullDataCommon):
                     report_str += f"\t{file_}\n"
         # Report
         logger.info(report_str)
+
+    def _get_download_path(self):
+        """Get download path
+
+        :return: Return path to download as defined in snappy configuration, i.e., raw data path.
+        """
+        # Find config file
+        with (pathlib.Path(self.config.base_path) / ".snappy_pipeline" / "config.yaml").open(
+            "rt"
+        ) as inputf:
+            config = yaml.safe_load(inputf)
+        # Parse available datasets in config
+        if "data_sets" not in config:
+            logger.error(
+                f"Could not find configuration key '{repr('data_sets')}' in {inputf.name}."
+            )
+            return
+        for key, data_set in config["data_sets"].items():
+            if (
+                key == self.config.project_uuid
+                or data_set.get("sodar_uuid") == self.config.project_uuid
+            ):
+                break
+        else:  # no "break" out of for-loop
+            logger.error(
+                f"Could not find dataset with key/sodar_uuid entry of {self.config.project_uuid}"
+            )
+            return
+        if not data_set.get("search_paths"):
+            logger.error(f"Data set has no attribute {repr('search_paths')}")
+            return
+
+        return data_set["search_paths"][-1]
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

@@ -60,6 +60,38 @@ class ParseSampleSheet:
                     for library in test_sample.ngs_libraries.values():
                         yield library.name
 
+    def yield_ngs_library_and_folder_names(
+        self, sheet, min_batch=None, max_batch=None, batch_key="batchNo", family_key="familyId"
+    ):
+        """Yield all NGS library and folder names from sheet.
+
+        When ``min_batch`` is given then only the donors for which the ``extra_infos[batch_key]`` is greater than
+        ``min_batch`` will be used.
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param min_batch: Minimum batch number to be extracted from the sheet. All samples in batches below the
+        threshold will be skipped.
+        :type min_batch: int
+
+        :param max_batch: Maximum batch number to be extracted from the sheet. All samples in batches above the
+        threshold will be skipped.
+        :type max_batch: int
+
+        :param batch_key: Batch number key in sheet. Default: 'batchNo'.
+        :type batch_key: str
+
+        :param family_key: Family identifier key. Default: 'familyId'.
+        :type family_key: str
+        """
+        for donor in self.yield_donor(sheet, min_batch, max_batch, batch_key, family_key):
+            for bio_sample in donor.bio_samples.values():
+                for test_sample in bio_sample.test_samples.values():
+                    for library in test_sample.ngs_libraries.values():
+                        folder_name = self._get_donor_folder_name(donor) or donor.secondary_id
+                        yield library.name, folder_name
+
     def yield_sample_names(
         self, sheet, min_batch=None, max_batch=None, batch_key="batchNo", family_key="familyId"
     ):

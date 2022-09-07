@@ -25,6 +25,7 @@ def pull_raw_data():
         "sodar_url": "https://sodar.bihealth.org/",
         "dry_run": False,
         "overwrite": False,
+        "sodar_directory": None,
         "tsv_shortcut": "germline",
         "first_batch": 0,
         "last_batch": None,
@@ -199,9 +200,7 @@ def test_run_snappy_pull_raw_nothing(capsys):
     assert res.err
 
 
-def test_pull_raw_data_filter_irods_collection_fastq(
-    pull_raw_data, remote_files_fastq, remote_files_all
-):
+def test_pull_raw_data_filter_irods_collection(pull_raw_data, remote_files_fastq, remote_files_all):
     """Tests PullRawDataCommand.filter_irods_collection() - FASTQ files"""
     # Define input
     absent_sample_list = ["P098", "P099"]
@@ -217,6 +216,35 @@ def test_pull_raw_data_filter_irods_collection_fastq(
     # Sanity check - should return empty dictionary, samples aren't present
     actual = pull_raw_data.filter_irods_collection(
         identifiers=absent_sample_list, remote_files_dict=remote_files_fastq, file_type=file_type
+    )
+    assert len(actual) == 0
+
+
+def test_pull_raw_data_filter_irods_collection_plus_dir_name(
+    pull_raw_data, remote_files_fastq, remote_files_all, library_to_irods_dict
+):
+    """Tests PullRawDataCommand.filter_irods_collection_plus_dir_name() - FASTQ files"""
+    # Define input
+    absent_sample_list = ["P098", "P099"]
+    samples_list = ["P001", "P002"]
+    file_type = "fastq"
+
+    # Call with samples id as identifiers
+    actual = pull_raw_data.filter_irods_collection_plus_dir_name(
+        identifiers=samples_list,
+        directory_name="raw_data",
+        remote_files_dict=remote_files_all,
+        file_type=file_type,
+    )
+    print(actual)
+    assert actual == library_to_irods_dict
+
+    # Sanity check - should return empty dictionary, samples aren't present
+    actual = pull_raw_data.filter_irods_collection_plus_dir_name(
+        identifiers=absent_sample_list,
+        directory_name="raw_data",
+        remote_files_dict=remote_files_fastq,
+        file_type=file_type,
     )
     assert len(actual) == 0
 
