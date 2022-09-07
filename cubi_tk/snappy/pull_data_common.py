@@ -141,3 +141,24 @@ class PullDataCommon(IrodsCheckCommand):
                 logger.error(f"Attempted to copy file to directory: {local_out_path}")
                 logger.error(self.get_irods_error(e))
                 raise
+
+    @staticmethod
+    def report_no_file_found(available_files):
+        """Report no files found
+
+        :param available_files: List of available files in SODAR.
+        :type available_files: list
+        """
+        available_files = sorted(available_files)
+        if len(available_files) > 50:
+            limited_str = " (limited to first 50)"
+            ellipsis_ = "..."
+            remote_files_str = "\n".join(available_files[:50])
+        else:
+            limited_str = ""
+            ellipsis_ = ""
+            remote_files_str = "\n".join(available_files)
+        logger.warning(
+            f"No file was found using the selected criteria.\n"
+            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+        )

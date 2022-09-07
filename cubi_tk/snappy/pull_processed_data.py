@@ -194,19 +194,7 @@ class PullProcessedDataCommand(PullDataCommon):
             file_type=self.args.file_type,
         )
         if len(filtered_remote_files_dict) == 0:
-            if len(remote_files_dict) > 50:
-                limited_str = " (limited to first 50)"
-                ellipsis_ = "..."
-                remote_files_str = "\n".join([*remote_files_dict][:50])
-            else:
-                limited_str = ""
-                ellipsis_ = ""
-                remote_files_str = "\n".join([*remote_files_dict])
-
-            logger.warning(
-                f"No file was found using the selected criteria.\n"
-                f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
-            )
+            self.report_no_file_found(available_files=[*remote_files_dict])
             return 0
 
         # Pair iRODS path with output path
