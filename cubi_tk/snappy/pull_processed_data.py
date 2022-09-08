@@ -1,3 +1,10 @@
+"""``cubi-tk snappy pull-processed-data``: pull processed data from SODAR iRODS to output directory.
+More Information
+----------------
+- Also see ``cubi-tk snappy`` :ref:`cli_main <CLI documentation>` and ``cubi-tk snappy pull-processed-data --help`` for more information.
+- `SNAPPY Pipeline Documentation <https://snappy-pipeline.readthedocs.io/en/latest/>`__.
+- `BiomedSheet Documentation <https://biomedsheets.readthedocs.io/en/master/>`__.
+"""
 import argparse
 import os
 from types import SimpleNamespace

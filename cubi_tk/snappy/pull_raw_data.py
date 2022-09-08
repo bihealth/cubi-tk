@@ -1,10 +1,8 @@
-"""``cubi-tk snappy pull-raw-data``: pull raw data from SODAR iRODS to SNAPPY dataset directory.
-
+"""``cubi-tk snappy pull-raw-data``: pull raw data (i.e., FASTQ files) from SODAR iRODS to SNAPPY dataset directory.
 More Information
 ----------------
-
-- Also see ``cubi-tk snappy`` :ref:`cli_main <CLI documentation>` and ``cubi-tk snappy pull-sheet --help`` for more information.
-- `SNAPPY Pipeline GitLab Project <https://cubi-gitlab.bihealth.org/CUBI/Pipelines/snappy>`__.
+- Also see ``cubi-tk snappy`` :ref:`cli_main <CLI documentation>` and ``cubi-tk snappy pull-raw-data --help`` for more information.
+- `SNAPPY Pipeline Documentation <https://snappy-pipeline.readthedocs.io/en/latest/>`__.
 - `BiomedSheet Documentation <https://biomedsheets.readthedocs.io/en/master/>`__.
 """
 
