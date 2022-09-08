@@ -55,6 +55,39 @@ def test_yield_ngs_library_names(parser, sheet):
         assert name_ in expected_batch_three
 
 
+def test_yield_ngs_library_and_folder_names(parser, sheet):
+    """Tests ParseSampleSheet.yield_ngs_library_and_folder_names()"""
+    # Define expected
+    expected_batch_one = [(f"P00{i}-N1-DNA1-WGS1", f"P00{i}") for i in (1, 2, 3)]
+    expected_batch_two = [(f"P00{i}-N1-DNA1-WGS1", f"P00{i}") for i in (4, 5, 6)]
+    expected_batch_three = [("P007-N1-DNA1-WGS1", "P007")]
+
+    # Test max batch = 1
+    actual = parser.yield_ngs_library_and_folder_names(sheet=sheet, max_batch=1)
+    for name_ in actual:
+        assert name_ in expected_batch_one
+
+    # Test min batch = 2
+    actual = parser.yield_ngs_library_and_folder_names(sheet=sheet, min_batch=2)
+    for name_ in actual:
+        expected_list = expected_batch_two + expected_batch_three
+        assert name_ in expected_list
+
+    # Test min batch = 3
+    actual = parser.yield_ngs_library_and_folder_names(sheet=sheet, min_batch=3)
+    for name_ in actual:
+        assert name_ in expected_batch_three
+
+
+def test_yield_ngs_library_and_folder_names_filter(parser, sheet):
+    """Tests ParseSampleSheet.yield_ngs_library_and_folder_names()"""
+    filter_ids_input = [f"P00{i}" for i in (1, 2, 3, 5)]
+    expected = [(f"P00{i}-N1-DNA1-WGS1", f"P00{i}") for i in (1, 2, 3, 5)]
+    actual = parser.yield_ngs_library_and_folder_names(sheet=sheet, selected_ids=filter_ids_input)
+    for name_ in actual:
+        assert name_ in expected
+
+
 def test_yield_ngs_library_names_multi_batch(parser, sheet_multi_batch):
     """Tests ParseSampleSheet.yield_ngs_library_names() - multiple batches in sample sheet"""
     # Define expected
@@ -136,6 +169,15 @@ def test_yield_sample_names(parser, sheet):
     actual = parser.yield_sample_names(sheet=sheet, min_batch=3)
     for name_ in actual:
         assert name_ in expected_batch_three
+
+
+def test_yield_sample_and_folder_names_filter(parser, sheet):
+    """Tests ParseSampleSheet.yield_sample_and_folder_names()"""
+    selected_ids_input = [f"P00{i}" for i in (1, 2, 3)]
+    expected = [(f"P00{i}", f"P00{i}") for i in (1, 2, 3)]
+    actual = parser.yield_sample_and_folder_names(sheet=sheet, selected_ids=selected_ids_input)
+    for name_ in actual:
+        assert name_ in expected
 
 
 def test_yield_sample_and_folder_names_batch_one(parser, sheet):

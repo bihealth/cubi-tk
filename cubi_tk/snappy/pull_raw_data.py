@@ -161,13 +161,19 @@ class PullRawDataCommand(PullDataCommon):
         if self.config.sodar_directory:
             selected_identifiers_tuples = list(
                 parser.yield_ngs_library_and_folder_names(
-                    sheet=sheet, min_batch=self.config.first_batch, max_batch=self.config.last_batch
+                    sheet=sheet,
+                    min_batch=self.config.first_batch,
+                    max_batch=self.config.last_batch,
+                    selected_ids=self.config.samples,
                 )
             )
         else:
             selected_identifiers_tuples = list(
                 parser.yield_sample_and_folder_names(
-                    sheet=sheet, min_batch=self.config.first_batch, max_batch=self.config.last_batch
+                    sheet=sheet,
+                    min_batch=self.config.first_batch,
+                    max_batch=self.config.last_batch,
+                    selected_ids=self.config.samples,
                 )
             )
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]

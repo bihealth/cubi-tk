@@ -136,6 +136,7 @@ class PullDataCommon(IrodsCheckCommand):
                     f"Failed to retrieve '{file_name}', it already exists in output directory: {local_out_path}"
                 )
                 raise
+
             except Exception as e:
                 logger.error(f"Failed to retrieve iRODS path: {irods_path}")
                 logger.error(f"Attempted to copy file to directory: {local_out_path}")

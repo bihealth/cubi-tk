@@ -236,7 +236,6 @@ def test_pull_raw_data_filter_irods_collection_plus_dir_name(
         remote_files_dict=remote_files_all,
         file_type=file_type,
     )
-    print(actual)
     assert actual == library_to_irods_dict
 
     # Sanity check - should return empty dictionary, samples aren't present

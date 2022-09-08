@@ -1,5 +1,4 @@
 """Common code to parse BioMedSheets"""
-from collections import OrderedDict
 from logzero import logger
 
 
@@ -61,7 +60,13 @@ class ParseSampleSheet:
                         yield library.name
 
     def yield_ngs_library_and_folder_names(
-        self, sheet, min_batch=None, max_batch=None, batch_key="batchNo", family_key="familyId"
+        self,
+        sheet,
+        min_batch=None,
+        max_batch=None,
+        batch_key="batchNo",
+        family_key="familyId",
+        selected_ids=None,
     ):
         """Yield all NGS library and folder names from sheet.
 
@@ -84,8 +89,15 @@ class ParseSampleSheet:
 
         :param family_key: Family identifier key. Default: 'familyId'.
         :type family_key: str
+
+        :param selected_ids: List of samples ids to keep, e.g., 'P001' instead of longer library name
+        'P001-N1-DNA1-WGS1'. Everything else will be ignored.
+        :type selected_ids: list
         """
         for donor in self.yield_donor(sheet, min_batch, max_batch, batch_key, family_key):
+            if selected_ids and donor.secondary_id not in selected_ids:
+                logger.debug(f"Sample '{donor.secondary_id}' not in provided selected id list.")
+                continue
             for bio_sample in donor.bio_samples.values():
                 for test_sample in bio_sample.test_samples.values():
                     for library in test_sample.ngs_libraries.values():
@@ -118,7 +130,13 @@ class ParseSampleSheet:
             yield donor.secondary_id
 
     def yield_sample_and_folder_names(
-        self, sheet, min_batch=None, max_batch=None, batch_key="batchNo", family_key="familyId"
+        self,
+        sheet,
+        min_batch=None,
+        max_batch=None,
+        batch_key="batchNo",
+        family_key="familyId",
+        selected_ids=None,
     ):
         """Yield all sample and folder names (``secondary_id``, ``folderName``) from sheet.
 
@@ -138,8 +156,14 @@ class ParseSampleSheet:
 
         :param family_key: Family identifier key. Default: 'familyId'.
         :type family_key: str
+
+        :param selected_ids: List of samples ids to keep, e.g., 'P001'. Everything else will be ignored.
+        :type selected_ids: list
         """
         for donor in self.yield_donor(sheet, min_batch, max_batch, batch_key, family_key):
+            if selected_ids and donor.secondary_id not in selected_ids:
+                logger.debug(f"Sample '{donor.secondary_id}' not in provided selected id list.")
+                continue
             folder_name = self._get_donor_folder_name(donor) or donor.secondary_id
             yield donor.secondary_id, folder_name
 
