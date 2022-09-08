@@ -25,7 +25,7 @@ def pull_raw_data():
         "sodar_url": "https://sodar.bihealth.org/",
         "dry_run": False,
         "overwrite": False,
-        "sodar_directory": None,
+        "use_library_name": False,
         "tsv_shortcut": "germline",
         "first_batch": 0,
         "last_batch": None,
@@ -133,8 +133,8 @@ def remote_files_all(remote_files_fastq, remote_files_vcf):
 
 
 @pytest.fixture
-def library_to_irods_dict():
-    """Returns example of output from PullRawDataCommand.pair_ipath_with_folder_name()"""
+def sample_to_irods_dict():
+    """Returns example of output from PullRawDataCommand.pair_ipath_with_folder_name() based on sample names."""
     p0001_sodar_path = (
         "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
     )
@@ -171,6 +171,16 @@ def library_to_irods_dict():
             ),
         ],
     }
+
+
+@pytest.fixture
+def library_to_irods_dict(sample_to_irods_dict):
+    """Returns example of output from PullRawDataCommand.pair_ipath_with_folder_name() based on library names"""
+    output_dict = {}
+    for key, value in sample_to_irods_dict.items():
+        new_key = key + "-N1-DNA1-WES1"
+        output_dict[new_key] = value
+    return output_dict
 
 
 def test_run_snappy_pull_raw_help(capsys):
@@ -225,25 +235,19 @@ def test_pull_raw_data_filter_irods_collection_plus_dir_name(
 ):
     """Tests PullRawDataCommand.filter_irods_collection_plus_dir_name() - FASTQ files"""
     # Define input
-    absent_sample_list = ["P098", "P099"]
-    samples_list = ["P001", "P002"]
+    absent_sample_list = ["P098-N1-DNA1-WES1", "P099-N1-DNA1-WES1"]
+    samples_list = ["P001-N1-DNA1-WES1", "P002-N1-DNA1-WES1"]
     file_type = "fastq"
 
     # Call with samples id as identifiers
-    actual = pull_raw_data.filter_irods_collection_plus_dir_name(
-        identifiers=samples_list,
-        directory_name="raw_data",
-        remote_files_dict=remote_files_all,
-        file_type=file_type,
+    actual = pull_raw_data.filter_irods_collection_by_library_name_in_path(
+        identifiers=samples_list, remote_files_dict=remote_files_all, file_type=file_type
     )
     assert actual == library_to_irods_dict
 
     # Sanity check - should return empty dictionary, samples aren't present
-    actual = pull_raw_data.filter_irods_collection_plus_dir_name(
-        identifiers=absent_sample_list,
-        directory_name="raw_data",
-        remote_files_dict=remote_files_fastq,
-        file_type=file_type,
+    actual = pull_raw_data.filter_irods_collection_by_library_name_in_path(
+        identifiers=absent_sample_list, remote_files_dict=remote_files_fastq, file_type=file_type
     )
     assert len(actual) == 0
 
@@ -258,7 +262,7 @@ def test_pull_raw_data_get_library_to_irods_dict(pull_raw_data, remote_files_fas
         assert all([str(irods.file_name).startswith(id_) for irods in actual.get(id_)])
 
 
-def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, library_to_irods_dict):
+def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, sample_to_irods_dict):
     """Tests PullRawDataCommand.pair_ipath_with_folder_name()"""
     # Define input
     out_dir = "out_dir"
@@ -299,7 +303,7 @@ def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, library_to_iro
 
     # Test with correct assay UUID - directory structure same as in SODAR
     actual = pull_raw_data.pair_ipath_with_outdir(
-        library_to_irods_dict=library_to_irods_dict,
+        library_to_irods_dict=sample_to_irods_dict,
         identifiers_tuples=identifiers_tup,
         output_dir=out_dir,
         assay_uuid=assay_uuid,
@@ -308,7 +312,7 @@ def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, library_to_iro
 
     # Test with wrong assay UUID - all files copied to root of output directory
     actual = pull_raw_data.pair_ipath_with_outdir(
-        library_to_irods_dict=library_to_irods_dict,
+        library_to_irods_dict=sample_to_irods_dict,
         identifiers_tuples=identifiers_tup,
         output_dir=out_dir,
         assay_uuid=wrong_assay_uuid,

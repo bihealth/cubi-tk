@@ -36,7 +36,7 @@ class Config:
     sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     tsv_shortcut: str
-    sodar_directory: str
+    use_library_name: bool
     overwrite: bool
     dry_run: bool
     first_batch: int
@@ -107,10 +107,13 @@ class PullRawDataCommand(PullDataCommon):
         )
         parser.add_argument("--samples", help="Optional list of samples to pull")
         parser.add_argument(
-            "--sodar-directory",
-            default=None,
-            required=False,
-            help="SODAR directory name expected for raw data path, e.g.: 'raw_data'.",
+            "--use-library-name",
+            default=False,
+            action="store_true",
+            help=(
+                "Flag to indicate that the search in SODAR directories should be based on library name "
+                "(e.g. 'P001-N1-DNA1-WGS1') instead of sample identifier (e.g.'P001') in the file name."
+            ),
         )
         parser.add_argument(
             "--assay-uuid",
@@ -158,7 +161,7 @@ class PullRawDataCommand(PullDataCommon):
 
         # Filter requested samples and folder directories
         parser = ParseSampleSheet()
-        if self.config.sodar_directory:
+        if self.config.use_library_name:
             selected_identifiers_tuples = list(
                 parser.yield_ngs_library_and_folder_names(
                     sheet=sheet,
@@ -198,10 +201,9 @@ class PullRawDataCommand(PullDataCommon):
         ).perform()
 
         # Filter based on identifiers and file type
-        if self.config.sodar_directory:
-            filtered_remote_files_dict = self.filter_irods_collection_plus_dir_name(
+        if self.config.use_library_name:
+            filtered_remote_files_dict = self.filter_irods_collection_by_library_name_in_path(
                 identifiers=selected_identifiers,
-                directory_name=self.config.sodar_directory,
                 remote_files_dict=remote_files_dict,
                 file_type="fastq",
             )
@@ -243,16 +245,16 @@ class PullRawDataCommand(PullDataCommon):
         logger.info("All done. Have a nice day!")
         return 0
 
-    def filter_irods_collection_plus_dir_name(
-        self, identifiers, directory_name, remote_files_dict, file_type
+    def filter_irods_collection_by_library_name_in_path(
+        self, identifiers, remote_files_dict, file_type
     ):
-        """Filter iRODS collection based on identifiers, directory name, and file type/extension.
+        """Filter iRODS collection based on identifiers and file type/extension.
+
+        Assumes that SODAR directories follow the logic below to filter by library name:
+        /sodarZone/projects/../<PROJECT_UUID>/sample_data/study_<STUDY_UUID>/assay_<ASSAY_UUID>/<LIBRARY_NAME>
 
         :param identifiers: List of sample identifiers or library names.
         :type identifiers: list
-
-        :param directory_name: Directory name as defined in arguments.
-        :type directory_name: str
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
         'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
@@ -282,20 +284,18 @@ class PullRawDataCommand(PullDataCommon):
                 # Piggyback loop for dir check
                 _irods_path_list.append(irods_obj.irods_path)
                 # Actual check
-                in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
-                if in_common_links:
+                if self._irods_path_in_common_links(irods_obj.irods_path):
+                    in_common_links = True
                     break
 
-            # Check if requested directory is in iRODS path
-            directory_in_path = directory_name in sum(
-                [path_.split("/") for path_ in _irods_path_list], []
-            )
-
-            # Filter: not in common links; directory must be part of path
-            if directory_in_path and not in_common_links:
+            # Update output if: not in common links and any id is part of SODAR path
+            # Assumption: the path will include at most one library name
+            if not in_common_links:
+                all_directories = sum([path_.split("/") for path_ in _irods_path_list], [])
                 for id_ in identifiers:
-                    if any([id_ in path_ for path_ in _irods_path_list]):
+                    if any([id_ == dir_ for dir_ in all_directories]):
                         output_dict[id_].extend(value)
+                        break
 
         return output_dict
 
