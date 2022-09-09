@@ -1,17 +1,22 @@
+"""``cubi-tk snappy pull-processed-data``: pull processed data from SODAR iRODS to output directory.
+More Information
+----------------
+- Also see ``cubi-tk snappy`` :ref:`cli_main <CLI documentation>` and ``cubi-tk snappy pull-processed-data --help`` for more information.
+- `SNAPPY Pipeline Documentation <https://snappy-pipeline.readthedocs.io/en/latest/>`__.
+- `BiomedSheet Documentation <https://biomedsheets.readthedocs.io/en/master/>`__.
+"""
 import argparse
 import os
 from types import SimpleNamespace
 import typing
 
-from irods.exception import OVERWRITE_WITHOUT_FORCE_FLAG
 from logzero import logger
-from pathlib import Path
-from sodar_cli import api
 
 from .common import get_biomedsheet_path, load_sheet_tsv
 from ..common import load_toml_config
-from ..irods.check import IrodsCheckCommand
 from .parse_sample_sheet import ParseSampleSheet
+from .pull_data_common import PullDataCommon
+
 from .retrieve_irods_collection import RetrieveIrodsCollection, DEFAULT_HASH_SCHEME
 
 
@@ -19,7 +24,7 @@ from .retrieve_irods_collection import RetrieveIrodsCollection, DEFAULT_HASH_SCH
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
 
 
-class PullProcessedDataCommand(IrodsCheckCommand):
+class PullProcessedDataCommand(PullDataCommon):
     """Implementation of the ``pull-processed-data`` command."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
@@ -32,7 +37,7 @@ class PullProcessedDataCommand(IrodsCheckCommand):
     }
 
     def __init__(self, args):
-        IrodsCheckCommand.__init__(self, args=SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME))
+        PullDataCommon.__init__(self)
         # Command line arguments.
         self.args = args
 
@@ -173,7 +178,11 @@ class PullProcessedDataCommand(IrodsCheckCommand):
         # Get assay UUID if not provided
         assay_uuid = None
         if not self.args.assay_uuid:
-            assay_uuid = self.get_assay_uuuid()
+            assay_uuid = self.get_assay_uuid(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                project_uuid=self.args.project_uuid,
+            )
 
         # Find all remote files (iRODS)
         pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
@@ -192,20 +201,8 @@ class PullProcessedDataCommand(IrodsCheckCommand):
             file_type=self.args.file_type,
         )
         if len(filtered_remote_files_dict) == 0:
-            if len(remote_files_dict) > 50:
-                limited_str = " (limited to first 50)"
-                ellipsis_ = "..."
-                remote_files_str = "\n".join([*remote_files_dict][:50])
-            else:
-                limited_str = ""
-                ellipsis_ = ""
-                remote_files_str = "\n".join([*remote_files_dict])
-
-            logger.warning(
-                f"No file was found using the selected criteria.\n"
-                f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
-            )
-            return
+            self.report_no_file_found(available_files=[*remote_files_dict])
+            return 0
 
         # Pair iRODS path with output path
         path_pair_list = self.pair_ipath_with_outdir(
@@ -216,6 +213,9 @@ class PullProcessedDataCommand(IrodsCheckCommand):
 
         # Retrieve files from iRODS
         self.get_irods_files(irods_local_path_pairs=path_pair_list)
+
+        logger.info("All done. Have a nice day!")
+        return 0
 
     @staticmethod
     def pair_ipath_with_outdir(remote_files_dict, output_dir, assay_uuid):
@@ -245,119 +245,19 @@ class PullProcessedDataCommand(IrodsCheckCommand):
                     irods_dir_structure = os.path.dirname(
                         str(irods_obj.irods_path).split(f"assay_{assay_uuid}/")[1]
                     )
-                    _out_dir = os.path.join(output_dir, irods_dir_structure)
+                    _out_path = os.path.join(output_dir, irods_dir_structure, irods_obj.file_name)
                 except IndexError:
                     logger.warning(
                         f"Provided Assay UUID '{assay_uuid}' is not present in SODAR path, "
                         f"hence directory structure won't be preserved.\n"
                         f"All files will be stored in root of output directory: {output_list}"
                     )
-                    _out_dir = output_dir
+                    _out_path = os.path.join(output_dir, irods_obj.file_name)
                 # Update output
-                output_list.append((irods_obj.irods_path, _out_dir))
-                output_list.append((irods_obj.irods_path + ".md5", _out_dir))
+                output_list.append((irods_obj.irods_path, _out_path))
+                output_list.append((irods_obj.irods_path + ".md5", _out_path + ".md5"))
 
         return output_list
-
-    def filter_irods_collection(self, identifiers, remote_files_dict, file_type):
-        """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
-
-        :param identifiers: List of sample identifiers or library names.
-        :type identifiers: list
-
-        :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1'); Value: iRODS data (``IrodsDataObject``).
-        :type remote_files_dict: dict
-
-        :param file_type: File type, example: 'bam' or 'vcf'.
-        :type file_type: str
-
-        :return: Returns filtered iRODS collection dictionary.
-        """
-        # Initialise variables
-        filtered_dict = {}
-
-        extensions_tuple = self.file_type_to_extensions_dict.get(file_type)
-
-        # Iterate
-        for key, value in remote_files_dict.items():
-            # Check for common links
-            # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
-            in_common_links = False
-            for irods_obj in value:
-                in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
-                if in_common_links:
-                    break
-
-            # Filter
-            if (
-                any(id_ in key for id_ in identifiers)  # presence of identifiers
-                and key.endswith(extensions_tuple)  # correct file extension
-                and not in_common_links  # not in common links
-            ):
-                filtered_dict[key] = value
-
-        return filtered_dict
-
-    @staticmethod
-    def _irods_path_in_common_links(irods_path):
-        """Checks if iRODS path is from common links, i.e., in 'ResultsReports', 'MiscFiles', 'TrackHubs'.
-
-        :param irods_path: iRODS path
-        :type irods_path: str
-
-        :return: Return True if path is in common links; otherwise, False.
-        """
-        common_links = {"ResultsReports", "MiscFiles", "TrackHubs"}
-        path_part_set = set(irods_path.split("/"))
-        return len(common_links.intersection(path_part_set)) > 0
-
-    def get_assay_uuuid(self):
-        """Get assay UUID.
-
-        :return: Returns assay UUID.
-        """
-        investigation = api.samplesheet.retrieve(
-            sodar_url=self.args.sodar_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=self.args.project_uuid,
-        )
-        for study in investigation.studies.values():
-            for _assay_uuid in study.assays:
-                # If multi-assay project it will only consider the first one
-                return _assay_uuid
-        return None
-
-    def get_irods_files(self, irods_local_path_pairs):
-        """Get iRODS files
-
-        Retrieves iRODS path and stores it locally.
-
-        :param irods_local_path_pairs:
-        """
-        # Connect to iRODS
-        with self._get_irods_sessions(count=1) as irods_sessions:
-            try:
-                for pair in irods_local_path_pairs:
-                    # Set variable
-                    file_name = pair[0].split("/")[-1]
-                    irods_path = pair[0]
-                    out_dir = pair[1]
-                    logger.info(f"Retrieving '{file_name}' from: {irods_path}")
-                    # Create output directory if necessary
-                    Path(out_dir).mkdir(parents=True, exist_ok=True)
-                    # Get file
-                    irods_sessions[0].data_objects.get(irods_path, out_dir)
-
-            except OVERWRITE_WITHOUT_FORCE_FLAG:
-                logger.error(
-                    f"Failed to retrieve '{file_name}', it already exists in output directory: {out_dir}"
-                )
-            except Exception as e:
-                logger.error(f"Failed to retrieve iRODS path: {irods_path}")
-                logger.error(f"Attempted to copy file to directory: {out_dir}")
-                logger.error(self.get_irods_error(e))
-                raise
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
