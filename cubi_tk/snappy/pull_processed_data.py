@@ -102,6 +102,9 @@ class PullProcessedDataCommand(PullDataCommon):
             help=f"File extensions to be retrieved. Valid options: {VALID_FILE_TYPES}",
         )
         parser.add_argument(
+            "--overwrite", default=False, action="store_true", help="Allow overwriting of local files."
+        )
+        parser.add_argument(
             "--assay-uuid",
             default=None,
             type=str,
@@ -212,7 +215,7 @@ class PullProcessedDataCommand(PullDataCommon):
         )
 
         # Retrieve files from iRODS
-        self.get_irods_files(irods_local_path_pairs=path_pair_list)
+        self.get_irods_files(irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite)
 
         logger.info("All done. Have a nice day!")
         return 0
