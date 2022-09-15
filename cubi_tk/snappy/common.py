@@ -12,6 +12,7 @@ import yaml
 #: Dependencies between the SNAPPY steps.
 DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
     "ngs_mapping": (),
+    "roh_calling": ("variant_calling",),
     "variant_calling": ("ngs_mapping",),
     "variant_export": ("variant_calling",),
     "targeted_seq_cnv_calling": ("ngs_mapping",),
