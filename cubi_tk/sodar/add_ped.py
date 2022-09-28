@@ -127,9 +127,31 @@ class AddPedCommand:
         parser.add_argument(
             "input_ped_file",
             metavar="pedigree.ped",
-            type=argparse.FileType("rt"),
+            type=lambda x: cls.validate_pedigree_file(parser, x),
             help="Path to PLINK PED file with records to add.",
         )
+
+    @classmethod
+    def validate_pedigree_file(cls, parser, path_to_file):
+        """Validate pedigree file
+
+        :param parser: Argument parser.
+        :type parser: argparse.ArgumentParser
+
+        :param path_to_file: Path to pedigree file being checked.
+        :type path_to_file: str
+
+        :return: Returns inputted path if file exists and has 'rt' permissions.
+        :raises PermissionError: if file doesn't have 'rt' permissions.
+        """
+        if not os.path.exists(path_to_file):
+            parser.error(f"The provided pedigree file does not exist: {path_to_file}")
+        try:
+            with open(path_to_file, "rt"):
+                pass
+        except PermissionError as e:
+            raise PermissionError(f"The provided file has invalid permissions: {path_to_file}") from e
+        return path_to_file
 
     @classmethod
     def run(
