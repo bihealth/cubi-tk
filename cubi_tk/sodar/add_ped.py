@@ -150,7 +150,9 @@ class AddPedCommand:
             with open(path_to_file, "rt"):
                 pass
         except PermissionError as e:
-            raise PermissionError(f"The provided file has invalid permissions: {path_to_file}") from e
+            raise PermissionError(
+                f"The provided file has invalid permissions: {path_to_file}"
+            ) from e
         return path_to_file
 
     @classmethod
@@ -193,7 +195,7 @@ class AddPedCommand:
                 logger.error("-- downloading sheet failed --")
                 return 1
             else:
-                logger.info("-- downloading sheet succeeeded --")
+                logger.info("-- downloading sheet succeeded --")
 
             logger.info("-- updating sample sheet --")
             add_res = AddPedIsaTabCommand(
@@ -223,7 +225,7 @@ class AddPedCommand:
                 logger.error("-- updating sheet failed --")
                 return 1
             else:
-                logger.info("-- updating sheet succeeeded --")
+                logger.info("-- updating sheet succeeded --")
 
             logger.info("-- uploading sample sheet --")
             ul_res = UploadSheetCommand(
@@ -241,7 +243,7 @@ class AddPedCommand:
                 logger.error("-- uploading sheet failed --")
                 return 1
             else:
-                logger.info("-- uploading sheet succeeeded --")
+                logger.info("-- uploading sheet succeeded --")
 
         return 0
 
