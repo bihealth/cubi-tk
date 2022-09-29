@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import SimpleNamespace
 
 from irods.keywords import FORCE_FLAG_KW
@@ -162,4 +163,52 @@ class PullDataCommon(IrodsCheckCommand):
         logger.warning(
             f"No file was found using the selected criteria.\n"
             f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+        )
+
+    def sort_irods_object_by_date_in_path(self, irods_obj_list):
+        """Sort list of iRODS object: latest to earliest.
+
+        Sort by date as defined in path, hence the main assumption is that there is a date somewhere in iRODS path:
+        /sodarZone/projects/../<PROJECT_UUID>/.../assay_<ASSAY_UUID>/<LIBRARY_NAME>/.../<DATE>/...
+
+        :param irods_obj_list: List of iRODS objects derived from collection in SODAR.
+        :type irods_obj_list: List[IrodsDataObject]
+
+        :return: Returns inputted list sorted from latest to earliest iRODS object.
+        """
+        if not irods_obj_list:
+            logger.warning("Provided list doesn't contain any iRODS objects.")
+            return irods_obj_list
+        return sorted(
+            irods_obj_list,
+            key=lambda irods_obj: self._find_date_in_path(irods_obj.irods_path),
+            reverse=True,
+        )
+
+    @staticmethod
+    def _find_date_in_path(path):
+        """Find date in provided path.
+
+        If multiple dates found in path, it will return the first one, i.e., closer to the root.
+        The accepted date formats are the following:
+            '%Y-%m-%d'
+            '%Y_%m_%d'
+            '%Y%m%d'
+
+        :param path: iRODS path.
+        :type path: str
+
+        :return: Returns ``<class 'datetime.datetime'>`` based on directory name.
+        """
+        accepted_date_format = ("%Y-%m-%d", "%Y_%m_%d", "%Y%m%d")
+        for dir_ in path.split("/"):
+            for date_format in accepted_date_format:
+                try:
+                    date = datetime.strptime(dir_, date_format)
+                    return date
+                except ValueError:
+                    pass
+        accepted_date_format_str = ", ".join(accepted_date_format)
+        raise ValueError(
+            f"Could not find a valid date in path: {path}\nTested date formats: {accepted_date_format_str}."
         )
