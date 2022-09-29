@@ -250,7 +250,7 @@ class PullProcessedDataCommand(PullDataCommon):
         :type assay_uuid: str
 
         :param retrieve_all: Flag indicates if all versions of the files should be downloaded (True)
-        or just the latest (False).
+        or just the latest (False). Default: False.
         :type retrieve_all: bool
 
         :return: Return list of tuples (iRODS path [str], local output directory [str]).
