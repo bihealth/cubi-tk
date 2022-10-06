@@ -20,8 +20,11 @@ DEFAULT_STEPS = (
     "ngs_mapping",
     "targeted_seq_cnv_export",
     "variant_export",
+    "variant_export_external",
     "wgs_cnv_export",
+    "wgs_cnv_export_external",
     "wgs_sv_export",
+    "wgs_sv_export_external",
 )
 
 #: The extensions that we are looking for.
@@ -92,7 +95,6 @@ class SnappyVarFishUploadCommand:
             default=os.environ.get("VARFISH_API_TOKEN", None),
             help="SODAR API token to use, defaults to env VARFISH_API_TOKEN.",
         )
-
         parser.add_argument(
             "--base-path",
             default=os.getcwd(),
@@ -102,7 +104,6 @@ class SnappyVarFishUploadCommand:
                 "work directory and falls back to current working directory by default."
             ),
         )
-
         parser.add_argument(
             "--steps",
             default=[],
@@ -113,7 +114,15 @@ class SnappyVarFishUploadCommand:
                 "arguments or use a comma-separated list. {%s}" % ", ".join(sorted(DEFAULT_STEPS))
             ),
         )
-
+        parser.add_argument(
+            "--external-data",
+            default=False,
+            action="store_true",
+            help=(
+                "Flag to indicate that data was externally generated. Search for files will not filter based "
+                "on common internally tool combinations, example: 'bwa.delly2' or 'bwa'."
+            ),
+        )
         parser.add_argument(
             "--min-batch",
             default=None,
@@ -130,7 +139,6 @@ class SnappyVarFishUploadCommand:
             required=False,
             help="Assume yes to all answers",
         )
-
         parser.add_argument(
             "--samples",
             help=(
@@ -140,7 +148,6 @@ class SnappyVarFishUploadCommand:
             ),
             default="",
         )
-
         parser.add_argument(
             "project", nargs="+", help="The UUID(s) of the SODAR project to submit."
         )
@@ -231,19 +238,22 @@ class SnappyVarFishUploadCommand:
             found: typing.Dict[str, str] = {}
             for step in self.args.steps:
                 for ext in EXTENSIONS:
-                    pattern = "%s/*.%s/**/*.%s" % (
-                        self.args.base_path / step / "work",
-                        library,
-                        ext,
-                    )
-                    logger.debug("pattern: %s", pattern)
-                    for x in glob.glob(pattern, recursive=True):
-                        b = os.path.basename(x)
-                        # Currently, must treat .ped specially 8-[
-                        if b not in found and any(
-                            (b.endswith(".ped") or b.startswith(p) for p in PREFIXES)
-                        ):
-                            found[b] = x
+                    work_path = self.args.base_path / step / "work"
+                    pattern = f"{work_path}/*.{library}/**/*.{ext}"
+                    logger.debug(f"pattern: {pattern}")
+                    for file_path in glob.glob(pattern, recursive=True):
+                        file_name = os.path.basename(file_path)
+                        # If data externally generated, cannot filter by common `snappy` tool combinations
+                        if self.args.external_data:
+                            key = f"{step}: {file_name}"
+                            found[key] = file_path
+                        elif file_name not in found and any(
+                            (
+                                file_name.endswith(".ped") or file_name.startswith(p)
+                                for p in PREFIXES
+                            )
+                        ):  # must treat .ped as special case
+                            found[file_name] = file_path
             logger.info("  found %d files for %s", len(found), library)
             if self.args.verbose:
                 found_s = "\n".join("%s (%s)" % (k, v) for k, v in sorted(found.items()))
