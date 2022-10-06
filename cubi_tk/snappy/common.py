@@ -15,15 +15,18 @@ DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
     "roh_calling": ("variant_calling",),
     "variant_calling": ("ngs_mapping",),
     "variant_export": ("variant_calling",),
+    "variant_export_external": (),
     "targeted_seq_cnv_calling": ("ngs_mapping",),
     "targeted_seq_cnv_annotation": ("targeted_seq_cnv_calling",),
     "targeted_seq_cnv_export": ("targeted_seq_cnv_annotation",),
     "wgs_sv_calling": ("ngs_mapping",),
     "wgs_sv_annotation": ("wgs_sv_calling",),
     "wgs_sv_export": ("wgs_sv_annotation",),
+    "wgs_sv_export_external": (),
     "wgs_cnv_calling": ("ngs_mapping", "variant_calling"),
     "wgs_cnv_annotation": ("wgs_cnv_calling",),
     "wgs_cnv_export": ("wgs_cnv_annotation",),
+    "wgs_cnv_export_external": (),
 }
 
 
