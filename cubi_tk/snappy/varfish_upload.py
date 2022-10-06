@@ -120,7 +120,7 @@ class SnappyVarFishUploadCommand:
             action="store_true",
             help=(
                 "Flag to indicate that data was externally generated. Search for files will not filter based "
-                "on common internally tool combinations, example: 'bwa.delly2' or 'bwa'."
+                "on common internally tool combinations, example: 'bwa.delly2' or 'bwa.gatk_hc'."
             ),
         )
         parser.add_argument(
