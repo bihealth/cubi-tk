@@ -61,7 +61,7 @@ class PullProcessedDataCommand(PullDataCommon):
             "--tsv-shortcut",
             default="germline",
             choices=("cancer", "generic", "germline"),
-            help="The shortcut TSV schema to use.",
+            help="The shortcut TSV schema to use; default: 'germline'.",
         )
         parser.add_argument(
             "--base-path",
