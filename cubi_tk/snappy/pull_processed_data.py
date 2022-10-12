@@ -249,13 +249,14 @@ class PullProcessedDataCommand(PullDataCommon):
 
         :return: Returns filtered list of identifiers based on inputted parameters.
         """
+        selected_samples_list = selected_samples.split(",")
         if by_sample_id:
-            return selected_samples.split(",")
+            return selected_samples_list
         else:
             parser = ParseSampleSheet()
             return list(
                 parser.yield_ngs_library_names_filtered_by_samples(
-                    sheet=sheet, selected_samples=selected_samples.split(",")
+                    sheet=sheet, selected_samples=selected_samples_list
                 )
             )
 
