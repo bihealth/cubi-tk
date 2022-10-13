@@ -226,14 +226,15 @@ class SnappyVarFishUploadCommand:
                 continue
 
             # Search for files of interest.
+            prefix_text = f" and prefixes\n    {PREFIXES}"
+            if self.args.external_data:
+                prefix_text = ""
             logger.debug(
-                "\nSearching in\n    %s\nfor library\n    %s\n"
-                "steps\n    %s\nand extensions\n    %s\n and prefixes\n    %s",
-                self.args.base_path,
-                library,
-                self.args.steps,
-                EXTENSIONS,
-                PREFIXES,
+                f"\nSearching in\n    {self.args.base_path}\n"
+                f"for library\n    {library}\n"
+                f"steps\n   {self.args.steps}\n"
+                f"and extensions\n    {EXTENSIONS}\n"
+                f"{prefix_text}"
             )
             found: typing.Dict[str, str] = {}
             for step in self.args.steps:
