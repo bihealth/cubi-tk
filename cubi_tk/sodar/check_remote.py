@@ -45,7 +45,7 @@ class FindLocalMD5Files:
 
         if self.recheck_md5 and DEFAULT_HASH_SCHEME != "MD5":
             logger.warning(
-                f"Recalculation of HASH other than MD5 not implemented yet! No hashes will be re-checked."
+                "Recalculation of HASH other than MD5 not implemented yet! No hashes will be re-checked."
             )
 
     # Adapted from snappy check remote
@@ -117,7 +117,7 @@ class FindLocalMD5Files:
 class FileComparisonChecker:
     """Class with checker methods."""
 
-    def __init__(self, local_files_dict, remote_files_dict, filenames_only=False, irods_basepath = None):
+    def __init__(self, local_files_dict, remote_files_dict, filenames_only=False, irods_basepath=None):
         """Constructor.
 
         :param local_files_dict: Dictionary with local directories as keys and list of FileDataObject as values.
@@ -403,12 +403,13 @@ class SodarCheckRemoteCommand:
             remote_files_dict=remote_files_dict,
             local_files_dict=local_files_dict,
             filenames_only=self.args.filename_only,
-            irods_basepath = assay_path
+            irods_basepath=assay_path
         ).run()
 
         if results:
             logger.info("All done.")
-        return results
+
+        return int(not results)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
