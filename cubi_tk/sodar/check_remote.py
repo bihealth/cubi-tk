@@ -1,8 +1,14 @@
 """``cubi-tk sodar check-remote``: check that files are present in remote SODAR/iRODS.
 
-Only uses local information for checking that the linked-in RAW data files are correct in terms
-of the MD5 sum.
-
+This tool searches recursively for all files with associated .md5 files in a given directory (or PWD)
+and compares them against files linked to a given SODAR project/irods directory, also the md5 sums
+recorded in local .md5 files can be rechecked. No hash format other than md5 is currently supported.
+Comparison is done based (first) on file names and then (unless disabled) on md5 sums,
+therefore wiles with different names but the same md5 sum will not be matched.
+File are sorted into:
+- those present only locally
+- those present both locally and in the remote directory
+- those present only in the remote directory
 """
 import argparse
 from collections import defaultdict
@@ -15,12 +21,13 @@ import attr
 from logzero import logger
 
 from ..common import load_toml_config, compute_md5_checksum
-from ..irods.check import DEFAULT_HASH_SCHEME
+from ..exceptions import FileMd5MismatchException
 from ..snappy.retrieve_irods_collection import RetrieveIrodsCollection
 from ..snappy.check_remote import Checker as SnappyChecker
 
-# Notes:
-# - will not find files that have correct md5sum but different name in irods
+# RetrieveIrodsCollection needs this in the namespace
+# either define it explicitly or import it
+DEFAULT_HASH_SCHEME = "MD5"
 
 
 # Adapted from snappy.retrieve_irods_collection
@@ -36,17 +43,11 @@ class FileDataObject:
 class FindLocalMD5Files:
     """Class contains methods to find local files with associated md5 sums"""
 
-    def __init__(self, base_path, recheck_md5):
+    def __init__(self, base_path, recheck_md5=False):
         """Constructor: init vars"""
 
         self.searchpath = Path(base_path)
-
         self.recheck_md5 = recheck_md5
-
-        if self.recheck_md5 and DEFAULT_HASH_SCHEME != "MD5":
-            logger.warning(
-                "Recalculation of HASH other than MD5 not implemented yet! No hashes will be re-checked."
-            )
 
     # Adapted from snappy check remote
     def run(self):
@@ -68,8 +69,6 @@ class FindLocalMD5Files:
             return None
 
         # Find all md5 files
-        # Todo/Maybe: search based on DEFAULT_HASH_SCHEME.lower()
-        # -> needs some other changes, only really useful once we start using something other than md5
         md5_files = self.searchpath.rglob("*.md5")
 
         # Check that corresponding files exist
@@ -78,7 +77,7 @@ class FindLocalMD5Files:
             datafile = md5file.with_suffix("")
             if not datafile.exists():
                 logger.warning(
-                    f"Orphaned local md5 file encountered: {md5file}. Ignoring expected: {datafile}"
+                    f"Ignoring orphaned local md5 file: {md5file}.\nExpected associated file not found: {datafile}"
                 )
                 continue
 
@@ -89,15 +88,14 @@ class FindLocalMD5Files:
                 md5sum = md5sum.split(" ")[0]
 
             # Check that md5 sum in local file is correct, this is slow so don't make it default
-            if self.recheck_md5 and DEFAULT_HASH_SCHEME == "MD5":
+            if self.recheck_md5:
                 recompute_md5 = compute_md5_checksum(datafile)
-                # TODO: this should probably be more than a warning?
                 if md5sum != recompute_md5:
-                    logger.warning(
+                    logger.error(
                         f"Wrong md5 sum recorded for file: {datafile}. "
-                        f"Recorded md5: {md5sum}, excepted md5: {recompute_md5}. Ignoring this file"
+                        f"Recorded md5: {md5sum}, excepted md5: {recompute_md5}."
                     )
-                    continue
+                    raise FileMd5MismatchException
 
             rawdata_structure_dict[datafile.parent].append(
                 FileDataObject(
@@ -117,7 +115,14 @@ class FindLocalMD5Files:
 class FileComparisonChecker:
     """Class with checker methods."""
 
-    def __init__(self, local_files_dict, remote_files_dict, filenames_only=False, irods_basepath=None):
+    def __init__(
+        self,
+        local_files_dict,
+        remote_files_dict,
+        filenames_only=False,
+        irods_basepath=None,
+        report_md5=False,
+    ):
         """Constructor.
 
         :param local_files_dict: Dictionary with local directories as keys and list of FileDataObject as values.
@@ -129,11 +134,14 @@ class FileComparisonChecker:
         :param filenames_only: Flag to indicate if md5 sums should not be used for comparison
 
         :param irods_basepath: assay basepath in irods that should be removed for reporting
+
+        :param report_md5: Flag to indicate if md5 sums should be included in report
         """
         self.local_files_dict = local_files_dict
         self.remote_files_dict = remote_files_dict
         self.filenames_only = filenames_only
         self.irods_basepath = irods_basepath
+        self.report_md5 = report_md5
 
     def run(self):
         """Executes comparison of local and remote files"""
@@ -144,17 +152,26 @@ class FileComparisonChecker:
 
         # Same name in Sodar is only relevant if we only match by name
         if self.filenames_only:
-            self.report_multiple_file_versions_in_sodar(remote_dict=self.remote_files_dict)
+            self.report_multiple_file_versions_in_sodar(self.remote_files_dict)
 
         self.report_findings(
-            both_locations=in_both, only_local=local_only, only_remote=remote_unmatched
+            both_locations=in_both,
+            only_local=local_only,
+            only_remote=remote_unmatched,
+            include_md5=self.report_md5,
         )
 
         # Return all okay
         return True
 
     @staticmethod
-    def compare_local_and_remote_files(local_dict, remote_dict, filenames_only=False, irods_basepath=""):
+    def report_multiple_file_versions_in_sodar(remote_files_dict):
+        return SnappyChecker.report_multiple_file_versions_in_sodar(remote_files_dict)
+
+    @staticmethod
+    def compare_local_and_remote_files(
+        local_dict, remote_dict, filenames_only=False, irods_basepath=""
+    ):
         """Compare locally and remotely available files.
 
         :param local_dict: Dictionary with local directories as keys and list of FileDataObject as values.
@@ -184,11 +201,9 @@ class FileComparisonChecker:
         # sort the files for reporting
         in_both = defaultdict(list)
         local_only = defaultdict(list)
-        # Using a set instead of dict for returning directly here is easier for checking which files get matched
+        # Using a set (instead of dict for returning directly) is easier for checking which files get matched
         remote_unmatched = {
-            filedata_from_irodsdata(f)
-            for filename, files in remote_dict.items()
-            for f in files
+            filedata_from_irodsdata(f) for filename, files in remote_dict.items() for f in files
         }
         filenames_warnings = set()
 
@@ -196,37 +211,42 @@ class FileComparisonChecker:
             for file in files:
                 filename = file.file_name
                 md5 = file.file_md5sum
-                if filename in remote_dict:
-                    remote_files = remote_dict[filename]
-                    if filenames_only:
-                        # All files with the same name will be matched
-                        in_both[directory].append(file)
-                        remote_unmatched -= {filedata_from_irodsdata(f) for f in remote_files}
-                        # If we match multiple files with the same name, they are likely not the same file, so
-                        # give *at least* a warning
-                        # TODO: maybe make this an error? optionally an error depending on flags?
-                        if len(remote_files) > 1 and filename not in filenames_warnings:
-                            filenames_warnings.add(filename)
-                            logger.warning(
-                                f"Local file ({filename}) matches {len(remote_files)} files in irods. "
-                                f"Run without --filename-only to check individual files based on MD5 as well as name."
-                            )
-                    else:
-                        md5_matches = {
-                            filedata_from_irodsdata(f) for f in remote_files if f.file_md5sum == md5
-                        }
-                        if md5_matches:
-                            remote_unmatched -= md5_matches
-                            in_both[directory].append(file)
-                        else:
-                            local_only[directory].append(file)
-                        # Multiple files with the same md5 aren't a critical issue - an info/warning is enough here
-                        if len(md5_matches) > 1:
-                            logger.info(
-                                f"Local file ({filename}) matches {len(md5_matches)} files with the same md5sum in irods."
-                            )
+                # Check first if there is any matching remote file or if file is local only
+                if filename not in remote_dict:
+                    local_only[directory].append(file)
+                    continue
+
+                # Collect all remote files with same name
+                remote_files = remote_dict[filename]
+
+                # For filename based matching *all* files with the same name will be matched
+                # If we match multiple files with the same name, they may not be the same, so warning is issued
+                # TODO: maybe make this an error? optionally an error depending on flags?
+                if filenames_only:
+                    in_both[directory].append(file)
+                    remote_unmatched -= {filedata_from_irodsdata(f) for f in remote_files}
+                    if len(remote_files) > 1 and filename not in filenames_warnings:
+                        filenames_warnings.add(filename)
+                        logger.warning(
+                            f"Local file ({filename}) matches {len(remote_files)} files in irods. "
+                            f"Run without --filename-only to check individual files based on MD5 as well as name."
+                        )
+                        continue
+
+                # From the file with matching names subselect those with same md5
+                md5_matches = {
+                    filedata_from_irodsdata(f) for f in remote_files if f.file_md5sum == md5
+                }
+                if md5_matches:
+                    remote_unmatched -= md5_matches
+                    in_both[directory].append(file)
                 else:
                     local_only[directory].append(file)
+                # Multiple files with the same md5 aren't a critical issue - an info/warning is enough here
+                if len(md5_matches) > 1:
+                    logger.info(
+                        f"Local file ({filename}) matches {len(md5_matches)} files with the same md5sum in irods."
+                    )
 
         # Convert set of unmatched files into the same dict structure as the others
         remote_only = defaultdict(list)
@@ -236,11 +256,7 @@ class FileComparisonChecker:
         return in_both, local_only, remote_only
 
     @staticmethod
-    def report_multiple_file_versions_in_sodar(remote_dict):
-        SnappyChecker.report_multiple_file_versions_in_sodar(remote_dict)
-
-    @staticmethod
-    def report_findings(both_locations, only_local, only_remote, include_md5=True):
+    def report_findings(both_locations, only_local, only_remote, include_md5=False):
         """Report findings
 
         :param both_locations: Dict for files found both locally and in remote directory.
@@ -257,10 +273,13 @@ class FileComparisonChecker:
 
         :param include_md5: Flag to indicate if md5 sums should be included in reports
         """
+
         # Convert entries to text
         def make_file_block(folder, files):
-            files_str = "\n".join("    " + f.file_name + ("" if not include_md5 else "  (" + f.file_md5sum[:8] + ")")
-                                  for f in sorted(files, key=lambda o: o.file_name))
+            files_str = "\n".join(
+                "    " + f.file_name + ("" if not include_md5 else "  (" + f.file_md5sum[:8] + ")")
+                for f in sorted(files, key=lambda o: o.file_name)
+            )
             return str(folder) + ":\n" + files_str
 
         in_both_str = "\n".join(
@@ -336,7 +355,12 @@ class SodarCheckRemoteCommand:
             action="store_true",
             help="Flag to double check that md5 sums stored in local files do actually match their corresponding files",
         )
-
+        parser.add_argument(
+            "--report-md5sums",
+            default=False,
+            action="store_true",
+            help="Flag to indicate if md5 sums should be included in file report",
+        )
         parser.add_argument(
             "--assay-uuid",
             default=None,
@@ -382,7 +406,7 @@ class SodarCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
-        IrodsCollector = RetrieveIrodsCollection(
+        irodscollector = RetrieveIrodsCollection(
             pseudo_args,
             self.args.sodar_url,
             self.args.sodar_api_token,
@@ -390,8 +414,8 @@ class SodarCheckRemoteCommand:
             self.args.project_uuid,
         )
 
-        remote_files_dict = IrodsCollector.perform()
-        assay_path = IrodsCollector.get_assay_irods_path(self.args.assay_uuid)
+        remote_files_dict = irodscollector.perform()
+        assay_path = irodscollector.get_assay_irods_path(self.args.assay_uuid)
 
         # Find all local files with md5 sum
         local_files_dict = FindLocalMD5Files(
@@ -403,7 +427,7 @@ class SodarCheckRemoteCommand:
             remote_files_dict=remote_files_dict,
             local_files_dict=local_files_dict,
             filenames_only=self.args.filename_only,
-            irods_basepath=assay_path
+            irods_basepath=assay_path,
         ).run()
 
         if results:
