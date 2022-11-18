@@ -5,16 +5,16 @@
   "source_type": ["hiPSC", "tissue"],
   "source_meta": "Genetic modfications,Passage,Expansion ID",
   "model_type": ["3D", "2D"],
-  "sample_meta": "Tissue type,Differentiation duration,Condition,Treatment,Treatment duration",
+  "sample_meta": "Experiment Identifier,Tissue type,Differentiation duration,Condition,Treatment,Treatment duration",
   "library_type": ["Single-Cell", "Bulk"],
   "library_kit": "{{'SC3Pv3' if cookiecutter.library_type == 'Single-Cell' else ''}}",
   "dissociation_meta": "{{'Cell count,Removal debris,Removal dead cell,Removal ab cell,Cell fixation,Cell viability' if cookiecutter.library_type == 'Single-Cell' else 'Cell count'}}",
-  "library_construction_meta": "{{'Sequencing kit,RNA amount,QC cell load recovery,QC tape fragment size' if cookiecutter.library_type == 'Single-Cell' else 'Sequencing kit,RNA amount,QC tape fragment size'}}",
+  "library_construction_meta": "{{'Sequencing kit,RNA amount,QC cell load recovery,QC tape fragment size' if cookiecutter.library_type == 'Single-Cell' else 'RNA amount,QC tape fragment size'}}",
   "sequencing_meta": "Platform,Instrument model,No. targeted reads,QC-notes",
   "study_title": "{{cookiecutter.investigation_title}}",
   "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
   "s_file_name": "{{cookiecutter.i_dir_name}}",
   "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
   "a_technology_type": "nucleotide sequencing",
-  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}"
+  "assay_name": "{{cookiecutter.library_type}}_{{cookiecutter.a_measurement_type|replace(' ', '_')}}"
 }
