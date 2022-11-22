@@ -51,8 +51,11 @@ def test_findlocalmd5_run():
     actual_2 = FindLocalMD5Files(test_dir_path / "test2", recheck_md5=False).run()
     assert actual_2 == expected_2
 
-    actual_empty = FindLocalMD5Files(test_dir_path / "empty_test", recheck_md5=False).run()
+    empty_dir = test_dir_path / "empty_test"
+    empty_dir.mkdir()
+    actual_empty = FindLocalMD5Files(empty_dir, recheck_md5=False).run()
     assert actual_empty == dict()
+    empty_dir.rmdir()
 
     actual = FindLocalMD5Files(test_dir_path, recheck_md5=False).run()
     assert all(expected_all[dirname] == filelist for dirname, filelist in actual.items())

@@ -231,7 +231,7 @@ class FileComparisonChecker:
                             f"Local file ({filename}) matches {len(remote_files)} files in irods. "
                             f"Run without --filename-only to check individual files based on MD5 as well as name."
                         )
-                        continue
+                    continue
 
                 # From the file with matching names subselect those with same md5
                 md5_matches = {
