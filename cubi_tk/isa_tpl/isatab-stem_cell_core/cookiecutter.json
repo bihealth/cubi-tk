@@ -13,8 +13,8 @@
   "sequencing_meta": "Platform,Instrument model,No. targeted reads,QC-notes",
   "study_title": "{{cookiecutter.investigation_title}}",
   "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
-  "s_file_name": "{{cookiecutter.i_dir_name}}",
-  "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
+  "s_file_name": "{{cookiecutter.investigation_title}}",
+  "assay_prefix": "{{cookiecutter.investigation_title}}",
   "a_technology_type": "nucleotide sequencing",
   "assay_name": "{{cookiecutter.library_type}}_{{cookiecutter.a_measurement_type|replace(' ', '_')}}"
 }
