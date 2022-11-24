@@ -61,13 +61,6 @@ class FindLocalMD5Files:
         # Initialise variables
         rawdata_structure_dict = defaultdict(list)
 
-        # Validate input
-        if not self.searchpath.exists():
-            logger.error(
-                f"Path to directory to raw data does not exist. Expected: {self.searchpath}"
-            )
-            return None
-
         # Find all md5 files
         md5_files = self.searchpath.rglob("*.md5")
 
@@ -98,11 +91,7 @@ class FindLocalMD5Files:
                     raise FileMd5MismatchException
 
             rawdata_structure_dict[datafile.parent].append(
-                FileDataObject(
-                    file_name=datafile.name,
-                    file_path=str(datafile),
-                    file_md5sum=md5sum,
-                )
+                FileDataObject(file_name=datafile.name, file_path=str(datafile), file_md5sum=md5sum)
             )
 
         logger.info("... done with raw data files search.")
@@ -423,17 +412,15 @@ class SodarCheckRemoteCommand:
         ).run()
 
         # Run checks
-        results = FileComparisonChecker(
+        FileComparisonChecker(
             remote_files_dict=remote_files_dict,
             local_files_dict=local_files_dict,
             filenames_only=self.args.filename_only,
             irods_basepath=assay_path,
         ).run()
 
-        if results:
-            logger.info("All done.")
-
-        return int(not results)
+        logger.info("All done.")
+        return 0
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
