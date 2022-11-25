@@ -52,6 +52,7 @@ Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` fo
 import argparse
 from functools import partial
 import json
+from pathlib import Path
 import os
 import typing
 
@@ -169,12 +170,6 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
 
     output_dir = os.path.realpath(args.output_dir)
     output_base = os.path.dirname(args.output_dir)
-    if os.path.exists(output_dir):  # pragma: no cover
-        logger.error("Output directory %s already exists. Refusing to overwrite!", output_dir)
-        return 1
-    if not os.path.exists(output_base):  # pragma: no cover
-        logger.error("Output path to output directory does not exist: %s", output_base)
-        return 1
     extra_context["i_dir_name"] = os.path.basename(output_dir)
 
     # FIXME: better solution? (added because args.var_is_triplet is None)
@@ -193,6 +188,23 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     logger.info("Resulting structure is:\n%s", "\n".join(listing))
     return 0
 
+def validate_output_directory(parser, output_directory_path):
+    """Validate output directory
+
+    :param parser: Argument parser.
+    :type parser: argparse.ArgumentParser
+
+    :param output_directory_path: Path to output directory being checked.
+    :type output_directory_path: str
+
+    :return: Returns inputted path if valid path and directory doesn't exists already.
+    """
+    output_directory_parent_path = Path(output_directory_path).resolve().parent
+    if Path(output_directory_path).resolve().exists():
+        parser.error(f"Refusing to overwrite! Output directory already exists: {output_directory_path}")
+    if not Path(output_directory_parent_path).exists():
+        parser.error(f"Path to output directory does not exist: {output_directory_parent_path}")
+    return output_directory_path
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
@@ -214,14 +226,17 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
             default=partial(run_cookiecutter, tpl),
             help=argparse.SUPPRESS,
         )
-        parser.add_argument("output_dir", help="Path to output directory")
+        parser.add_argument(
+            "output_dir",
+            type=lambda x:validate_output_directory(parser, x),
+            help="Path to output directory"
+        )
 
         for name in tpl.configuration:
             key = name.replace("_", "-")
             parser.add_argument(
                 "--var-%s" % key, help="template variables %s" % repr(name), default=None
             )
-
 
 def run(args, parser, subparser):  # pragma: nocover
     """Main entry point for isa-tpl command."""
