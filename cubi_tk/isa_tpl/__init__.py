@@ -188,6 +188,7 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     logger.info("Resulting structure is:\n%s", "\n".join(listing))
     return 0
 
+
 def validate_output_directory(parser, output_directory_path):
     """Validate output directory
 
@@ -201,10 +202,13 @@ def validate_output_directory(parser, output_directory_path):
     """
     output_directory_parent_path = Path(output_directory_path).resolve().parent
     if Path(output_directory_path).resolve().exists():
-        parser.error(f"Refusing to overwrite! Output directory already exists: {output_directory_path}")
+        parser.error(
+            f"Refusing to overwrite! Output directory already exists: {output_directory_path}"
+        )
     if not Path(output_directory_parent_path).exists():
         parser.error(f"Path to output directory does not exist: {output_directory_parent_path}")
     return output_directory_path
+
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
@@ -228,8 +232,8 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         )
         parser.add_argument(
             "output_dir",
-            type=lambda x:validate_output_directory(parser, x),
-            help="Path to output directory"
+            type=lambda x: validate_output_directory(parser, x),
+            help="Path to output directory",
         )
 
         for name in tpl.configuration:
@@ -237,6 +241,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
             parser.add_argument(
                 "--var-%s" % key, help="template variables %s" % repr(name), default=None
             )
+
 
 def run(args, parser, subparser):  # pragma: nocover
     """Main entry point for isa-tpl command."""
