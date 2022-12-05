@@ -28,7 +28,8 @@ The `Cookiecutter`_ directories are located in this module's directory.  Current
 - ``isatab-bulk_rnaseq``
 - ``isatab-tumor_normal_dna``
 - ``isatab-tumor_normal_triplets``
-- ``isatab-stem_cell_core``
+- ``isatab-stem_cell_core_bulk``
+- ``isatab-stem_cell_core_sc``
 
 Adding Templates
 ----------------
@@ -145,11 +146,17 @@ _TEMPLATES = (
         configuration=load_variables("isatab-ms_meta_biocrates"),
     ),
     IsaTabTemplate(
-        name="stem_cell_core",
-        path=os.path.join(_BASE_DIR, "isatab-stem_cell_core"),
-        description="RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
-        configuration=load_variables("isatab-stem_cell_core"),
+        name="stem_cell_core_bulk",
+        path=os.path.join(_BASE_DIR, "isatab-stem_cell_core_bulk"),
+        description="Bulk RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
+        configuration=load_variables("isatab-stem_cell_core_bulk"),
     ),
+    IsaTabTemplate(
+        name="stem_cell_core_sc",
+        path=os.path.join(_BASE_DIR, "isatab-stem_cell_core_sc"),
+        description="Single cell RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
+        configuration=load_variables("isatab-stem_cell_core_sc"),
+    ),    
 )
 
 #: Known ISA-tab templates.
