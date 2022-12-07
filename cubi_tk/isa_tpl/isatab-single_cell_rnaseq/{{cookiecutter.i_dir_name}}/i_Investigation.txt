@@ -79,7 +79,7 @@ Study Protocol Type Term Source REF	""	""	""	""
 Study Protocol Description	""	""	""	""
 Study Protocol URI	""	""	""	""
 Study Protocol Version	""	""	""	""
-Study Protocol Parameters Name	Method	Dissociation method;Cell count{% for meta in dissociation_meta -%};{{meta}}{% endfor %}	Library kit;Library type;Multiplex genotype;Multiplex sample;Multiplex oligo{% for meta in library_construction_meta -%};{{meta}}{% endfor %}	Sequencing run;Library prefix;Barcode kit;Barcode name{% for meta in sequencing_meta -%};{{meta}}{% endfor %}
+Study Protocol Parameters Name	Method	Dissociation method;Cell count{% for meta in dissociation_meta -%};{{meta}}{% endfor %}	Library kit;Library type;Multiplex genotype;Multiplex sample;Multiplex oligo{% for meta in library_construction_meta -%};{{meta}}{% endfor %}	Sequencing batch;Library prefix;Barcode kit;Barcode name{% for meta in sequencing_meta -%};{{meta}}{% endfor %}
 Study Protocol Parameters Name Term Accession Number	""	";{% for meta in dissociation_meta -%};{% endfor %}"	";;;;{% for meta in library_construction_meta -%};{% endfor %}"	";;;{% for meta in sequencing_meta -%};{% endfor %}"
 Study Protocol Parameters Name Term Source REF	""	";{% for meta in dissociation_meta -%};{% endfor %}"	";;;;{% for meta in library_construction_meta -%};{% endfor %}"	";;;{% for meta in sequencing_meta -%};{% endfor %}"
 Study Protocol Components Name	""	""	""	""
