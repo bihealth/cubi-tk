@@ -51,3 +51,7 @@ class UserCanceledException(CubiTkException):
 
 class InvalidReadmeException(CubiTkException):
     """Raised if the Readme does not meet the specification."""
+
+
+class FileMd5MismatchException(CubiTkException):
+    """Raised if the recored md5 sum for a file does not match the (re)computed value."""

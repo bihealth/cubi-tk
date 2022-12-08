@@ -59,6 +59,33 @@ class ParseSampleSheet:
                     for library in test_sample.ngs_libraries.values():
                         yield library.name
 
+    def yield_ngs_library_names_filtered_by_samples(
+        self, sheet, selected_samples, batch_key="batchNo", family_key="familyId"
+    ):
+        """Yield all NGS library names from sheet.
+
+        When ``min_batch`` is given then only the donors for which the ``extra_infos[batch_key]`` is greater than
+        ``min_batch`` will be used.
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param selected_samples: List of sample identifiers as string, e.g., 'P001' instead of 'P001-N1-DNA1-WGS1'.
+        :type selected_samples: list
+
+        :param batch_key: Batch number key in sheet. Default: 'batchNo'.
+        :type batch_key: str
+
+        :param family_key: Family identifier key. Default: 'familyId'.
+        :type family_key: str
+        """
+        for donor in self.yield_donor(sheet=sheet, batch_key=batch_key, family_key=family_key):
+            if donor.secondary_id in selected_samples:
+                for bio_sample in donor.bio_samples.values():
+                    for test_sample in bio_sample.test_samples.values():
+                        for library in test_sample.ngs_libraries.values():
+                            yield library.name
+
     def yield_ngs_library_and_folder_names(
         self,
         sheet,

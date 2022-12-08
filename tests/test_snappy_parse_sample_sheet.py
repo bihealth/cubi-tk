@@ -262,3 +262,14 @@ def test_yield_sample_names_multi_batch(parser, sheet_multi_batch):
     expected_list = expected_batch_six
     for name_ in actual:
         assert name_ in expected_list
+
+
+def test_yield_ngs_library_names_filtered_by_samples(parser, sheet):
+    """Tests ParseSampleSheet.yield_ngs_library_names_filtered_by_samples()"""
+    selected_samples = ["P001", "P002"]
+    expected = [f"P00{i}-N1-DNA1-WGS1" for i in (1, 2)]
+    actual = parser.yield_ngs_library_names_filtered_by_samples(
+        sheet=sheet, selected_samples=selected_samples
+    )
+    for name_ in actual:
+        assert name_ in expected
