@@ -1,0 +1,16 @@
+[Metadata]
+schema	germline_variants
+schema_version	v1
+
+[Custom Fields]
+key	annotatedEntity	docs	type	minimum	maximum	unit	choices	pattern
+batchNo	bioEntity	Batch No.	integer	.	.	.	.	.
+familyId	bioEntity	Family	string	.	.	.	.	.
+projectUuid	bioEntity	Project UUID	string	.	.	.	.	.
+libraryKit	ngsLibrary	Enrichment kit	string	.	.	.	.	.
+
+[Data]
+familyId	patientName	fatherName	motherName	sex	isAffected	libraryType	folderName	batchNo	hpoTerms	projectUuid	seqPlatform	libraryKit
+FAM_index	index	0	0	U	.	WES	index	1	.		ILLUMINA	Agilent SureSelect Human All Exon V6r2
+FAM_mother	mother	0	0	U	.	WES	mother	1	.		ILLUMINA	Agilent SureSelect Human All Exon V6r2
+FAM_father	father	0	0	U	.	WES	father	1	.		ILLUMINA	Agilent SureSelect Human All Exon V6r2
