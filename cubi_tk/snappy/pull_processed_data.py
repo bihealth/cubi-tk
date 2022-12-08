@@ -110,6 +110,16 @@ class PullProcessedDataCommand(PullDataCommon):
             help=f"File extensions to be retrieved. Valid options: {VALID_FILE_TYPES}",
         )
         parser.add_argument(
+            "--download-all-versions",
+            default=False,
+            action="store_true",
+            help=(
+                "By default only the latest version of a file will be download. For instance, if a was uploaded "
+                "two times, in '2022-01-31' and '2022-02-28', only the latest is downloaded. If this flag is "
+                "present, both versions will be downloaded."
+            ),
+        )
+        parser.add_argument(
             "--overwrite",
             default=False,
             action="store_true",
@@ -222,6 +232,7 @@ class PullProcessedDataCommand(PullDataCommon):
             remote_files_dict=filtered_remote_files_dict,
             output_dir=self.args.output_directory,
             assay_uuid=self.args.assay_uuid or assay_uuid,
+            retrieve_all=self.args.download_all_versions,
         )
 
         # Retrieve files from iRODS
@@ -285,8 +296,7 @@ class PullProcessedDataCommand(PullDataCommon):
             yield_names_method = parser.yield_ngs_library_names
         return list(yield_names_method(sheet=sheet, min_batch=min_batch, max_batch=max_batch))
 
-    @staticmethod
-    def pair_ipath_with_outdir(remote_files_dict, output_dir, assay_uuid):
+    def pair_ipath_with_outdir(self, remote_files_dict, output_dir, assay_uuid, retrieve_all=False):
         """Pair iRODS path with local output directory
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
@@ -299,12 +309,22 @@ class PullProcessedDataCommand(PullDataCommon):
         :param assay_uuid: Assay UUID - used as a hack to get the directory structure in SODAR.
         :type assay_uuid: str
 
+        :param retrieve_all: Flag indicates if all versions of the files should be downloaded (True)
+        or just the latest (False). Default: False.
+        :type retrieve_all: bool
+
         :return: Return list of tuples (iRODS path [str], local output directory [str]).
         """
         # Initiate output
         output_list = []
         # Iterate over iRODS objects
         for irods_obj_list in remote_files_dict.values():
+
+            # Retrieve only latest, test if list is empty
+            if irods_obj_list and not retrieve_all:
+                irods_obj_list = [self.sort_irods_object_by_date_in_path(irods_obj_list)[0]]
+
+            # Iterate over iRODS object list, by default list contain only latest
             for irods_obj in irods_obj_list:
                 # Keeps iRODS directory structure if assay UUID is provided.
                 # Assumption is that SODAR directories follow the logic below:

@@ -22,44 +22,64 @@ def pull_processed_data():
 @pytest.fixture
 def remote_files_bam():
     """Returns iRODS collection example for BAM files and two samples, P001 and P002"""
-    p0001_sodar_path = (
-        "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/1999-09-09"
-    )
-    p0002_sodar_path = (
-        "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P002-N1-DNA1-WES1/1999-09-09"
-    )
+    p0001_sodar_path = "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P001-N1-DNA1-WES1/%s"
+    p0002_sodar_path = "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P002-N1-DNA1-WES1/%s"
     return {
         "bwa.P001-N1-DNA1-WES1.bam": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.bam",
-                irods_path=f"{p0001_sodar_path}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam",
+                irods_path=f"{p0001_sodar_path % '1975-01-04'}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam",
                 file_md5sum=FILE_MD5SUM,
                 replicas_md5sum=REPLICAS_MD5SUM,
-            )
+            ),
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1.bam",
+                irods_path=f"{p0001_sodar_path % '1999-09-09'}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            ),
         ],
         "bwa.P001-N1-DNA1-WES1.bam.bai": [
             IrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.bam.bai",
-                irods_path=f"{p0001_sodar_path}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam.bai",
+                irods_path=f"{p0001_sodar_path % '1975-01-04'}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam.bai",
                 file_md5sum=FILE_MD5SUM,
                 replicas_md5sum=REPLICAS_MD5SUM,
-            )
+            ),
+            IrodsDataObject(
+                file_name="bwa.P001-N1-DNA1-WES1.bam.bai",
+                irods_path=f"{p0001_sodar_path % '1999-09-09'}/ngs_mapping/bwa.P001-N1-DNA1-WES1.bam.bai",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            ),
         ],
         "bwa.P002-N1-DNA1-WES1.bam": [
             IrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.bam",
-                irods_path=f"{p0002_sodar_path}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam",
+                irods_path=f"{p0002_sodar_path % '1999-09-09'}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam",
                 file_md5sum=FILE_MD5SUM,
                 replicas_md5sum=REPLICAS_MD5SUM,
-            )
+            ),
+            IrodsDataObject(
+                file_name="bwa.P002-N1-DNA1-WES1.bam",
+                irods_path=f"{p0002_sodar_path % '1975-01-04'}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            ),
         ],
         "bwa.P002-N1-DNA1-WES1.bam.bai": [
             IrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.bam.bai",
-                irods_path=f"{p0002_sodar_path}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam.bai",
+                irods_path=f"{p0002_sodar_path % '1999-09-09'}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam.bai",
                 file_md5sum=FILE_MD5SUM,
                 replicas_md5sum=REPLICAS_MD5SUM,
-            )
+            ),
+            IrodsDataObject(
+                file_name="bwa.P002-N1-DNA1-WES1.bam.bai",
+                irods_path=f"{p0002_sodar_path % '1975-01-04'}/ngs_mapping/bwa.P002-N1-DNA1-WES1.bam.bai",
+                file_md5sum=FILE_MD5SUM,
+                replicas_md5sum=REPLICAS_MD5SUM,
+            ),
         ],
     }
 
@@ -492,6 +512,46 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam(pull_processed_data, rem
         remote_files_dict=remote_files_bam, output_dir=out_dir, assay_uuid=wrong_assay_uuid
     )
     assert sorted(actual) == sorted(wrong_uuid_expected)
+
+
+def test_pull_processed_data_pair_ipath_with_outdir_bam_retrieve_all(
+    pull_processed_data, remote_files_bam
+):
+    """Tests PullProcessedDataCommand.pull_processed_data - all versions of BAM files."""
+    # Define input
+    out_dir = "out_dir"
+    assay_uuid = "99999999-aaa-bbbb-cccc-99999999"
+
+    # Define expected
+    irods_path = (
+        "/sodar_path/.../assay_99999999-aaa-bbbb-cccc-99999999/P00{i}-N1-DNA1-WES1/{date}/ngs_mapping/"
+        "bwa.P00{i}-N1-DNA1-WES1.{ext}"
+    )
+    full_out_dir = "out_dir/P00{i}-N1-DNA1-WES1/{date}/ngs_mapping/bwa.P00{i}-N1-DNA1-WES1.{ext}"
+    irods_files_list = [
+        irods_path.format(i=i, date=date, ext=ext)
+        for i in (1, 2)
+        for date in ("1999-09-09", "1975-01-04")
+        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+    ]
+    correct_uuid_output_dir_list = [
+        full_out_dir.format(i=i, date=date, ext=ext)
+        for i in (1, 2)
+        for date in ("1999-09-09", "1975-01-04")
+        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+    ]
+    correct_uuid_expected = []
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
+        correct_uuid_expected.append((_irods_path, _out_path))
+
+    # Test with correct assay UUID - directory structure same as in SODAR
+    actual = pull_processed_data.pair_ipath_with_outdir(
+        remote_files_dict=remote_files_bam,
+        output_dir=out_dir,
+        assay_uuid=assay_uuid,
+        retrieve_all=True,
+    )
+    assert sorted(actual) == sorted(correct_uuid_expected)
 
 
 def test_pull_processed_data_pair_ipath_with_outdir_vcf(pull_processed_data, remote_files_vcf):
