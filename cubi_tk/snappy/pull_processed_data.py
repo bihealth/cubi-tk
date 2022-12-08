@@ -296,8 +296,7 @@ class PullProcessedDataCommand(PullDataCommon):
             yield_names_method = parser.yield_ngs_library_names
         return list(yield_names_method(sheet=sheet, min_batch=min_batch, max_batch=max_batch))
 
-    @staticmethod
-    def pair_ipath_with_outdir(remote_files_dict, output_dir, assay_uuid):
+    def pair_ipath_with_outdir(self, remote_files_dict, output_dir, assay_uuid, retrieve_all=False):
         """Pair iRODS path with local output directory
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
