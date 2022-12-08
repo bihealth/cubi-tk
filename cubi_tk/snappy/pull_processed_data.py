@@ -61,7 +61,7 @@ class PullProcessedDataCommand(PullDataCommon):
             "--tsv-shortcut",
             default="germline",
             choices=("cancer", "generic", "germline"),
-            help="The shortcut TSV schema to use.",
+            help="The shortcut TSV schema to use; default: 'germline'.",
         )
         parser.add_argument(
             "--base-path",
@@ -70,6 +70,14 @@ class PullProcessedDataCommand(PullDataCommon):
             help=(
                 "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
                 "back to current working directory by default."
+            ),
+        )
+        parser.add_argument(
+            "--selected-samples",
+            help=(
+                "Limits the request to the listed sample names. Don't include the full library name, just the "
+                "sample name (e.g., 'P001' instead of 'P001-N1-DNA1-WES1'). Separate the sample with comma for "
+                "multiple samples, example: 'P001,P002,P003'. Note: argument overrides batch related arguments."
             ),
         )
         parser.add_argument(
@@ -102,7 +110,10 @@ class PullProcessedDataCommand(PullDataCommon):
             help=f"File extensions to be retrieved. Valid options: {VALID_FILE_TYPES}",
         )
         parser.add_argument(
-            "--overwrite", default=False, action="store_true", help="Allow overwriting of local files."
+            "--overwrite",
+            default=False,
+            action="store_true",
+            help="Allow overwriting of local files.",
         )
         parser.add_argument(
             "--assay-uuid",
@@ -119,8 +130,7 @@ class PullProcessedDataCommand(PullDataCommon):
         """Entry point into the command."""
         return cls(args).execute()
 
-    @staticmethod
-    def check_args(args):
+    def check_args(self, args):
         """Called for checking arguments."""
         res = 0
 
@@ -164,18 +174,18 @@ class PullProcessedDataCommand(PullDataCommon):
         sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
         # Filter requested samples or libraries
-        parser = ParseSampleSheet()
-        if self.args.sample_id:  # example: 'P001'
-            selected_identifiers = list(
-                parser.yield_sample_names(
-                    sheet=sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
-                )
+        if self.args.selected_samples:
+            selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
+                sheet=sheet,
+                selected_samples=self.args.selected_samples,
+                by_sample_id=self.args.sample_id,
             )
-        else:  # example: 'P001-N1-DNA1-WGS1'
-            selected_identifiers = list(
-                parser.yield_ngs_library_names(
-                    sheet=sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
-                )
+        else:
+            selected_identifiers = self._filter_requested_samples_or_libraries(
+                sheet=sheet,
+                min_batch=self.args.first_batch,
+                max_batch=self.args.last_batch,
+                by_sample_id=self.args.sample_id,
             )
 
         # Get assay UUID if not provided
@@ -215,10 +225,65 @@ class PullProcessedDataCommand(PullDataCommon):
         )
 
         # Retrieve files from iRODS
-        self.get_irods_files(irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite)
+        self.get_irods_files(
+            irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite
+        )
 
         logger.info("All done. Have a nice day!")
         return 0
+
+    @staticmethod
+    def _filter_requested_samples_or_libraries_by_selected_samples(
+        sheet, selected_samples, by_sample_id
+    ):
+        """Filter requested samples or libraries based on selected sample list
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param selected_samples: List of sample identifiers as string, e.g., 'P001,P002,P003'.
+        :type selected_samples: str
+
+        :param by_sample_id: Flag filter by sample id instead of library name.
+        :type by_sample_id: bool
+
+        :return: Returns filtered list of identifiers based on inputted parameters.
+        """
+        selected_samples_list = selected_samples.split(",")
+        if by_sample_id:
+            return selected_samples_list
+        else:
+            parser = ParseSampleSheet()
+            return list(
+                parser.yield_ngs_library_names_filtered_by_samples(
+                    sheet=sheet, selected_samples=selected_samples_list
+                )
+            )
+
+    @staticmethod
+    def _filter_requested_samples_or_libraries(sheet, min_batch, max_batch, by_sample_id):
+        """Filter requested samples or libraries
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param min_batch: First batch number.
+        :type min_batch:  int
+
+        :param max_batch: Last batch number.
+        :type max_batch: int
+
+        :param by_sample_id: Flag filter by sample id instead of library name.
+        :type by_sample_id: bool
+
+        :return: Returns filtered list of identifiers based on inputted parameters.
+        """
+        parser = ParseSampleSheet()
+        if by_sample_id:  # example: 'P001'
+            yield_names_method = parser.yield_sample_names
+        else:  # example: 'P001-N1-DNA1-WGS1'
+            yield_names_method = parser.yield_ngs_library_names
+        return list(yield_names_method(sheet=sheet, min_batch=min_batch, max_batch=max_batch))
 
     @staticmethod
     def pair_ipath_with_outdir(remote_files_dict, output_dir, assay_uuid):
