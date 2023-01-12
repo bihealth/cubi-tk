@@ -9,8 +9,8 @@ Investigation Title	{{cookiecutter.investigation_title}}
 Investigation Description	""
 Investigation Submission Date	""
 Investigation Public Release Date	""
-Comment[Created With Configuration]	/path/to/isa-configurations/bih_studies/bih_single_cell
-Comment[Last Opened With Configuration]	bih_single_cell
+Comment[Created With Configuration]	bih_cancer
+Comment[Last Opened With Configuration]	bih_cancer
 INVESTIGATION PUBLICATIONS
 Investigation PubMed ID
 Investigation Publication DOI
