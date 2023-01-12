@@ -14,7 +14,7 @@ pytest:
 	pytest .
 
 .PHONY: lint-all
-lint-all: bandit pyflakes pep257 prospector
+lint-all: bandit pyflakes pep257
 
 .PHONY: bandit
 bandit:
@@ -31,7 +31,3 @@ pep257:
 .PHONY: flake8
 flake8:
 	flake8
-
-.PHONY: prospector
-prospector:
-	prospector

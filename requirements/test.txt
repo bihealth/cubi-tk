@@ -38,4 +38,5 @@ mypy
 # More checking
 bandit
 pyflakes
-prospector
+
+setuptools ==65.6.3

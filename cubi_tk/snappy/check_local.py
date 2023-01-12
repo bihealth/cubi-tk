@@ -34,7 +34,8 @@ class GermlineSheetChecker:
             ]
         return all(results)
 
-    def _check_parent_sex(self, sheet: shortcuts.GermlineCaseSheet):
+    @staticmethod
+    def _check_parent_sex(sheet: shortcuts.GermlineCaseSheet):
         """Check whether parent sex is consistent."""
         logger.info("Checking for parent sex consistency...")
         ok = True
@@ -57,27 +58,24 @@ class GermlineSheetChecker:
         for name in fathers:
             sex = name_to_sex.get(name, "unknown")
             if sex != "male":
+                father_of_str = ", ".join(sorted(father_of[name]))
                 logger.warning(
-                    "Donor %s is father of %s but sex is % and not male",
-                    name,
-                    ", ".join(sorted(father_of[name])),
-                    sex,
+                    f"Donor '{name}' is father of '{father_of_str}' but sex is '{sex}' and not male"
                 )
                 ok = False
         for name in mothers:
             sex = name_to_sex.get(name, "unknown")
             if sex != "female":
+                mother_of_str = ", ".join(sorted(mother_of[name]))
                 logger.warning(
-                    "Donor %s is mother of %s but sex is % and not female",
-                    name,
-                    ", ".join(sorted(mother_of[name])),
-                    sex,
+                    f"Donor '{name}' is mother of '{mother_of_str}' but sex is '{sex}' and not female"
                 )
                 ok = False
 
         return ok
 
-    def _check_dangling_parents(self, sheet: shortcuts.GermlineCaseSheet):
+    @staticmethod
+    def _check_dangling_parents(sheet: shortcuts.GermlineCaseSheet):
         """Check whether there are any dangling parents."""
         logger.info("Checking for dangling parents...")
         ok = True
@@ -85,16 +83,19 @@ class GermlineSheetChecker:
         donor_names = {donor.name for donor in sheet.donors}
         for donor in sheet.donors:
             if donor.father and donor.father.name not in donor_names:
-                logger.warning("Father of %s is not known: %s", donor.father.name, donor.name)
+                logger.warning(f"Father of '{donor.father.name}' is not known: {donor.name}")
                 ok = False
             if donor.mother and donor.mother.name not in donor_names:
-                logger.warning("Mother of %s is not known: %s", donor.father.name, donor.name)
+                logger.warning(f"Mother of '{donor.mother.name}' is not known: {donor.name}")
                 ok = False
 
         return ok
 
-    def _check_family_id(self, sheet: shortcuts.GermlineCaseSheet):
+    @staticmethod
+    def _check_family_id(sheet: shortcuts.GermlineCaseSheet):
         """Check whether parents links point over family boundaries."""
+        logger.info("Checking for family identifiers...")
+
         ok = True
 
         seen_family_ids: typing.Set[str] = set()
@@ -108,20 +109,16 @@ class GermlineSheetChecker:
             family_ids = {donor.extra_infos.get("familyId") for donor in pedigree.donors}
             seen_family_ids |= family_ids
             if len(family_ids) != 1:
-                logger.warning(
-                    "Seen multiple family IDs within one pedigree: %s",
-                    ", ".join(sorted(family_ids)),
-                )
+                family_ids_str = ", ".join(sorted(family_ids))
+                logger.warning(f"Seen multiple family IDs within one pedigree: {family_ids_str}")
                 ok = False
 
         no_family_donors = {
             donor for donor in sheet.donors if not donor.extra_infos.get("familyId")
         }
         if no_family_donors:
-            logger.warning(
-                "Found donors without family ID: %s",
-                ", ".join(sorted([donor.name for donor in no_family_donors])),
-            )
+            no_family_donors_str = ", ".join(sorted([donor.name for donor in no_family_donors]))
+            logger.warning(f"Found donors without family ID: {no_family_donors_str}")
             ok = False
 
         return ok
@@ -148,7 +145,6 @@ class FileCheckBase:
 
     def run_checks(self):
         """Execute checks, return True if all good else False."""
-        logger.info("Running germline sheet checks...")
         return self._check_files()
 
     def _check_files(self):
@@ -161,7 +157,7 @@ class FileCheckBase:
     def _check_files_inner(self, file_glob):
         results = []
         for file_path in glob.glob(os.path.join(self.base_dir, file_glob)):
-            logger.debug("Checking %s", file_path)
+            logger.debug(f"Checking {file_path}")
             results.append(self.check_file(file_path))
         return all(results)
 
@@ -178,7 +174,6 @@ class PedFileCheck(FileCheckBase):
     def check_file(self, path):
         ped_path = path
         results = []
-
         with open(ped_path, "rt") as pedf:
             donors = list(parse_ped.parse_ped(pedf))
             if not donors:
@@ -334,9 +329,9 @@ class VcfFileCheck(FileCheckBase):
         real_path = os.path.realpath(vcf_path)
         if not os.path.exists(real_path):
             logger.error(
-                "Symlink problem, points to non-existing path\n\nlink: %s\ndest: %s\n",
-                os.path.relpath(vcf_path, self.base_dir),
-                os.path.relpath(real_path, self.base_dir),
+                f"Symlink problem, points to non-existing path\n\n"
+                f"link: {os.path.relpath(vcf_path, self.base_dir)}\n"
+                f"dest: {os.path.relpath(real_path, self.base_dir)}\n"
             )
             return False
         with warnings.catch_warnings():  # suppress warnings
@@ -345,16 +340,15 @@ class VcfFileCheck(FileCheckBase):
                 vcf_names = reader.header.samples.names
                 if not vcf_names:
                     logger.error(
-                        "Found no samples in VCF path\n\nVCF path: %s",
-                        os.path.relpath(vcf_path, self.base_dir),
+                        f"Found no samples in VCF path\n\nVCF path: {os.path.relpath(vcf_path, self.base_dir)}"
                     )
                     return False
                 pedigree = self.donor_ngs_library_to_pedigree.get(vcf_names[0])
                 if not pedigree:
                     logger.error(
-                        "Index from VCF not found in sample sheet.\n\nindex:    %s\nVCF path: %s\n",
-                        vcf_names[0],
-                        os.path.relpath(vcf_path, self.base_dir),
+                        f"Index from VCF not found in sample sheet.\n\n"
+                        f"index:    {vcf_names[0]}\n"
+                        f"VCF path: {os.path.relpath(vcf_path, self.base_dir)}\n"
                     )
                     return False
                 vcf_names = set(vcf_names)
@@ -364,16 +358,12 @@ class VcfFileCheck(FileCheckBase):
                 if vcf_names != pedigree_names:
                     logger.error(
                         (
-                            "Inconsistent members between VCF and sample sheets.\n\n"
-                            "shared:     %s\n"
-                            "VCF only:   %s\n"
-                            "sheet only: %s\n"
-                            "VCF path:   %s\n"
-                        ),
-                        ", ".join(sorted(vcf_names & pedigree_names)) or "(none)",
-                        ", ".join(sorted(vcf_names - pedigree_names)) or "(none)",
-                        ", ".join(sorted(pedigree_names - vcf_names)) or "(none)",
-                        os.path.relpath(vcf_path, self.base_dir),
+                            f"Inconsistent members between VCF and sample sheets.\n\n"
+                            f"shared:     {', '.join(sorted(vcf_names & pedigree_names)) or '(none)'}\n"
+                            f"VCF only:   {', '.join(sorted(vcf_names - pedigree_names)) or '(none)'}\n"
+                            f"sheet only: {', '.join(sorted(pedigree_names - vcf_names)) or '(none)'}\n"
+                            f"VCF path:   { os.path.relpath(vcf_path, self.base_dir)}\n"
+                        )
                     )
                     return False
         return True

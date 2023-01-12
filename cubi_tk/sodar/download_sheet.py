@@ -160,7 +160,7 @@ class DownloadSheetCommand:
         :type text: str
         """
         # Remove extra info - use basename only
-        file_name = file_name.split('/')[-1]
+        file_name = file_name.split("/")[-1]
         out_path = out_path / file_name
         if out_path.exists() and not self.config.overwrite and not self.config.dry_run:
             raise OverwriteRefusedException(
