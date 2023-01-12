@@ -157,7 +157,7 @@ _TEMPLATES = (
         path=os.path.join(_BASE_DIR, "isatab-stem_cell_core_sc"),
         description="Single cell RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
         configuration=load_variables("isatab-stem_cell_core_sc"),
-    ),    
+    ),
 )
 
 #: Known ISA-tab templates.
