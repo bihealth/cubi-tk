@@ -1,0 +1,7 @@
+{% set sample_numbers = cookiecutter.sample_numbers.split(",") -%}
+{% set cellculture_meta = cookiecutter.cellculture_meta.split(",") -%}
+{% set sample_meta = cookiecutter.sample_meta.split(",") -%}
+Source Name	Characteristics[Organism]	Term Source REF	Term Accession Number	Characteristics[Source Type]	Characteristics[Cellline]	Characteristics[Genetic modfications]	Protocol REF	Parameter Value[Passage]{%+ for meta in cellculture_meta %}	Parameter Value[{{meta}}]{% endfor %}	Protocol REF	Parameter Value[Protocol numbers]	Parameter Value[Culture type]	Parameter Value[Differentiation dates]	Parameter Value[No. of passages]	Parameter Value[Well format]	Parameter Value[Day]	Performer	Protocol REF	Parameter Value[SampleType]	Parameter Value[Collection reagent]	Performer	Date	Sample Name{%+ for meta in sample_meta %}	Characteristics[{{meta}}]{% endfor %}
+{% for sample_no in sample_numbers -%}
+{{cookiecutter.cellline}}	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606	{{cookiecutter.source_type}}	{{cookiecutter.cellline}}		Cell culture	{%+ for meta in cellculture_meta %}	{% endfor %}	Differentiation		{{cookiecutter.model_type}}						Sample collection					GEX-BLK_{{sample_no}}{%+ for meta in sample_meta %}	{% endfor %}
+{% endfor -%}

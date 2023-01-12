@@ -1,0 +1,7 @@
+{% set sample_numbers = cookiecutter.sample_numbers.split(",") -%}
+{% set library_construction_meta = cookiecutter.library_construction_meta.split(",") -%}
+{% set sequencing_meta = cookiecutter.sequencing_meta.split(",") -%}
+Sample Name	Protocol REF	Parameter Value[Passed]	Protocol REF	Parameter Value[Extraction kit]	Parameter Value[RNA amount (ng)]	Parameter Value[Tapestation QC RIN]	Performer	Date	Extract Name	Protocol REF	Parameter Value[Library kit]	Parameter Value[Library type]{%+ for meta in library_construction_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Protocol REF	Parameter Value[Sequencing run]	Parameter Value[Barcode kit]	Parameter Value[Barcode name]{%+ for meta in sequencing_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Library Name
+{% for sample_no in sample_numbers -%}
+GEX-BLK_{{sample_no}}	OverallQC		RNA extraction						GEX-BLK_{{sample_no}}	Library construction	{{cookiecutter.library_kit}}	Gene expression	{%+ for meta in library_construction_meta %}	{% endfor %}		Nucleic acid sequencing			{%+ for meta in sequencing_meta %}	{% endfor %}			GEX-BLK_{{sample_no}}
+{% endfor -%}

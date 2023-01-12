@@ -1,0 +1,15 @@
+{% set sample_names = cookiecutter.sample_names.split(",") -%}
+{% set features = cookiecutter.library_type.split("+") -%}
+{% if cookiecutter.sample_multiplexing == "CellPlex" -%}{{ features.append("CellPlex") or "" }}{% endif -%}
+{% set dissociation_meta = cookiecutter.dissociation_meta.split(",") -%}
+{% set library_construction_meta = cookiecutter.library_construction_meta.split(",") -%}
+{% set sequencing_meta = cookiecutter.sequencing_meta.split(",") -%}
+Sample Name	Protocol REF	Parameter Value[Passed]	Protocol REF	Parameter Value[Dissociation method]{%+ for meta in dissociation_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Protocol REF	Parameter Value[Library kit]	Parameter Value[Library type]	Parameter Value[Multiplex genotype]	Parameter Value[Multiplex sample]	Parameter Value[Multiplex oligo]{%+ for meta in library_construction_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Extract Name	Protocol REF	Parameter Value[Sequencing batch]	Parameter Value[Fastq prefix]	Parameter Value[Barcode kit]	Parameter Value[Barcode name]{%+ for meta in sequencing_meta %}	Parameter Value[{{meta}}]{% endfor %}	Performer	Date	Library Name
+{% for sample_name in sample_names -%}
+{% for f_name in features -%}
+{% set feature = cookiecutter._library_types[f_name].full -%}
+{% set abr = cookiecutter._library_types[f_name].short -%}
+{% set sample = sample_name|replace(" ", "_") -%}
+{{sample}}	OverallQC		Dissociation	{%+ for meta in dissociation_meta %}	{% endfor %}			Library construction	{{cookiecutter.library_kit}}	{{feature}}	{{cookiecutter.genotype_multiplexing == 'yes'}}	{{cookiecutter.sample_multiplexing}}		{%+ for meta in library_construction_meta %}	{% endfor %}		{{sample}}_{{abr}}	Nucleic acid sequencing		{{sample}}_{{abr}}			{%+ for meta in sequencing_meta %}	{% endfor %}		{{sample}}
+{% endfor -%}
+{% endfor -%}

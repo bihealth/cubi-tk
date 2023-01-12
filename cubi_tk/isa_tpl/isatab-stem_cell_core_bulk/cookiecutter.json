@@ -1,0 +1,20 @@
+{
+  "group": "CoreRnD",
+  "study_title": "Study Title",
+  "sample_numbers": "0001,0002",
+  "investigation_title": "{{cookiecutter.group}} - {{cookiecutter.study_title}}",
+  "source_type": ["hiPSC", "tissue"],
+  "cellline": "",
+  "cellculture_meta": "Expansion ID,Media,Matrix",
+  "model_type": ["2D", "3D"],
+  "sample_meta": "Experiment Name,Experiment Identifier,Tissue type,Differentiation duration,Condition,Treatment,Treatment duration",
+  "a_measurement_type": "transcription profiling",
+  "a_technology_type": "nucleotide sequencing",
+  "library_kit": "mRNA",
+  "library_construction_meta": "Library selection,Target insert size",
+  "sequencing_meta": "Platform,Instrument model,No. targeted reads,Paired-End",
+  "i_dir_name": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
+  "s_file_name": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
+  "assay_prefix": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
+  "assay_name": "GEX_{{cookiecutter.a_measurement_type|replace(' ', '_')}}"
+}
