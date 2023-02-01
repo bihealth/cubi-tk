@@ -151,6 +151,19 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         "--library-types", help="Library type(s) to use, comma-separated, default is to use all."
     )
 
+    parser.add_argument(
+        "--first-batch",
+        default=0,
+        type=int,
+        help="First batch to be included in local sample sheet. Defaults: 0.",
+    )
+    parser.add_argument(
+        "--last-batch",
+        type=int,
+        default=None,
+        help="Last batch to be included in local sample sheet. Not used by default.",
+    )
+
 
 def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
@@ -234,7 +247,12 @@ class SampleSheetBuilder(IsaNodeVisitor):
             )
 
 
-def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID]) -> str:
+def build_sheet(
+    config: PullSheetsConfig,
+    project_uuid: typing.Union[str, UUID],
+    min_batch: int,
+    max_batch: typing.Union[int, type(None)],
+) -> str:
     """Build sheet TSV file."""
 
     result = []
@@ -255,6 +273,7 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
     result.append("\n".join(HEADER_TPL))
     for sample_name, source in builder.sources.items():
         sample = builder.samples.get(sample_name, None)
+        batch = 0 if source.batch_no is None else int(source.batch_no)
         if not config.library_types or not sample or sample.library_type in config.library_types:
             row = [
                 source.family or "FAM",
@@ -265,13 +284,16 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
                 MAPPING_STATUS[source.affected.lower()],
                 sample.library_type or "." if sample else ".",
                 sample.folder_name or "." if sample else ".",
-                "0" if source.batch_no is None else source.batch_no,
+                str(batch),
                 ".",
                 str(project_uuid),
                 sample.seq_platform or "." if sample else ".",
                 sample.library_kit or "." if sample else ".",
             ]
-            result.append("\t".join([c.strip() for c in row]))
+            row_str = "\t".join([c.strip() for c in row])
+            if batch < min_batch and (max_batch is None or batch > max_batch):
+                row_str = "#" + row_str
+            result.append(row_str)
     result.append("")
 
     return "\n".join(result)
@@ -301,7 +323,7 @@ def run(
         if dataset.sodar_uuid:
             overwrite_helper(
                 config_path / dataset.sheet_file,
-                build_sheet(config, dataset.sodar_uuid),
+                build_sheet(config, dataset.sodar_uuid, args.first_batch, args.last_batch),
                 do_write=not args.dry_run,
                 show_diff=True,
                 show_diff_side_by_side=args.show_diff_side_by_side,
