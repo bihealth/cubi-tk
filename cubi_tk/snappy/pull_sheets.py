@@ -250,8 +250,8 @@ class SampleSheetBuilder(IsaNodeVisitor):
 def build_sheet(
     config: PullSheetsConfig,
     project_uuid: typing.Union[str, UUID],
-    min_batch: int,
-    max_batch: typing.Union[int, type(None)],
+    first_batch: int,
+    last_batch: typing.Union[int, type(None)],
 ) -> str:
     """Build sheet TSV file."""
 
@@ -291,7 +291,7 @@ def build_sheet(
                 sample.library_kit or "." if sample else ".",
             ]
             row_str = "\t".join([c.strip() for c in row])
-            if batch < min_batch and (max_batch is None or batch > max_batch):
+            if batch < first_batch and (last_batch is None or batch > last_batch):
                 row_str = "#" + row_str
             result.append(row_str)
     result.append("")
