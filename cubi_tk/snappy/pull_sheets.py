@@ -344,7 +344,9 @@ def run(
         if dataset.sodar_uuid:
             overwrite_helper(
                 config_path / dataset.sheet_file,
-                build_sheet(config, dataset.sodar_uuid),
+                build_sheet(
+                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut
+                ),
                 do_write=not args.dry_run,
                 show_diff=True,
                 show_diff_side_by_side=args.show_diff_side_by_side,
