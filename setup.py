@@ -26,15 +26,15 @@ def parse_requirements(path):
 with open("README.md") as readme_file:
     readme = readme_file.read()
 
-with open("HISTORY.md") as history_file:
-    history = history_file.read()
+with open("CHANGELOG.md") as changelog_file:
+    changelog = changelog_file.read()
 
 test_requirements = parse_requirements("requirements/test.txt")
 install_requirements = parse_requirements("requirements/base.txt")
 
 setup(
     author="Manuel Holtgrewe, Patrick Pett",
-    author_email=("manuel.holtgrewe@bihealth.de, patrick.pett@bihealth.de"),
+    author_email=("manuel.holtgrewe@bih-charite.de"),
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -42,15 +42,15 @@ setup(
         "Natural Language :: English",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
     entry_points={"console_scripts": ("cubi-tk = cubi_tk.__main__:main",)},
     description="Tooling for connecting GitLab, pipelines, and SODAR at CUBI.",
     install_requires=install_requirements,
     license="MIT license",
-    long_description=readme + "\n\n" + history,
+    long_description=readme + "\n\n" + changelog,
     long_description_content_type="text/markdown",
     include_package_data=True,
     keywords="cubi_tk",

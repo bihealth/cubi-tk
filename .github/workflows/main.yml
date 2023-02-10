@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches_ignore: []
+
+jobs:
+  cancel-previous:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - uses: khan/pull-request-workflow-cancel@1.0.0
+        with:
+          workflows: "main.yml"
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+
+      - name: Install dependencies
+        run: |
+            pip install -r requirements/test_black.txt
+            pip freeze
+
+      - name: Run linting tools
+        run: |
+          make lint
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: marocchino/sticky-pull-request-comment@v1.1.0
+        with:
+          message: 'Please format your code with [black](https://black.readthedocs.io): `make black`.'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  testing:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - '3.8'
+          - '3.9'
+          - '3.10'
+    needs: linting
+    steps:
+      - name: Install Python via conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          conda-channels: defaults,bioconda,conda-forge
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+
+      - name: Install mamba
+        run: conda install -y mamba==0.27.0
+
+      - name: Prepare environment.yaml file
+        run: >
+          cp environment.yaml /tmp/environment.yaml && sed -i -e
+          's/- python/- python=${{ matrix.python-version }}/'
+          /tmp/environment.yaml
+
+      - name: Update environment using mamba
+        run: mamba env update --name root --file /tmp/environment.yaml
+
+      - name: Save time by installing packages via mamba.
+        run: mamba install -y pysam
+
+      - name: Install dependencies
+        run: |
+            pip install -r requirements/test_black.txt
+            pip freeze
+
+      - name: Run tests
+        run: pytest
+
+      - uses: codecov/codecov-action@v3

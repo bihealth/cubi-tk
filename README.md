@@ -1,8 +1,4 @@
-![Continuous Integration Status](https://github.com/bihealth/cubi-tk/workflows/CI/badge.svg)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/71dd0ea53e444cd0949a00a7025face7)](https://www.codacy.com/gh/bihealth/cubi-tk/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bihealth/cubi-tk&amp;utm_campaign=Badge_Grade)
-[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/71dd0ea53e444cd0949a00a7025face7)](https://www.codacy.com/gh/bihealth/cubi-tk/dashboard?utm_source=github.com&utm_medium=referral&utm_content=bihealth/cubi-tk&utm_campaign=Badge_Coverage)
-[![Coveralls Status](https://coveralls.io/repos/github/bihealth/cubi-tk/badge.svg?branch=master)](https://coveralls.io/github/bihealth/cubi-tk?branch=master)
-[![Documentation Status](https://readthedocs.org/projects/cubi-tk/badge/?version=latest)](https://cubi-tk.readthedocs.io/en/latest/?badge=latest)
+[![CI](https://github.com/bihealth/cubi-tk/actions/workflows/main.yml/badge.svg)](https://github.com/bihealth/cubi-tk/actions/workflows/main.yml)
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 # CUBI Toolkit
