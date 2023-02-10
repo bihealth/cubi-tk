@@ -223,7 +223,7 @@ class Checker:
     """Class with common checker methods."""
 
     def __init__(self, local_files_dict, remote_files_dict, check_md5=False):
-        """ Constructor.
+        """Constructor.
 
         :param local_files_dict: Dictionary with local files and directories structure for all libraries in sample
         sheet.
@@ -493,7 +493,7 @@ class RawDataChecker(Checker):
     check_name = "raw_data"
 
     def __init__(self, sheet, base_path, local_files_dict, remote_files_dict, check_md5):
-        """ Constructor.
+        """Constructor.
 
         :param sheet: Sample sheet.
         :type sheet: biomedsheets.shortcuts.GermlineCaseSheet
@@ -528,7 +528,7 @@ class NgsMappingChecker(Checker):
     check_name = "ngs_mapping"
 
     def __init__(self, *args, **kwargs):
-        """ Constructor."""
+        """Constructor."""
         super().__init__(*args, **kwargs)
 
     def run(self):
@@ -546,7 +546,7 @@ class VariantCallingChecker(Checker):
     check_name = "variant_calling"
 
     def __init__(self, *args, **kwargs):
-        """ Constructor."""
+        """Constructor."""
         super().__init__(*args, **kwargs)
 
     def run(self):
@@ -564,7 +564,7 @@ class SomaticVariantCallingChecker(Checker):
     check_name = "somatic_variant_calling"
 
     def __init__(self, *args, **kwargs):
-        """ Constructor."""
+        """Constructor."""
         super().__init__(*args, **kwargs)
 
     def run(self):

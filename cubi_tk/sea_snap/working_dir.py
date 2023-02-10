@@ -18,7 +18,6 @@ CLUSTER_CONFIG = "cluster_config.json"
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
-
     # find Sea-snap directory
     logger.info("Try to find RNA-SeA-SnaP pipeline directory...")
     start_path = Path(args.sea_snap_path)

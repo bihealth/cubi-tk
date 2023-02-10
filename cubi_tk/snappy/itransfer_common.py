@@ -283,7 +283,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         # Project UUID provided by user
         if is_uuid(in_destination):
-
             if create_lz_bool:
                 # Assume that provided UUID is associated with a Project and user wants a new LZ.
                 # Behavior: search for available LZ; if none,create new LZ.

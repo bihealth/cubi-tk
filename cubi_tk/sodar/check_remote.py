@@ -66,7 +66,6 @@ class FindLocalMD5Files:
 
         # Check that corresponding files exist
         for md5file in md5_files:
-
             datafile = md5file.with_suffix("")
             if not datafile.exists():
                 logger.warning(

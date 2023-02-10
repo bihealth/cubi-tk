@@ -114,7 +114,7 @@ def test_pull_data_common_sort_irods_object_by_date_in_path_mixed(irods_objects_
 
 
 def test_pull_data_common_sort_irods_object_by_date_in_path_missing_date(
-    irods_objects_list_missing_date
+    irods_objects_list_missing_date,
 ):
     """Tests PullDataCommon.sort_irods_object_by_date_in_path() - missing date in path"""
     raw_data_class = PullDataCommon()
