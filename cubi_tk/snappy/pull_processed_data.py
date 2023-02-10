@@ -319,7 +319,6 @@ class PullProcessedDataCommand(PullDataCommon):
         output_list = []
         # Iterate over iRODS objects
         for irods_obj_list in remote_files_dict.values():
-
             # Retrieve only latest, test if list is empty
             if irods_obj_list and not retrieve_all:
                 irods_obj_list = [self.sort_irods_object_by_date_in_path(irods_obj_list)[0]]

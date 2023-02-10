@@ -240,7 +240,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
 
     def _remove_relative_symlinks(self, rel_symlinks):
         """Remove relative symlinks from the original directory"""
-        for (relative, _) in rel_symlinks:
+        for relative, _ in rel_symlinks:
             os.remove(os.path.join(self.project_dir, relative))
 
     def _restore_relative_symlinks(self, root, rel_symlinks, add_dangling=True):
@@ -260,7 +260,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
             The symlink should be there, even though the target file is not accessible
             in the archived copy.
         """
-        for (relative, target) in rel_symlinks:
+        for relative, target in rel_symlinks:
             symlink_path = os.path.join(root, relative)
             if os.path.exists(symlink_path) or os.path.islink(symlink_path):
                 continue

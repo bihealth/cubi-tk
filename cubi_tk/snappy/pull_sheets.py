@@ -22,6 +22,9 @@ from ..common import CommonConfig, overwrite_helper, load_toml_config
 from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
 from .models import load_datasets
 from .common import find_snappy_root_dir
+from .parse_sample_sheet import ParseSampleSheet
+from biomedsheets import io_tsv
+from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 
 #: Template for the to-be-generated file.
 HEADER_TPL = (
@@ -63,6 +66,9 @@ class PullSheetsConfig:
     show_diff: bool
     show_diff_side_by_side: bool
     library_types: typing.Tuple[str]
+    first_batch: int
+    last_batch: typing.Union[int, type(None)]
+    tsv_shortcut: str
 
     @staticmethod
     def create(args, global_config, toml_config=None):
@@ -75,6 +81,9 @@ class PullSheetsConfig:
             show_diff=args.show_diff,
             show_diff_side_by_side=args.show_diff_side_by_side,
             library_types=tuple(args.library_types),
+            first_batch=args.first_batch,
+            last_batch=args.last_batch,
+            tsv_shortcut=args.tsv_shortcut,
         )
 
 
@@ -149,6 +158,26 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument(
         "--library-types", help="Library type(s) to use, comma-separated, default is to use all."
+    )
+
+    parser.add_argument(
+        "--first-batch",
+        default=0,
+        type=int,
+        help="First batch to be included in local sample sheet. Defaults: 0.",
+    )
+    parser.add_argument(
+        "--last-batch",
+        type=int,
+        default=None,
+        help="Last batch to be included in local sample sheet. Not used by default.",
+    )
+
+    parser.add_argument(
+        "--tsv-shortcut",
+        default="germline",
+        choices=("cancer", "generic", "germline"),
+        help="The shortcut TSV schema to use; default: 'germline'.",
     )
 
 
@@ -234,7 +263,13 @@ class SampleSheetBuilder(IsaNodeVisitor):
             )
 
 
-def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID]) -> str:
+def build_sheet(
+    config: PullSheetsConfig,
+    project_uuid: typing.Union[str, UUID],
+    first_batch: typing.Optional[int] = None,
+    last_batch: typing.Optional[int] = None,
+    tsv_shortcut: str = "germline",
+) -> str:
     """Build sheet TSV file."""
 
     result = []
@@ -252,7 +287,6 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
     iwalker.run(builder)
 
     # Generate the resulting sample sheet.
-    result.append("\n".join(HEADER_TPL))
     for sample_name, source in builder.sources.items():
         sample = builder.samples.get(sample_name, None)
         if not config.library_types or not sample or sample.library_type in config.library_types:
@@ -272,7 +306,16 @@ def build_sheet(config: PullSheetsConfig, project_uuid: typing.Union[str, UUID])
                 sample.library_kit or "." if sample else ".",
             ]
             result.append("\t".join([c.strip() for c in row]))
-    result.append("")
+
+    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
+    sheet = load_tsv(list(HEADER_TPL) + result, naming_scheme=NAMING_ONLY_SECONDARY_ID)
+    parser = ParseSampleSheet()
+    samples_in_batch = list(parser.yield_sample_names(sheet, first_batch, last_batch))
+    result = (
+        list(HEADER_TPL)
+        + [line if line.split("\t")[1] in samples_in_batch else "#" + line for line in result]
+        + [""]
+    )
 
     return "\n".join(result)
 
@@ -301,7 +344,9 @@ def run(
         if dataset.sodar_uuid:
             overwrite_helper(
                 config_path / dataset.sheet_file,
-                build_sheet(config, dataset.sodar_uuid),
+                build_sheet(
+                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut
+                ),
                 do_write=not args.dry_run,
                 show_diff=True,
                 show_diff_side_by_side=args.show_diff_side_by_side,

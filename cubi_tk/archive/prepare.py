@@ -140,7 +140,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
 
         # Check how the path should be processed by regular expression matching
         status = "archive"
-        for (rule, patterns) in rules.items():
+        for rule, patterns in rules.items():
             for pattern in patterns:
                 if pattern.match(path):
                     status = rule
@@ -266,7 +266,7 @@ class ArchivePrepareCommand(common.ArchiveCommandBase):
         with open(filename, "rt") as f:
             rules = yaml.safe_load(f)
 
-        for (rule, patterns) in rules.items():
+        for rule, patterns in rules.items():
             compiled = []
             for pattern in patterns:
                 compiled.append(re.compile(pattern))

@@ -46,7 +46,6 @@ class PullDataCommon(IrodsCheckCommand):
 
         # Iterate
         for key, value in remote_files_dict.items():
-
             # Simplify criteria: must have the correct file extension
             if not key.endswith(extensions_tuple):
                 continue

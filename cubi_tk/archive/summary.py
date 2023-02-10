@@ -123,7 +123,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                 stats["size"], stats["size_outside"]
             )
         )
-        for (name, the_stat) in stats["classes"].items():
+        for name, the_stat in stats["classes"].items():
             logger.info(
                 "Number of {} files: {} (total size: {})".format(
                     name, the_stat["nFile"], the_stat["size"]
@@ -157,7 +157,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
             "size_outside": 0,
             "classes": {},
         }
-        for (name, params) in yaml.safe_load(f).items():
+        for name, params in yaml.safe_load(f).items():
             stats["classes"][name] = {
                 "min_size": int(params["min_size"]),
                 "pattern": re.compile(params["pattern"]),
@@ -193,7 +193,7 @@ class ArchiveSummaryCommand(common.ArchiveCommandBase):
                 save.append("inaccessible")
 
         # File classes
-        for (name, the_class) in stats["classes"].items():
+        for name, the_class in stats["classes"].items():
             if not the_class["pattern"].match(file_attr.relative_path):
                 continue
             is_lost = file_attr.target and (file_attr.dangling is None or file_attr.dangling)

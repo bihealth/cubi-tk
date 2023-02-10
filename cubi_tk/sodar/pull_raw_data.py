@@ -216,7 +216,7 @@ class PullRawDataCommand:
             logger.info("Answered 'no': NOT pulling files")
         else:
             failed_libs = []
-            for (src, target, cmd) in commands:
+            for src, target, cmd in commands:
                 try:
                     cmd_str = " ".join(map(shlex.quote, cmd))
                     logger.info("Executing %s", cmd_str)
@@ -225,7 +225,7 @@ class PullRawDataCommand:
                     check_call(cmd)
                 except SubprocessError:  # pragma: nocover
                     failed_libs.append((src, target, cmd_str))
-            for (src, target, cmd_str) in failed_libs:
+            for src, target, cmd_str in failed_libs:
                 if not self.config.allow_missing or not self._missing_data_directory(src):
                     logger.error("Problem executing irsync command: %s", cmd_str)
                     return 1

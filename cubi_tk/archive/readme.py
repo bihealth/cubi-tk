@@ -193,12 +193,12 @@ class ArchiveReadmeCommand(common.ArchiveCommandBase):
         extra_context = self._extra_context_from_config()
 
         if self.config.skip_collect:
-            for (context_name, _) in COMMANDS.items():
+            for context_name, _ in COMMANDS.items():
                 extra_context[context_name] = "NA"
             extra_context["snakemake_nb"] = "NA"
         else:
             logger.info("Collecting size & inodes numbers")
-            for (context_name, cmd) in COMMANDS.items():
+            for context_name, cmd in COMMANDS.items():
                 if context_name not in extra_context.keys():
                     cmd.append(project_dir)
                     extra_context[context_name] = DU.match(
@@ -302,12 +302,12 @@ def is_readme_valid(filename=None, verbose=False):
     matching = set()
     for line in f:
         line = line.rstrip()
-        for (name, pattern) in PATTERNS.items():
+        for name, pattern in PATTERNS.items():
             if pattern.match(line):
                 matching.add(name)
     f.close()
     if verbose:
-        for (name, _) in PATTERNS.items():
+        for name, _ in PATTERNS.items():
             if name not in matching:
                 logger.warning("Entry {} missing from README.md file".format(name))
     return set(PATTERNS.keys()).issubset(matching)

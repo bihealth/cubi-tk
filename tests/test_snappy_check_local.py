@@ -127,7 +127,7 @@ def test_germline_sheet_checker_mother_wrong_family_id(sheet_tsv_mother_wrong_fa
 
 
 def test_germline_sheet_checker_same_family_id_different_pedigrees(
-    sheet_tsv_same_family_id_different_pedigrees
+    sheet_tsv_same_family_id_different_pedigrees,
 ):
     """Tests GermlineSheetChecker.run_checks() - different pedigrees with same family id"""
     sheet = create_germline_sheet_object(sheet_tsv=sheet_tsv_same_family_id_different_pedigrees)

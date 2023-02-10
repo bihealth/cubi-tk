@@ -22,6 +22,9 @@ def pull_sheet_config():
         "show_diff": False,
         "show_diff_side_by_side": False,
         "library_types": ("WES", "RNA_seq"),
+        "first_batch": 0,
+        "last_batch": None,
+        "tsv_shortcut": "germline",
     }
     return PullSheetsConfig(**args)
 

@@ -210,7 +210,6 @@ class SampleInfoTool:
     allowed_read_extensions = [".fastq", ".fastq.gz", ".fq", ".fq.gz"]
 
     def __init__(self, args):
-
         self.in_path_pattern = args.in_path_pattern
 
         self.wildcard_constraints = self._prepare_in_path_pattern()
@@ -389,7 +388,7 @@ class SampleInfoTool:
         """
         read sample info from yaml
         """
-        with (open(filename, "r") if isinstance(filename, str) else filename) as f:
+        with open(filename, "r") if isinstance(filename, str) else filename as f:
             try:
                 self.sample_info = yaml.safe_load(f)["sample_info"]
             except yaml.YAMLError as exc:
