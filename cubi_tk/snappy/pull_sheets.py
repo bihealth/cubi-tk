@@ -266,9 +266,9 @@ class SampleSheetBuilder(IsaNodeVisitor):
 def build_sheet(
     config: PullSheetsConfig,
     project_uuid: typing.Union[str, UUID],
-    first_batch: int,
-    last_batch: typing.Union[int, type(None)],
-    tsv_shortcut: str,
+    first_batch: typing.Optional[int] = None,
+    last_batch: typing.Optional[int] = None,
+    tsv_shortcut: str = "germline",
 ) -> str:
     """Build sheet TSV file."""
 
