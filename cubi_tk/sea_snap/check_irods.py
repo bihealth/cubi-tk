@@ -1,15 +1,14 @@
 """``cubi-tk sea-snap check-irods``: Check target iRods collection (all sea-snap output files? all md5 files? metadata md5 consistent? enough replicas?)."""
 
-import os
 import argparse
+import os
 from pathlib import Path
-import yaml
 import re
 
 from logzero import logger
+import yaml
 
 from ..irods.check import IrodsCheckCommand
-
 
 MIN_NUM_REPLICAS = 2
 NUM_PARALLEL_TESTS = 8

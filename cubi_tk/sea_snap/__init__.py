@@ -22,13 +22,15 @@ More Information
 import argparse
 
 from ..common import run_nocmd
+from .check_irods import setup_argparse as setup_argparse_check_irods
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
-from .itransfer_results import setup_argparse as setup_argparse_itransfer_mapping_results
+from .itransfer_results import (
+    setup_argparse as setup_argparse_itransfer_mapping_results,
+)
 
 # from .pull_isa import setup_argparse as setup_argparse_pull_isa
 from .working_dir import setup_argparse as setup_argparse_working_dir
 from .write_sample_info import setup_argparse as setup_argparse_write_sample_info
-from .check_irods import setup_argparse as setup_argparse_check_irods
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

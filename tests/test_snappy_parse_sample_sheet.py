@@ -1,10 +1,10 @@
 """Tests for ``cubi_tk.snappy.parse_sample_sheet``."""
 
 import pathlib
-import pytest
 
 from biomedsheets.io_tsv import read_germline_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+import pytest
 
 from cubi_tk.snappy.parse_sample_sheet import ParseSampleSheet
 

@@ -1,16 +1,14 @@
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 
-from irods.keywords import FORCE_FLAG_KW
 from irods.exception import OVERWRITE_WITHOUT_FORCE_FLAG
-
+from irods.keywords import FORCE_FLAG_KW
 from logzero import logger
-from pathlib import Path
 from sodar_cli import api
 
 from ..irods.check import IrodsCheckCommand
 from .retrieve_irods_collection import DEFAULT_HASH_SCHEME
-
 
 #: Valid file extensions
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")

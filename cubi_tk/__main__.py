@@ -3,31 +3,32 @@
 
 import argparse
 import logging
+import os
 import sys
 
 import argcomplete
 import logzero
-import os
 from logzero import logger
 
 from cubi_tk import __version__
+
+from .archive import run as run_archive
+from .archive import setup_argparse as setup_argparse_archive
 from .common import run_nocmd
+from .irods import run as run_irods
+from .irods import setup_argparse as setup_argparse_irods
 from .isa_tab import run as run_isa_tab
 from .isa_tab import setup_argparse as setup_argparse_isa_tab
 from .isa_tpl import run as run_isa_tpl
 from .isa_tpl import setup_argparse as setup_argparse_isa_tpl
-from .snappy import run as run_snappy
-from .snappy import setup_argparse as setup_argparse_snappy
-from .sodar import run as run_sodar
-from .sodar import setup_argparse as setup_argparse_sodar
-from .irods import run as run_irods
-from .irods import setup_argparse as setup_argparse_irods
 from .org_raw import run as run_org_raw
 from .org_raw import setup_argparse as setup_argparse_org_raw
 from .sea_snap import run as run_sea_snap
 from .sea_snap import setup_argparse as setup_argparse_sea_snap
-from .archive import run as run_archive
-from .archive import setup_argparse as setup_argparse_archive
+from .snappy import run as run_snappy
+from .snappy import setup_argparse as setup_argparse_snappy
+from .sodar import run as run_sodar
+from .sodar import setup_argparse as setup_argparse_sodar
 
 
 def setup_argparse_only():  # pragma: nocover

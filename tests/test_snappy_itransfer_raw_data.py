@@ -6,11 +6,12 @@ We only run some smoke tests here.
 import os
 from unittest import mock
 
-import pytest
 from pyfakefs import fake_filesystem
+import pytest
+
+from cubi_tk.__main__ import main, setup_argparse
 
 from .conftest import my_exists, my_get_sodar_info
-from cubi_tk.__main__ import setup_argparse, main
 
 
 def test_run_snappy_itransfer_raw_data_help(capsys):

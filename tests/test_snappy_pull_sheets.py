@@ -2,6 +2,7 @@
 """
 import json
 import pathlib
+
 import pytest
 
 from cubi_tk.common import CommonConfig

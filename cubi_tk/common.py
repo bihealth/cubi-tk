@@ -9,22 +9,24 @@ import pathlib
 import shutil
 import struct
 import subprocess
+from subprocess import CalledProcessError, check_output
 import sys
 import tempfile
 import termios
 import typing
-import warnings
-from subprocess import check_output, CalledProcessError
 from uuid import UUID
+import warnings
 
 import attr
 import icdiff
-import toml
 from logzero import logger
 from termcolor import colored
+import toml
 
-from .exceptions import IrodsIcommandsUnavailableException, IrodsIcommandsUnavailableWarning
-
+from .exceptions import (
+    IrodsIcommandsUnavailableException,
+    IrodsIcommandsUnavailableWarning,
+)
 
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)

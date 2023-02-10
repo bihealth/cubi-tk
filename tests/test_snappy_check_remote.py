@@ -6,7 +6,6 @@ import pytest
 from cubi_tk.snappy.check_remote import Checker, FindLocalFiles, FindLocalRawdataFiles
 from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
 
-
 # Tests FindLocalFiles =================================================================================================
 
 

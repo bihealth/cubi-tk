@@ -40,15 +40,19 @@ import argparse
 from ..common import run_nocmd
 from .check_local import setup_argparse as setup_argparse_check_local
 from .check_remote import setup_argparse as setup_argparse_check_remote
+from .itransfer_ngs_mapping import (
+    setup_argparse as setup_argparse_itransfer_ngs_mapping,
+)
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
-from .itransfer_ngs_mapping import setup_argparse as setup_argparse_itransfer_ngs_mapping
-from .itransfer_variant_calling import setup_argparse as setup_argparse_itransfer_variant_calling
 from .itransfer_step import setup_argparse as setup_argparse_itransfer_step
-from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
+from .itransfer_variant_calling import (
+    setup_argparse as setup_argparse_itransfer_variant_calling,
+)
+from .kickoff import setup_argparse as setup_argparse_kickoff
 from .pull_all_data import setup_argparse as setup_argparse_pull_all_data
 from .pull_processed_data import setup_argparse as setup_argparse_pull_processed_data
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
-from .kickoff import setup_argparse as setup_argparse_kickoff
+from .pull_sheets import setup_argparse as setup_argparse_pull_sheets
 from .varfish_upload import setup_argparse as setup_argparse_varfish_upload
 
 

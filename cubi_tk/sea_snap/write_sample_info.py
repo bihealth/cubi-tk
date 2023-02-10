@@ -9,25 +9,25 @@ More Information
 """
 
 import argparse
-import difflib
-import os
-import shutil
-import tempfile
-import re
-import sys
-import typing
 from collections import namedtuple
-from pathlib import Path
+import difflib
 from glob import glob
-import yaml
+import os
+from pathlib import Path
+import re
+import shutil
+import sys
+import tempfile
+import typing
 from uuid import UUID
 
+from altamisa.isatab import AssayReader
 import icdiff
 from logzero import logger
-from termcolor import colored
 import pandas as pd
-from altamisa.isatab import AssayReader
 import requests
+from termcolor import colored
+import yaml
 
 #: The URL template to use.
 from ..common import get_terminal_columns

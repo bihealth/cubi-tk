@@ -1,10 +1,9 @@
 """Tests for ``cubi_tk.isa_tab``.
 
 """
-import os
-import glob
 import filecmp
-
+import glob
+import os
 from shutil import copytree
 
 from cubi_tk.__main__ import main

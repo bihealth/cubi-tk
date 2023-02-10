@@ -4,12 +4,12 @@ We only run some smoke tests here.
 """
 
 import os
+from pathlib import Path
+import time
 
 import pytest
-import time
-from pathlib import Path
 
-from cubi_tk.__main__ import setup_argparse, main
+from cubi_tk.__main__ import main, setup_argparse
 
 
 def test_run_seasnap_working_dir_help(capsys):

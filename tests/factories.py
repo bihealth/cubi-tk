@@ -1,9 +1,9 @@
-import uuid
 from datetime import datetime
-
-from cubi_tk.sodar import models
+import uuid
 
 import factory
+
+from cubi_tk.sodar import models
 
 
 class UserFactory(factory.Factory):

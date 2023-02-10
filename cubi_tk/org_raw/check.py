@@ -4,12 +4,12 @@ import argparse
 from ctypes import c_int, c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
-import subprocess
 from pathlib import Path
+import subprocess
 import typing
 
-import tqdm
 from logzero import logger
+import tqdm
 
 from cubi_tk.common import sizeof_fmt
 

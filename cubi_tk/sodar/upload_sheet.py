@@ -1,17 +1,17 @@
 """``cubi-tk sodar upload-sheet``: upload ISA-tab to SODAR."""
 
 import argparse
-import os
 import itertools
-import typing
+import os
 from pathlib import Path
+import typing
 
 import attr
 from logzero import logger
 from sodar_cli import api
 
 from .. import isa_support
-from ..common import overwrite_helper, load_toml_config
+from ..common import load_toml_config, overwrite_helper
 from ..exceptions import OverwriteRefusedException
 
 

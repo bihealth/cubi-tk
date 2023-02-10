@@ -1,8 +1,13 @@
 """Tests for ``cubi_tk.snappy.check_remote``."""
 
 import pathlib
-from cubi_tk.sodar.check_remote import FileComparisonChecker, FindLocalMD5Files, FileDataObject
+
 from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+from cubi_tk.sodar.check_remote import (
+    FileComparisonChecker,
+    FileDataObject,
+    FindLocalMD5Files,
+)
 
 
 def test_findlocalmd5_run():

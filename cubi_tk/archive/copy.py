@@ -1,7 +1,6 @@
 """``cubi-tk archive prepare``: Prepare a project for archival"""
 
 import argparse
-import attr
 import datetime
 import os
 import re
@@ -10,10 +9,10 @@ import subprocess
 import tempfile
 import typing
 
+import attr
 from logzero import logger
 
-from . import common
-from . import readme
+from . import common, readme
 from ..common import execute_shell_commands
 from ..exceptions import InvalidReadmeException, MissingFileException
 

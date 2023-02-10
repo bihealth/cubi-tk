@@ -8,8 +8,7 @@ import tempfile
 
 import pytest
 
-from cubi_tk.__main__ import setup_argparse, main
-
+from cubi_tk.__main__ import main, setup_argparse
 import cubi_tk.archive.readme
 
 

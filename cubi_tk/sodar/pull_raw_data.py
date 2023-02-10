@@ -2,17 +2,22 @@
 
 import argparse
 import os
-import shlex
-import typing
 from pathlib import Path
+import shlex
 from subprocess import SubprocessError, check_call
+import typing
 
 import attr
 from logzero import logger
 from sodar_cli import api
 
 from ..common import load_toml_config
-from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
+from ..isa_support import (
+    InvestigationTraversal,
+    IsaNodeVisitor,
+    first_value,
+    isa_dict_to_isa_data,
+)
 
 
 @attr.s(frozen=True, auto_attribs=True)

@@ -2,7 +2,6 @@
 import pathlib
 
 from biomedsheets import models, shortcuts
-
 import pytest
 
 from cubi_tk.snappy.common import (
