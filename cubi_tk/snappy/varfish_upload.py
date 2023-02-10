@@ -38,6 +38,7 @@ PREFIXES = (
     "bwa.gcnv",
     "bwa.popdel",
     "bwa.xhmm",
+    "minimap2.sniffles2",
     "write_pedigree",
 )
 
