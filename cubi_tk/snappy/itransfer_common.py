@@ -1,15 +1,15 @@
 """Common code for ``cubi-tk snappy itransfer-*`` commands."""
 
 import argparse
+from ctypes import c_ulonglong
 import datetime
 import glob
-import os
-import typing
-from ctypes import c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
-from subprocess import check_output, SubprocessError, check_call, STDOUT
+import os
+from subprocess import STDOUT, SubprocessError, check_call, check_output
 import sys
+import typing
 
 import attr
 from biomedsheets import shortcuts
@@ -18,8 +18,8 @@ import requests
 from retrying import retry
 import tqdm
 
-from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
+from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 

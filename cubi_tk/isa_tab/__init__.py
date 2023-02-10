@@ -86,9 +86,9 @@ import argparse
 
 from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
+from .annotate import setup_argparse as setup_argparse_annotate
 from .resolve_hpo import setup_argparse as setup_argparse_resolve_hpo
 from .validate import setup_argparse as setup_argparse_validate
-from .annotate import setup_argparse as setup_argparse_annotate
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

@@ -53,8 +53,8 @@ Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` fo
 import argparse
 from functools import partial
 import json
-from pathlib import Path
 import os
+from pathlib import Path
 import typing
 
 import attr

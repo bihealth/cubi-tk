@@ -1,18 +1,18 @@
 """``cubi-tk irods check``: Check target iRODS collection (all md5 files? metadata md5 consistent? enough replicas?)."""
 
 import argparse
+from contextlib import contextmanager
 import json
+from multiprocessing.pool import ThreadPool
 import os
 import re
-import tqdm
 import typing
 
-from contextlib import contextmanager
 from irods.collection import iRODSCollection
 from irods.data_object import iRODSDataObject
 from irods.session import iRODSSession
 from logzero import logger
-from multiprocessing.pool import ThreadPool
+import tqdm
 
 MIN_NUM_REPLICAS = 2
 NUM_PARALLEL_TESTS = 4

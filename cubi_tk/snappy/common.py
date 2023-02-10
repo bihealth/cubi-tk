@@ -8,7 +8,6 @@ from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
 import yaml
 
-
 #: Dependencies between the SNAPPY steps.
 DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
     "ngs_mapping": (),

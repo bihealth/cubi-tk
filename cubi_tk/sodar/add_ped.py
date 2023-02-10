@@ -9,9 +9,12 @@ import typing
 import attr
 from logzero import logger
 
-from .download_sheet import DownloadSheetCommand, Config as DownloadSheetConfig
-from .upload_sheet import UploadSheetCommand, Config as UploadSheetConfig
-from ..isa_tab.add_ped import AddPedIsaTabCommand, Config as AddPedIsaTabCommandConfig
+from ..isa_tab.add_ped import AddPedIsaTabCommand
+from ..isa_tab.add_ped import Config as AddPedIsaTabCommandConfig
+from .download_sheet import Config as DownloadSheetConfig
+from .download_sheet import DownloadSheetCommand
+from .upload_sheet import Config as UploadSheetConfig
+from .upload_sheet import UploadSheetCommand
 
 
 @attr.s(frozen=True, auto_attribs=True)

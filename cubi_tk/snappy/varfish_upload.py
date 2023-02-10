@@ -10,10 +10,9 @@ from biomedsheets import shortcuts
 from logzero import logger
 from varfish_cli.__main__ import main as varfish_cli_main
 
-from .common import load_sheet_tsv
 from ..common import find_base_path
+from .common import load_sheet_tsv
 from .models import DataSet, load_datasets
-
 
 #: Default pipeline steps to use.
 DEFAULT_STEPS = (

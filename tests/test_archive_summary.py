@@ -4,11 +4,11 @@ We only run some smoke tests here.
 """
 
 import os
-
-import pytest
 import tempfile
 
-from cubi_tk.__main__ import setup_argparse, main
+import pytest
+
+from cubi_tk.__main__ import main, setup_argparse
 
 
 def test_run_archive_summary_help(capsys):

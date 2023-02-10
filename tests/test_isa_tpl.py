@@ -8,8 +8,8 @@ import filecmp
 import glob
 import os
 
-from cubi_tk.isa_tpl import run_cookiecutter, TEMPLATES
 from cubi_tk.__main__ import setup_argparse
+from cubi_tk.isa_tpl import TEMPLATES, run_cookiecutter
 
 
 def test_run_cookiecutter_isatab_generic(tmp_path):

@@ -1,21 +1,21 @@
 """``cubi-tk sea-snap itransfer-ngs-mapping``: transfer ngs_mapping results into iRODS landing zone."""
 
-import os
-import sys
 import argparse
-import typing
-import re
-import pathlib
+from ctypes import c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
-from subprocess import check_output, SubprocessError
-from ctypes import c_ulonglong
+import os
+import pathlib
+import re
+from subprocess import SubprocessError, check_output
+import sys
+import typing
 
-import tqdm
 from logzero import logger
+import tqdm
 
-from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob
 from ..common import check_irods_icommands, sizeof_fmt
+from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8

@@ -7,8 +7,7 @@ import attr
 from logzero import logger
 from sodar_cli import api
 
-from ..irods.check import IrodsCheckCommand, HASH_SCHEMES
-
+from ..irods.check import HASH_SCHEMES, IrodsCheckCommand
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
 DEFAULT_HASH_SCHEME = "MD5"

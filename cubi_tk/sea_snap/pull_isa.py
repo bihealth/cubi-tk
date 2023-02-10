@@ -10,9 +10,9 @@ More Information
 
 import argparse
 import os
-from uuid import UUID
-import typing
 from pathlib import Path
+import typing
+from uuid import UUID
 
 from logzero import logger
 import requests

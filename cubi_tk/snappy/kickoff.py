@@ -9,9 +9,9 @@ import typing
 from logzero import logger
 from toposort import toposort
 
-from . import common
-
 from cubi_tk.exceptions import ParseOutputException
+
+from . import common
 
 
 def run(

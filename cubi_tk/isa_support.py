@@ -5,15 +5,15 @@ from pathlib import Path
 import tempfile
 import typing
 
-import attr
 from altamisa.isatab import (
-    InvestigationInfo,
-    Study,
     Assay,
-    InvestigationReader,
-    StudyReader,
     AssayReader,
+    InvestigationInfo,
+    InvestigationReader,
+    Study,
+    StudyReader,
 )
+import attr
 from logzero import logger
 
 

@@ -4,7 +4,7 @@ import argparse
 import os
 import typing
 
-from .itransfer_common import SnappyItransferCommandBase, IndexLibrariesOnlyMixin
+from .itransfer_common import IndexLibrariesOnlyMixin, SnappyItransferCommandBase
 
 #: Template string for variant_calling results files.
 TPL_INPUT_DIR = "variant_calling/output/%(mapper)s.%(caller)s.%(library_name)s"

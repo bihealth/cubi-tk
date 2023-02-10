@@ -11,20 +11,25 @@ More Information
 import argparse
 import os
 import pathlib
-from uuid import UUID
 import typing
+from uuid import UUID
 
 import attr
+from biomedsheets import io_tsv
+from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
 from sodar_cli import api
 
-from ..common import CommonConfig, overwrite_helper, load_toml_config
-from ..isa_support import InvestigationTraversal, IsaNodeVisitor, isa_dict_to_isa_data, first_value
-from .models import load_datasets
+from ..common import CommonConfig, load_toml_config, overwrite_helper
+from ..isa_support import (
+    InvestigationTraversal,
+    IsaNodeVisitor,
+    first_value,
+    isa_dict_to_isa_data,
+)
 from .common import find_snappy_root_dir
+from .models import load_datasets
 from .parse_sample_sheet import ParseSampleSheet
-from biomedsheets import io_tsv
-from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 
 #: Template for the to-be-generated file.
 HEADER_TPL = (

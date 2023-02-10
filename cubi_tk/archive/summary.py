@@ -1,16 +1,16 @@
 """``cubi-tk archive summary``: Creates a summary table of problematic files and files of interest"""
 
 import argparse
-import attr
 import os
+from pathlib import Path
 import re
 import sys
 import time
 import typing
-import yaml
 
-from pathlib import Path
+import attr
 from logzero import logger
+import yaml
 
 from . import common
 from .common import traverse_project_files

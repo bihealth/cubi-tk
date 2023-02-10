@@ -1,14 +1,14 @@
 """``cubi-tk archive``: common features"""
 
 import argparse
-import attr
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import typing
 
-from pathlib import Path
+import attr
 
 
 @attr.s(frozen=True, auto_attribs=True)

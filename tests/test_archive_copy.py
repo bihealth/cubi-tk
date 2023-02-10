@@ -4,16 +4,15 @@ We only run some smoke tests here.
 """
 
 import datetime
+import filecmp
 import glob
 import os
 import re
-
-import filecmp
-import pytest
 import tempfile
 
-from cubi_tk.__main__ import setup_argparse, main
+import pytest
 
+from cubi_tk.__main__ import main, setup_argparse
 
 HASHDEEP_TITLES_PATTERN = re.compile("^(%|#).*$")
 IGNORE_FILES_PATTERN = re.compile("^(.*/)?(hashdeep|workdir)_(report|audit)\\.txt$")

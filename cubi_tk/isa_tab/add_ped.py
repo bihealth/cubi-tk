@@ -1,49 +1,48 @@
 """``cubi-tk isa-tab add-ped``: add records to ISA-tab from PED file."""
 
 import argparse
-import pathlib
-import itertools
 import io
+import itertools
+import pathlib
 import typing
 
-from altamisa.isatab import (
-    InvestigationWriter,
-    AssayWriter,
-    StudyWriter,
-    Study,
-    Assay,
-    Arc,
-    Material,
-    Process,
-    Characteristics,
-    FactorValue,
-    Comment,
-    ParameterValue,
-    OntologyTermRef,
-)
 from altamisa.constants.table_headers import (
     CHARACTERISTICS,
     COMMENT,
-    FACTOR_VALUE,
-    PARAMETER_VALUE,
-    SOURCE_NAME,
-    SAMPLE_NAME,
-    MATERIAL_NAME_HEADERS,
-    PROCESS_NAME_HEADERS,
     DATE,
-    LABEL,
-    MATERIAL_TYPE,
-    PERFORMER,
     EXTRACT_NAME,
+    FACTOR_VALUE,
+    LABEL,
     LIBRARY_NAME,
-    UNIT,
+    MATERIAL_NAME_HEADERS,
+    MATERIAL_TYPE,
+    PARAMETER_VALUE,
+    PERFORMER,
+    PROCESS_NAME_HEADERS,
     RAW_DATA_FILE,
+    SAMPLE_NAME,
+    SOURCE_NAME,
+    UNIT,
+)
+from altamisa.isatab import (
+    Arc,
+    Assay,
+    AssayWriter,
+    Characteristics,
+    Comment,
+    FactorValue,
+    InvestigationWriter,
+    Material,
+    OntologyTermRef,
+    ParameterValue,
+    Process,
+    Study,
+    StudyWriter,
 )
 import attr
 from logzero import logger
 
-from .. import parse_ped
-from .. import isa_support
+from .. import isa_support, parse_ped
 from ..common import overwrite_helper
 
 

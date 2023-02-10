@@ -11,8 +11,8 @@ from biomedsheets import shortcuts
 from logzero import logger
 import vcfpy
 
-from .common import get_biomedsheet_path, get_all_biomedsheet_paths, load_sheet_tsv
 from .. import parse_ped
+from .common import get_all_biomedsheet_paths, get_biomedsheet_path, load_sheet_tsv
 
 
 class GermlineSheetChecker:

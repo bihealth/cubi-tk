@@ -16,14 +16,14 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 import typing
-import attr
 
+import attr
 from logzero import logger
 
-from ..common import load_toml_config, compute_md5_checksum
+from ..common import compute_md5_checksum, load_toml_config
 from ..exceptions import FileMd5MismatchException
-from ..snappy.retrieve_irods_collection import RetrieveIrodsCollection
 from ..snappy.check_remote import Checker as SnappyChecker
+from ..snappy.retrieve_irods_collection import RetrieveIrodsCollection
 
 # RetrieveIrodsCollection needs this in the namespace
 # either define it explicitly or import it

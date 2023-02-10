@@ -7,16 +7,22 @@ import pathlib
 import typing
 from warnings import warn
 
-import attr
 from altamisa.constants.table_headers import (
-    SAMPLE_NAME,
+    DATA_FILE_HEADERS,
     MATERIAL_NAME_HEADERS,
     PROCESS_NAME_HEADERS,
     PROTOCOL_REF,
-    DATA_FILE_HEADERS,
+    SAMPLE_NAME,
 )
-from altamisa.isatab import InvestigationWriter, AssayWriter, StudyWriter, Characteristics, Comment
+from altamisa.isatab import (
+    AssayWriter,
+    Characteristics,
+    Comment,
+    InvestigationWriter,
+    StudyWriter,
+)
 from altamisa.isatab.helpers import is_ontology_term_ref
+import attr
 from logzero import logger
 
 from .. import isa_support

@@ -1,7 +1,7 @@
 """"Test ``cubi-tk isa-tab add-ped``."""
 
-import shutil
 import pathlib
+import shutil
 
 from cubi_tk.__main__ import main
 

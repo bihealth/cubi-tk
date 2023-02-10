@@ -2,21 +2,20 @@
 
 import argparse
 from ctypes import c_int, c_ulonglong
-import re
-import typing
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
+import re
 import shutil
+import typing
 
 import attr
 from logzero import logger
 import tqdm
 
-from .check import CheckCommand, run_check
-
 #: Default value for --src-regex.
 from ..common import sizeof_fmt
+from .check import CheckCommand, run_check
 
 DEFAULT_SRC_REGEX = r"(.*/)?(?P<sample>.+)(?:-.+?)?\.f(?:ast)?q\.gz"
 

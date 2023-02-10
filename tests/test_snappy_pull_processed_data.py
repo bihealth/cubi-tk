@@ -3,9 +3,9 @@
 
 import pytest
 
+from cubi_tk.__main__ import setup_argparse
 from cubi_tk.snappy.pull_processed_data import PullProcessedDataCommand
 from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
-from cubi_tk.__main__ import setup_argparse
 
 # Empty file MD5 checksum
 FILE_MD5SUM = "d41d8cd98f00b204e9800998ecf8427e"

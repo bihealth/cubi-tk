@@ -2,9 +2,9 @@
 """
 
 import argparse
+import json
 import os
 import typing
-import json
 
 import cattr
 from logzero import logger

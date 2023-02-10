@@ -1,26 +1,29 @@
 """``cubi-tk sodar ingest-fastq``: add FASTQ files to SODAR"""
 
-import os
 import argparse
-import datetime
 from ctypes import c_ulonglong
-import re
-import typing
+import datetime
+import glob
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
-from subprocess import check_output, SubprocessError
+import os
 import pathlib
-import glob
+import re
+from subprocess import SubprocessError, check_output
+import typing
 
 from logzero import logger
 from sodar_cli import api
 import tqdm
 
-from ..exceptions import MissingFileException
-from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob, irsync_transfer
-
 #: Default value for --src-regex.
 from ..common import sizeof_fmt
+from ..exceptions import MissingFileException
+from ..snappy.itransfer_common import (
+    SnappyItransferCommandBase,
+    TransferJob,
+    irsync_transfer,
+)
 
 DEFAULT_SRC_REGEX = (
     r"(.*/)?(?P<sample>.+?)"

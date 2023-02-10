@@ -6,10 +6,10 @@ We only run some smoke tests here.
 import os
 from unittest import mock
 
-import pytest
 from pyfakefs import fake_filesystem, fake_pathlib
+import pytest
 
-from cubi_tk.__main__ import setup_argparse, main
+from cubi_tk.__main__ import main, setup_argparse
 
 
 def test_run_seasnap_itransfer_results_help(capsys):

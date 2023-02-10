@@ -1,21 +1,20 @@
 """``cubi-tk archive prepare``: Prepare a project for archival"""
 
 import argparse
-import attr
 import datetime
 import os
 import re
 import sys
 import time
 import typing
+
+import attr
+from logzero import logger
 import yaml
 
-from logzero import logger
-
-from ..common import compute_md5_checksum, execute_shell_commands
 from . import common
+from ..common import compute_md5_checksum, execute_shell_commands
 from .readme import is_readme_valid
-
 
 MSG = "**Contents of original `README.md` file**"
 

@@ -4,17 +4,17 @@ We only run some smoke tests here.
 """
 
 import datetime
+import filecmp
 import glob
 import os
 import re
 import tempfile
 
-import filecmp
 import pytest
 
-from cubi_tk.__main__ import setup_argparse, main
-from .test_archive_copy import sort_hashdeep_title_and_body
+from cubi_tk.__main__ import main, setup_argparse
 
+from .test_archive_copy import sort_hashdeep_title_and_body
 
 SNAKEMAKE = re.compile("^.*\\.snakemake\\.tar\\.gz$")
 HASHDEEP = re.compile("^(([0-9]{4})-([0-9]{2})-([0-9]{2}))_hashdeep_report\\.txt$")

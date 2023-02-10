@@ -1,12 +1,12 @@
 """Tests for ``cubi_tk.snappy.check_local``."""
 import io
-import textwrap
 import pathlib
+import textwrap
 
-import pytest
 from biomedsheets.io_tsv import read_germline_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from biomedsheets.shortcuts import GermlineCaseSheet
+import pytest
 
 from cubi_tk.snappy.check_local import GermlineSheetChecker, PedFileCheck, VcfFileCheck
 
