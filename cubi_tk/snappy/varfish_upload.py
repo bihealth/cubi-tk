@@ -24,6 +24,7 @@ DEFAULT_STEPS = (
     "wgs_cnv_export_external",
     "wgs_sv_export",
     "wgs_sv_export_external",
+    "varfish_export",
 )
 
 #: The extensions that we are looking for.
@@ -37,6 +38,7 @@ PREFIXES = (
     "bwa.gcnv",
     "bwa.popdel",
     "bwa.xhmm",
+    "bwa_mem2.varfish_",
     "minimap2.sniffles2",
     "write_pedigree",
 )
@@ -264,6 +266,7 @@ class SnappyVarFishUploadCommand:
             # Perform call to varfish import.
             args = [
                 "varfish-cli",
+                "--no-verify-ssl",
                 "--verbose",
                 "case",
                 "create-import-info",
