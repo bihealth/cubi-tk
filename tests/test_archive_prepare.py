@@ -13,7 +13,7 @@ import tempfile
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
-
+from cubi_tk.common import execute_shell_commands
 from .test_archive_copy import sort_hashdeep_title_and_body
 
 SNAKEMAKE = re.compile("^.*\\.snakemake\\.tar\\.gz$")
@@ -46,8 +46,19 @@ def test_run_archive_prepare_nothing(capsys):
 
 
 def test_run_archive_prepare_smoke_test():
+    repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
     with tempfile.TemporaryDirectory() as tmp_dir:
-        repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
+        execute_shell_commands(
+            [
+                [
+                    "tar",
+                    "-zxf",
+                    os.path.join(repo_dir, "temp_dest_verif.tar.gz"),
+                    "--directory",
+                    tmp_dir,
+                ]
+            ]
+        )
         project_name = "project"
 
         argv = [
@@ -56,7 +67,7 @@ def test_run_archive_prepare_smoke_test():
             "--rules",
             os.path.join(repo_dir, "rules.yaml"),
             "--readme",
-            os.path.join(repo_dir, "temp_dest_verif", "README.md"),
+            os.path.join(tmp_dir, "temp_dest_verif", "README.md"),
             os.path.join(repo_dir, project_name),
             os.path.join(tmp_dir, "temp_dest"),
         ]
@@ -76,7 +87,7 @@ def test_run_archive_prepare_smoke_test():
 
         # --- compare hashdeep report with reference
         (repo_titles, repo_body) = sort_hashdeep_title_and_body(
-            os.path.join(repo_dir, "temp_dest_verif", "1970-01-01_hashdeep_report.txt")
+            os.path.join(tmp_dir, "temp_dest_verif", "1970-01-01_hashdeep_report.txt")
         )
         (tmp_titles, tmp_body) = sort_hashdeep_title_and_body(
             os.path.join(tmp_dir, "temp_dest", "1970-01-01_hashdeep_report.txt")
@@ -84,7 +95,7 @@ def test_run_archive_prepare_smoke_test():
         # No test on gzipped files, timestamp stored on gzip format could be different
         assert repo_body == tmp_body
 
-        prefix = os.path.join(repo_dir, "temp_dest_verif")
+        prefix = os.path.join(tmp_dir, "temp_dest_verif")
         ref_fns = [
             os.path.relpath(x, start=prefix)
             for x in filter(
@@ -103,7 +114,7 @@ def test_run_archive_prepare_smoke_test():
         assert sorted(ref_fns) == sorted(test_fns)
 
         matches, mismatches, errors = filecmp.cmpfiles(
-            os.path.join(repo_dir, "temp_dest_verif"),
+            os.path.join(tmp_dir, "temp_dest_verif"),
             os.path.join(tmp_dir, "temp_dest"),
             common=ref_fns,
             shallow=False,
