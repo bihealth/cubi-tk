@@ -14,6 +14,7 @@ import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
 from cubi_tk.common import execute_shell_commands
+
 from .test_archive_copy import sort_hashdeep_title_and_body
 
 SNAKEMAKE = re.compile("^.*\\.snakemake\\.tar\\.gz$")
