@@ -51,7 +51,7 @@ argcomplete
 pyyaml
 
 # VarFish REST API client.
-varfish-cli >=0.3.5
+varfish-cli >=0.5.1
 
 # Compact, round-tripable configuration format.
 toml

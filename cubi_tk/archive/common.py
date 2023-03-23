@@ -146,11 +146,9 @@ def run_hashdeep(directory, out_file=None, num_threads=4, ref_file=None):
     else:
         cmd += ["-o", "fl", "."]
     # Run hashdeep from the directory, storing the output in f
-    p = subprocess.Popen(cmd, cwd=directory, encoding="utf-8", stdout=f, stderr=subprocess.PIPE)
-    p.communicate()
+    p = subprocess.Popen(cmd, cwd=directory, encoding="utf-8", stdout=f, stderr=None)
+    p.wait()
     # Return hashdeep return value
-    if out_file:
-        f.close()
     return p.returncode
 
 

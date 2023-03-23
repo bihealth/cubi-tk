@@ -1,6 +1,7 @@
 """``cubi-tk archive prepare``: Prepare a project for archival"""
 
 import argparse
+import atexit
 import datetime
 import os
 import re
@@ -116,6 +117,11 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         rel_symlinks = self._find_relative_symlinks(self.project_dir, rel_symlinks)
         logger.info("Set {} relative symlinks aside".format(len(rel_symlinks)))
 
+        # Make sure to restore relative symlinks
+        atexit.register(
+            self._restore_relative_symlinks, root=self.project_dir, rel_symlinks=rel_symlinks
+        )
+
         tmpdir = tempfile.TemporaryDirectory()
 
         status = 0
@@ -167,10 +173,6 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
         except Exception as e:
             status = 1
             logger.error(e)
-        finally:
-            # Restore relative symlinks to the original temporary destination
-            logger.info("Restoring relative symlinks")
-            self._restore_relative_symlinks(self.project_dir, rel_symlinks)
 
         return status
 
@@ -267,6 +269,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
             if add_dangling or os.path.exists(os.path.join(symlink_dir, target)):
                 os.makedirs(symlink_dir, mode=488, exist_ok=True)  # 488 is 750 in octal
                 os.symlink(target, symlink_path)
+        logger.info("Restored relative symlinks in {}".format(root))
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

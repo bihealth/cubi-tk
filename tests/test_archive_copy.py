@@ -13,6 +13,7 @@ import tempfile
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
+from cubi_tk.common import execute_shell_commands
 
 HASHDEEP_TITLES_PATTERN = re.compile("^(%|#).*$")
 IGNORE_FILES_PATTERN = re.compile("^(.*/)?(hashdeep|workdir)_(report|audit)\\.txt$")
@@ -62,14 +63,36 @@ def sort_hashdeep_title_and_body(filename):
 
 
 def test_run_archive_copy_smoke_test(mocker):
+    base_path = os.path.join(os.path.dirname(__file__), "data", "archive")
     with tempfile.TemporaryDirectory() as tmp_dir:
-        repo_dir = os.path.join(os.path.dirname(__file__), "data", "archive")
+        execute_shell_commands(
+            [
+                [
+                    "tar",
+                    "-zxf",
+                    os.path.join(base_path, "temp_dest_verif.tar.gz"),
+                    "--directory",
+                    tmp_dir,
+                ]
+            ]
+        )
+        execute_shell_commands(
+            [
+                [
+                    "tar",
+                    "-zxf",
+                    os.path.join(base_path, "final_dest_verif.tar.gz"),
+                    "--directory",
+                    tmp_dir,
+                ]
+            ]
+        )
 
         argv = [
             "archive",
             "copy",
             "--keep-workdir-hashdeep",
-            os.path.join(repo_dir, "temp_dest_verif"),
+            os.path.join(tmp_dir, "temp_dest_verif"),
             os.path.join(tmp_dir, "final_dest"),
         ]
         setup_argparse()
@@ -88,7 +111,7 @@ def test_run_archive_copy_smoke_test(mocker):
 
         # --- check report
         (repo_titles, repo_body) = sort_hashdeep_title_and_body(
-            os.path.join(repo_dir, "final_dest_verif", "workdir_report.txt")
+            os.path.join(tmp_dir, "final_dest_verif", "workdir_report.txt")
         )
         (tmp_titles, tmp_body) = sort_hashdeep_title_and_body(
             os.path.join(tmp_dir, "final_dest", "workdir_report.txt")
@@ -96,14 +119,14 @@ def test_run_archive_copy_smoke_test(mocker):
 
         # --- check audits
         for fn in ["hashdeep_audit", "workdir_audit"]:
-            with open(os.path.join(repo_dir, "final_dest_verif", fn + ".txt"), "r") as f:
+            with open(os.path.join(tmp_dir, "final_dest_verif", fn + ".txt"), "r") as f:
                 repo = sorted(f.readlines())
             with open(os.path.join(tmp_dir, "final_dest", fn + ".txt"), "r") as f:
                 tmp = sorted(f.readlines())
             assert repo == tmp
 
         # --- test all copied files, except the hashdeep report & audit, that can differ by line order
-        prefix = os.path.join(repo_dir, "final_dest_verif")
+        prefix = os.path.join(tmp_dir, "final_dest_verif")
         ref_fns = [
             os.path.relpath(x, start=prefix)
             for x in filter(
@@ -123,7 +146,7 @@ def test_run_archive_copy_smoke_test(mocker):
         test_fns = filter(lambda x: not IGNORE_FILES_PATTERN.match(x), test_fns)
 
         matches, mismatches, errors = filecmp.cmpfiles(
-            os.path.join(repo_dir, "final_dest_verif"),
+            os.path.join(tmp_dir, "final_dest_verif"),
             os.path.join(tmp_dir, "final_dest"),
             common=ref_fns,
             shallow=False,
