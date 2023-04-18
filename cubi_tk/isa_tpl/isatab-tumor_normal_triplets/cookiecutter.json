@@ -68,5 +68,6 @@
   "lib_layout": [
     "PAIRED",
     "SINGLE"
-  ]
+  ],
+  "__output_dir": "Required variable. Do not remove."
 }

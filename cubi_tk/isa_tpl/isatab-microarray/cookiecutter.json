@@ -37,5 +37,6 @@
       "accession_number": "http://purl.obolibrary.org/obo/OBI_0400148",
       "source_ref": "OBI"
     }
-  }
+  },
+  "__output_dir": "Required variable. Do not remove."
 }

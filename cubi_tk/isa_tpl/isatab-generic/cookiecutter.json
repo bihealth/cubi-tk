@@ -54,5 +54,6 @@
   "sample_type": "x-charite-medgen-blood-book-id",
   "lib_strategy": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}RNA-seq{% else %}UNKNOWN{% endif %}",
   "lib_selection": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}PolyA{% else %}UNKNOWN{% endif %}",
-  "lib_layout": [ "PAIRED", "SINGLE" ]
+  "lib_layout": [ "PAIRED", "SINGLE" ],
+  "__output_dir": "Required variable. Do not remove."
 }

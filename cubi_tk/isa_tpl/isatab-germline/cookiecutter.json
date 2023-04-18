@@ -70,5 +70,6 @@
   "sample_type": "x-charite-medgen-blood-book-id",
   "lib_strategy": "{% if cookiecutter.a_measurement_abbreviation == 'WES' %}WXS{% else %}WGS{% endif %}",
   "lib_selection": "{% if cookiecutter.a_measurement_abbreviation == 'WES' %}Hybrid Selection{% else %}RANDOM{% endif %}",
-  "lib_layout": "PAIRED"
+  "lib_layout": "PAIRED",
+  "__output_dir": "Required variable. Do not remove."
 }

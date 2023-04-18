@@ -13,5 +13,6 @@
   "s_file_name": "{{cookiecutter.i_dir_name}}",
   "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
   "a_technology_type": "nucleotide sequencing",
-  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}"
+  "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}",
+  "__output_dir": "Required variable. Do not remove."
 }

@@ -77,5 +77,6 @@
   "chromatography_instrument": [
     "Agilent UHPLC 1290",
     "Agilent 1290 Infinity II LC System"
-  ]
+  ],
+  "__output_dir": "Required variable. Do not remove."
 }
