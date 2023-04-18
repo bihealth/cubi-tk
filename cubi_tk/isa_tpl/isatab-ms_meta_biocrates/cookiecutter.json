@@ -1,6 +1,5 @@
 {
   "investigation_title": "Investigation Title",
-  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
 
   "study_title": "{{cookiecutter.investigation_title}}",
   "study_id": "{{cookiecutter.study_title|lower|replace(' ', '_')}}",

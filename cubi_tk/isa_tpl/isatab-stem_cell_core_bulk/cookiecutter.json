@@ -13,7 +13,7 @@
   "library_kit": "mRNA",
   "library_construction_meta": "Library selection,Target insert size",
   "sequencing_meta": "Platform,Instrument model,No. targeted reads,Paired-End",
-  "i_dir_name": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
+  "study_id": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
   "s_file_name": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
   "assay_prefix": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
   "assay_name": "GEX_{{cookiecutter.a_measurement_type|replace(' ', '_')}}",
