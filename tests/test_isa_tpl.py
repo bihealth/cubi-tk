@@ -22,7 +22,9 @@ def test_run_cookiecutter_isatab_generic(tmp_path):
 
     assert output_path.exists()
     assert (output_path / "i_Investigation.txt").exists()
-    assert (output_path / "a_investigation_title_transcription_profiling_nucleotide_sequencing.txt").exists()
+    assert (
+        output_path / "a_investigation_title_transcription_profiling_nucleotide_sequencing.txt"
+    ).exists()
     assert (output_path / "s_Investigation_Title.txt").exists()
 
 
@@ -36,7 +38,9 @@ def test_run_cookiecutter_isatab_germline(tmp_path):
 
     assert output_path.exists()
     assert (output_path / "i_Investigation.txt").exists()
-    assert (output_path / "a_investigation_title_exome_sequencing_nucleotide_sequencing.txt").exists()
+    assert (
+        output_path / "a_investigation_title_exome_sequencing_nucleotide_sequencing.txt"
+    ).exists()
     assert (output_path / "s_Investigation_Title.txt").exists()
 
 
