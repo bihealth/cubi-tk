@@ -32,7 +32,6 @@
   "library_type": ["GEX", "GEX+antibody", "GEX+VDJ", "GEX+other", "GEX+antibody+VDJ", "GEX+other+another"],
   "sample_multiplexing": ["No", "CellPlex", "TotalSeq", "Other"],
   "genotype_multiplexing": ["no", "yes"],
-  "study_id": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
   "s_file_name": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
   "assay_prefix": "{{cookiecutter.study_title|replace(' ', '_')|replace('/', '-')}}",
   "assay_name": "{{cookiecutter.library_type}}_{{cookiecutter.a_measurement_type|replace(' ', '_')}}",
