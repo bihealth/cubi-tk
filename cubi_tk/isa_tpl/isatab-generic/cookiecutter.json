@@ -46,13 +46,13 @@
   "center_contact": "",
 
   "study_title": "{{cookiecutter.investigation_title}}",
-  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
-  "s_file_name": "{{cookiecutter.i_dir_name}}",
-  "assay_prefix": "{{cookiecutter.i_dir_name|lower}}",
+  "s_file_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
+  "assay_prefix": "{{cookiecutter.s_file_name|lower}}",
   "a_measurement_abbreviation": "{% if cookiecutter.a_measurement_type == 'transcription profiling' %}mRNA_seq{% else %}UNKNOWN{% endif %}",
   "assay_name": "{{cookiecutter.a_measurement_type|replace(' ', '_')}}_{{cookiecutter.a_technology_type|replace(' ', '_')}}",
   "sample_type": "x-charite-medgen-blood-book-id",
   "lib_strategy": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}RNA-seq{% else %}UNKNOWN{% endif %}",
   "lib_selection": "{% if cookiecutter.a_measurement_abbreviation == 'mRNA_seq' %}PolyA{% else %}UNKNOWN{% endif %}",
-  "lib_layout": [ "PAIRED", "SINGLE" ]
+  "lib_layout": [ "PAIRED", "SINGLE" ],
+  "__output_dir": "Required variable. Do not remove."
 }

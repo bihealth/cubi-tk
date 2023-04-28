@@ -176,8 +176,8 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     logger.info(args)
 
     output_dir = os.path.realpath(args.output_dir)
-    output_base = os.path.dirname(args.output_dir)
-    extra_context["i_dir_name"] = os.path.basename(output_dir)
+    output_base = os.path.dirname(output_dir)
+    extra_context["__output_dir"] = os.path.basename(output_dir)
 
     # FIXME: better solution? (added because args.var_is_triplet is None)
     if "is_triplet" in tpl.configuration:

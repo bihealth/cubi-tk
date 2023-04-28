@@ -9,8 +9,8 @@ Investigation Title	{{cookiecutter.investigation_title}}
 Investigation Description	""
 Investigation Submission Date	""
 Investigation Public Release Date	""
-Comment[Created With Configuration]	bih_cancer
-Comment[Last Opened With Configuration]	bih_cancer
+Comment[Created With Configuration]	/path/to/isa-configurations/bih_studies/bih_bulk_RNAseq
+Comment[Last Opened With Configuration]	bih_bulk_RNAseq
 INVESTIGATION PUBLICATIONS
 Investigation PubMed ID
 Investigation Publication DOI
@@ -32,7 +32,7 @@ Investigation Person Roles
 Investigation Person Roles Term Accession Number
 Investigation Person Roles Term Source REF
 STUDY
-Study Identifier	{{cookiecutter.i_dir_name}}
+Study Identifier	{{cookiecutter.s_file_name}}
 Study Title	{{cookiecutter.investigation_title}}
 Study Description	""
 Comment[Study Grant Number]	""
@@ -67,21 +67,16 @@ Study Assay Technology Type Term Accession Number	http://purl.obolibrary.org/obo
 Study Assay Technology Type Term Source REF	OBI
 Study Assay Technology Platform	Illumina
 STUDY PROTOCOLS
-{% set source_meta = cookiecutter.source_meta.split(",") -%}
-{% set sample_meta = cookiecutter.sample_meta.split(",") -%}
-{% set dissociation_meta = cookiecutter.dissociation_meta.split(",") -%}
-{% set library_construction_meta = cookiecutter.library_construction_meta.split(",") -%}
-{% set sequencing_meta = cookiecutter.sequencing_meta.split(",") -%}
-Study Protocol Name	Sample collection	Dissociation	Library construction	Nucleic acid sequencing
-Study Protocol Type	Sample collection	Dissociation	Library construction	Nucleic acid sequencing
+Study Protocol Name	Sample collection	RNA extraction	Library construction	Nucleic acid sequencing
+Study Protocol Type	Sample collection	RNA extraction	Library construction	Nucleic acid sequencing
 Study Protocol Type Term Accession Number	""	""	""	""
 Study Protocol Type Term Source REF	""	""	""	""
 Study Protocol Description	""	""	""	""
 Study Protocol URI	""	""	""	""
 Study Protocol Version	""	""	""	""
-Study Protocol Parameters Name	Method	Dissociation method;Cell count{% for meta in dissociation_meta -%};{{meta}}{% endfor %}	Library kit;Library type;Multiplex genotype;Multiplex sample;Multiplex oligo{% for meta in library_construction_meta -%};{{meta}}{% endfor %}	Sequencing batch;Library prefix;Barcode kit;Barcode name{% for meta in sequencing_meta -%};{{meta}}{% endfor %}
-Study Protocol Parameters Name Term Accession Number	""	";{% for meta in dissociation_meta -%};{% endfor %}"	";;;;{% for meta in library_construction_meta -%};{% endfor %}"	";;;{% for meta in sequencing_meta -%};{% endfor %}"
-Study Protocol Parameters Name Term Source REF	""	";{% for meta in dissociation_meta -%};{% endfor %}"	";;;;{% for meta in library_construction_meta -%};{% endfor %}"	";;;{% for meta in sequencing_meta -%};{% endfor %}"
+Study Protocol Parameters Name	Method	Concentration	Library source;Library strategy;Library selection;Library layout;Library kit;Target insert size;Wet-lab insert size;Barcode kit;Barcode name	Platform;Instrument model;Base quality encoding;Library prefix
+Study Protocol Parameters Name Term Accession Number	""	""	";;;;;;;;"	";;;"
+Study Protocol Parameters Name Term Source REF	""	""	";;;;;;;;"	";;;"
 Study Protocol Components Name	""	""	""	""
 Study Protocol Components Type	""	""	""	""
 Study Protocol Components Type Term Accession Number	""	""	""	""

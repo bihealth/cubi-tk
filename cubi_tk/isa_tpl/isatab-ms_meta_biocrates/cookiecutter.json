@@ -1,6 +1,5 @@
 {
   "investigation_title": "Investigation Title",
-  "i_dir_name": "{{cookiecutter.investigation_title|replace(' ', '_')}}",
 
   "study_title": "{{cookiecutter.investigation_title}}",
   "study_id": "{{cookiecutter.study_title|lower|replace(' ', '_')}}",
@@ -77,5 +76,6 @@
   "chromatography_instrument": [
     "Agilent UHPLC 1290",
     "Agilent 1290 Infinity II LC System"
-  ]
+  ],
+  "__output_dir": "Required variable. Do not remove."
 }
