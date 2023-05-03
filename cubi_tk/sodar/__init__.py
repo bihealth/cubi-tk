@@ -37,6 +37,9 @@ Sub Commands
     Upload external files to SODAR
     (defaults for fastq files).
 
+``ingest``
+    Upload arbitrary files to SODAR
+
 ``check-remote``
     Check if or which local files with md5 sums are already deposited in iRODs/Sodar
 
@@ -54,6 +57,7 @@ from .add_ped import setup_argparse as setup_argparse_add_ped
 from .check_remote import setup_argparse as setup_argparse_check_remote
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
 from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
+from .ingest import setup_argparse as setup_argparse_ingest
 from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move
@@ -87,6 +91,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
             "ingest-fastq", help="Upload external files to SODAR (defaults for fastq)"
         )
     )
+    setup_argparse_ingest(subparsers.add_parser("ingest", help="Upload arbitrary files to SODAR"))
     setup_argparse_check_remote(
         subparsers.add_parser(
             "check-remote", help="Compare local files with md5 sum against SODAR/iRODS"
