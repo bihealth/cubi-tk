@@ -16,11 +16,17 @@ def fake_filesystem(fs):
 @pytest.fixture
 def jobs():
     return (
-        TransferJob(path_src="myfile.csv", path_dest="dest_dir/myfile.csv", bytes=123),
+        TransferJob(
+            path_src="myfile.csv",
+            path_dest="dest_dir/myfile.csv",
+            bytes=123,
+            md5="ed3b3cbb18fd148bc925944ff0861ce6",
+        ),
         TransferJob(
             path_src="folder/file.csv",
             path_dest="dest_dir/folder/file.csv",
             bytes=1024,
+            md5="a6e9e3c859b803adb0f1d5f08a51d0f6",
         ),
     )
 
@@ -42,16 +48,19 @@ def test_irods_transfer_init(jobs, itransfer):
     assert itransfer.destinations == [job.path_dest for job in jobs]
 
 
-def test_irods_transfer_put(fs, itransfer):
-    fs.create_file("myfile.csv")
-    fs.create_dir("folder")
-    fs.create_file("folder/file.csv")
-    fs.create_dir("dest_dir/folder")
+def test_irods_transfer_put(fs, itransfer, jobs):
+    for job in jobs:
+        fs.create_file(job.path_src)
+        fs.create_dir(Path(job.path_dest).parent)
 
     with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
         itransfer.put()
-    assert Path("dest_dir/myfile.csv").exists()
-    assert Path("dest_dir/folder/file.csv").exists()
+
+    for job in jobs:
+        assert Path(job.path_dest).exists()
+        assert Path(job.path_dest + ".md5").exists()
+        with Path(job.path_dest + ".md5").open() as file:
+            assert file.readline() == f"{job.md5}  {Path(job.path_dest).name}"
 
 
 def test_irods_transfer_chksum(itransfer):

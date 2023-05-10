@@ -1,6 +1,7 @@
 import getpass
 import os.path
 import sys
+import tempfile
 from typing import Tuple
 
 import attr
@@ -24,6 +25,9 @@ class TransferJob:
 
     #: Number of bytes to transfer.
     bytes: int
+
+    #: MD5 hashsum of file.
+    md5: str
 
 
 def get_irods_error(e: Exception):
@@ -71,22 +75,40 @@ class iRODSTransfer:
         self.destinations = [job.path_dest for job in self.jobs]
 
     def put(self):
-        # TODO: add more parenthesis after python 3.10
-        with tqdm(
-            total=self.total_bytes, unit="B", unit_scale=True, unit_divisor=1024, position=1
-        ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
-            for job in self.jobs:
-                try:
-                    file_log.set_description_str(f"Current file: {job.path_src}")
-                    self.session.data_objects.put(job.path_src, job.path_dest)
-                    t.update(job.bytes)
-                except Exception as e:
-                    logger.error(f"Problem during transfer of {job.path_src}")
-                    logger.error(get_irods_error(e))
-                    sys.exit(1)
-                finally:
-                    self.session.cleanup()
-            t.clear()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Double tqdm for currently transferred file info
+            # TODO: add more parenthesis after python 3.10
+            with tqdm(
+                total=self.total_bytes,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                position=1,
+            ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
+                for job in self.jobs:
+                    job_name = os.path.basename(job.path_src)
+
+                    # create temporary md5 files
+                    with open(
+                        os.path.join(temp_dir, job_name) + ".md5", "w", encoding="utf-8"
+                    ) as tmp:
+                        tmp.write(f"{job.md5}  {job_name}")
+
+                    try:
+                        file_log.set_description_str(f"Current file: {job.path_src}")
+                        self.session.data_objects.put(job.path_src, job.path_dest)
+                        self.session.data_objects.put(
+                            os.path.join(temp_dir, job_name) + ".md5",
+                            job.path_dest + ".md5",
+                        )
+                        t.update(job.bytes)
+                    except Exception as e:
+                        logger.error(f"Problem during transfer of {job.path_src}")
+                        logger.error(get_irods_error(e))
+                        sys.exit(1)
+                    finally:
+                        self.session.cleanup()
+                t.clear()
 
     def get(self):
         pass
