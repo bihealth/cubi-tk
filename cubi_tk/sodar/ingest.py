@@ -108,6 +108,7 @@ class SodarIngest:
         )
         parser.add_argument(
             "-y",
+            "--yes",
             default=False,
             action="store_true",
             help="Don't ask for permission prior to transfer.",
@@ -218,7 +219,7 @@ class SodarIngest:
             logger.info("Planning to create the following sub-collections:")
             for d in dirs:
                 print(f"{self.target_coll}/{str(d)}")
-            if not self.args.y:
+            if not self.args.yes:
                 if not input("Is this OK? [y/N] ").lower().startswith("y"):
                     logger.error("Aborting at your request.")
                     sys.exit(0)
@@ -247,7 +248,7 @@ class SodarIngest:
         logger.info("Into this iRODS collection:")
         print(f"{self.lz_irods_path}/{self.target_coll}/")
 
-        if not self.args.y:
+        if not self.args.yes:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):
                 logger.error("Aborting at your request.")
                 sys.exit(0)
