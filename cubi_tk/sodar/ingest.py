@@ -64,13 +64,6 @@ class SodarIngest:
             help="Recursively match files in subdirectories. Creates iRODS sub-collections to match directory structure.",
         )
         parser.add_argument(
-            "-c",
-            "--checksums",
-            default=False,
-            action="store_true",
-            help="Compute missing md5 checksums for source files.",
-        )
-        parser.add_argument(
             "-K",
             "--remote-checksums",
             default=False,
@@ -134,7 +127,6 @@ class SodarIngest:
 
         # Build file list and add missing md5 files
         source_paths = self.build_file_list()
-        source_paths = self.process_md5_sums(source_paths)
 
         # Initiate iRODS session
         irods_session = init_irods(self.irods_env_path)
@@ -252,37 +244,6 @@ class SodarIngest:
                 output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
-    def process_md5_sums(self, paths):
-        """Check input paths for corresponding .md5 file. Generate one if missing."""
-
-        output_paths = paths.copy()
-        for file in paths:
-            p = file["spath"]
-            i = file["ipath"].parent / (p.name + ".md5")
-            upper_path = p.parent / (p.name + ".MD5")
-            lower_path = p.parent / (p.name + ".md5")
-            if upper_path.exists() and lower_path.exists():
-                logger.info(
-                    f"Found both {upper_path.name} and {lower_path.name} in {str(p.parent)}/"
-                )
-                logger.info("Removing upper case version.")
-                upper_path.unlink()
-                output_paths.append({"spath": lower_path, "ipath": i})
-            elif upper_path.exists():
-                logger.info(f"Found {upper_path.name} in {str(p.parent)}/")
-                logger.info("Renaming to " + lower_path.name)
-                upper_path.rename(upper_path.with_suffix(".md5"))
-                output_paths.append({"spath": lower_path, "ipath": i})
-            elif lower_path.exists():
-                output_paths.append({"spath": lower_path, "ipath": i})
-
-            if not lower_path.exists() and self.args.checksums:
-                with lower_path.open("w", encoding="utf-8") as file:
-                    file.write(f"{compute_md5_checksum(p)}  {p.name}")
-                output_paths.append({"spath": lower_path, "ipath": i})
-
-        return output_paths
-
     def build_jobs(self, source_paths) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
 
@@ -294,6 +255,7 @@ class SodarIngest:
                     path_src=str(p["spath"]),
                     path_dest=f"{self.lz_irods_path}/{self.target_coll}/{str(p['ipath'])}",
                     bytes=p["spath"].stat().st_size,
+                    md5=compute_md5_checksum(p["spath"]),
                 )
             )
 
