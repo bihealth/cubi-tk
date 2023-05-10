@@ -1,20 +1,18 @@
 """``cubi-tk sodar ingest``: add arbitrary files to SODAR"""
 
 import argparse
-import getpass
 import os
 from pathlib import Path
 import sys
 import typing
 
 import attr
-from irods.session import iRODSSession
 from logzero import logger
 from sodar_cli import api
-from tqdm import tqdm
+
+from cubi_tk.irods_utils import TransferJob, get_irods_error, init_irods, iRODSTransfer
 
 from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
-from ..snappy.itransfer_common import TransferJob
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -41,34 +39,6 @@ class SodarIngest:
 
         # iRODS environment
         self.irods_env = None
-
-    def _init_irods(self):
-        """Connect to iRODS."""
-        irods_auth_path = self.irods_env_path.parent.joinpath(".irodsA")
-        if irods_auth_path.exists():
-            try:
-                session = iRODSSession(irods_env_file=self.irods_env_path)
-                session.server_version  # check for outdated .irodsA file
-            except Exception as e:
-                logger.error("iRODS connection failed: %s", self.get_irods_error(e))
-                logger.error("Are you logged in? try 'iinit'")
-                sys.exit(1)
-            finally:
-                session.cleanup()
-        else:
-            # Query user for password.
-            logger.info("iRODS authentication file not found.")
-            password = getpass.getpass(prompt="Please enter SODAR password:")
-            try:
-                session = iRODSSession(irods_env_file=self.irods_env_path, password=password)
-                session.server_version  # check for exceptions
-            except Exception as e:
-                logger.error("iRODS connection failed: %s", self.get_irods_error(e))
-                sys.exit(1)
-            finally:
-                session.cleanup()
-
-        return session
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -123,12 +93,6 @@ class SodarIngest:
         parser.add_argument("destination", help="UUID or iRODS path of SODAR landing zone.")
 
     @classmethod
-    def get_irods_error(cls, e: Exception):
-        """Return logger friendly iRODS exception."""
-        es = str(e)
-        return es if es else e.__class__.__name__
-
-    @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
@@ -173,7 +137,7 @@ class SodarIngest:
         source_paths = self.process_md5_sums(source_paths)
 
         # Initiate iRODS session
-        irods_session = self._init_irods()
+        irods_session = init_irods(self.irods_env_path)
 
         # Query target collection
         logger.info("Querying landing zone collections…")
@@ -183,7 +147,7 @@ class SodarIngest:
             for c in coll.subcollections:
                 collections.append(c.name)
         except Exception as e:
-            logger.error(f"Failed to query landing zone collections: {self.get_irods_error(e)}")
+            logger.error(f"Failed to query landing zone collections: {get_irods_error(e)}")
             sys.exit(1)
         finally:
             irods_session.cleanup()
@@ -241,7 +205,8 @@ class SodarIngest:
         jobs = self.build_jobs(source_paths)
 
         # Final go from user & transfer
-        total_bytes = sum([job.bytes for job in jobs])
+        itransfer = iRODSTransfer(irods_session, jobs)
+        total_bytes = itransfer.total_bytes
         logger.info("Planning to transfer the following files:")
         for job in jobs:
             print(job.path_src)
@@ -253,29 +218,14 @@ class SodarIngest:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):
                 logger.error("Aborting at your request.")
                 sys.exit(0)
-        # TODO: add more parenthesis after python 3.10
-        with tqdm(
-            total=total_bytes, unit="B", unit_scale=True, unit_divisor=1024, position=1
-        ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
-            for job in jobs:
-                try:
-                    file_log.set_description_str(f"Current file: {job.path_src}")
-                    irods_session.data_objects.put(job.path_src, job.path_dest)
-                    t.update(job.bytes)
-                except Exception as e:
-                    logger.error(f"Problem during transfer of {job.path_src}.")
-                    logger.error(self.get_irods_error(e))
-                    sys.exit(1)
-                finally:
-                    irods_session.cleanup()
-            t.clear()
 
+        itransfer.put()
         logger.info("File transfer complete.")
 
         # Compute server-side checksums
         if self.args.remote_checksums:
             logger.info("Computing server-side checksums.")
-            self.compute_irods_checksums(session=irods_session, jobs=jobs)
+            itransfer.chksum()
 
     def build_file_list(self):
         """Build list of source files to transfer. iRODS paths are relative to target collection."""
@@ -348,23 +298,6 @@ class SodarIngest:
             )
 
         return tuple(sorted(transfer_jobs))
-
-    def compute_irods_checksums(self, session, jobs: typing.Tuple[TransferJob, ...]):
-        for job in jobs:
-            if not job.path_src.endswith(".md5"):
-                print(
-                    str(
-                        Path(job.path_dest).relative_to(f"{self.lz_irods_path}/{self.target_coll}/")
-                    )
-                )
-                try:
-                    data_object = session.data_objects.get(job.path_dest)
-                    data_object.chksum()
-                except Exception as e:
-                    logger.error("iRODS checksum error.")
-                    logger.error(e)
-                finally:
-                    session.cleanup()
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
