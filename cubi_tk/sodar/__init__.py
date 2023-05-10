@@ -56,8 +56,8 @@ from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
 from .check_remote import setup_argparse as setup_argparse_check_remote
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
-from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 from .ingest import setup_argparse as setup_argparse_ingest
+from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move

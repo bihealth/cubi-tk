@@ -1,9 +1,8 @@
 """Tests for ``cubi_tk.sodar.ingest``."""
 
 import pytest
-from unittest import mock
-from pyfakefs import fake_filesystem, fake_pathlib
-from cubi_tk.__main__ import main, setup_argparse
+
+from cubi_tk.__main__ import setup_argparse
 
 
 def test_run_sodar_ingest_help(capsys):
