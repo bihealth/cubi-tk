@@ -1,19 +1,20 @@
 """``cubi-tk sodar ingest``: add arbitrary files to SODAR"""
 
 import argparse
-import os
-import sys
-from pathlib import Path
 import getpass
+import os
+from pathlib import Path
+import sys
 import typing
-import attr
 
+import attr
 from irods.session import iRODSSession
 from logzero import logger
 from sodar_cli import api
-from ..common import load_toml_config, is_uuid, compute_md5_checksum, sizeof_fmt
-from ..snappy.itransfer_common import TransferJob
 from tqdm import tqdm
+
+from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
+from ..snappy.itransfer_common import TransferJob
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -125,7 +126,7 @@ class SodarIngest:
     def get_irods_error(cls, e: Exception):
         """Return logger friendly iRODS exception."""
         es = str(e)
-        return es if es != "None" else e.__class__.__name__
+        return es if es else e.__class__.__name__
 
     @classmethod
     def run(
@@ -181,8 +182,8 @@ class SodarIngest:
             coll = irods_session.collections.get(self.lz_irods_path)
             for c in coll.subcollections:
                 collections.append(c.name)
-        except:
-            logger.error("Failed to query landing zone collections.")
+        except Exception as e:
+            logger.error(f"Failed to query landing zone collections: {self.get_irods_error(e)}")
             sys.exit(1)
         finally:
             irods_session.cleanup()
@@ -261,9 +262,10 @@ class SodarIngest:
                     file_log.set_description_str(f"Current file: {job.path_src}")
                     irods_session.data_objects.put(job.path_src, job.path_dest)
                     t.update(job.bytes)
-                except:
-                    logger.error("Problem during transfer of " + job.path_src)
-                    raise
+                except Exception as e:
+                    logger.error(f"Problem during transfer of {job.path_src}.")
+                    logger.error(self.get_irods_error(e))
+                    sys.exit(1)
                 finally:
                     irods_session.cleanup()
             t.clear()
@@ -284,8 +286,11 @@ class SodarIngest:
         for src in source_paths:
             try:
                 abspath = src.resolve()
-            except:
-                logger.error("File not found:", src.name)
+            except FileNotFoundError:
+                logger.error(f"File not found: {src.name}")
+                continue
+            except RuntimeError:
+                logger.error(f"Infinite loop: {src.name}")
                 continue
 
             if src.is_dir():
