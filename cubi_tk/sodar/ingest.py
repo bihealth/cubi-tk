@@ -120,7 +120,7 @@ class SodarIngest:
                 self.lz_irods_path = lz_info.irods_path
                 logger.info(f"Target iRods path: {self.lz_irods_path}")
             else:
-                logger.info("Target landing zone is not ACTIVE.")
+                logger.error("Target landing zone is not ACTIVE.")
                 sys.exit(1)
         else:
             self.lz_irods_path = self.args.destination
@@ -178,7 +178,7 @@ class SodarIngest:
                 print(f"{self.target_coll}/{str(d)}")
             if not self.args.yes:
                 if not input("Is this OK? [y/N] ").lower().startswith("y"):
-                    logger.error("Aborting at your request.")
+                    logger.info("Aborting at your request.")
                     sys.exit(0)
 
             for d in dirs:
@@ -208,7 +208,7 @@ class SodarIngest:
 
         if not self.args.yes:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):
-                logger.error("Aborting at your request.")
+                logger.info("Aborting at your request.")
                 sys.exit(0)
 
         itransfer.put()
@@ -229,10 +229,10 @@ class SodarIngest:
             try:
                 abspath = src.resolve()
             except FileNotFoundError:
-                logger.error(f"File not found: {src.name}")
+                logger.warning(f"File not found: {src.name}")
                 continue
             except RuntimeError:
-                logger.error(f"Infinite loop: {src.name}")
+                logger.warning(f"Infinite loop: {src.name}")
                 continue
 
             if src.is_dir():
