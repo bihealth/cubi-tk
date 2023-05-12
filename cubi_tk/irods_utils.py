@@ -110,9 +110,6 @@ class iRODSTransfer:
                         self.session.cleanup()
                 t.clear()
 
-    def get(self):
-        pass
-
     def chksum(self):
         common_prefix = os.path.commonprefix(self.destinations)
         for job in self.jobs:
