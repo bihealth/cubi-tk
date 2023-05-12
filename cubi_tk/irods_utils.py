@@ -43,7 +43,7 @@ def init_irods(irods_env_path: os.PathLike) -> iRODSSession:
         try:
             session = iRODSSession(irods_env_file=irods_env_path)
             session.server_version  # check for outdated .irodsA file
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"iRODS connection failed: {get_irods_error(e)}")
             logger.error("Are you logged in? try 'iinit'")
             sys.exit(1)
@@ -56,7 +56,7 @@ def init_irods(irods_env_path: os.PathLike) -> iRODSSession:
         try:
             session = iRODSSession(irods_env_file=irods_env_path, password=password)
             session.server_version  # check for exceptions
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"iRODS connection failed: {get_irods_error(e)}")
             sys.exit(1)
         finally:
@@ -102,7 +102,7 @@ class iRODSTransfer:
                             job.path_dest + ".md5",
                         )
                         t.update(job.bytes)
-                    except Exception as e:
+                    except Exception as e:  # pragma: no cover
                         logger.error(f"Problem during transfer of {job.path_src}")
                         logger.error(get_irods_error(e))
                         sys.exit(1)
@@ -121,7 +121,7 @@ class iRODSTransfer:
                 try:
                     data_object = self.session.data_objects.get(job.path_dest)
                     data_object.chksum()
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     logger.error("iRODS checksum error.")
                     logger.error(get_irods_error(e))
                 finally:
