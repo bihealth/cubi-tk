@@ -2,15 +2,23 @@ from pathlib import Path
 import shutil
 from unittest.mock import patch
 
+import irods.exception
 from irods.session import iRODSSession
 import pytest
 
-from cubi_tk.irods_utils import TransferJob, init_irods, iRODSTransfer
+from cubi_tk.irods_utils import TransferJob, get_irods_error, init_irods, iRODSTransfer
 
 
 @pytest.fixture
 def fake_filesystem(fs):
     yield fs
+
+
+def test_get_irods_error():
+    e = irods.exception.NetworkException()
+    assert get_irods_error(e) == "NetworkException"
+    e = irods.exception.NetworkException("Connection reset")
+    assert get_irods_error(e) == "Connection reset"
 
 
 @patch("cubi_tk.irods_utils.iRODSSession")
