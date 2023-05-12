@@ -1,5 +1,0 @@
-Source Name	Characteristics[Organism]	Term Source REF	Term Accession Number	Characteristics[Source type]	Characteristics[external reference]	Characteristics[Group]	Protocol REF	Parameter Value[Method]	Performer	Date	Sample Name	Characteristics[Origin]	Characteristics[Condition]	Characteristics[Treatment]
-{% set sample_names = cookiecutter.sample_names.split(",") -%}
-{% for sample_name in sample_names -%}
-{{sample_name|replace("-", "_")}}	Homo sapiens	NCBITAXON	http://purl.bioontology.org/ontology/NCBITAXON/9606				Sample collection				{{sample_name|replace("-", "_")}}			
-{% endfor -%}
