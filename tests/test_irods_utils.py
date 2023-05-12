@@ -5,12 +5,32 @@ from unittest.mock import patch
 from irods.session import iRODSSession
 import pytest
 
-from cubi_tk.irods_utils import TransferJob, iRODSTransfer
+from cubi_tk.irods_utils import TransferJob, init_irods, iRODSTransfer
 
 
 @pytest.fixture
 def fake_filesystem(fs):
     yield fs
+
+
+@patch("cubi_tk.irods_utils.iRODSSession")
+@patch("getpass.getpass")
+def test_init_irods(mockpass, mocksession, fs):
+    ienv = Path(".irods/irods_environment.json")
+    password = "1234"
+
+    # .irodsA not found, asks for password
+    mockpass.return_value = password
+    init_irods(ienv)
+    mockpass.assert_called()
+    mocksession.assert_called_with(irods_env_file=ienv, password=password)
+
+    # .irodsA there, does not ask for password
+    fs.create_file(".irods/.irodsA")
+    mockpass.reset_mock()
+    init_irods(ienv)
+    mockpass.assert_not_called()
+    mocksession.assert_called_with(irods_env_file=ienv)
 
 
 @pytest.fixture
@@ -67,5 +87,5 @@ def test_irods_transfer_chksum(itransfer):
     with patch.object(itransfer.session.data_objects, "get") as mock:
         itransfer.chksum()
 
-        assert mock.called
-        assert mock.called_with(itransfer.destinations)
+        for path in itransfer.destinations:
+            mock.assert_any_call(path)
