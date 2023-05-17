@@ -75,10 +75,16 @@ class SodarIngest:
             "--yes",
             default=False,
             action="store_true",
-            help="Don't ask for permission prior to transfer.",
+            help="Don't ask for permission.",
         )
         parser.add_argument(
             "--collection", type=str, help="Target iRODS collection. Skips manual selection input."
+        )
+        parser.add_argument(
+            "--iinit",
+            default=False,
+            action="store_true",
+            help="Save PAM auth token to disk. Keep login active.",
         )
         parser.add_argument(
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
@@ -129,7 +135,7 @@ class SodarIngest:
         source_paths = self.build_file_list()
 
         # Initiate iRODS session
-        irods_session = init_irods(self.irods_env_path)
+        irods_session = init_irods(self.irods_env_path, ask=not self.args.yes)
 
         # Query target collection
         logger.info("Querying landing zone collections…")
