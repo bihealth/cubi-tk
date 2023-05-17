@@ -1,17 +1,52 @@
 from pathlib import Path
 import shutil
-from unittest.mock import patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import irods.exception
 from irods.session import iRODSSession
 import pytest
 
-from cubi_tk.irods_utils import TransferJob, get_irods_error, init_irods, iRODSTransfer
+from cubi_tk.irods_utils import (
+    TransferJob,
+    get_irods_error,
+    init_irods,
+    iRODSTransfer,
+    save_irods_token,
+)
 
 
 @pytest.fixture
 def fake_filesystem(fs):
     yield fs
+
+
+@pytest.fixture
+def jobs():
+    return (
+        TransferJob(
+            path_src="myfile.csv",
+            path_dest="dest_dir/myfile.csv",
+            bytes=123,
+            md5="ed3b3cbb18fd148bc925944ff0861ce6",
+        ),
+        TransferJob(
+            path_src="folder/file.csv",
+            path_dest="dest_dir/folder/file.csv",
+            bytes=1024,
+            md5="a6e9e3c859b803adb0f1d5f08a51d0f6",
+        ),
+    )
+
+
+@pytest.fixture
+def itransfer(jobs):
+    session = iRODSSession(
+        irods_host="localhost",
+        irods_port=1247,
+        irods_user_name="pytest",
+        irods_zone_name="pytest",
+    )
+    return iRODSTransfer(session, jobs)
 
 
 def test_get_irods_error():
@@ -41,34 +76,17 @@ def test_init_irods(mockpass, mocksession, fs):
     mocksession.assert_called_with(irods_env_file=ienv)
 
 
-@pytest.fixture
-def jobs():
-    return (
-        TransferJob(
-            path_src="myfile.csv",
-            path_dest="dest_dir/myfile.csv",
-            bytes=123,
-            md5="ed3b3cbb18fd148bc925944ff0861ce6",
-        ),
-        TransferJob(
-            path_src="folder/file.csv",
-            path_dest="dest_dir/folder/file.csv",
-            bytes=1024,
-            md5="a6e9e3c859b803adb0f1d5f08a51d0f6",
-        ),
-    )
+@patch("cubi_tk.irods_utils.encode", return_value="it works")
+def test_write_token(mockencode, fs):
+    ienv = Path(".irods/irods_environment.json")
 
+    mocksession = MagicMock()
+    pam_pw = PropertyMock(return_value=["secure"])
+    type(mocksession).pam_pw_negotiated = pam_pw
 
-@pytest.fixture
-def itransfer(jobs):
-    session = iRODSSession(
-        irods_host="localhost",
-        irods_port=1247,
-        irods_user_name="pytest",
-        irods_zone_name="pytest",
-    )
-
-    return iRODSTransfer(session, jobs)
+    save_irods_token(mocksession, ienv)
+    assert ienv.parent.joinpath(".irodsA").exists()
+    mockencode.assert_called_with("secure")
 
 
 def test_irods_transfer_init(jobs, itransfer):

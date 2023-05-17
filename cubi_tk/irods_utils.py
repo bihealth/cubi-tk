@@ -1,10 +1,13 @@
 import getpass
 import os.path
+from pathlib import Path
 import sys
 import tempfile
 from typing import Tuple
 
 import attr
+from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
+from irods.password_obfuscation import encode
 from irods.session import iRODSSession
 from logzero import logger
 from tqdm import tqdm
@@ -36,33 +39,72 @@ def get_irods_error(e: Exception):
     return es if es and es != "None" else e.__class__.__name__
 
 
-def init_irods(irods_env_path: os.PathLike) -> iRODSSession:
+def init_irods(irods_env_path: os.PathLike, ask: bool = False) -> iRODSSession:
     """Connect to iRODS."""
     irods_auth_path = irods_env_path.parent.joinpath(".irodsA")
     if irods_auth_path.exists():
         try:
             session = iRODSSession(irods_env_file=irods_env_path)
             session.server_version  # check for outdated .irodsA file
+            return session
         except Exception as e:  # pragma: no cover
             logger.error(f"iRODS connection failed: {get_irods_error(e)}")
-            logger.error("Are you logged in? try 'iinit'")
-            sys.exit(1)
+            pass
         finally:
             session.cleanup()
-    else:
-        # Query user for password.
-        logger.info("iRODS authentication file not found.")
-        password = getpass.getpass(prompt="Please enter SODAR password:")
+
+    # No valid .irodsA file. Query user for password.
+    logger.info("No valid iRODS authentication file found.")
+    attempts = 0
+    while attempts < 3:
         try:
-            session = iRODSSession(irods_env_file=irods_env_path, password=password)
+            session = iRODSSession(
+                irods_env_file=irods_env_path,
+                password=getpass.getpass(prompt="Please enter SODAR password:"),
+            )
             session.server_version  # check for exceptions
+            break
+        except PAM_AUTH_PASSWORD_FAILED:  # pragma: no cover
+            if attempts < 2:
+                logger.warning("Wrong password. Please try again.")
+                attempts += 1
+                continue
+            else:
+                logger.error("iRODS connection failed.")
+                sys.exit(1)
         except Exception as e:  # pragma: no cover
             logger.error(f"iRODS connection failed: {get_irods_error(e)}")
             sys.exit(1)
         finally:
             session.cleanup()
 
+    if ask and input("Save iRODS session for passwordless operation? [y/N] ").lower().startswith(
+        "y"
+    ):
+        save_irods_token(session)
+    elif not ask:
+        save_irods_token(session)
+
     return session
+
+
+def save_irods_token(session: iRODSSession, irods_env_path=None):
+    """Retrieve PAM temp auth token 'obfuscate' it and save to disk."""
+    if not irods_env_path:
+        irods_auth_path = Path.home().joinpath(".irods", ".irodsA")
+    else:
+        irods_auth_path = Path(irods_env_path).parent.joinpath(".irodsA")
+
+    irods_auth_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        token = session.pam_pw_negotiated
+    except CAT_INVALID_AUTHENTICATION:
+        raise
+
+    if isinstance(token, list) and token:
+        irods_auth_path.write_text(encode(token[0]))
+        irods_auth_path.chmod(0o600)
 
 
 class iRODSTransfer:
