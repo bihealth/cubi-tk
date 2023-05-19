@@ -14,6 +14,9 @@ from cubi_tk.irods_utils import TransferJob, get_irods_error, init_irods, iRODST
 
 from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
 
+# for testing
+logger.propagate = True
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class Config:
@@ -233,12 +236,12 @@ class SodarIngest:
 
         for src in source_paths:
             try:
-                abspath = src.resolve()
+                abspath = src.resolve(strict=True)
             except FileNotFoundError:
                 logger.warning(f"File not found: {src.name}")
                 continue
             except RuntimeError:
-                logger.warning(f"Infinite loop: {src.name}")
+                logger.warning(f"Symlink loop: {src.name}")
                 continue
 
             if src.is_dir():
