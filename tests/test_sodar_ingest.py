@@ -1,7 +1,8 @@
 """Tests for ``cubi_tk.sodar.ingest``."""
 
+from argparse import ArgumentParser
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -37,6 +38,23 @@ def test_run_sodar_ingest_nothing(capsys):
 @pytest.fixture
 def fake_filesystem(fs):
     yield fs
+
+
+@pytest.fixture
+def ingest(fs):
+    fs.create_dir(Path.home().joinpath(".irods"))
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
+
+    argv = ["--recursive", "testdir", "target"]
+
+    parser = ArgumentParser()
+    SodarIngest.setup_argparse(parser)
+    args = parser.parse_args(argv)
+
+    obj = SodarIngest(args)
+    obj.lz_irods_path = "/irodsZone"
+    obj.target_coll = "targetCollection"
+    return obj
 
 
 def test_sodar_ingest_build_file_list(fs, caplog):
@@ -81,3 +99,24 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     assert {"spath": Path("/testdir/file1.md5"), "ipath": Path("file1.md5")} not in paths
     assert {"spath": Path("/testdir/subdir/file2"), "ipath": Path("subdir/file2")} not in paths
     assert {"spath": Path("/testdir/file3"), "ipath": Path("file3")} in paths
+
+
+@patch("cubi_tk.sodar.ingest.sorted")
+@patch("cubi_tk.sodar.ingest.compute_md5_checksum", return_value="5555")
+@patch("pathlib.Path.stat")
+@patch("cubi_tk.sodar.ingest.TransferJob")
+def test_sodar_ingest_build_jobs(mockjob, mockstats, mockmd5, mocksorted, ingest):
+    paths = [
+        {"spath": Path("myfile.csv"), "ipath": Path("dest_dir/myfile.csv")},
+        {"spath": Path("folder/file.csv"), "ipath": Path("dest_dir/folder/file.csv")},
+    ]
+    mockstats().st_size = 1024
+
+    ingest.build_jobs(paths)
+    for p in paths:
+        mockjob.assert_any_call(
+            path_src=str(p["spath"]),
+            path_dest=f"{ingest.lz_irods_path}/{ingest.target_coll}/{str(p['ipath'])}",
+            bytes=1024,
+            md5="5555",
+        )
