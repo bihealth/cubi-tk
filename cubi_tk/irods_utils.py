@@ -9,11 +9,13 @@ import attr
 from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
 from irods.password_obfuscation import encode
 from irods.session import iRODSSession
+import logzero
 from logzero import logger
 from tqdm import tqdm
 
-# TODO: move this class to common.py?
-# from .snappy.itransfer_common import TransferJob
+# no-frills logger
+formatter = logzero.LogFormatter(fmt="%(message)s")
+output_logger = logzero.setup_logger(formatter=formatter)
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -156,7 +158,7 @@ class iRODSTransfer:
         common_prefix = os.path.commonprefix(self.destinations)
         for job in self.jobs:
             if not job.path_src.endswith(".md5"):
-                print(os.path.relpath(job.path_dest, common_prefix))
+                output_logger.info(os.path.relpath(job.path_dest, common_prefix))
                 try:
                     data_object = self.session.data_objects.get(job.path_dest)
                     data_object.chksum()
