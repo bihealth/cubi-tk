@@ -7,6 +7,7 @@ import sys
 import typing
 
 import attr
+import logzero
 from logzero import logger
 from sodar_cli import api
 
@@ -16,6 +17,10 @@ from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
 
 # for testing
 logger.propagate = True
+
+# no-frills logger
+formatter = logzero.LogFormatter(fmt="%(message)s")
+output_logger = logzero.setup_logger(formatter=formatter)
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -184,7 +189,7 @@ class SodarIngest:
 
             logger.info("Planning to create the following sub-collections:")
             for d in dirs:
-                print(f"{self.target_coll}/{str(d)}")
+                output_logger.info(f"{self.target_coll}/{str(d)}")
             if not self.args.yes:
                 if not input("Is this OK? [y/N] ").lower().startswith("y"):
                     logger.info("Aborting at your request.")
@@ -210,10 +215,10 @@ class SodarIngest:
         total_bytes = itransfer.total_bytes
         logger.info("Planning to transfer the following files:")
         for job in jobs:
-            print(job.path_src)
+            output_logger.info(job.path_src)
         logger.info(f"With a total size of {sizeof_fmt(total_bytes)}")
         logger.info("Into this iRODS collection:")
-        print(f"{self.lz_irods_path}/{self.target_coll}/")
+        output_logger.info(f"{self.lz_irods_path}/{self.target_coll}/")
 
         if not self.args.yes:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):
