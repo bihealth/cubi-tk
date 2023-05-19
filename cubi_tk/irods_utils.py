@@ -163,7 +163,7 @@ class iRODSTransfer:
                     data_object = self.session.data_objects.get(job.path_dest)
                     data_object.chksum()
                 except Exception as e:  # pragma: no cover
-                    logger.error("iRODS checksum error.")
+                    logger.error("Problem during iRODS checksumming.")
                     logger.error(get_irods_error(e))
                 finally:
                     self.session.cleanup()
