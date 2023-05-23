@@ -45,9 +45,6 @@ class SodarIngest:
             logger.error("iRODS environment file is missing.")
             sys.exit(1)
 
-        # iRODS environment
-        self.irods_env = None
-
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -87,12 +84,6 @@ class SodarIngest:
         )
         parser.add_argument(
             "--collection", type=str, help="Target iRODS collection. Skips manual selection input."
-        )
-        parser.add_argument(
-            "--iinit",
-            default=False,
-            action="store_true",
-            help="Save PAM auth token to disk. Keep login active.",
         )
         parser.add_argument(
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
