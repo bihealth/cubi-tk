@@ -1,12 +1,13 @@
 """Tests for ``cubi_tk.sodar.ingest``."""
 
+import os
 from argparse import ArgumentParser
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
 
-from cubi_tk.__main__ import setup_argparse
+from cubi_tk.__main__ import main, setup_argparse
 from cubi_tk.sodar.ingest import SodarIngest
 
 
@@ -88,16 +89,28 @@ def test_sodar_ingest_build_file_list(fs, caplog):
 
     # Files
     assert {"spath": Path("/testdir/file1"), "ipath": Path("file1")} in paths
-    assert {"spath": Path("/testdir/file1.md5"), "ipath": Path("file1.md5")} not in paths
-    assert {"spath": Path("/testdir/subdir/file2"), "ipath": Path("subdir/file2")} in paths
+    assert {
+        "spath": Path("/testdir/file1.md5"),
+        "ipath": Path("file1.md5"),
+    } not in paths
+    assert {
+        "spath": Path("/testdir/subdir/file2"),
+        "ipath": Path("subdir/file2"),
+    } in paths
     assert {"spath": Path("/testdir/file3"), "ipath": Path("file3")} in paths
 
     # Re-run without recursive search
     args.recursive = False
     paths = SodarIngest.build_file_list(dummy)
     assert {"spath": Path("/testdir/file1"), "ipath": Path("file1")} in paths
-    assert {"spath": Path("/testdir/file1.md5"), "ipath": Path("file1.md5")} not in paths
-    assert {"spath": Path("/testdir/subdir/file2"), "ipath": Path("subdir/file2")} not in paths
+    assert {
+        "spath": Path("/testdir/file1.md5"),
+        "ipath": Path("file1.md5"),
+    } not in paths
+    assert {
+        "spath": Path("/testdir/subdir/file2"),
+        "ipath": Path("subdir/file2"),
+    } not in paths
     assert {"spath": Path("/testdir/file3"), "ipath": Path("file3")} in paths
 
 
@@ -120,3 +133,68 @@ def test_sodar_ingest_build_jobs(mockjob, mockstats, mockmd5, mocksorted, ingest
             bytes=1024,
             md5="5555",
         )
+
+
+@patch("cubi_tk.sodar.ingest.init_irods")
+@patch("cubi_tk.sodar.ingest.api.landingzone.retrieve")
+def test_sodar_ingest_smoketest(mockapi, mocksession, fs):
+    class DummyAPI(object):
+        pass
+
+    class DummyColl(object):
+        pass
+
+    fs.create_dir(Path.home().joinpath(".irods"))
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
+
+    fs.create_dir("/source/subdir")
+    fs.create_dir("/target/coll/")
+    fs.create_file("/source/file1")
+    fs.create_file("/source/subdir/file2")
+    lz_uuid = "f46b4fc3-0927-449d-b725-9ffed231507b"
+    argv = [
+        "sodar",
+        "ingest",
+        "--sodar-url",
+        "sodar_url",
+        "--sodar-api-token",
+        "token",
+        "--collection",
+        "coll",
+        "--yes",
+        "--recursive",
+        "source",
+        lz_uuid,
+    ]
+
+    # Test cancel no invalid LZ
+    api_return = DummyAPI()
+    api_return.status = "DELETED"
+    api_return.irods_path = "target"
+    mockapi.return_value = api_return
+
+    with pytest.raises(SystemExit):
+        main(argv)
+        mockapi.assert_called_with(
+            sodar_url="sodar_url", sodar_api_token="token", landingzone_uuid=lz_uuid
+        )
+
+    # Test calls when LZ is active
+    api_return.status = "ACTIVE"
+    dcoll = DummyColl()
+    dcoll.subcollections = [
+        DummyColl(),
+    ]
+    dcoll.subcollections[0].name = "coll"
+    mocksession.return_value.collections.get.return_value = dcoll
+    mocksession.return_value.collections.create = MagicMock(wraps=os.mkdir)
+
+    main(argv)
+    assert call().collections.get("target") in mocksession.mock_calls
+    assert call().collections.create("target/coll/subdir") in mocksession.mock_calls
+
+    # TODO: more assertions, but I don't know how to query this out of the mock...
+    # assert Path("/target/coll/file1").exists()
+    # assert Path("/target/coll/file1.md5").exists()
+    assert Path("/target/coll/subdir/").exists()
+    # assert Path("/target/coll/subdir/file2.md5").exists()
