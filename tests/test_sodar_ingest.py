@@ -1,7 +1,7 @@
 """Tests for ``cubi_tk.sodar.ingest``."""
 
-import os
 from argparse import ArgumentParser
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
