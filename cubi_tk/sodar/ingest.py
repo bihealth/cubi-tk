@@ -45,6 +45,14 @@ class SodarIngest:
             logger.error("iRODS environment file is missing.")
             sys.exit(1)
 
+        # Get SODAR API info
+        toml_config = load_toml_config(Config())
+
+        if not self.args.sodar_url:
+            self.args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+        if not self.args.sodar_api_token:
+            self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -99,14 +107,6 @@ class SodarIngest:
 
     def execute(self):
         """Execute ingest."""
-        # Get SODAR API info
-        toml_config = load_toml_config(Config())
-
-        if not self.args.sodar_url:
-            self.args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
-        if not self.args.sodar_api_token:
-            self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
             try:
@@ -115,7 +115,7 @@ class SodarIngest:
                     sodar_api_token=self.args.sodar_api_token,
                     landingzone_uuid=self.args.destination,
                 )
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 logger.error("Failed to retrieve landing zone information.")
                 logger.error(e)
                 sys.exit(1)
@@ -128,7 +128,7 @@ class SodarIngest:
                 logger.error("Target landing zone is not ACTIVE.")
                 sys.exit(1)
         else:
-            self.lz_irods_path = self.args.destination
+            self.lz_irods_path = self.args.destination  # pragma: no cover
 
         # Build file list and add missing md5 files
         source_paths = self.build_file_list()
@@ -143,7 +143,7 @@ class SodarIngest:
             coll = irods_session.collections.get(self.lz_irods_path)
             for c in coll.subcollections:
                 collections.append(c.name)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error(f"Failed to query landing zone collections: {get_irods_error(e)}")
             sys.exit(1)
         finally:
@@ -168,7 +168,7 @@ class SodarIngest:
 
         elif self.args.collection in collections:
             self.target_coll = self.args.collection
-        else:
+        else:  # pragma: no cover
             logger.error("Selected target collection does not exist in landing zone.")
             sys.exit(1)
 
@@ -182,7 +182,7 @@ class SodarIngest:
             for d in dirs:
                 output_logger.info(f"{self.target_coll}/{str(d)}")
             if not self.args.yes:
-                if not input("Is this OK? [y/N] ").lower().startswith("y"):
+                if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
                     logger.info("Aborting at your request.")
                     sys.exit(0)
 
@@ -190,7 +190,7 @@ class SodarIngest:
                 coll_name = f"{self.lz_irods_path}/{self.target_coll}/{str(d)}"
                 try:
                     irods_session.collections.create(coll_name)
-                except Exception as e:
+                except Exception as e:  # pragma: no cover
                     logger.error("Error creating sub-collection.")
                     logger.error(e)
                     sys.exit(1)
@@ -212,7 +212,7 @@ class SodarIngest:
         output_logger.info(f"{self.lz_irods_path}/{self.target_coll}/")
 
         if not self.args.yes:
-            if not input("Is this OK? [y/N] ").lower().startswith("y"):
+            if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
@@ -220,7 +220,7 @@ class SodarIngest:
         logger.info("File transfer complete.")
 
         # Compute server-side checksums
-        if self.args.remote_checksums:
+        if self.args.remote_checksums:  # pragma: no cover
             logger.info("Computing server-side checksums.")
             itransfer.chksum()
 

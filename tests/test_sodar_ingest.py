@@ -46,7 +46,15 @@ def ingest(fs):
     fs.create_dir(Path.home().joinpath(".irods"))
     fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
-    argv = ["--recursive", "testdir", "target"]
+    argv = [
+        "--recursive",
+        "--sodar-url",
+        "sodar_url",
+        "--sodar-api-token",
+        "token",
+        "testdir",
+        "target",
+    ]
 
     parser = ArgumentParser()
     SodarIngest.setup_argparse(parser)
