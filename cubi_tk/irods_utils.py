@@ -41,7 +41,7 @@ def get_irods_error(e: Exception):
     return es if es and es != "None" else e.__class__.__name__
 
 
-def init_irods(irods_env_path: os.PathLike, ask: bool = False) -> iRODSSession:
+def init_irods(irods_env_path: Path, ask: bool = False) -> iRODSSession:
     """Connect to iRODS."""
     irods_auth_path = irods_env_path.parent.joinpath(".irodsA")
     if irods_auth_path.exists():
@@ -130,19 +130,18 @@ class iRODSTransfer:
                 position=1,
             ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
                 for job in self.jobs:
-                    job_name = os.path.basename(job.path_src)
+                    job_name = Path(job.path_src).name
+                    hashpath = Path(temp_dir).joinpath(job_name + ".md5")
 
                     # create temporary md5 files
-                    with open(
-                        os.path.join(temp_dir, job_name) + ".md5", "w", encoding="utf-8"
-                    ) as tmp:
+                    with hashpath.open("w", encoding="utf-8") as tmp:
                         tmp.write(f"{job.md5}  {job_name}")
 
                     try:
                         file_log.set_description_str(f"Current file: {job.path_src}")
                         self.session.data_objects.put(job.path_src, job.path_dest)
                         self.session.data_objects.put(
-                            os.path.join(temp_dir, job_name) + ".md5",
+                            hashpath,
                             job.path_dest + ".md5",
                         )
                         t.update(job.bytes)
@@ -155,10 +154,10 @@ class iRODSTransfer:
                 t.clear()
 
     def chksum(self):
-        common_prefix = os.path.commonprefix(self.destinations)
+        common_prefix = os.path.commonpath(self.destinations)
         for job in self.jobs:
             if not job.path_src.endswith(".md5"):
-                output_logger.info(os.path.relpath(job.path_dest, common_prefix))
+                output_logger.info(Path(job.path_dest).relative_to(common_prefix))
                 try:
                     data_object = self.session.data_objects.get(job.path_dest)
                     data_object.chksum()
