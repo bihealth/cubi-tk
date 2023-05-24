@@ -83,7 +83,7 @@ def init_irods(irods_env_path: Path, ask: bool = False) -> iRODSSession:
     if ask and input("Save iRODS session for passwordless operation? [y/N] ").lower().startswith(
         "y"
     ):
-        save_irods_token(session)
+        save_irods_token(session)  # pragma: no cover
     elif not ask:
         save_irods_token(session)
 
@@ -101,7 +101,7 @@ def save_irods_token(session: iRODSSession, irods_env_path=None):
 
     try:
         token = session.pam_pw_negotiated
-    except CAT_INVALID_AUTHENTICATION:
+    except CAT_INVALID_AUTHENTICATION:  # pragma: no cover
         raise
 
     if isinstance(token, list) and token:
