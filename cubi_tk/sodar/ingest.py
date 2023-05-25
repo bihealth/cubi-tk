@@ -231,7 +231,10 @@ class SodarIngest:
             itransfer.chksum()
 
     def build_file_list(self):
-        """Build list of source files to transfer. iRODS paths are relative to target collection."""
+        """
+        Build list of source files to transfer.
+        iRODS paths are relative to target collection.
+        """
 
         source_paths = [Path(src) for src in self.args.sources]
         output_paths = list()
