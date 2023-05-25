@@ -47,11 +47,15 @@ class SodarIngest:
 
         # Get SODAR API info
         toml_config = load_toml_config(Config())
-
-        if not self.args.sodar_url:
-            self.args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+        if toml_config:
+            config_url = toml_config.get("global", {}).get("sodar_server_url")
+            if self.args.sodar_url == "https://sodar.bihealth.org/" and config_url:
+                self.args.sodar_url = config_url
+            if not self.args.sodar_api_token:
+                self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
         if not self.args.sodar_api_token:
-            self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+            logger.error("SODAR API token missing.")
+            sys.exit(1)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -91,7 +95,9 @@ class SodarIngest:
             help="Don't ask for permission.",
         )
         parser.add_argument(
-            "--collection", type=str, help="Target iRODS collection. Skips manual selection input."
+            "--collection",
+            type=str,
+            help="Target iRODS collection. Skips manual selection input.",
         )
         parser.add_argument(
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
