@@ -110,7 +110,13 @@ def save_irods_token(session: iRODSSession, irods_env_path=None):
 
 
 class iRODSTransfer:
-    """Transfers files to and from iRODS."""
+    """
+    Transfer files to iRODS.
+
+    Attributes:
+    session -- initialised iRODSSession
+    jobs -- a tuple of TransferJob objects
+    """
 
     def __init__(self, session: iRODSSession, jobs: Tuple[TransferJob, ...]):
         self.session = session
