@@ -14,8 +14,9 @@ Manual
 
     | :ref:`Creating ISA-tab files <man_isa_tpl>`
     | :ref:`Annotating ISA-tab files <man_isa_tab>`
-    | :ref:`Upload raw data to SODAR <man_ingest_fastq>`
-    | :ref:`Upload raw data to SODAR <man_seasnap_itransfer_results>`
+    | :ref:`Upload data to SODAR <man_sodar_ingest>`
+    | :ref:`Upload fastq files to SODAR <man_ingest_fastq>`
+    | :ref:`Upload results of the Seasnap pipeline to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
     | :ref:`Tools for archiving old projects <man_archive>`
 
@@ -51,6 +52,7 @@ Project Info
 
     man_isa_tpl
     man_isa_tab
+    man_sodar_ingest
     man_ingest_fastq
     man_itransfer_results
     man_write_sample_info
