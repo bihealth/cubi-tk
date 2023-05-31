@@ -7,6 +7,7 @@ import sys
 import typing
 
 import attr
+from irods.exception import DataObjectDoesNotExist
 import logzero
 from logzero import logger
 from sodar_cli import api
@@ -138,6 +139,9 @@ class SodarIngest:
 
         # Build file list and add missing md5 files
         source_paths = self.build_file_list()
+        if len(source_paths) == 0:
+            logger.info("Nothing to do. Quitting.")
+            sys.exit(1)
 
         # Initiate iRODS session
         irods_session = init_irods(self.irods_env_path, ask=not self.args.yes)
@@ -207,7 +211,28 @@ class SodarIngest:
         # Build transfer jobs
         jobs = self.build_jobs(source_paths)
 
+        # check if remote files exist
+        joblist = jobs.copy()
+        for job in joblist:
+            try:
+                obj = irods_session.data_objects.get(job.path_dest)
+                if not obj.checksum and self.args.remote_checksums:
+                    obj.checksum = obj.chksum()
+                if obj.checksum == job.md5:
+                    logger.info(
+                        f"File {Path(job.path_dest).name} already exists in iRODS with matching checksum. Skipping upload."
+                    )
+                    jobs.remove(job)
+            except DataObjectDoesNotExist:  # pragma: no cover
+                pass
+            finally:
+                irods_session.cleanup()
+
         # Final go from user & transfer
+        if len(jobs) == 0:
+            logger.info("Nothing to do. Quitting.")
+            sys.exit(1)
+
         itransfer = iRODSTransfer(irods_session, jobs)
         total_bytes = itransfer.total_bytes
         logger.info("Planning to transfer the following files:")
@@ -258,7 +283,7 @@ class SodarIngest:
                 output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
-    def build_jobs(self, source_paths) -> typing.Tuple[TransferJob, ...]:
+    def build_jobs(self, source_paths) -> typing.Set[TransferJob]:
         """Build file transfer jobs."""
 
         transfer_jobs = []
@@ -273,7 +298,7 @@ class SodarIngest:
                 )
             )
 
-        return tuple(sorted(transfer_jobs))
+        return set(sorted(transfer_jobs))
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

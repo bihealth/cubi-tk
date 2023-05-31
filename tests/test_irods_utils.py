@@ -99,9 +99,8 @@ def test_irods_transfer_put(fs, itransfer, jobs):
         fs.create_file(job.path_src)
         fs.create_dir(Path(job.path_dest).parent)
 
-    with patch.object(itransfer.session.data_objects, "get"):
-        with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
-            itransfer.put()
+    with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
+        itransfer.put()
 
     for job in jobs:
         assert Path(job.path_dest).exists()

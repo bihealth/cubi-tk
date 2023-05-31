@@ -3,14 +3,10 @@ import os.path
 from pathlib import Path
 import sys
 import tempfile
-from typing import Tuple
+from typing import Set
 
 import attr
-from irods.exception import (
-    CAT_INVALID_AUTHENTICATION,
-    PAM_AUTH_PASSWORD_FAILED,
-    DataObjectDoesNotExist,
-)
+from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
 from irods.password_obfuscation import encode
 from irods.session import iRODSSession
 import logzero
@@ -122,7 +118,7 @@ class iRODSTransfer:
     jobs -- a tuple of TransferJob objects
     """
 
-    def __init__(self, session: iRODSSession, jobs: Tuple[TransferJob, ...]):
+    def __init__(self, session: iRODSSession, jobs: Set[TransferJob]):
         self.session = session
         self.jobs = jobs
         self.total_bytes = sum([job.bytes for job in self.jobs])
@@ -142,28 +138,6 @@ class iRODSTransfer:
                 for job in self.jobs:
                     file_log.set_description_str(f"Current file: {job.path_src}")
                     job_name = Path(job.path_src).name
-
-                    # check if remote file exists
-                    try:
-                        obj = self.session.data_objects.get(job.path_dest)
-                        if obj.checksum == job.md5:
-                            logger.debug(
-                                f"File {job_name} already exists in iRODS with matching checksum. Skipping upload."
-                            )
-                            t.total -= job.bytes
-                            t.refresh()
-                            continue
-                        elif not obj.checksum and obj.size == job.bytes:
-                            logger.debug(
-                                f"File {job_name} already exists in iRODS with matching file size. Skipping upload."
-                            )
-                            t.total -= job.bytes
-                            t.refresh()
-                            continue
-                    except DataObjectDoesNotExist:  # pragma: no cover
-                        pass
-                    finally:
-                        self.session.cleanup()
 
                     # create temporary md5 files
                     hashpath = Path(temp_dir).joinpath(job_name + ".md5")
@@ -192,7 +166,8 @@ class iRODSTransfer:
                 output_logger.info(Path(job.path_dest).relative_to(common_prefix))
                 try:
                     data_object = self.session.data_objects.get(job.path_dest)
-                    data_object.chksum()
+                    if not data_object.checksum:
+                        data_object.chksum()
                 except Exception as e:  # pragma: no cover
                     logger.error("Problem during iRODS checksumming.")
                     logger.error(get_irods_error(e))
