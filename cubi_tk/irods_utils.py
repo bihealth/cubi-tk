@@ -6,7 +6,11 @@ import tempfile
 from typing import Tuple
 
 import attr
-from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
+from irods.exception import (
+    CAT_INVALID_AUTHENTICATION,
+    PAM_AUTH_PASSWORD_FAILED,
+    DataObjectDoesNotExist,
+)
 from irods.password_obfuscation import encode
 from irods.session import iRODSSession
 import logzero
@@ -136,15 +140,37 @@ class iRODSTransfer:
                 position=1,
             ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
                 for job in self.jobs:
+                    file_log.set_description_str(f"Current file: {job.path_src}")
                     job_name = Path(job.path_src).name
-                    hashpath = Path(temp_dir).joinpath(job_name + ".md5")
+
+                    # check if remote file exists
+                    try:
+                        obj = self.session.data_objects.get(job.path_dest)
+                        if obj.checksum == job.md5:
+                            logger.debug(
+                                f"File {job_name} already exists in iRODS with matching checksum. Skipping upload."
+                            )
+                            t.total -= job.bytes
+                            t.refresh()
+                            continue
+                        elif not obj.checksum and obj.size == job.bytes:
+                            logger.debug(
+                                f"File {job_name} already exists in iRODS with matching file size. Skipping upload."
+                            )
+                            t.total -= job.bytes
+                            t.refresh()
+                            continue
+                    except DataObjectDoesNotExist:  # pragma: no cover
+                        pass
+                    finally:
+                        self.session.cleanup()
 
                     # create temporary md5 files
+                    hashpath = Path(temp_dir).joinpath(job_name + ".md5")
                     with hashpath.open("w", encoding="utf-8") as tmp:
                         tmp.write(f"{job.md5}  {job_name}")
 
                     try:
-                        file_log.set_description_str(f"Current file: {job.path_src}")
                         self.session.data_objects.put(job.path_src, job.path_dest)
                         self.session.data_objects.put(
                             hashpath,
