@@ -141,7 +141,7 @@ class SodarIngest:
         source_paths = self.build_file_list()
         if len(source_paths) == 0:
             logger.info("Nothing to do. Quitting.")
-            sys.exit(1)
+            sys.exit(0)
 
         # Initiate iRODS session
         irods_session = init_irods(self.irods_env_path, ask=not self.args.yes)
@@ -231,7 +231,7 @@ class SodarIngest:
         # Final go from user & transfer
         if len(jobs) == 0:
             logger.info("Nothing to do. Quitting.")
-            sys.exit(1)
+            sys.exit(0)
 
         itransfer = iRODSTransfer(irods_session, jobs)
         total_bytes = itransfer.total_bytes
