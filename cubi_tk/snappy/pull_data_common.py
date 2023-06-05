@@ -1,3 +1,5 @@
+import os
+
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -123,11 +125,14 @@ class PullDataCommon(IrodsCheckCommand):
                     file_name = pair[0].split("/")[-1]
                     irods_path = pair[0]
                     local_out_path = pair[1]
-                    logger.info(f"Retrieving '{file_name}' from: {irods_path}")
                     # Create output directory if necessary
                     Path(local_out_path).parent.mkdir(parents=True, exist_ok=True)
                     # Get file
-                    irods_sessions[0].data_objects.get(irods_path, local_out_path, **kw_options)
+                    if os.path.exists(local_out_path) and not force_overwrite:
+                        logger.info(f"{file_name} already exists. Force_overwrite to re-download.")
+                    else:
+                        logger.info(f"Retrieving '{file_name}' from: {irods_path}")
+                        irods_sessions[0].data_objects.get(irods_path, local_out_path, **kw_options)
 
             except OVERWRITE_WITHOUT_FORCE_FLAG:
                 logger.error(
