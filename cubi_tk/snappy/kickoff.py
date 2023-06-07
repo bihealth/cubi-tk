@@ -18,7 +18,7 @@ def run(
 ) -> typing.Optional[int]:
     logger.info("Try to find SNAPPY pipeline directory...")
     try:
-        path = common.find_snappy_root_dir(args.path or os.getcwd(), common.DEPENDENCIES.keys())
+        path = common.find_snappy_root_dir(args.path or os.getcwd())
     except common.CouldNotFindPipelineRoot:
         return 1
 
@@ -30,7 +30,6 @@ def run(
         dependencies = common.get_workflow_step_dependencies(step)
         step_set[step.name] = dependencies
 
-    # step_set = {name for name in common.DEPENDENCIES if (path / name).exists()}
     steps: typing.List[str] = []
     for names in toposort({k: set(v) for k, v in step_set.items()}):
         steps += names
