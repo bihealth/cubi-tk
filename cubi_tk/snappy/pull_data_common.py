@@ -22,9 +22,7 @@ class PullDataCommon(IrodsCheckCommand):
     file_type_to_extensions_dict = None
 
     def __init__(self):
-        IrodsCheckCommand.__init__(
-            self, args=SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
-        )
+        IrodsCheckCommand.__init__(self, args=SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME))
 
     def filter_irods_collection(self, identifiers, remote_files_dict, file_type):
         """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
@@ -119,9 +117,7 @@ class PullDataCommon(IrodsCheckCommand):
         """
         kw_options = {}
         if force_overwrite:
-            kw_options = {
-                FORCE_FLAG_KW: None
-            }  # Keyword has no value, just needs to be present
+            kw_options = {FORCE_FLAG_KW: None}  # Keyword has no value, just needs to be present
         # Connect to iRODS
         with self._get_irods_sessions(count=1) as irods_sessions:
             try:
@@ -134,14 +130,10 @@ class PullDataCommon(IrodsCheckCommand):
                     Path(local_out_path).parent.mkdir(parents=True, exist_ok=True)
                     # Get file
                     if os.path.exists(local_out_path) and not force_overwrite:
-                        logger.info(
-                            f"{file_name} already exists. Force_overwrite to re-download."
-                        )
+                        logger.info(f"{file_name} already exists. Force_overwrite to re-download.")
                     else:
                         logger.info(f"Retrieving '{file_name}' from: {irods_path}")
-                        irods_sessions[0].data_objects.get(
-                            irods_path, local_out_path, **kw_options
-                        )
+                        irods_sessions[0].data_objects.get(irods_path, local_out_path, **kw_options)
 
             except OVERWRITE_WITHOUT_FORCE_FLAG:
                 logger.error(
