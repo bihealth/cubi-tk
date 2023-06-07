@@ -13,6 +13,7 @@ from cubi_tk.exceptions import ParseOutputException
 
 from . import common
 
+
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
@@ -80,7 +81,10 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--timeout", default=10, type=int, help="Number of seconds to wait for commands."
+        "--timeout",
+        default=10,
+        type=int,
+        help="Number of seconds to wait for commands.",
     )
 
     parser.add_argument(
