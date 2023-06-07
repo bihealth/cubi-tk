@@ -12,7 +12,7 @@ Tooling for connecting GitLab, pipelines, and SODAR at CUBI.
 Prerequisites when using conda:
 
 ```bash
-$ conda create -n cubi-tk python=3.7
+$ conda create -n cubi-tk python=3.10
 $ conda activate cubi-tk
 ```
 
