@@ -22,13 +22,13 @@ def run(
     except common.CouldNotFindPipelineRoot:
         return 1
 
-    logger.info("Looking for pipeline directories (assuming standard naming)...")
+    logger.info("Looking for pipeline directories (needs to contain snappy config.yaml)...")
     logger.debug("Looking in %s", path)
     step_set = {}
     folder_steps = common.get_snappy_step_directories(path)
-    for step in folder_steps:
-        dependencies = common.get_workflow_step_dependencies(step)
-        step_set[step.name] = dependencies
+    for step_name, step_path in folder_steps.items():
+        dependencies = common.get_workflow_step_dependencies(step_path)
+        step_set[step_name] = dependencies
 
     steps: typing.List[str] = []
     for names in toposort({k: set(v) for k, v in step_set.items()}):
@@ -39,7 +39,8 @@ def run(
     jids: typing.Dict[str, str] = {}
 
     for step in steps:
-        path_cache = path / step / ".snappy_path_cache"
+        step_path = folder_steps[step]
+        path_cache = step_path / ".snappy_path_cache"
         if step == "ngs_mapping" and path_cache.exists():
             age_cache = time.time() - path_cache.stat().st_mtime
             max_age = 24 * 60 * 60  # 1d
@@ -51,11 +52,11 @@ def run(
         if dep_jids:
             cmd += ["--dependency", "afterok:%s" % ":".join(map(str, dep_jids))]
         cmd += ["pipeline_job.sh"]
-        logger.info("Submitting step %s: %s", step, " ".join(cmd))
+        logger.info("Submitting step %s (./%s): %s", step, step_path.name, " ".join(cmd))
         if args.dry_run:
             jid = "<%s>" % step
         else:
-            stdout_raw = subprocess.check_output(cmd, cwd=str(path / step), timeout=args.timeout)
+            stdout_raw = subprocess.check_output(cmd, cwd=str(step_path), timeout=args.timeout)
             stdout = stdout_raw.decode("utf-8")
             if not stdout.startswith("Submitted batch job "):
                 raise ParseOutputException("Did not understand sbatch output: %s" % stdout)
