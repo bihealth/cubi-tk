@@ -1,19 +1,18 @@
 """Common functionality for SNAPPY."""
 
+from collections import defaultdict
+import importlib
 import pathlib
-import typing
 import pkgutil
+import re
+import typing
 
 from biomedsheets import io_tsv
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
-import yaml
-import importlib
-import re
-from collections import defaultdict
-
-import snappy_pipeline.workflows as snappy_workflows
 from snappy_pipeline import expand_ref
+import snappy_pipeline.workflows as snappy_workflows
+import yaml
 
 
 class CouldNotFindPipelineRoot(Exception):
@@ -64,7 +63,7 @@ def get_workflow_snakefile_object_name(snakefile_path):
     """
 
     with snakefile_path.open() as f:
-        if m := re.search("wf\s*=\s*(\w+)\(", f.read()):
+        if m := re.search(r"wf\s*=\s*(\w+)\(", f.read()):
             module_name = m.group(1)
             return module_name
     return None
