@@ -2,11 +2,18 @@
 
 import pathlib
 import typing
+import pkgutil
 
 from biomedsheets import io_tsv
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
 import yaml
+import importlib
+import re
+from collections import defaultdict
+
+import snappy_pipeline.workflows as snappy_workflows
+from snappy_pipeline import expand_ref
 
 #: Dependencies between the SNAPPY steps.
 DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
@@ -36,6 +43,77 @@ class CouldNotFindPipelineRoot(Exception):
 class CouldNotFindBioMedSheet(Exception):
     """Raised when BioMedSheet could not be found in configuration file."""
 
+class DummyWorkflow:
+    """Dummy workflow that does nothing.
+    """
+    def __init__(self):
+        self.globals = defaultdict(str)
+
+    def __getattr__(self, _):
+        return self._catchall
+
+    def _catchall(self, *_, **__):
+        pass
+
+def get_available_snappy_workflows():
+    """Get all available snappy workflows in snappy_pipeline.
+
+    :return: List of ModuleInfo with individual workflow modules.
+    """
+    return list(pkgutil.iter_modules(snappy_workflows.__path__))
+
+def get_available_snappy_workflow_paths():
+    """Get module paths for all available snappy workflows.
+
+    :return: Dict of workflow name to workflow module path.
+    """
+    workflow_names = get_available_snappy_workflows()
+    return {w.name: pathlib.Path(w.module_finder.path) / w.name for w in workflow_names}
+
+def get_workflow_snakefile_object_name(snakefile_path):
+    """Find the Workflow implementation object name.
+
+    :param snakefile_path: Path to snakefile for workflow.
+    :type snakefile_path: str, pathlib.Path
+
+    :return: str Name of the implementation class or None if nothing as been found.
+    """
+
+    with snakefile_path.open() as f:
+        if m := re.search("wf\s*=\s*(\w+)\(", f.read()):
+            module_name = m.group(1)
+            return module_name
+    return None
+
+def get_workflow_step_dependencies(workflow_step_path):
+    """Find workflow dependencies for the given workflow step.
+    :param workflow_step_path: Path to the workflow step.
+    :type workflow_step_path: str, pathlib.Path
+
+    :return: List of dependencies for the given workflow step.
+    """
+    workflow_step_path = pathlib.Path(workflow_step_path)
+    step_name = workflow_step_path.name
+    step_config_path = workflow_step_path / "config.yaml"
+
+    step_module_paths = get_available_snappy_workflow_paths()
+    module_path = step_module_paths[step_name]
+    module_config_path = module_path / "Snakefile"
+    # get the name of the workflow step class name
+    obj_name = get_workflow_snakefile_object_name(module_config_path)
+    if obj_name is None:
+        raise RuntimeError(f"Could not find workflow object for {step_name}")
+
+    workflow_module = importlib.import_module("."+step_name, "snappy_pipeline.workflows")
+    workflow_class = getattr(workflow_module, obj_name)
+
+    with open(str(step_config_path), "r") as stream:
+        config_data = yaml.safe_load(stream)
+
+    config, lookup_paths, config_paths = expand_ref(str(step_config_path), config_data, [str(workflow_step_path), str(workflow_step_path.parent / ".snappy_pipeline")])
+    workflow_object = workflow_class(DummyWorkflow(), config, lookup_paths, config_paths, str(workflow_step_path))
+    dependencies = workflow_object.sub_workflows.keys()
+    return list(dependencies)
 
 def find_snappy_root_dir(
     start_path: typing.Union[str, pathlib.Path], more_markers: typing.Iterable[str] = ()
@@ -63,6 +141,19 @@ def find_snappy_root_dir(
     raise CouldNotFindPipelineRoot()
 
 
+# TODO: this assumes standard naming which is a limitation...
+# MZ: now this is easily fixable by extending the folder identification to
+# parse the config.yaml
+def get_snappy_step_directories(snappy_root_dir):
+    snappy_workflows_names = [
+        s.name for s in get_available_snappy_workflows()
+    ]
+    folder_steps = [p for p in pathlib.Path(snappy_root_dir).iterdir() if p.is_dir() and p.name in snappy_workflows_names]
+
+    return folder_steps
+
+
+
 def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
     """Load sample sheet.
 
@@ -77,6 +168,20 @@ def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
     load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
     with open(path_tsv, "rt") as f:
         return load_tsv(f, naming_scheme=NAMING_ONLY_SECONDARY_ID)
+
+
+def get_snappy_config(snappy_root_dir):
+    """Get snappy configuration.
+
+    :param snappy_root_dir: Path to snappy root directory.
+    :type snappy_root_dir: str, pathlib.Path
+
+    :return: Returns loaded snappy configuration.
+    """
+    snappy_config = snappy_root_dir / ".snappy_pipeline" / "config.yaml"
+    with open(snappy_config, "r") as stream:
+        config = yaml.safe_load(stream)
+    return config
 
 
 def get_biomedsheet_path(start_path, uuid):

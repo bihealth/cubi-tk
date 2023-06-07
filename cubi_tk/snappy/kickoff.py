@@ -13,7 +13,6 @@ from cubi_tk.exceptions import ParseOutputException
 
 from . import common
 
-
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
@@ -23,17 +22,23 @@ def run(
     except common.CouldNotFindPipelineRoot:
         return 1
 
-    # TODO: this assumes standard naming which is a limitation...
     logger.info("Looking for pipeline directories (assuming standard naming)...")
     logger.debug("Looking in %s", path)
-    step_set = {name for name in common.DEPENDENCIES if (path / name).exists()}
+    step_set = {}
+    folder_steps = common.get_snappy_step_directories(path)
+    for step in folder_steps:
+        dependencies = common.get_workflow_step_dependencies(step)
+        step_set[step.name] = dependencies
+
+    # step_set = {name for name in common.DEPENDENCIES if (path / name).exists()}
     steps: typing.List[str] = []
-    for names in toposort({k: set(v) for k, v in common.DEPENDENCIES.items()}):
-        steps += [name for name in names if name in step_set]
+    for names in toposort({k: set(v) for k, v in step_set.items()}):
+        steps += names
     logger.info("Will run the steps: %s", ", ".join(steps))
 
     logger.info("Submitting with sbatch...")
     jids: typing.Dict[str, str] = {}
+
     for step in steps:
         path_cache = path / step / ".snappy_path_cache"
         if step == "ngs_mapping" and path_cache.exists():
@@ -42,7 +47,7 @@ def run(
             if age_cache > max_age:
                 logger.info("Cache older than %d - purging", max_age)
                 path_cache.unlink()
-        dep_jids = [jids[dep] for dep in common.DEPENDENCIES[step] if dep in jids]
+        dep_jids = [jids[dep] for dep in step_set[step] if dep in jids]
         cmd = ["sbatch"]
         if dep_jids:
             cmd += ["--dependency", "afterok:%s" % ":".join(map(str, dep_jids))]
