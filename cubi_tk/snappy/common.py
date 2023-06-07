@@ -132,7 +132,7 @@ def get_workflow_step_dependencies(workflow_step_path):
     if obj_name is None:
         raise RuntimeError(f"Could not find workflow object for {step_name}")
 
-    workflow_module = importlib.import_module("." + step_name, "snappy_pipeline.workflows")
+    workflow_module = importlib.import_module(f".{step_name}", "snappy_pipeline.workflows")
     workflow_class = getattr(workflow_module, obj_name)
 
     workflow_object = workflow_class(
