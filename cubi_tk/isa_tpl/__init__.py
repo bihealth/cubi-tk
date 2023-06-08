@@ -54,18 +54,18 @@ import argparse
 from functools import partial
 import json
 import os
-import shutil
-import warnings
 from pathlib import Path
+import shutil
 import typing
+import warnings
 
+import altamisa
 import attr
 from cookiecutter.main import cookiecutter
 from logzero import logger
 from toolz import curry
 
 from ..common import run_nocmd, yield_files_recursively
-import altamisa
 
 
 @attr.s(frozen=True, auto_attribs=True)
