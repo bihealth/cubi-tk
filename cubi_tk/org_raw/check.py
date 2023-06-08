@@ -109,7 +109,7 @@ def _check(ok: Value, counter: Value, path: Path, args, t: tqdm.tqdm):
     run_check(ok, path, args)
 
     with counter.get_lock():
-        counter.value += path.stat().st_size
+        counter.value = path.stat().st_size
         t.update(counter.value)
 
 

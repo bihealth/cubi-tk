@@ -76,7 +76,7 @@ def _organize(ok: Value, counter: Value, job: OrganizeJob, args, t: tqdm.tqdm):
         run_check(ok, job.dest, args)
 
     with counter.get_lock():
-        counter.value += data_size
+        counter.value = data_size
         t.update(counter.value)
 
 
