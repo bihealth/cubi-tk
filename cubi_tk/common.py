@@ -161,7 +161,7 @@ def yield_files_recursively(path, print_=False, file=sys.stderr):
     paths = glob.glob(os.path.join(path, "**"), recursive=True)
     for p in sorted(paths):
         p = p[len(path) + 1 :]
-        if len(p) == 0:
+        if not p:
             continue
         if print_:
             print(p, file=file)  # pragma: no cover
