@@ -11,6 +11,11 @@ import typing
 from irods.collection import iRODSCollection
 from irods.data_object import iRODSDataObject
 from irods.session import iRODSSession
+from irods.models import Collection as CollectionModel
+from irods.models import DataObject as DataObjectModel
+from irods.column import Criterion
+
+
 from logzero import logger
 import tqdm
 
@@ -107,12 +112,15 @@ class IrodsCheckCommand:
         """Get data objects recursively under the given iRODS path."""
         data_objs = dict(files=[], checksums={})
         ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
-        for res in root_coll.walk():
-            for obj in res[2]:
-                if obj.path.endswith("." + self.args.hash_scheme.lower()):
-                    data_objs["checksums"][obj.path] = obj
-                elif obj.path.split(".")[-1] not in ignore_schemes:
-                    data_objs["files"].append(obj)
+        irods_sess = root_coll.manager.sess
+        query = irods_sess.query(DataObjectModel, CollectionModel.name).filter(
+            Criterion('like', CollectionModel.name, root_coll.path + "%"))
+        for res in query:
+            obj = irods_sess.data_objects.get(res[CollectionModel.name] + '/' + res[DataObjectModel.name])
+            if obj.path.endswith("." + self.args.hash_scheme.lower()):
+                data_objs["checksums"][obj.path] = obj
+            elif obj.path.split(".")[-1] not in ignore_schemes:
+                data_objs["files"].append(obj)
         return data_objs
 
     def check_args(self, _args):
