@@ -280,9 +280,9 @@ class PullRawDataCommand(PullDataCommon):
             in_common_links = False
             for irods_obj in value:
                 # Piggyback loop for dir check
-                _irods_path_list.append(irods_obj.irods_path)
+                _irods_path_list.append(irods_obj.path)
                 # Actual check
-                if self._irods_path_in_common_links(irods_obj.irods_path):
+                if self._irods_path_in_common_links(irods_obj.path):
                     in_common_links = True
                     break
 
@@ -332,10 +332,10 @@ class PullRawDataCommand(PullDataCommon):
                 # /sodarZone/projects/../<PROJECT_UUID>/sample_data/study_<STUDY_UUID>/assay_<ASSAY_UUID>/<LIBRARY_NAME>
                 try:
                     irods_dir_structure = os.path.dirname(
-                        str(irods_obj.irods_path).split(f"assay_{assay_uuid}/")[1]
+                        str(irods_obj.path).split(f"assay_{assay_uuid}/")[1]
                     )
                     _out_path = os.path.join(
-                        output_dir, folder_name, irods_dir_structure, irods_obj.file_name
+                        output_dir, folder_name, irods_dir_structure, irods_obj.name
                     )
                 except IndexError:
                     logger.warning(
@@ -343,10 +343,9 @@ class PullRawDataCommand(PullDataCommon):
                         f"hence directory structure won't be preserved.\n"
                         f"All files will be stored in root of output directory: {output_list}"
                     )
-                    _out_path = os.path.join(output_dir, folder_name, irods_obj.file_name)
+                    _out_path = os.path.join(output_dir, folder_name, irods_obj.name)
                 # Update output
-                output_list.append((irods_obj.irods_path, _out_path))
-                output_list.append((irods_obj.irods_path + ".md5", _out_path + ".md5"))
+                output_list.append((irods_obj.path, _out_path))
 
         return output_list
 
