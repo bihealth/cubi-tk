@@ -53,7 +53,7 @@ class PullDataCommon(IrodsCheckCommand):
             # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
             in_common_links = False
             for irods_obj in value:
-                in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
+                in_common_links = self._irods_path_in_common_links(irods_obj.path)
                 if in_common_links:
                     break
 
@@ -184,7 +184,7 @@ class PullDataCommon(IrodsCheckCommand):
             return irods_obj_list
         return sorted(
             irods_obj_list,
-            key=lambda irods_obj: self._find_date_in_path(irods_obj.irods_path),
+            key=lambda irods_obj: self._find_date_in_path(irods_obj.path),
             reverse=True,
         )
 

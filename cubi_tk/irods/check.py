@@ -13,7 +13,7 @@ from irods.data_object import iRODSDataObject
 from irods.session import iRODSSession
 from irods.models import Collection as CollectionModel
 from irods.models import DataObject as DataObjectModel
-from irods.column import Criterion
+from irods.column import Like
 
 
 from logzero import logger
@@ -108,25 +108,28 @@ class IrodsCheckCommand:
         es = str(e)
         return es if es != "None" else e.__class__.__name__
 
-    def get_data_objs(self, root_coll: iRODSCollection):
+    def get_data_objs(self, root_coll: iRODSCollection) -> typing.List[iRODSDataObject]:
         """Get data objects recursively under the given iRODS path."""
-        data_objs = dict(files=[], checksums={})
+        data_objs = []
         ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
         irods_sess = root_coll.manager.sess
-        #logger.info('Starting irods query')
-        query = irods_sess.query(DataObjectModel, CollectionModel).filter(
-            Criterion('like', CollectionModel.name, root_coll.path + "%"))
+
+        query = irods_sess.query(
+            DataObjectModel, CollectionModel
+        ).filter(
+            Like(CollectionModel.name, f"{root_coll.path}%")
+        )
+
         for res in query:
-            #If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional, likely because a name/path/... attribute is overwritten somewhere 
+            # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional, likely because a name/path/... attribute is overwritten somewhere
             coll_res = {k: v for k,v in res.items() if k.icat_id >= 500}
             obj_res = {k: v for k,v in res.items() if k.icat_id < 500}
             coll = iRODSCollection(root_coll.manager, coll_res)
             obj = iRODSDataObject( irods_sess.data_objects, parent = coll, results=[obj_res])
-            if obj.path.endswith("." + self.args.hash_scheme.lower()):
-                data_objs["checksums"][obj.path] = obj
-            elif obj.path.split(".")[-1] not in ignore_schemes:
-                data_objs["files"].append(obj)
-        #logger.info('all objects collected')
+
+            if obj.path.split(".")[-1] not in ignore_schemes:
+                data_objs.append(obj)
+
         return data_objs
 
     def check_args(self, _args):

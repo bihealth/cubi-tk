@@ -208,7 +208,7 @@ class PullProcessedDataCommand(PullDataCommon):
         # Find all remote files (iRODS)
         pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
         extensions_tuple = self.file_type_to_extensions_dict.get(self.args.file_type)
-        remote_files_dict = RetrieveIrodsCollection(
+        remote_file_objs = RetrieveIrodsCollection(
             pseudo_args,
             self.args.sodar_url,
             self.args.sodar_api_token,
@@ -219,11 +219,11 @@ class PullProcessedDataCommand(PullDataCommon):
         # Filter based on identifiers and file type
         filtered_remote_files_dict = self.filter_irods_collection(
             identifiers=selected_identifiers,
-            remote_files_dict=remote_files_dict,
+            remote_files_dict=remote_file_objs,
             file_type=self.args.file_type,
         )
         if len(filtered_remote_files_dict) == 0:
-            self.report_no_file_found(available_files=[*remote_files_dict])
+            self.report_no_file_found(available_files=[*remote_file_objs])
             return 0
 
         # Pair iRODS path with output path
@@ -329,19 +329,18 @@ class PullProcessedDataCommand(PullDataCommon):
                 # /sodarZone/projects/../<PROJECT_UUID>/sample_data/study_<STUDY_UUID>/assay_<ASSAY_UUID>/<LIBRARY_NAME>
                 try:
                     irods_dir_structure = os.path.dirname(
-                        str(irods_obj.irods_path).split(f"assay_{assay_uuid}/")[1]
+                        str(irods_obj.path).split(f"assay_{assay_uuid}/")[1]
                     )
-                    _out_path = os.path.join(output_dir, irods_dir_structure, irods_obj.file_name)
+                    _out_path = os.path.join(output_dir, irods_dir_structure, irods_obj.name)
                 except IndexError:
                     logger.warning(
                         f"Provided Assay UUID '{assay_uuid}' is not present in SODAR path, "
                         f"hence directory structure won't be preserved.\n"
                         f"All files will be stored in root of output directory: {output_list}"
                     )
-                    _out_path = os.path.join(output_dir, irods_obj.file_name)
+                    _out_path = os.path.join(output_dir, irods_obj.name)
                 # Update output
-                output_list.append((irods_obj.irods_path, _out_path))
-                output_list.append((irods_obj.irods_path + ".md5", _out_path + ".md5"))
+                output_list.append((irods_obj.path, _out_path))
 
         return output_list
 

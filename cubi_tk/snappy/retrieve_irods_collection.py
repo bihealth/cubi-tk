@@ -3,6 +3,7 @@
 from itertools import chain
 from collections import defaultdict
 import re
+import typing
 
 import attr
 from logzero import logger
@@ -61,7 +62,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         self.assay_uuid = assay_uuid
         self.project_uuid = project_uuid
 
-    def perform(self, identifiers=None, extensions_tuple=None):
+    def perform(self):
         """Perform class routines.
 
         :return: Returns iRODS collection represented as dictionary: key: file name as string (e.g.,
@@ -73,7 +74,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         assay_path = self.get_assay_irods_path(assay_uuid=self.assay_uuid)
 
         # Get iRODS collection
-        irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path, identifiers=identifiers, extensions_tuple=extensions_tuple)
+        irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path)
 
         logger.info("... done with remote files search.")
         return irods_collection_dict
@@ -124,7 +125,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
             f"All available UUIDs:\n{multi_assay_str}"
         )
 
-    def retrieve_irods_data_objects(self, irods_path, identifiers=None, extensions_tuple=None):
+    def retrieve_irods_data_objects(self, irods_path):
         """Retrieve data objects from iRODS.
 
         :param irods_path: iRODS path.
@@ -138,34 +139,20 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         with self._get_irods_sessions(1) as irods_sessions:
             data_obj_manager = irods_sessions[0].data_objects
             try:
-                results = irods_sessions[0].query(Collection.name, DataObject.name, DataObject.path).filter(Like(Collection.name, f"{irods_path}%")).filter(Criterion("not like", DataObject.name, f"%.{DEFAULT_HASH_SCHEME.lower()}"))
-
-                checksum_results = irods_sessions[0].query(Collection.name, DataObject.name, DataObject.path).filter(Like(Collection.name, f"{irods_path}%")).filter(Criterion("like", DataObject.name, f"%.{DEFAULT_HASH_SCHEME.lower()}"))
+                root_coll = irods_sessions[0].collections.get(irods_path)
             except Exception as e:
                 logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
                 raise
 
             # Get files and run checks
             logger.info("Querying for data objects")
-            # irods_collection = self.get_data_objs(root_coll)
-            irods_collection = {
-                "files": [IrodsRawDataObject(name=r[DataObject.name], path=f"{r[Collection.name]}/{r[DataObject.name]}", manager=data_obj_manager) for r in results],
-                "checksums": {
-                    f"{r[Collection.name]}/{r[DataObject.name]}": IrodsRawDataObject(name=r[DataObject.name], path=f"{r[Collection.name]}/{r[DataObject.name]}", manager=data_obj_manager)
-                    for r in checksum_results
-                }
-            }
+            irods_data_objs = self.get_data_objs(root_coll)
 
-            if extensions_tuple and identifiers:
-                irods_collection["files"] = [
-                    f for f in irods_collection["files"]
-                    if f.path.endswith(extensions_tuple) and any(id in f.path for id in identifiers)
-                ]
-
-            return self.parse_irods_collection(irods_collection=irods_collection)
+            irods_obj_dict = self.parse_irods_collection(irods_data_objs)
+            return irods_obj_dict
 
     @staticmethod
-    def parse_irods_collection(irods_collection):
+    def parse_irods_collection(irods_data_objs: typing.List[IrodsDataObject]) -> typing.Dict[str, typing.List[IrodsDataObject]]:
         """Parse iRODS collection
 
         :param irods_collection: iRODS collection.
@@ -176,25 +163,8 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         """
         # Initialise variables
         output_dict = defaultdict(list)
-        checksums = irods_collection["checksums"]
 
-        # Extract relevant info from iRODS collection: file and replicates MD5SUM
-        for data_obj in irods_collection["files"]:
-            chk_obj = checksums.get(data_obj.path + "." + DEFAULT_HASH_SCHEME.lower())
-            if not chk_obj:
-                logger.error(f"No checksum file for: {data_obj.path}")
-                continue
-            with chk_obj.open("r") as f:
-                file_sum = re.search(
-                    HASH_SCHEMES[DEFAULT_HASH_SCHEME]["regex"], f.read().decode("utf-8")
-                ).group(0)
-                output_dict[data_obj.name].append(
-                    IrodsDataObject(
-                        file_name=data_obj.name,
-                        irods_path=data_obj.path,
-                        file_md5sum=file_sum,
-                        replicas_md5sum=[],
-                        # replicas_md5sum=[replica.checksum for replica in data_obj.replicas],
-                    )
-                )
+        for obj in irods_data_objs:
+            output_dict[obj.name].append(obj)
+
         return output_dict
