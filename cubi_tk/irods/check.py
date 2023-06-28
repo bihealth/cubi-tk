@@ -113,14 +113,20 @@ class IrodsCheckCommand:
         data_objs = dict(files=[], checksums={})
         ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
         irods_sess = root_coll.manager.sess
-        query = irods_sess.query(DataObjectModel, CollectionModel.name).filter(
+        #logger.info('Starting irods query')
+        query = irods_sess.query(DataObjectModel, CollectionModel).filter(
             Criterion('like', CollectionModel.name, root_coll.path + "%"))
         for res in query:
-            obj = irods_sess.data_objects.get(res[CollectionModel.name] + '/' + res[DataObjectModel.name])
+            #If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional, likely because a name/path/... attribute is overwritten somewhere 
+            coll_res = {k: v for k,v in res.items() if k.icat_id >= 500}
+            obj_res = {k: v for k,v in res.items() if k.icat_id < 500}
+            coll = iRODSCollection(root_coll.manager, coll_res)
+            obj = iRODSDataObject( irods_sess.data_objects, parent = coll, results=[obj_res])
             if obj.path.endswith("." + self.args.hash_scheme.lower()):
                 data_objs["checksums"][obj.path] = obj
             elif obj.path.split(".")[-1] not in ignore_schemes:
                 data_objs["files"].append(obj)
+        #logger.info('all objects collected')
         return data_objs
 
     def check_args(self, _args):
