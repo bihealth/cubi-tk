@@ -5,6 +5,7 @@ import pytest
 
 from cubi_tk.__main__ import setup_argparse
 from cubi_tk.snappy.pull_processed_data import PullProcessedDataCommand
+
 from .helpers import createIrodsDataObject as IrodsDataObject
 
 # Empty file MD5 checksum
@@ -480,14 +481,10 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam(pull_processed_data, rem
         "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/ngs_mapping/bwa.P00{i}-N1-DNA1-WES1.{ext}"
     )
     irods_files_list = [
-        irods_path.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("bam", "bam.bai")
+        irods_path.format(i=i, ext=ext) for i in (1, 2) for ext in ("bam", "bam.bai")
     ]
     correct_uuid_output_dir_list = [
-        full_out_dir.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("bam", "bam.bai")
+        full_out_dir.format(i=i, ext=ext) for i in (1, 2) for ext in ("bam", "bam.bai")
     ]
     wrong_uuid_output_dir_list = [
         "out_dir/bwa.P00{i}-N1-DNA1-WES1.{ext}".format(i=i, ext=ext)
@@ -570,14 +567,10 @@ def test_pull_processed_data_pair_ipath_with_outdir_vcf(pull_processed_data, rem
         "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/variant_calling/bwa.P00{i}-N1-DNA1-WES1.{ext}"
     )
     irods_files_list = [
-        irods_path.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("vcf.gz", "vcf.gz.tbi")
+        irods_path.format(i=i, ext=ext) for i in (1, 2) for ext in ("vcf.gz", "vcf.gz.tbi")
     ]
     correct_uuid_output_dir_list = [
-        full_out_dir.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("vcf.gz", "vcf.gz.tbi")
+        full_out_dir.format(i=i, ext=ext) for i in (1, 2) for ext in ("vcf.gz", "vcf.gz.tbi")
     ]
     wrong_uuid_output_dir_list = [
         "out_dir/bwa.P00{i}-N1-DNA1-WES1.{ext}".format(i=i, ext=ext)

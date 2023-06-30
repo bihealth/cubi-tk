@@ -3,12 +3,11 @@
 from collections import defaultdict
 import typing
 
+from irods.data_object import iRODSDataObject
 from logzero import logger
 from sodar_cli import api
 
 from ..irods.check import IrodsCheckCommand
-
-from irods.data_object import iRODSDataObject
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
 DEFAULT_HASH_SCHEME = "MD5"
@@ -39,8 +38,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         self.project_uuid = project_uuid
 
     def perform(self) -> typing.Dict[str, typing.List[iRODSDataObject]]:
-        """Perform class routines.
-        """
+        """Perform class routines."""
         logger.info("Starting remote files search ...")
 
         # Get assay iRODS path
@@ -100,7 +98,9 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
             f"All available UUIDs:\n{multi_assay_str}"
         )
 
-    def retrieve_irods_data_objects(self, irods_path: str) -> typing.Dict[str, typing.List[iRODSDataObject]]:
+    def retrieve_irods_data_objects(
+        self, irods_path: str
+    ) -> typing.Dict[str, typing.List[iRODSDataObject]]:
         """Retrieve data objects from iRODS.
 
         :param irods_path: iRODS path.
@@ -127,7 +127,6 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
                 raise
 
         return {}
-
 
     @staticmethod
     def parse_irods_collection(irods_data_objs) -> typing.Dict[str, typing.List[iRODSDataObject]]:

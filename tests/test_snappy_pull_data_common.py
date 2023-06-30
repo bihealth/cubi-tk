@@ -4,6 +4,7 @@
 import pytest
 
 from cubi_tk.snappy.pull_data_common import PullDataCommon
+
 from .helpers import createIrodsDataObject as IrodsDataObject
 
 # Empty file MD5 checksum

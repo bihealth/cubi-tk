@@ -2,12 +2,13 @@
 
 import pathlib
 
-from .helpers import createIrodsDataObject as IrodsDataObject
 from cubi_tk.sodar.check_remote import (
     FileComparisonChecker,
     FileDataObject,
     FindLocalMD5Files,
 )
+
+from .helpers import createIrodsDataObject as IrodsDataObject
 
 
 def test_findlocalmd5_run():
@@ -73,20 +74,31 @@ def test_filecomparisoncheck_compare_local_and_remote_files():
     remote_dict = {
         "test1.txt": [
             IrodsDataObject(
-                "test1.txt", "/test1/test1.txt", "fa029a7f2a3ca5a03fe682d3b77c7f0d", 3 * ["fa029a7f2a3ca5a03fe682d3b77c7f0d"]
+                "test1.txt",
+                "/test1/test1.txt",
+                "fa029a7f2a3ca5a03fe682d3b77c7f0d",
+                3 * ["fa029a7f2a3ca5a03fe682d3b77c7f0d"],
             )
         ],
         "test2.txt": [
             IrodsDataObject(
-                "test2.txt", "/test2/test2.txt", "856babf68edfd13e2fd019df330e11c5", 3 * ["856babf68edfd13e2fd019df330e11c5"]
+                "test2.txt",
+                "/test2/test2.txt",
+                "856babf68edfd13e2fd019df330e11c5",
+                3 * ["856babf68edfd13e2fd019df330e11c5"],
             )
         ],
         "test3.txt": [
             IrodsDataObject(
-                "test3.txt", "/test3/test3.txt", "0f034ea35fde3fca41d71cbcb13ee659", 3 * ["0f034ea35fde3fca41d71cbcb13ee659"]
+                "test3.txt",
+                "/test3/test3.txt",
+                "0f034ea35fde3fca41d71cbcb13ee659",
+                3 * ["0f034ea35fde3fca41d71cbcb13ee659"],
             )
         ],
-        "test5.txt": [IrodsDataObject("test5.txt", "/test5/test5.txt", "abcdefgh", 3 * ["abcdefgh"])],
+        "test5.txt": [
+            IrodsDataObject("test5.txt", "/test5/test5.txt", "abcdefgh", 3 * ["abcdefgh"])
+        ],
     }
     # Setup (local) FileDataObjects:
     test1 = FileDataObject(
@@ -116,6 +128,7 @@ def test_filecomparisoncheck_compare_local_and_remote_files():
         local_dict, remote_dict
     )
     from pprint import pprint
+
     pprint(actual_both)
     pprint(actual_local)
     pprint(actual_remote)
