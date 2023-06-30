@@ -116,7 +116,7 @@ class FileComparisonChecker:
         :param local_files_dict: Dictionary with local directories as keys and list of FileDataObject as values.
         :type local_files_dict: dict
 
-        :param remote_files_dict: Dictionary with remote filenames as keys and list of IrodsDataObject as values.
+        :param remote_files_dict: Dictionary with remote filenames as keys and list of iRodsDataObject as values.
         :type remote_files_dict: dict
 
         :param filenames_only: Flag to indicate if md5 sums should not be used for comparison
@@ -165,7 +165,7 @@ class FileComparisonChecker:
         :param local_dict: Dictionary with local directories as keys and list of FileDataObject as values.
         :type local_dict: dict
 
-        :param remote_dict: Dictionary with remote filenames as keys and list of IrodsDataObject as values.
+        :param remote_dict: Dictionary with remote filenames as keys and list of iRodsDataObject as values.
         :type remote_dict: dict
 
         :param filenames_only: Flag to indicate if md5 sums should not be used for comparison
@@ -179,10 +179,10 @@ class FileComparisonChecker:
         """
 
         def filedata_from_irodsdata(obj):
-            # Helper Function to convert IrodsDataObject (non-hashable) to FileDataObject, also making path relative
-            p = Path(obj.irods_path).parent
+            # Helper Function to convert iRodsDataObject (non-hashable) to FileDataObject, also making path relative
+            p = Path(obj.path).parent
             p = p.relative_to(irods_basepath) if irods_basepath else p
-            return FileDataObject(obj.file_name, str(p), obj.file_md5sum)
+            return FileDataObject(obj.name, str(p), obj.checksum)
 
         # The dictionaries will contain double information on the file path (both as keys & in the objects)
         # For collecting info in itself sets would be easier, however grouping by folder makes it easier to
@@ -223,7 +223,7 @@ class FileComparisonChecker:
 
                 # From the file with matching names subselect those with same md5
                 md5_matches = {
-                    filedata_from_irodsdata(f) for f in remote_files if f.file_md5sum == md5
+                    filedata_from_irodsdata(f) for f in remote_files if f.checksum == md5
                 }
                 if md5_matches:
                     remote_unmatched -= md5_matches

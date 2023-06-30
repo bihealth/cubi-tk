@@ -299,7 +299,7 @@ class PullProcessedDataCommand(PullDataCommon):
         """Pair iRODS path with local output directory
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1'); Value: iRODS data (``IrodsDataObject``).
+        'P001-N1-DNA1-WES1'); Value: iRODS data (``DataObject``).
         :type remote_files_dict: dict
 
         :param output_dir: Output directory path.

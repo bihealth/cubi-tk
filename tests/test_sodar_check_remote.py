@@ -2,7 +2,7 @@
 
 import pathlib
 
-from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+from .helpers import createIrodsDataObject as IrodsDataObject
 from cubi_tk.sodar.check_remote import (
     FileComparisonChecker,
     FileDataObject,
@@ -73,20 +73,20 @@ def test_filecomparisoncheck_compare_local_and_remote_files():
     remote_dict = {
         "test1.txt": [
             IrodsDataObject(
-                "test1.txt", "test1/test1.txt", "fa029a7f2a3ca5a03fe682d3b77c7f0d", 3 * [None]
+                "test1.txt", "/test1/test1.txt", "fa029a7f2a3ca5a03fe682d3b77c7f0d", 3 * ["fa029a7f2a3ca5a03fe682d3b77c7f0d"]
             )
         ],
         "test2.txt": [
             IrodsDataObject(
-                "test2.txt", "test2/test2.txt", "856babf68edfd13e2fd019df330e11c5", 3 * [None]
+                "test2.txt", "/test2/test2.txt", "856babf68edfd13e2fd019df330e11c5", 3 * ["856babf68edfd13e2fd019df330e11c5"]
             )
         ],
         "test3.txt": [
             IrodsDataObject(
-                "test3.txt", "test3/test3.txt", "0f034ea35fde3fca41d71cbcb13ee659", 3 * [None]
+                "test3.txt", "/test3/test3.txt", "0f034ea35fde3fca41d71cbcb13ee659", 3 * ["0f034ea35fde3fca41d71cbcb13ee659"]
             )
         ],
-        "test5.txt": [IrodsDataObject("test5.txt", "test5/test5.txt", "abcdefgh", 3 * [None])],
+        "test5.txt": [IrodsDataObject("test5.txt", "/test5/test5.txt", "abcdefgh", 3 * ["abcdefgh"])],
     }
     # Setup (local) FileDataObjects:
     test1 = FileDataObject(
@@ -109,19 +109,23 @@ def test_filecomparisoncheck_compare_local_and_remote_files():
     expected_both = {test_dir_path / "test1": [test1], test_dir_path / "test2": [test2]}
     expected_local = {test_dir_path / "test3": [test3], test_dir_path / "test4": [test4]}
     expected_remote = {
-        "test3": [FileDataObject("test3.txt", "test3", "0f034ea35fde3fca41d71cbcb13ee659")],
-        "test5": [FileDataObject("test5.txt", "test5", "abcdefgh")],
+        "/test3": [FileDataObject("test3.txt", "/test3", "0f034ea35fde3fca41d71cbcb13ee659")],
+        "/test5": [FileDataObject("test5.txt", "/test5", "abcdefgh")],
     }
     actual_both, actual_local, actual_remote = FileComparisonChecker.compare_local_and_remote_files(
         local_dict, remote_dict
     )
+    from pprint import pprint
+    pprint(actual_both)
+    pprint(actual_local)
+    pprint(actual_remote)
     assert expected_both == actual_both
     assert expected_local == actual_local
     assert expected_remote == actual_remote
     # Check matching by filename only (test3 moves to expected_both)
     expected_both.update({test_dir_path / "test3": [test3]})
     expected_local.pop(test_dir_path / "test3")
-    expected_remote.pop("test3")
+    expected_remote.pop("/test3")
     actual_both, actual_local, actual_remote = FileComparisonChecker.compare_local_and_remote_files(
         local_dict, remote_dict, filenames_only=True
     )

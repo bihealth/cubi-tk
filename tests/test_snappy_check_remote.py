@@ -4,7 +4,9 @@ import pathlib
 import pytest
 
 from cubi_tk.snappy.check_remote import Checker, FindLocalFiles, FindLocalRawdataFiles
-from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+# from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+
+from .helpers import createIrodsDataObject
 
 # Tests FindLocalFiles =================================================================================================
 
@@ -87,7 +89,7 @@ def test_compare_local_and_remote_files():
     replicas_md5sum = [file_md5sum] * 3
     in_remote_dict = {
         "bwa.P001-N1-DNA1-WES1.bam": [
-            IrodsDataObject(
+            createIrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.bam",
                 irods_path="/sodar_path/bwa.P001-N1-DNA1-WES1.bam",
                 file_md5sum=file_md5sum,
@@ -95,7 +97,7 @@ def test_compare_local_and_remote_files():
             )
         ],
         "bwa.P001-N1-DNA1-WES1.bam.bai": [
-            IrodsDataObject(
+            createIrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.bam.bai",
                 irods_path="/sodar_path/bwa.P001-N1-DNA1-WES1.bam.bai",
                 file_md5sum=file_md5sum,
@@ -103,7 +105,7 @@ def test_compare_local_and_remote_files():
             )
         ],
         "bwa.P002-N1-DNA1-WES1.bam": [
-            IrodsDataObject(
+            createIrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.bam",
                 irods_path="/sodar_path/bwa.P002-N1-DNA1-WES1.bam",
                 file_md5sum=file_md5sum,
@@ -111,7 +113,7 @@ def test_compare_local_and_remote_files():
             )
         ],
         "bwa.P002-N1-DNA1-WES1.bam.bai": [
-            IrodsDataObject(
+            createIrodsDataObject(
                 file_name="bwa.P002-N1-DNA1-WES1.bam.bai",
                 irods_path="/sodar_path/bwa.P002-N1-DNA1-WES1.bam.bai",
                 file_md5sum=file_md5sum,
@@ -165,7 +167,7 @@ def test_compare_local_and_remote_files():
     # Update input and expected results
     extra_remote_files_dict = {
         "bwa.P001-N1-DNA1-WES1.conda_info.txt": [
-            IrodsDataObject(
+            createIrodsDataObject(
                 file_name="bwa.P001-N1-DNA1-WES1.conda_info.txt",
                 irods_path="/sodar_path/bwa.P001-N1-DNA1-WES1.conda_info.txt",
                 file_md5sum=file_md5sum,

@@ -4,7 +4,7 @@
 import pytest
 
 from cubi_tk.snappy.pull_data_common import PullDataCommon
-from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+from .helpers import createIrodsDataObject as IrodsDataObject
 
 # Empty file MD5 checksum
 FILE_MD5SUM = "d41d8cd98f00b204e9800998ecf8427e"
@@ -99,7 +99,7 @@ def test_pull_data_common_sort_irods_object_by_date_in_path(irods_objects_list):
     expected = ("2038-01-19", "2000-01-01", "1999-09-09")
     actual = raw_data_class.sort_irods_object_by_date_in_path(irods_obj_list=irods_objects_list)
     for count, irods_obj in enumerate(actual):
-        assert expected[count] in irods_obj.irods_path
+        assert expected[count] in irods_obj.path
 
 
 def test_pull_data_common_sort_irods_object_by_date_in_path_mixed(irods_objects_list_format_mixed):
@@ -110,7 +110,7 @@ def test_pull_data_common_sort_irods_object_by_date_in_path_mixed(irods_objects_
         irods_obj_list=irods_objects_list_format_mixed
     )
     for count, irods_obj in enumerate(actual):
-        assert expected[count] in irods_obj.irods_path
+        assert expected[count] in irods_obj.path
 
 
 def test_pull_data_common_sort_irods_object_by_date_in_path_missing_date(

@@ -255,7 +255,7 @@ class PullRawDataCommand(PullDataCommon):
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``DataObject``).
         :type remote_files_dict: dict
 
         :param file_type: File type, example: 'fastq'.
@@ -302,7 +302,7 @@ class PullRawDataCommand(PullDataCommon):
         """Pair iRODS path with local output directory
 
         :param library_to_irods_dict: Dictionary with iRODS collection information by sample. Key: sample name as
-        string (e.g., 'P001'); Value: iRODS data (``IrodsDataObject``).
+        string (e.g., 'P001'); Value: iRODS data (``DataObject``).
         :type library_to_irods_dict: dict
 
         :param identifiers_tuples: List of tuples (sample name, folder name) as defined in the sample sheet.
@@ -357,7 +357,7 @@ class PullRawDataCommand(PullDataCommon):
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001_R1_001.fastq.gz'); Value: iRODS data (``IrodsDataObject``).
+        'P001_R1_001.fastq.gz'); Value: iRODS data (``DataObject``).
         :type remote_files_dict: dict
 
         :return: Returns dictionary: Key: identifier (sample name [str]); Value: list of iRODS objects.

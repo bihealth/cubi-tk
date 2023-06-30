@@ -108,9 +108,9 @@ class IrodsCheckCommand:
         es = str(e)
         return es if es != "None" else e.__class__.__name__
 
-    def get_data_objs(self, root_coll: iRODSCollection) -> typing.List[iRODSDataObject]:
+    def get_data_objs(self, root_coll: iRODSCollection) -> typing.Dict[str, typing.Union[typing.Dict[str, iRODSDataObject], typing.List[iRODSDataObject]]]:
         """Get data objects recursively under the given iRODS path."""
-        data_objs = []
+        data_objs = dict(files=[], checksums=[])
         ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
         irods_sess = root_coll.manager.sess
 
@@ -127,8 +127,10 @@ class IrodsCheckCommand:
             coll = iRODSCollection(root_coll.manager, coll_res)
             obj = iRODSDataObject( irods_sess.data_objects, parent = coll, results=[obj_res])
 
-            if obj.path.split(".")[-1] not in ignore_schemes:
-                data_objs.append(obj)
+            if obj.path.endswith("." + self.args.hash_scheme.lower()):
+                data_objs["checksums"][obj.path] = obj
+            elif obj.path.split(".")[-1] not in ignore_schemes:
+                data_objs["files"].append(obj)
 
         return data_objs
 
@@ -186,10 +188,10 @@ class IrodsCheckCommand:
             self.run_checks(data_objs)
             logger.info("All done")
 
-    def run_checks(self, data_objs: dict):
+    def run_checks(self, data_objs: typing.List[iRODSDataObject]):
         """Run checks on files, in parallel if enabled."""
-        num_files = len(data_objs["files"])
-        dsp_files = data_objs["files"]
+        num_files = len(data_objs)
+        dsp_files = data_objs
         if self.args.num_display_files > 0:
             dsp_files = dsp_files[: self.args.num_display_files]
         lst_files = "\n".join([f.path for f in dsp_files])
