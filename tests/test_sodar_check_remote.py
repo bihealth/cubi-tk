@@ -127,11 +127,6 @@ def test_filecomparisoncheck_compare_local_and_remote_files():
     actual_both, actual_local, actual_remote = FileComparisonChecker.compare_local_and_remote_files(
         local_dict, remote_dict
     )
-    from pprint import pprint
-
-    pprint(actual_both)
-    pprint(actual_local)
-    pprint(actual_remote)
     assert expected_both == actual_both
     assert expected_local == actual_local
     assert expected_remote == actual_remote
