@@ -106,7 +106,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         :param irods_path: iRODS path.
 
         :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of iRodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
+        Value: list of iRODSDataObject (native python-irodsclient object).
         """
 
         # Connect to iRODS
@@ -136,7 +136,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         :type irods_collection: dict
 
         :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of iRodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
+        Value: list of iRODSDataObject (native python-irodsclient object).
         """
         # Initialise variables
         output_dict = defaultdict(list)

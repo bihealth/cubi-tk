@@ -116,7 +116,7 @@ class FileComparisonChecker:
         :param local_files_dict: Dictionary with local directories as keys and list of FileDataObject as values.
         :type local_files_dict: dict
 
-        :param remote_files_dict: Dictionary with remote filenames as keys and list of iRodsDataObject as values.
+        :param remote_files_dict: Dictionary with remote filenames as keys and list of iRODSDataObject as values.
         :type remote_files_dict: dict
 
         :param filenames_only: Flag to indicate if md5 sums should not be used for comparison
@@ -165,7 +165,7 @@ class FileComparisonChecker:
         :param local_dict: Dictionary with local directories as keys and list of FileDataObject as values.
         :type local_dict: dict
 
-        :param remote_dict: Dictionary with remote filenames as keys and list of iRodsDataObject as values.
+        :param remote_dict: Dictionary with remote filenames as keys and list of iRODSDataObject as values.
         :type remote_dict: dict
 
         :param filenames_only: Flag to indicate if md5 sums should not be used for comparison

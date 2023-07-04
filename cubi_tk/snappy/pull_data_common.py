@@ -31,7 +31,7 @@ class PullDataCommon(IrodsCheckCommand):
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``DataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``iRODSDataObject``).
         :type remote_files_dict: dict
 
         :param file_type: File type, example: 'bam' or 'vcf'.
@@ -175,7 +175,7 @@ class PullDataCommon(IrodsCheckCommand):
         /sodarZone/projects/../<PROJECT_UUID>/.../assay_<ASSAY_UUID>/<LIBRARY_NAME>/.../<DATE>/...
 
         :param irods_obj_list: List of iRODS objects derived from collection in SODAR.
-        :type irods_obj_list: List[DataObject]
+        :type irods_obj_list: List[iRODSDataObject]
 
         :return: Returns inputted list sorted from latest to earliest iRODS object.
         """
