@@ -208,7 +208,7 @@ class PullProcessedDataCommand(PullDataCommon):
         # Find all remote files (iRODS)
         pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
         extensions_tuple = self.file_type_to_extensions_dict.get(self.args.file_type)
-        remote_file_objs = RetrieveIrodsCollection(
+        remote_files_dict = RetrieveIrodsCollection(
             pseudo_args,
             self.args.sodar_url,
             self.args.sodar_api_token,
@@ -219,11 +219,11 @@ class PullProcessedDataCommand(PullDataCommon):
         # Filter based on identifiers and file type
         filtered_remote_files_dict = self.filter_irods_collection(
             identifiers=selected_identifiers,
-            remote_files_dict=remote_file_objs,
+            remote_files_dict=remote_files_dict,
             file_type=self.args.file_type,
         )
         if len(filtered_remote_files_dict) == 0:
-            self.report_no_file_found(available_files=[*remote_file_objs])
+            self.report_no_file_found(available_files=[*remote_files_dict])
             return 0
 
         # Pair iRODS path with output path
