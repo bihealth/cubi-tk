@@ -112,7 +112,7 @@ class IrodsCheckCommand:
         str, typing.Union[typing.Dict[str, iRODSDataObject], typing.List[iRODSDataObject]]
     ]:
         """Get data objects recursively under the given iRODS path."""
-        data_objs = dict(files=[], checksums=[])
+        data_objs = dict(files=[], checksums={})
         ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
         irods_sess = root_coll.manager.sess
 
@@ -188,10 +188,10 @@ class IrodsCheckCommand:
             self.run_checks(data_objs)
             logger.info("All done")
 
-    def run_checks(self, data_objs: typing.List[iRODSDataObject]):
+    def run_checks(self, data_objs: dict):
         """Run checks on files, in parallel if enabled."""
-        num_files = len(data_objs)
-        dsp_files = data_objs
+        num_files = len(data_objs["files"])
+        dsp_files = data_objs["files"]
         if self.args.num_display_files > 0:
             dsp_files = dsp_files[: self.args.num_display_files]
         lst_files = "\n".join([f.path for f in dsp_files])
