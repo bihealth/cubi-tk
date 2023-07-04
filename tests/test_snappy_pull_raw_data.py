@@ -5,7 +5,8 @@ import pytest
 
 from cubi_tk.__main__ import setup_argparse
 from cubi_tk.snappy.pull_raw_data import Config, PullRawDataCommand
-from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+
+from .helpers import createIrodsDataObject as IrodsDataObject
 
 # Empty file MD5 checksum
 FILE_MD5SUM = "d41d8cd98f00b204e9800998ecf8427e"
@@ -259,7 +260,7 @@ def test_pull_raw_data_get_library_to_irods_dict(pull_raw_data, remote_files_fas
         identifiers=samples_list, remote_files_dict=remote_files_fastq
     )
     for id_ in samples_list:
-        assert all([str(irods.file_name).startswith(id_) for irods in actual.get(id_)])
+        assert all([str(irods.name).startswith(id_) for irods in actual.get(id_)])
 
 
 def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, sample_to_irods_dict):
@@ -280,19 +281,19 @@ def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, sample_to_irod
         irods_path.format(i=i, r=r, ext=ext)
         for i in (1, 2)
         for r in (1, 2)
-        for ext in ("fastq.gz", "fastq.gz.md5")
+        for ext in ("fastq.gz",)
     ]
     correct_uuid_output_dir_list = [
         full_out_dir.format(i=i, r=r, ext=ext)
         for i in (1, 2)
         for r in (1, 2)
-        for ext in ("fastq.gz", "fastq.gz.md5")
+        for ext in ("fastq.gz",)
     ]
     wrong_uuid_output_dir_list = [
         "out_dir/P00{i}/P00{i}_R{r}_001.{ext}".format(i=i, r=r, ext=ext)
         for i in (1, 2)
         for r in (1, 2)
-        for ext in ("fastq.gz", "fastq.gz.md5")
+        for ext in ("fastq.gz",)
     ]
     correct_uuid_expected = []
     for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
