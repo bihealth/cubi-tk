@@ -12,7 +12,8 @@ from toposort import toposort
 from cubi_tk.exceptions import ParseOutputException
 
 from . import common
-from .snappy_workflows import get_snappy_step_directories, get_workflow_step_dependencies
+from .snappy_workflows import SnappyWorkflowManager
+# from .snappy_workflows import get_snappy_step_directories, get_workflow_step_dependencies
 
 
 def run(
@@ -27,9 +28,15 @@ def run(
     logger.info("Looking for pipeline directories (needs to contain snappy config.yaml)...")
     logger.debug("Looking in %s", path)
     step_set = {}
-    folder_steps = get_snappy_step_directories(path)
+
+    manager = SnappyWorkflowManager.from_snappy()
+
+    if manager is None:
+        return None
+
+    folder_steps = manager.get_snappy_step_directories(path)
     for step_name, step_path in folder_steps.items():
-        dependencies = get_workflow_step_dependencies(step_path)
+        dependencies = manager.get_workflow_step_dependencies(step_path)
         step_set[step_name] = dependencies
 
     steps: typing.List[str] = []

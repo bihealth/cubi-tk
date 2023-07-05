@@ -1,44 +1,12 @@
 from collections import defaultdict
 import importlib
 import pathlib
-import pkgutil
 import re
 import typing
 import yaml
 
-from snappy_pipeline import expand_ref
-import snappy_pipeline.workflows as snappy_workflows
-
-
-class DummyWorkflow:
-    """Dummy workflow that does nothing."""
-
-    def __init__(self):
-        self.globals = defaultdict(str)
-
-    def __getattr__(self, _):
-        return self._catchall
-
-    def _catchall(self, *_, **__):
-        pass
-
-
-def get_available_snappy_workflows():
-    """Get all available snappy workflows in snappy_pipeline.
-
-    :return: List of ModuleInfo with individual workflow modules.
-    """
-    return list(pkgutil.iter_modules(snappy_workflows.__path__))
-
-
-def get_available_snappy_workflow_paths():
-    """Get module paths for all available snappy workflows.
-
-    :return: Dict of workflow name to workflow module path.
-    """
-    workflow_names = get_available_snappy_workflows()
-    return {w.name: pathlib.Path(w.module_finder.path) / w.name for w in workflow_names}
-
+from attrs import define
+from logzero import logger
 
 def get_workflow_snakefile_object_name(snakefile_path):
     """Find the Workflow implementation object name.
@@ -56,107 +24,112 @@ def get_workflow_snakefile_object_name(snakefile_path):
     return None
 
 
-def load_workflow_step_configuration(workflow_step_path):
-    """Load snappy configuration and resolve any refs.
+class DummyWorkflow:
+    """Dummy workflow that does nothing."""
 
-    :param workflow_step_path: Path to snappy config yaml.
-    :type workflow_step_path: str, pathlib.Path
+    def __init__(self):
+        self.globals = defaultdict(str)
 
-    :return: Tuple of config, lookup paths and configuration paths. If no config is found, a tuple of None is returned.
-    """
+    def __getattr__(self, _):
+        return self._catchall
 
-    config_path = pathlib.Path(workflow_step_path) / "config.yaml"
-
-    if not config_path.exists():
-        return (None, None, None)
-
-    with open(str(config_path)) as stream:
-        config_data = yaml.safe_load(stream)
-
-    config, lookup_paths, config_paths = expand_ref(
-        str(config_path),
-        config_data,
-        [str(workflow_step_path), str(workflow_step_path.parent / ".snappy_pipeline")],
-    )
-    return config, lookup_paths, config_paths
+    def _catchall(self, *_, **__):
+        pass
 
 
-def get_snappy_config(snappy_root_dir):
-    """Get snappy configuration.
+@define
+class SnappyWorkflowManager:
 
-    :param snappy_root_dir: Path to snappy root directory.
-    :type snappy_root_dir: str, pathlib.Path
+    _expand_ref: typing.Callable
+    _step_to_module: typing.Dict[str, typing.Any]
 
-    :return: Returns loaded snappy configuration.
-    """
-    snappy_config = snappy_root_dir / ".snappy_pipeline" / "config.yaml"
-    with open(snappy_config, "r") as stream:
-        config = yaml.safe_load(stream)
-    return config
+    @classmethod
+    def from_snappy(cls) -> typing.Optional["SnappyWorkflowManager"]:
+        try:
+            from snappy_pipeline import expand_ref
+            from snappy_pipeline.apps.snappy_snake import STEP_TO_MODULE
+        except ImportError:
+            logger.warn("snappy_pipeline is not available. snappy pipeline related functions will not work properly.")
+            return None
 
+        return cls(expand_ref=expand_ref, step_to_module=STEP_TO_MODULE)
 
-def get_workflow_step_dependencies(workflow_step_path):
-    """Find workflow dependencies for the given workflow step.
-    :param workflow_step_path: Path to the workflow step.
-    :type workflow_step_path: str, pathlib.Path
+    def _load_workflow_step_configuration(self, workflow_step_path: typing.Union[str, pathlib.Path]) -> tuple:
+        """Load snappy configuration and resolve any refs.
 
-    :return: List of dependencies for the given workflow step.
-    """
-    workflow_step_path = pathlib.Path(workflow_step_path)
+        :param workflow_step_path: Path to snappy config yaml.
+        :type workflow_step_path: str, pathlib.Path
 
-    config, lookup_paths, config_paths = load_workflow_step_configuration(workflow_step_path)
-    if config is None:
-        raise RuntimeError(f"Could not load workflow step confiuration for {workflow_step_path}")
+        :return: Tuple of config, lookup paths and configuration paths. If no config is found, a tuple of None is returned.
+        """
 
-    step_name = config["pipeline_step"]["name"]
+        config_path = pathlib.Path(workflow_step_path) / "config.yaml"
 
-    step_module_paths = get_available_snappy_workflow_paths()
-    module_path = step_module_paths[step_name]
-    module_config_path = module_path / "Snakefile"
-    # get the name of the workflow step class name
-    obj_name = get_workflow_snakefile_object_name(module_config_path)
-    if obj_name is None:
-        raise RuntimeError(f"Could not find workflow object for {step_name}")
+        if not config_path.exists():
+            return (None, None, None)
 
-    workflow_module = importlib.import_module(f".{step_name}", "snappy_pipeline.workflows")
-    workflow_class = getattr(workflow_module, obj_name)
+        with open(str(config_path)) as stream:
+            config_data = yaml.safe_load(stream)
 
-    workflow_object = workflow_class(
-        DummyWorkflow(), config, lookup_paths, config_paths, str(workflow_step_path)
-    )
-    dependencies = workflow_object.sub_workflows.keys()
-    return list(dependencies)
+        config, lookup_paths, config_paths = self._expand_ref(
+            str(config_path),
+            config_data,
+            [str(workflow_step_path), str(pathlib.Path(workflow_step_path).parent / ".snappy_pipeline")],
+        )
+        return config, lookup_paths, config_paths
 
 
-def get_workflow_name(workflow_path):
-    """Get the name of the workflow in the directory. This will parse the contained config.yaml.
+    def _get_workflow_name(self, workflow_path: typing.Union[str, pathlib.Path]) -> typing.Optional[str]:
+        """Get the name of the workflow in the directory. This will parse the contained config.yaml.
+        """
 
-    :param workflow_path: Path of the workflow.
-    :type workflow_path: str, pathlib.Path
+        config, _, _ = self._load_workflow_step_configuration(workflow_path)
+        if config is not None and "pipeline_step" in config:
+            return config["pipeline_step"].get("name", None)
 
-    :return: Optional str name of the workflow.
-    """
+    def get_snappy_step_directories(self, snappy_root_dir: typing.Union[str, pathlib.Path]) -> typing.Optional[dict]:
+        """Get a dictionary of snappy workflow step names and their associated path.
 
-    config, _, _ = load_workflow_step_configuration(workflow_path)
-    if config is not None and "pipeline_step" in config:
-        return config["pipeline_step"].get("name", None)
+        :param snappy_root_dir: Path to the snappy root directory, also containing .snappy_pipeline
 
+        :return: Dict of workflow step name to workflow step path.
+        """
+        folder_steps = {
+            name: path
+            for name, path in [
+                (self._get_workflow_name(p), p) for p in pathlib.Path(snappy_root_dir).iterdir()
+            ]
+            if name in self._step_to_module
+        }
 
-def get_snappy_step_directories(snappy_root_dir):
-    """Get a dictionary of snappy workflow step names and their associated path.
+        return folder_steps
 
-    :param snappy_root_dir: Path to the snappy root directory, also containing .snappy_pipeline
-    :type snappy_root_dir: str, pathlib.Path
+    def get_workflow_step_dependencies(self, workflow_step_path: typing.Union[str, pathlib.Path]) -> typing.List[str]:
+        """Find workflow dependencies for the given workflow step.
+        :param workflow_step_path: Path to the workflow step.
 
-    :return: Dict of workflow step name to workflow step path.
-    """
-    snappy_workflows_names = [s.name for s in get_available_snappy_workflows()]
-    folder_steps = {
-        name: path
-        for name, path in [
-            (get_workflow_name(p), p) for p in pathlib.Path(snappy_root_dir).iterdir()
-        ]
-        if name in snappy_workflows_names
-    }
+        :return: List of dependencies for the given workflow step.
+        """
+        workflow_step_path = pathlib.Path(workflow_step_path)
 
-    return folder_steps
+        config, lookup_paths, config_paths = self._load_workflow_step_configuration(workflow_step_path)
+        if config is None:
+            raise RuntimeError(f"Could not load workflow step confiuration for {workflow_step_path}")
+
+        step_name = config["pipeline_step"]["name"]
+
+        module = self._step_to_module[step_name]
+        module_config_path = pathlib.Path(module.__file__).parent / "Snakefile"
+        # get the name of the workflow step class name
+        obj_name = get_workflow_snakefile_object_name(module_config_path)
+        if obj_name is None:
+            raise RuntimeError(f"Could not find workflow object for {step_name}")
+
+        workflow_module = importlib.import_module(f".{step_name}", "snappy_pipeline.workflows")
+        workflow_class = getattr(workflow_module, obj_name)
+
+        workflow_object = workflow_class(
+            DummyWorkflow(), config, lookup_paths, config_paths, str(workflow_step_path)
+        )
+        dependencies = workflow_object.sub_workflows.keys()
+        return list(dependencies)
