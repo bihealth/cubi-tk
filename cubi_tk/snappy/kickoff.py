@@ -28,20 +28,22 @@ def run(
 
     logger.info("Looking for pipeline directories (needs to contain snappy config.yaml)...")
     logger.debug("Looking in %s", path)
-    step_set = {}
 
     manager = SnappyWorkflowManager.from_snappy()
 
     if manager is None:
         return None
 
+    step_dependencies = {}
     folder_steps = manager.get_snappy_step_directories(path)
     for step_name, step_path in folder_steps.items():
         dependencies = manager.get_workflow_step_dependencies(step_path)
-        step_set[step_name] = dependencies
+        assert all(dep in folder_steps for dep in dependencies)
+
+        step_dependencies[step_name] = dependencies
 
     steps: typing.List[str] = []
-    for names in toposort({k: set(v) for k, v in step_set.items()}):
+    for names in toposort({k: set(v) for k, v in step_dependencies.items()}):
         steps += names
     logger.info("Will run the steps: %s", ", ".join(steps))
 
@@ -57,7 +59,7 @@ def run(
             if age_cache > max_age:
                 logger.info("Cache older than %d - purging", max_age)
                 path_cache.unlink()
-        dep_jids = [jids[dep] for dep in step_set[step] if dep in jids]
+        dep_jids = [jids[dep] for dep in step_dependencies[step] if dep in jids]
         cmd = ["sbatch"]
         if dep_jids:
             cmd += ["--dependency", "afterok:%s" % ":".join(map(str, dep_jids))]

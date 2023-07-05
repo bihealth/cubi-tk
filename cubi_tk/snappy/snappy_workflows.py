@@ -9,16 +9,15 @@ from logzero import logger
 import yaml
 
 
-def get_workflow_snakefile_object_name(snakefile_path):
+def get_workflow_snakefile_object_name(snakefile_path: typing.Union[str, pathlib.Path]) -> typing.Optional[str]:
     """Find the Workflow implementation object name.
 
     :param snakefile_path: Path to snakefile for workflow.
-    :type snakefile_path: str, pathlib.Path
 
     :return: str Name of the implementation class or None if nothing as been found.
     """
 
-    with snakefile_path.open() as f:
+    with open(str(snakefile_path)) as f:
         if m := re.search(r"wf\s*=\s*(\w+)\(", f.read()):
             module_name = m.group(1)
             return module_name
@@ -98,7 +97,7 @@ class SnappyWorkflowManager:
 
     def get_snappy_step_directories(
         self, snappy_root_dir: typing.Union[str, pathlib.Path]
-    ) -> typing.Optional[dict]:
+    ) -> typing.Dict[str, pathlib.Path]:
         """Get a dictionary of snappy workflow step names and their associated path.
 
         :param snappy_root_dir: Path to the snappy root directory, also containing .snappy_pipeline
