@@ -39,3 +39,6 @@ bandit
 pyflakes
 
 setuptools ==65.6.3
+
+# needed for testing snappy workflow methods
+snappy-pipeline @ git+https://github.com/bihealth/snappy-pipeline
