@@ -41,6 +41,7 @@ class DummyWorkflow:
 @define
 class SnappyWorkflowManager:
     _expand_ref: typing.Callable
+    _snakefile_path: typing.Callable
     _step_to_module: typing.Dict[str, typing.Any]
 
     @classmethod
@@ -48,13 +49,14 @@ class SnappyWorkflowManager:
         try:
             from snappy_pipeline import expand_ref
             from snappy_pipeline.apps.snappy_snake import STEP_TO_MODULE
+            from snappy_pipeline.base import snakefile_path
         except ImportError:
             logger.warn(
                 "snappy_pipeline is not available. snappy pipeline related functions will not work properly."
             )
             return None
 
-        return cls(expand_ref=expand_ref, step_to_module=STEP_TO_MODULE)
+        return cls(expand_ref=expand_ref, step_to_module=STEP_TO_MODULE, snakefile_path=snakefile_path)
 
     def _load_workflow_step_configuration(
         self, workflow_step_path: typing.Union[str, pathlib.Path]
@@ -133,10 +135,10 @@ class SnappyWorkflowManager:
 
         step_name = config["pipeline_step"]["name"]
 
-        module = self._step_to_module[step_name]
-        module_config_path = pathlib.Path(module.__file__).parent / "Snakefile"
+        module_snakefile = self._snakefile_path(step_name)
+
         # get the name of the workflow step class name
-        obj_name = get_workflow_snakefile_object_name(module_config_path)
+        obj_name = get_workflow_snakefile_object_name(module_snakefile)
         if obj_name is None:
             raise RuntimeError(f"Could not find workflow object for {step_name}")
 
