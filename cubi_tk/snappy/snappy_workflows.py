@@ -144,6 +144,7 @@ class SnappyWorkflowManager:
 
         workflow_module = importlib.import_module(f".{step_name}", "snappy_pipeline.workflows")
         workflow_class = getattr(workflow_module, obj_name)
+        assert workflow_class.name == step_name
 
         workflow_object = workflow_class(
             DummyWorkflow(), config, lookup_paths, config_paths, str(workflow_step_path)
