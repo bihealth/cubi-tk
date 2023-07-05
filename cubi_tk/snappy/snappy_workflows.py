@@ -3,10 +3,11 @@ import importlib
 import pathlib
 import re
 import typing
-import yaml
 
 from attrs import define
 from logzero import logger
+import yaml
+
 
 def get_workflow_snakefile_object_name(snakefile_path):
     """Find the Workflow implementation object name.
@@ -39,7 +40,6 @@ class DummyWorkflow:
 
 @define
 class SnappyWorkflowManager:
-
     _expand_ref: typing.Callable
     _step_to_module: typing.Dict[str, typing.Any]
 
@@ -49,12 +49,16 @@ class SnappyWorkflowManager:
             from snappy_pipeline import expand_ref
             from snappy_pipeline.apps.snappy_snake import STEP_TO_MODULE
         except ImportError:
-            logger.warn("snappy_pipeline is not available. snappy pipeline related functions will not work properly.")
+            logger.warn(
+                "snappy_pipeline is not available. snappy pipeline related functions will not work properly."
+            )
             return None
 
         return cls(expand_ref=expand_ref, step_to_module=STEP_TO_MODULE)
 
-    def _load_workflow_step_configuration(self, workflow_step_path: typing.Union[str, pathlib.Path]) -> tuple:
+    def _load_workflow_step_configuration(
+        self, workflow_step_path: typing.Union[str, pathlib.Path]
+    ) -> tuple:
         """Load snappy configuration and resolve any refs.
 
         :param workflow_step_path: Path to snappy config yaml.
@@ -74,20 +78,25 @@ class SnappyWorkflowManager:
         config, lookup_paths, config_paths = self._expand_ref(
             str(config_path),
             config_data,
-            [str(workflow_step_path), str(pathlib.Path(workflow_step_path).parent / ".snappy_pipeline")],
+            [
+                str(workflow_step_path),
+                str(pathlib.Path(workflow_step_path).parent / ".snappy_pipeline"),
+            ],
         )
         return config, lookup_paths, config_paths
 
-
-    def _get_workflow_name(self, workflow_path: typing.Union[str, pathlib.Path]) -> typing.Optional[str]:
-        """Get the name of the workflow in the directory. This will parse the contained config.yaml.
-        """
+    def _get_workflow_name(
+        self, workflow_path: typing.Union[str, pathlib.Path]
+    ) -> typing.Optional[str]:
+        """Get the name of the workflow in the directory. This will parse the contained config.yaml."""
 
         config, _, _ = self._load_workflow_step_configuration(workflow_path)
         if config is not None and "pipeline_step" in config:
             return config["pipeline_step"].get("name", None)
 
-    def get_snappy_step_directories(self, snappy_root_dir: typing.Union[str, pathlib.Path]) -> typing.Optional[dict]:
+    def get_snappy_step_directories(
+        self, snappy_root_dir: typing.Union[str, pathlib.Path]
+    ) -> typing.Optional[dict]:
         """Get a dictionary of snappy workflow step names and their associated path.
 
         :param snappy_root_dir: Path to the snappy root directory, also containing .snappy_pipeline
@@ -104,7 +113,9 @@ class SnappyWorkflowManager:
 
         return folder_steps
 
-    def get_workflow_step_dependencies(self, workflow_step_path: typing.Union[str, pathlib.Path]) -> typing.List[str]:
+    def get_workflow_step_dependencies(
+        self, workflow_step_path: typing.Union[str, pathlib.Path]
+    ) -> typing.List[str]:
         """Find workflow dependencies for the given workflow step.
         :param workflow_step_path: Path to the workflow step.
 
@@ -112,9 +123,13 @@ class SnappyWorkflowManager:
         """
         workflow_step_path = pathlib.Path(workflow_step_path)
 
-        config, lookup_paths, config_paths = self._load_workflow_step_configuration(workflow_step_path)
+        config, lookup_paths, config_paths = self._load_workflow_step_configuration(
+            workflow_step_path
+        )
         if config is None:
-            raise RuntimeError(f"Could not load workflow step confiuration for {workflow_step_path}")
+            raise RuntimeError(
+                f"Could not load workflow step confiuration for {workflow_step_path}"
+            )
 
         step_name = config["pipeline_step"]["name"]
 

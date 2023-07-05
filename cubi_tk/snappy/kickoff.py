@@ -13,6 +13,7 @@ from cubi_tk.exceptions import ParseOutputException
 
 from . import common
 from .snappy_workflows import SnappyWorkflowManager
+
 # from .snappy_workflows import get_snappy_step_directories, get_workflow_step_dependencies
 
 
