@@ -16,14 +16,6 @@ $ conda create -n cubi-tk python=3.10
 $ conda activate cubi-tk
 ```
 
-First install snappy-pipeline, which is required for some snappy commands:
-
-```bash
-$ git clone https://github.com/bihealth/snappy-pipeline
-$ cd snappy-pipeline
-$ pip install -e .
-```
-
 Clone CUBI-TK and install.
 
 ```bash

@@ -9,5 +9,3 @@ dependencies:
   - python
   - pip
   - hashdeep
-  - pip:
-    - git+https://github.com/bihealth/snappy-pipeline
