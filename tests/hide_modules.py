@@ -5,17 +5,17 @@
 """
 
 # Copyright (c) 2019 Rory Yorke
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,9 +26,9 @@
 
 try:
     import importlib.abc
+
     # py>=3.3 has MetaPathFinder
-    _ModuleHiderBase = getattr(importlib.abc, 'MetaPathFinder',
-                               importlib.abc.Finder)
+    _ModuleHiderBase = getattr(importlib.abc, "MetaPathFinder", importlib.abc.Finder)
 except ImportError:
     # py2
     _ModuleHiderBase = object
@@ -51,11 +51,12 @@ class ModuleHider(_ModuleHiderBase):
     # python >=3.4
     def find_spec(self, fullname, path, target=None):
         if fullname in self.hidden:
-            raise ImportError('No module named {}'.format(fullname))
+            raise ImportError("No module named {}".format(fullname))
 
     def hide(self):
         "Starting hiding modules"
         import sys
+
         if self in sys.meta_path:
             raise RuntimeError("Already hiding modules")
         # must be first to override standard finders
@@ -69,6 +70,7 @@ class ModuleHider(_ModuleHiderBase):
     def unhide(self):
         "Unhide modules"
         import sys
+
         sys.meta_path.remove(self)
         sys.modules.update(self.hidden_modules)
         self.hidden_modules.clear()
@@ -93,13 +95,16 @@ def hide_modules(hidden):
     will be hidden; once the function exits, the modules will be
     unhidden.
     """
+
     def applydec(f):
         def decf(*args, **kwargs):
             with ModuleHider(hidden):
                 f(*args, **kwargs)
+
         # carry across name so that nose still finds the test
         decf.__name__ = f.__name__
         # and carry across doc for test descriptions (etc.)
         decf.__doc__ = f.__doc__
         return decf
+
     return applydec

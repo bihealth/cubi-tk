@@ -1,10 +1,6 @@
 """Tests for ``cubi_tk.snappy.snappy_workflows``.
 """
 
-
-from typing import Callable
-import pytest
-
 from cubi_tk.snappy.snappy_workflows import SnappyWorkflowManager
 
 from .hide_modules import hide_modules
@@ -14,6 +10,7 @@ from .hide_modules import hide_modules
 def test_could_not_import_module():
     manager = SnappyWorkflowManager.from_snappy()
     assert manager is None
+
 
 def test_could_import_module():
     manager = SnappyWorkflowManager.from_snappy()

@@ -9,7 +9,9 @@ from logzero import logger
 import yaml
 
 
-def get_workflow_snakefile_object_name(snakefile_path: typing.Union[str, pathlib.Path]) -> typing.Optional[str]:
+def get_workflow_snakefile_object_name(
+    snakefile_path: typing.Union[str, pathlib.Path]
+) -> typing.Optional[str]:
     """Find the Workflow implementation object name.
 
     :param snakefile_path: Path to snakefile for workflow.
@@ -55,7 +57,9 @@ class SnappyWorkflowManager:
             )
             return None
 
-        return cls(expand_ref=expand_ref, step_to_module=STEP_TO_MODULE, snakefile_path=snakefile_path)
+        return cls(
+            expand_ref=expand_ref, step_to_module=STEP_TO_MODULE, snakefile_path=snakefile_path
+        )
 
     def _load_workflow_step_configuration(
         self, workflow_step_path: typing.Union[str, pathlib.Path]
