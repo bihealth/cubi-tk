@@ -14,7 +14,24 @@ from cubi_tk.exceptions import ParseOutputException
 from . import common
 from .snappy_workflows import SnappyWorkflowManager
 
-# from .snappy_workflows import get_snappy_step_directories, get_workflow_step_dependencies
+
+class SnappyMissingPackageException(Exception):
+    def __str__(self):
+        return "snappy-pipeline is not installed. This function will not work."
+
+
+class SnappyMissingDependencyException(Exception):
+    """Raised if dependencies of steps do not exist in the current workflow."""
+
+    def __init__(
+        self, step_name: str, step_dependencies: typing.List[str], existing_steps: typing.List[str]
+    ):
+        self.step_name = step_name
+        self.step_dependencies = step_dependencies
+        self.existing_steps = existing_steps
+
+    def __str__(self):
+        return f"{self.step_name} requires {self.step_dependencies}, but only {self.existing_steps} exist in workflow directory."
 
 
 def run(
@@ -32,13 +49,16 @@ def run(
     manager = SnappyWorkflowManager.from_snappy()
 
     if manager is None:
-        return None
+        raise SnappyMissingPackageException
 
     step_dependencies = {}
     folder_steps = manager.get_snappy_step_directories(path)
     for step_name, step_path in folder_steps.items():
         dependencies = manager.get_workflow_step_dependencies(step_path)
-        assert all(dep in folder_steps for dep in dependencies)
+        if not all(dep in folder_steps for dep in dependencies):
+            raise SnappyMissingDependencyException(
+                step_name, dependencies, list(folder_steps.keys())
+            )
 
         step_dependencies[step_name] = dependencies
 
