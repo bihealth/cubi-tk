@@ -207,7 +207,6 @@ class PullProcessedDataCommand(PullDataCommon):
 
         # Find all remote files (iRODS)
         pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
-        extensions_tuple = self.file_type_to_extensions_dict.get(self.args.file_type)
         remote_files_dict = RetrieveIrodsCollection(
             pseudo_args,
             self.args.sodar_url,
