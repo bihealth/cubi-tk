@@ -214,7 +214,7 @@ class PullProcessedDataCommand(PullDataCommon):
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,
-        ).perform(identifiers=selected_identifiers, extensions_tuple=extensions_tuple)
+        ).perform()
 
         # Filter based on identifiers and file type
         filtered_remote_files_dict = self.filter_irods_collection(

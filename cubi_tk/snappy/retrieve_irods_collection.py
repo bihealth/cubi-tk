@@ -141,7 +141,7 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         # Initialise variables
         output_dict = defaultdict(list)
 
-        for obj in irods_data_objs["files"].values():
+        for obj in irods_data_objs["files"]:
             output_dict[obj.name].append(obj)
 
         return output_dict
