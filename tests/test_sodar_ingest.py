@@ -75,8 +75,9 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_symlink("/loop_src2", "/loop_src")
 
     args = DummyArgs()
-    args.sources = ["broken_link", "not_here", "loop_src", "testdir"]
+    args.sources = ["broken_link", "not_here", "loop_src", "testdir", "testdir", "file5"]
     args.recursive = True
+    args.exclude = ["file4", "file5"]
     dummy = MagicMock()
     args_mock = PropertyMock(return_value=args)
     type(dummy).args = args_mock
@@ -86,6 +87,8 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_file("/testdir/file1.md5")
     fs.create_file("/testdir/subdir/file2")
     fs.create_file("/file3")
+    fs.create_file("/testdir/file4")
+    fs.create_file("/file5")
     fs.create_symlink("/testdir/file3", "/file3")
 
     paths = SodarIngest.build_file_list(dummy)
@@ -120,6 +123,8 @@ def test_sodar_ingest_build_file_list(fs, caplog):
         "ipath": Path("subdir/file2"),
     } not in paths
     assert {"spath": Path("/testdir/file3"), "ipath": Path("file3")} in paths
+    assert {"spath": Path("/testdir/file4"), "ipath": Path("file4")} not in paths
+    assert {"spath": Path("file5"), "ipath": Path("file5")} not in paths
 
 
 @patch("cubi_tk.sodar.ingest.sorted")
