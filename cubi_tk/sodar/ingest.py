@@ -82,6 +82,13 @@ class SodarIngest:
             help="Recursively match files in subdirectories. Creates iRODS sub-collections to match directory structure.",
         )
         parser.add_argument(
+            "-e",
+            "--exclude",
+            nargs="+",
+            type=list,
+            help="Exclude files by defining one or multiple glob-style patterns.",
+        )
+        parser.add_argument(
             "-K",
             "--remote-checksums",
             default=False,
@@ -276,11 +283,15 @@ class SodarIngest:
 
             if src.is_dir():
                 paths = abspath.glob("**/*" if self.args.recursive else "*")
+                excludes = self.args.exclude
                 for p in paths:
+                    if excludes and any([p.match(e) for e in excludes]):
+                        continue
                     if p.is_file() and not p.suffix.lower() == ".md5":
                         output_paths.append({"spath": p, "ipath": p.relative_to(abspath)})
             else:
-                output_paths.append({"spath": src, "ipath": Path(src.name)})
+                if not any([src.match(e) for e in excludes if e]):
+                    output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
     def build_jobs(self, source_paths) -> typing.Set[TransferJob]:
