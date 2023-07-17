@@ -38,6 +38,7 @@ PREFIXES = (
     "bwa.gcnv",
     "bwa.popdel",
     "bwa.xhmm",
+    "bwa_mem2.mehari_",
     "bwa_mem2.varfish_",
     "minimap2.sniffles2",
     "write_pedigree",
