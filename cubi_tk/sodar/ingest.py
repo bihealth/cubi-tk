@@ -85,7 +85,8 @@ class SodarIngest:
             "-e",
             "--exclude",
             nargs="+",
-            type=list,
+            default="",
+            type=str,
             help="Exclude files by defining one or multiple glob-style patterns.",
         )
         parser.add_argument(
@@ -281,9 +282,9 @@ class SodarIngest:
                 logger.warning(f"Symlink loop: {src.name}")
                 continue
 
+            excludes = self.args.exclude
             if src.is_dir():
                 paths = abspath.glob("**/*" if self.args.recursive else "*")
-                excludes = self.args.exclude
                 for p in paths:
                     if excludes and any([p.match(e) for e in excludes]):
                         continue
