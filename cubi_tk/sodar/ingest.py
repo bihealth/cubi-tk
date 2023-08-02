@@ -241,6 +241,7 @@ class SodarIngest:
             logger.info("Nothing to do. Quitting.")
             sys.exit(0)
 
+        jobs = sorted(jobs, key=lambda x: x.path_src)
         itransfer = iRODSTransfer(irods_session, jobs)
         total_bytes = itransfer.total_bytes
         logger.info("Planning to transfer the following files:")
