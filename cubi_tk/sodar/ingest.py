@@ -217,24 +217,7 @@ class SodarIngest:
             logger.info("Sub-collections created.")
 
         # Build transfer jobs
-        jobs = self.build_jobs(source_paths)
-
-        # check if remote files exist
-        joblist = jobs.copy()
-        for job in joblist:
-            try:
-                obj = irods_session.data_objects.get(job.path_dest)
-                if not obj.checksum and self.args.remote_checksums:
-                    obj.checksum = obj.chksum()
-                if obj.checksum == job.md5:
-                    logger.info(
-                        f"File {Path(job.path_dest).name} already exists in iRODS with matching checksum. Skipping upload."
-                    )
-                    jobs.remove(job)
-            except DataObjectDoesNotExist:  # pragma: no cover
-                pass
-            finally:
-                irods_session.cleanup()
+        jobs = self.build_jobs(source_paths, irods_session)
 
         # Final go from user & transfer
         if len(jobs) == 0:
@@ -296,18 +279,51 @@ class SodarIngest:
                     output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
-    def build_jobs(self, source_paths) -> typing.Set[TransferJob]:
+    def build_jobs(self, source_paths, irods_session) -> typing.Set[TransferJob]:
         """Build file transfer jobs."""
 
         transfer_jobs = []
 
         for p in source_paths:
+            path_dest = f"{self.lz_irods_path}/{self.target_coll}/{str(p['ipath'])}"
+            md5_path = p["spath"].parent / (p["spath"].name + ".md5")
+
+            if md5_path.exists():
+                with md5_path.open() as f:
+                    md5sum = f.readline()[:32]
+                logger.info(f"Found md5 hash on disk for {p['spath']}")
+            else:
+                md5sum = compute_md5_checksum(p["spath"])
+                with md5_path.open("w", encoding="utf-8") as f:
+                    f.write(f"{md5sum}  {p['spath'].name}")
+
+            try:
+                obj = irods_session.data_objects.get(path_dest)
+                if not obj.checksum and self.args.remote_checksums:
+                    obj.checksum = obj.chksum()
+                if obj.checksum == md5sum:
+                    logger.info(
+                        f"File {Path(path_dest).name} already exists in iRODS with matching checksum. Skipping upload."
+                    )
+                    continue
+            except DataObjectDoesNotExist:  # pragma: no cover
+                pass
+            finally:
+                irods_session.cleanup()
+
             transfer_jobs.append(
                 TransferJob(
                     path_src=str(p["spath"]),
-                    path_dest=f"{self.lz_irods_path}/{self.target_coll}/{str(p['ipath'])}",
+                    path_dest=path_dest,
                     bytes=p["spath"].stat().st_size,
-                    md5=compute_md5_checksum(p["spath"]),
+                )
+            )
+
+            transfer_jobs.append(
+                TransferJob(
+                    path_src=str(md5_path),
+                    path_dest=path_dest + ".md5",
+                    bytes=md5_path.stat().st_size,
                 )
             )
 
