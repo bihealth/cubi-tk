@@ -44,6 +44,7 @@ def init_irods(irods_env_path: Path, ask: bool = False) -> iRODSSession:
         try:
             session = iRODSSession(irods_env_file=irods_env_path)
             session.server_version  # check for outdated .irodsA file
+            session.connection_timeout = 300
             return session
         except Exception as e:  # pragma: no cover
             logger.error(f"iRODS connection failed: {get_irods_error(e)}")
