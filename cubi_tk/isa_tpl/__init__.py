@@ -36,7 +36,6 @@ Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` fo
 
 import argparse
 from functools import partial
-import os
 from pathlib import Path
 
 from cookiecutter.main import cookiecutter
@@ -59,9 +58,9 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
         logger.info(tpl.configuration)
         logger.info(args)
 
-    output_dir = os.path.realpath(args.output_dir)
-    output_base = os.path.dirname(output_dir)
-    extra_context["__output_dir"] = os.path.basename(output_dir)
+    output_dir = Path(args.output_dir).resolve()
+    output_base = Path(output_dir).parent
+    extra_context["__output_dir"] = Path(output_dir).name
 
     logger.info("Start running cookiecutter")
     logger.info("  template path: %s", tpl.path)
