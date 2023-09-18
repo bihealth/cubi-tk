@@ -62,10 +62,6 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     output_base = os.path.dirname(output_dir)
     extra_context["__output_dir"] = os.path.basename(output_dir)
 
-    # FIXME: better solution? (added because args.var_is_triplet is None)
-    if "is_triplet" in tpl.configuration:
-        extra_context["is_triplet"] = tpl.configuration["is_triplet"]
-
     logger.info("Start running cookiecutter")
     logger.info("  template path: %s", tpl.path)
     logger.info("  vars from CLI: %s", extra_context)
