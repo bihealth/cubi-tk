@@ -67,6 +67,3 @@ sodar-cli ==0.1.0
 
 # Python iRODS client
 python-irodsclient==1.1.3
-
-# CUBI ISA-Tab Templates
--e git+https://github.com/bihealth/cubi-isa-templates.git@13ec5a83c9f7871d64064bbae658a0009d4bf113#egg=cubi-isa-templates
