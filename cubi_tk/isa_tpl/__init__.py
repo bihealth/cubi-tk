@@ -59,7 +59,7 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
         logger.info(args)
 
     output_dir = Path(args.output_dir).resolve()
-    output_base = Path(output_dir).parent
+    output_base = output_dir.parent
     extra_context["__output_dir"] = Path(output_dir).name
 
     logger.info("Start running cookiecutter")
