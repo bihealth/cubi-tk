@@ -18,29 +18,12 @@ It will be necessary to edit and extend the automatically generated files, e.g. 
 Available Templates
 -------------------
 
-The `Cookiecutter`_ directories are located in this module's directory.  Currently available templates are:
-
-- ``isatab-generic``
-- ``isatab-germline``
-- ``isatab-microarray``
-- ``isatab-ms_meta_biocrates``
-- ``isatab-single_cell_rnaseq``
-- ``isatab-bulk_rnaseq``
-- ``isatab-tumor_normal_dna``
-- ``isatab-tumor_normal_triplets``
-- ``isatab-stem_cell_core_bulk``
-- ``isatab-stem_cell_core_sc``
+These have been moved to a separate repository: see `cubi-isa-templates`_.
 
 Adding Templates
 ----------------
 
-Adding templates consists of the following steps:
-
-1. Add a new template directory below ``cubi_tk/isa_tpl``.
-2. Register it appending a ``IsaTabTemplate`` object to ``_TEMPLATES`` in ``cubi_tk.isa_tpl``.
-3. Add it to the list above in the docstring.
-
-The easiest way to start out is to copy an existing cookiecutter template and registration.
+See `cubi-isa-templates`_.
 
 More Information
 ----------------
@@ -48,123 +31,22 @@ More Information
 Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` for more information.
 
 .. _Cookiecutter: https://cookiecutter.readthedocs.io/
+.. _cubi-isa-templates: https://github.com/bihealth/cubi-isa-templates
 """
 
 import argparse
 from functools import partial
-import json
-import os
 from pathlib import Path
 import shutil
-import typing
 import warnings
 
 import altamisa
-import attr
 from cookiecutter.main import cookiecutter
+from cubi_isa_templates import TEMPLATES
 from logzero import logger
 from toolz import curry
 
 from ..common import run_nocmd, yield_files_recursively
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class IsaTabTemplate:
-    """Information regarding an ISA-tab template."""
-
-    #: Name of the ISA-tab template.
-    name: str
-
-    #: Path to template directory.
-    path: str
-
-    #: Configuration loaded from ``cookiecutter.json``.
-    configuration: typing.Dict[str, typing.Any]
-
-    #: Optional description string.
-    description: typing.Optional[str] = None
-
-
-#: Base directory to this file.
-_BASE_DIR = os.path.dirname(__file__)
-
-
-def load_variables(template_name, extra=None):
-    """Load variables given the template name."""
-    extra = extra or {}
-    config_path = os.path.join(_BASE_DIR, template_name, "cookiecutter.json")
-    with open(config_path, "rt") as inputf:
-        result = json.load(inputf)
-    result.update(extra)
-    return result
-
-
-#: Known ISA-tab templates (internal, mapping generated below).
-_TEMPLATES = (
-    IsaTabTemplate(
-        name="single_cell_rnaseq",
-        path=os.path.join(_BASE_DIR, "isatab-single_cell_rnaseq"),
-        description="single cell RNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-single_cell_rnaseq"),
-    ),
-    IsaTabTemplate(
-        name="bulk_rnaseq",
-        path=os.path.join(_BASE_DIR, "isatab-bulk_rnaseq"),
-        description="bulk RNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-generic"),
-    ),
-    IsaTabTemplate(
-        name="tumor_normal_dna",
-        path=os.path.join(_BASE_DIR, "isatab-tumor_normal_dna"),
-        description="Tumor-Normal DNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-tumor_normal_dna", {"is_triplet": False}),
-    ),
-    IsaTabTemplate(
-        name="tumor_normal_triplets",
-        path=os.path.join(_BASE_DIR, "isatab-tumor_normal_triplets"),
-        description="Tumor-Normal DNA+RNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-tumor_normal_triplets", {"is_triplet": True}),
-    ),
-    IsaTabTemplate(
-        name="germline",
-        path=os.path.join(_BASE_DIR, "isatab-germline"),
-        description="germline DNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-germline"),
-    ),
-    IsaTabTemplate(
-        name="generic",
-        path=os.path.join(_BASE_DIR, "isatab-generic"),
-        description="generic RNA sequencing ISA-tab template",
-        configuration=load_variables("isatab-generic"),
-    ),
-    IsaTabTemplate(
-        name="microarray",
-        path=os.path.join(_BASE_DIR, "isatab-microarray"),
-        description="microarray ISA-tab template",
-        configuration=load_variables("isatab-microarray"),
-    ),
-    IsaTabTemplate(
-        name="ms_meta_biocrates",
-        path=os.path.join(_BASE_DIR, "isatab-ms_meta_biocrates"),
-        description="MS Metabolomics Biocrates kit ISA-tab template",
-        configuration=load_variables("isatab-ms_meta_biocrates"),
-    ),
-    IsaTabTemplate(
-        name="stem_cell_core_bulk",
-        path=os.path.join(_BASE_DIR, "isatab-stem_cell_core_bulk"),
-        description="Bulk RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
-        configuration=load_variables("isatab-stem_cell_core_bulk"),
-    ),
-    IsaTabTemplate(
-        name="stem_cell_core_sc",
-        path=os.path.join(_BASE_DIR, "isatab-stem_cell_core_sc"),
-        description="Single cell RNA sequencing ISA-tab template from hiPSC for stem cell core projects",
-        configuration=load_variables("isatab-stem_cell_core_sc"),
-    ),
-)
-
-#: Known ISA-tab templates.
-TEMPLATES = {tpl.name: tpl for tpl in _TEMPLATES}
 
 
 @curry
@@ -175,16 +57,13 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
         if getattr(args, "var_%s" % name, None) is not None:
             extra_context[name] = getattr(args, "var_%s" % name)
 
-    logger.info(tpl.configuration)
-    logger.info(args)
+    if args.verbose:
+        logger.info(tpl.configuration)
+        logger.info(args)
 
-    output_dir = os.path.realpath(args.output_dir)
-    output_base = os.path.dirname(output_dir)
-    extra_context["__output_dir"] = os.path.basename(output_dir)
-
-    # FIXME: better solution? (added because args.var_is_triplet is None)
-    if "is_triplet" in tpl.configuration:
-        extra_context["is_triplet"] = tpl.configuration["is_triplet"]
+    output_dir = Path(args.output_dir).resolve()
+    output_base = output_dir.parent
+    extra_context["__output_dir"] = Path(output_dir).name
 
     logger.info("Start running cookiecutter")
     logger.info("  template path: %s", tpl.path)

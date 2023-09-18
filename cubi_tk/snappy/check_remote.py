@@ -258,7 +258,7 @@ class Checker:
         # Restrict dictionary to directories associated with step
         subset_remote_files_dict = {}
         for key in self.remote_files_dict:
-            if all((check_name in dat.irods_path for dat in self.remote_files_dict[key])):
+            if all((check_name in dat.path for dat in self.remote_files_dict[key])):
                 subset_remote_files_dict[key] = self.remote_files_dict.get(key)
 
         # Parse local files - remove library reference
@@ -333,7 +333,7 @@ class Checker:
             # Compare to remote MD5
             for irods_dat in remote_dict.get(original_file_name):
                 if local_md5 != irods_dat.FILE_MD5SUM:
-                    different_md5_list.append((md5_file.replace(".md5", ""), irods_dat.irods_path))
+                    different_md5_list.append((md5_file.replace(".md5", ""), irods_dat.path))
                 else:
                     same_md5_list.append(md5_file.replace(".md5", ""))
                 # BONUS - check remote replicas
@@ -345,7 +345,7 @@ class Checker:
                 ):
                     logger.error(
                         f"iRODS metadata checksum not consistent with checksum file...\n"
-                        f"File: {irods_dat.irods_path}\n"
+                        f"File: {irods_dat.path}\n"
                         f"File checksum: {irods_dat.FILE_MD5SUM}\n"
                         f"Metadata checksum: {', '.join(irods_dat.REPLICAS_MD5SUM)}\n"
                     )
@@ -393,7 +393,7 @@ class Checker:
         # Only remote
         for file_ in all_remote_files_set - all_local_files_set:
             for irods_dat in remote_dict[file_]:
-                only_remote_set.add(irods_dat.irods_path)
+                only_remote_set.add(irods_dat.path)
 
         # Only local
         for file_ in all_local_files_set - all_remote_files_set:
@@ -419,7 +419,7 @@ class Checker:
         inner_dict = {}
         for file_, irods_list in remote_dict.items():
             if len(irods_list) > 1:
-                inner_dict[file_] = [dat.irods_path for dat in irods_list]
+                inner_dict[file_] = [dat.path for dat in irods_list]
         # Format and display information - if any
         if len(inner_dict) > 0:
             pairs_str = ""

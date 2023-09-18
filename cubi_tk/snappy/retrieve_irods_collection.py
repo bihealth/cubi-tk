@@ -1,26 +1,16 @@
 """Contains classes and methods used to retrieve iRODS collections from SODAR.
 """
 from collections import defaultdict
-import re
+import typing
 
-import attr
+from irods.data_object import iRODSDataObject
 from logzero import logger
 from sodar_cli import api
 
-from ..irods.check import HASH_SCHEMES, IrodsCheckCommand
+from ..irods.check import IrodsCheckCommand
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
 DEFAULT_HASH_SCHEME = "MD5"
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class IrodsDataObject:
-    """iRODS data object - simplified version of data provided in iRODS Collections."""
-
-    file_name: str
-    irods_path: str
-    file_md5sum: str
-    replicas_md5sum: list
 
 
 class RetrieveIrodsCollection(IrodsCheckCommand):
@@ -47,19 +37,17 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
         self.assay_uuid = assay_uuid
         self.project_uuid = project_uuid
 
-    def perform(self):
-        """Perform class routines.
-
-        :return: Returns iRODS collection represented as dictionary: key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1'); value: iRODS data (``IrodsDataObject``).
-        """
+    def perform(self) -> typing.Dict[str, typing.List[iRODSDataObject]]:
+        """Perform class routines."""
         logger.info("Starting remote files search ...")
 
         # Get assay iRODS path
         assay_path = self.get_assay_irods_path(assay_uuid=self.assay_uuid)
 
         # Get iRODS collection
-        irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path)
+        irods_collection_dict = {}
+        if assay_path:
+            irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path)
 
         logger.info("... done with remote files search.")
         return irods_collection_dict
@@ -110,60 +98,50 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
             f"All available UUIDs:\n{multi_assay_str}"
         )
 
-    def retrieve_irods_data_objects(self, irods_path):
+    def retrieve_irods_data_objects(
+        self, irods_path: str
+    ) -> typing.Dict[str, typing.List[iRODSDataObject]]:
         """Retrieve data objects from iRODS.
 
         :param irods_path: iRODS path.
-        :type irods_path: str
 
         :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of IrodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
+        Value: list of iRODSDataObject (native python-irodsclient object).
         """
+
         # Connect to iRODS
-        with self._get_irods_sessions() as irods_sessions:
+        with self._get_irods_sessions(1) as irods_sessions:
             try:
                 root_coll = irods_sessions[0].collections.get(irods_path)
-                s_char = "s" if len(irods_sessions) != 1 else ""
-                logger.info(f"{len(irods_sessions)} iRODS connection{s_char} initialized")
+
+                # Get files and run checks
+                logger.info("Querying for data objects")
+
+                if root_coll is not None:
+                    irods_data_objs = self.get_data_objs(root_coll)
+                    irods_obj_dict = self.parse_irods_collection(irods_data_objs)
+                    return irods_obj_dict
+
             except Exception as e:
                 logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
                 raise
 
-            # Get files and run checks
-            logger.info("Querying for data objects")
-            irods_collection = self.get_data_objs(root_coll)
-            return self.parse_irods_collection(irods_collection=irods_collection)
+        return {}
 
     @staticmethod
-    def parse_irods_collection(irods_collection):
+    def parse_irods_collection(irods_data_objs) -> typing.Dict[str, typing.List[iRODSDataObject]]:
         """Parse iRODS collection
 
         :param irods_collection: iRODS collection.
         :type irods_collection: dict
 
         :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of IrodsDataObject (attributes: 'file_name', 'irods_path', 'file_md5sum', 'replicas_md5sum').
+        Value: list of iRODSDataObject (native python-irodsclient object).
         """
         # Initialise variables
         output_dict = defaultdict(list)
-        checksums = irods_collection["checksums"]
 
-        # Extract relevant info from iRODS collection: file and replicates MD5SUM
-        for data_obj in irods_collection["files"]:
-            chk_obj = checksums.get(data_obj.path + "." + DEFAULT_HASH_SCHEME.lower())
-            if not chk_obj:
-                logger.error(f"No checksum file for: {data_obj.path}")
-                continue
-            with chk_obj.open("r") as f:
-                file_sum = re.search(
-                    HASH_SCHEMES[DEFAULT_HASH_SCHEME]["regex"], f.read().decode("utf-8")
-                ).group(0)
-                output_dict[data_obj.name].append(
-                    IrodsDataObject(
-                        file_name=data_obj.name,
-                        irods_path=data_obj.path,
-                        file_md5sum=file_sum,
-                        replicas_md5sum=[replica.checksum for replica in data_obj.replicas],
-                    )
-                )
+        for obj in irods_data_objs["files"]:
+            output_dict[obj.name].append(obj)
+
         return output_dict

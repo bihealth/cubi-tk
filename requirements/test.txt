@@ -10,6 +10,9 @@ pytest-cache >=1.0
 pytest-cov >=2.4.0
 pytest-mock >=2.0.0
 
+# Coverage for covreports
+coverage >= 7.2.0
+
 # Faking of file systems
 pyfakefs >=3.7.1
 
@@ -39,3 +42,6 @@ bandit
 pyflakes
 
 setuptools ==65.6.3
+
+# needed for testing snappy workflow methods
+snappy-pipeline @ git+https://github.com/bihealth/snappy-pipeline

@@ -1,5 +1,4 @@
 """Common functionality for SNAPPY."""
-
 import pathlib
 import typing
 
@@ -8,26 +7,6 @@ from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from logzero import logger
 import yaml
 
-#: Dependencies between the SNAPPY steps.
-DEPENDENCIES: typing.Dict[str, typing.Tuple[str, ...]] = {
-    "ngs_mapping": (),
-    "roh_calling": ("variant_calling",),
-    "variant_calling": ("ngs_mapping",),
-    "variant_export": ("variant_calling",),
-    "variant_export_external": (),
-    "targeted_seq_cnv_calling": ("ngs_mapping",),
-    "targeted_seq_cnv_annotation": ("targeted_seq_cnv_calling",),
-    "targeted_seq_cnv_export": ("targeted_seq_cnv_annotation",),
-    "wgs_sv_calling": ("ngs_mapping",),
-    "wgs_sv_annotation": ("wgs_sv_calling",),
-    "wgs_sv_export": ("wgs_sv_annotation",),
-    "wgs_sv_export_external": (),
-    "wgs_cnv_calling": ("ngs_mapping",),
-    "wgs_cnv_annotation": ("wgs_cnv_calling",),
-    "wgs_cnv_export": ("wgs_cnv_annotation",),
-    "wgs_cnv_export_external": (),
-}
-
 
 class CouldNotFindPipelineRoot(Exception):
     """Raised when ``.snappy_pipeline`` could not be found."""
@@ -35,6 +14,22 @@ class CouldNotFindPipelineRoot(Exception):
 
 class CouldNotFindBioMedSheet(Exception):
     """Raised when BioMedSheet could not be found in configuration file."""
+
+
+def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
+    """Load sample sheet.
+
+    :param path_tsv: Path to sample sheet TSV file.
+    :type path_tsv: pathlib.Path
+
+    :param tsv_shortcut: Sample sheet type. Default: 'germline'.
+    :type tsv_shortcut: str
+
+    :return: Returns Sheet model.
+    """
+    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
+    with open(path_tsv, "rt") as f:
+        return load_tsv(f, naming_scheme=NAMING_ONLY_SECONDARY_ID)
 
 
 def find_snappy_root_dir(
@@ -61,22 +56,6 @@ def find_snappy_root_dir(
             return path
     logger.error("Could not find SNAPPY pipeline directories below %s", start_path)
     raise CouldNotFindPipelineRoot()
-
-
-def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
-    """Load sample sheet.
-
-    :param path_tsv: Path to sample sheet TSV file.
-    :type path_tsv: pathlib.Path
-
-    :param tsv_shortcut: Sample sheet type. Default: 'germline'.
-    :type tsv_shortcut: str
-
-    :return: Returns Sheet model.
-    """
-    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
-    with open(path_tsv, "rt") as f:
-        return load_tsv(f, naming_scheme=NAMING_ONLY_SECONDARY_ID)
 
 
 def get_biomedsheet_path(start_path, uuid):
