@@ -3,18 +3,19 @@
 from argparse import ArgumentParser
 from unittest.mock import patch
 
-from cubi_tk.isa_tpl.__init__ import run_cookiecutter, validate_output_directory
 from cubi_isa_templates import TEMPLATES
+
+from cubi_tk.isa_tpl.__init__ import run_cookiecutter, validate_output_directory
 
 
 def test_run_cookiecutter(tmp_path):
     tpl = TEMPLATES["generic"]
-    args = type('test', (), {})()
+    args = type("test", (), {})()
     path = tmp_path / "dir"
     args.output_dir = str(path)
     args.verbose = False
 
-    run_cookiecutter(tpl, args, no_input = True)
+    run_cookiecutter(tpl, args, no_input=True)
 
 
 @patch.object(ArgumentParser, "error")
