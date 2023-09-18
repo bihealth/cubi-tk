@@ -18,7 +18,7 @@ def parse_requirements(path):
                 fname = line.split()[1]
                 inner_path = os.path.join(os.path.dirname(path), fname)
                 requirements += parse_requirements(inner_path)
-            elif line != "" and not line.startswith("#") and not line.startswith("-e"):
+            elif line != "" and not line.startswith("#"):
                 requirements.append(line)
     return requirements
 
