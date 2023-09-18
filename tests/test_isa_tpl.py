@@ -1,8 +1,4 @@
-"""Tests for ``cubi_tk.isa_tpl``.
-
-We run cookiecutter for each template once for smoke-testing but don't actually validate the results behind the
-output directory being created.
-"""
+"""Tests for ``cubi_tk.isa_tpl``."""
 
 from argparse import ArgumentParser
 from unittest.mock import patch
