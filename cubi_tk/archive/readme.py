@@ -12,11 +12,11 @@ import typing
 
 import attr
 from cookiecutter.main import cookiecutter
+from cubi_isa_templates import IsaTabTemplate
 from logzero import logger
 
 from . import common
 from ..common import execute_shell_commands
-from ..isa_tpl import IsaTabTemplate
 
 _TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 

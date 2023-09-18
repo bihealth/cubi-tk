@@ -1,5 +1,0 @@
-Sample Name	Protocol REF	Performer	Date	Extract Name	Protocol REF	Performer	Date	Labeled Extract Name	Label	Protocol REF	Performer	Date	Hybridization Assay Name	Array Design REF	Protocol REF	Performer	Date	Scan Name	Image File	Array Data File	Array Data Matrix File	Protocol REF	Performer	Date	Normalization Name	Derived Array Data File	Protocol REF	Performer	Date	Data Transformation Name	Derived Array Data Matrix File
-{% set sample_names = cookiecutter.sample_names.split(",") -%}																															
-{%- for sample_name in sample_names -%}																															
-{{sample_name|replace("-", "_")}}-S1	Nucleic acid extraction			{{sample_name|replace("-", "_")}}-S1-E1	Labeling					Nucleic acid hybridization			{{sample_name|replace("-", "_")}}-S1-E1-H1	{{cookiecutter.array_design_ref}}	Data collection			{{sample_name|replace("-", "_")}}-S1-E1-H1				Normalization data transformation					Data transformation				
-{% endfor %}
