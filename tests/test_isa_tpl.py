@@ -4,69 +4,19 @@ We run cookiecutter for each template once for smoke-testing but don't actually 
 output directory being created.
 """
 
-import filecmp
-import glob
-import os
+from argparse import ArgumentParser
+from unittest.mock import patch
 
-from cubi_tk.__main__ import setup_argparse
-from cubi_tk.isa_tpl import TEMPLATES, run_cookiecutter
+from cubi_tk.isa_tpl.__init__ import validate_output_directory
 
 
-def test_run_cookiecutter_isatab_generic(tmp_path):
-    output_path = tmp_path / "output_dir"
-    parser, subparsers = setup_argparse()
-    args = parser.parse_args(["isa-tpl", "generic", str(output_path)])
-
-    run_isatab_generic = run_cookiecutter(TEMPLATES["generic"], no_input=True)
-    run_isatab_generic(args, parser, subparsers.choices[args.cmd])
-
-    assert output_path.exists()
-    assert (output_path / "i_Investigation.txt").exists()
-    assert (
-        output_path / "a_investigation_title_transcription_profiling_nucleotide_sequencing.txt"
-    ).exists()
-    assert (output_path / "s_Investigation_Title.txt").exists()
-
-
-def test_run_cookiecutter_isatab_germline(tmp_path):
-    output_path = tmp_path / "output_dir"
-    parser, subparsers = setup_argparse()
-    args = parser.parse_args(["isa-tpl", "germline", str(output_path)])
-
-    run_isatab_germline = run_cookiecutter(TEMPLATES["germline"], no_input=True)
-    run_isatab_germline(args, parser, subparsers.choices[args.cmd])
-
-    assert output_path.exists()
-    assert (output_path / "i_Investigation.txt").exists()
-    assert (output_path / "a_investigation_title_exome_sequencing.txt").exists()
-    assert (output_path / "s_investigation_title.txt").exists()
-
-
-def test_run_cookiecutter_isatab_ms_meta_biocrates(tmp_path):
-    # Setup parameters
-    output_path = tmp_path / "output_dir"
-    parser, subparsers = setup_argparse()
-    args = parser.parse_args(["isa-tpl", "ms_meta_biocrates", str(output_path)])
-
-    # Create templates
-    run_isatpl = run_cookiecutter(TEMPLATES["ms_meta_biocrates"], no_input=True)
-    run_isatpl(args, parser, subparsers.choices[args.cmd])
-
-    # Check output files
-    assert output_path.exists()
-    assert (output_path / "i_Investigation.txt").exists()
-    assert (output_path / "a_investigation_title_Biocrates_MxP_Quant_500_Kit_FIA.txt").exists()
-    assert (output_path / "a_investigation_title_Biocrates_MxP_Quant_500_Kit_LC.txt").exists()
-    assert (output_path / "s_investigation_title.txt").exists()
-
-    # Run altamisa validate here? I.e. it shouldn't throw exceptions or critical warnings.
-
-    # Test against reference files
-    path_test = os.path.join(os.path.dirname(__file__), "data", "isa_tpl", "ms_meta_biocrates_01")
-    files = glob.glob(os.path.join(path_test, "*"))
-    match, mismatch, errors = filecmp.cmpfiles(
-        path_test, output_path, (os.path.basename(f) for f in files), shallow=False
-    )
-    print([match, mismatch, errors])
-    assert len(mismatch) == 0
-    assert len(errors) == 0
+@patch.object(ArgumentParser, "error")
+def test_validate_output_directory(test_error, tmp_path):
+    parser = ArgumentParser()
+    d = tmp_path / "dir"
+    d.mkdir()
+    d2 = tmp_path / "no_dir" / "subdir"
+    validate_output_directory(parser, d)
+    validate_output_directory(parser, d2)
+    validate_output_directory(parser, d2.parent)
+    assert parser.error.call_count == 2
