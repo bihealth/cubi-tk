@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -30,7 +31,7 @@ class PullDataCommon(IrodsCheckCommand):
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``iRODSDataObject``).
         :type remote_files_dict: dict
 
         :param file_type: File type, example: 'bam' or 'vcf'.
@@ -52,7 +53,7 @@ class PullDataCommon(IrodsCheckCommand):
             # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
             in_common_links = False
             for irods_obj in value:
-                in_common_links = self._irods_path_in_common_links(irods_obj.irods_path)
+                in_common_links = self._irods_path_in_common_links(irods_obj.path)
                 if in_common_links:
                     break
 
@@ -93,7 +94,9 @@ class PullDataCommon(IrodsCheckCommand):
         :return: Returns assay UUID.
         """
         investigation = api.samplesheet.retrieve(
-            sodar_url=sodar_url, sodar_api_token=sodar_api_token, project_uuid=project_uuid
+            sodar_url=sodar_url,
+            sodar_api_token=sodar_api_token,
+            project_uuid=project_uuid,
         )
         for study in investigation.studies.values():
             for _assay_uuid in study.assays:
@@ -123,11 +126,14 @@ class PullDataCommon(IrodsCheckCommand):
                     file_name = pair[0].split("/")[-1]
                     irods_path = pair[0]
                     local_out_path = pair[1]
-                    logger.info(f"Retrieving '{file_name}' from: {irods_path}")
                     # Create output directory if necessary
                     Path(local_out_path).parent.mkdir(parents=True, exist_ok=True)
                     # Get file
-                    irods_sessions[0].data_objects.get(irods_path, local_out_path, **kw_options)
+                    if os.path.exists(local_out_path) and not force_overwrite:
+                        logger.info(f"{file_name} already exists. Force_overwrite to re-download.")
+                    else:
+                        logger.info(f"Retrieving '{file_name}' from: {irods_path}")
+                        irods_sessions[0].data_objects.get(irods_path, local_out_path, **kw_options)
 
             except OVERWRITE_WITHOUT_FORCE_FLAG:
                 logger.error(
@@ -169,7 +175,7 @@ class PullDataCommon(IrodsCheckCommand):
         /sodarZone/projects/../<PROJECT_UUID>/.../assay_<ASSAY_UUID>/<LIBRARY_NAME>/.../<DATE>/...
 
         :param irods_obj_list: List of iRODS objects derived from collection in SODAR.
-        :type irods_obj_list: List[IrodsDataObject]
+        :type irods_obj_list: List[iRODSDataObject]
 
         :return: Returns inputted list sorted from latest to earliest iRODS object.
         """
@@ -178,7 +184,7 @@ class PullDataCommon(IrodsCheckCommand):
             return irods_obj_list
         return sorted(
             irods_obj_list,
-            key=lambda irods_obj: self._find_date_in_path(irods_obj.irods_path),
+            key=lambda irods_obj: self._find_date_in_path(irods_obj.path),
             reverse=True,
         )
 

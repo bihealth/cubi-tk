@@ -5,7 +5,8 @@ import pytest
 
 from cubi_tk.__main__ import setup_argparse
 from cubi_tk.snappy.pull_processed_data import PullProcessedDataCommand
-from cubi_tk.snappy.retrieve_irods_collection import IrodsDataObject
+
+from .helpers import createIrodsDataObject as IrodsDataObject
 
 # Empty file MD5 checksum
 FILE_MD5SUM = "d41d8cd98f00b204e9800998ecf8427e"
@@ -480,19 +481,15 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam(pull_processed_data, rem
         "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/ngs_mapping/bwa.P00{i}-N1-DNA1-WES1.{ext}"
     )
     irods_files_list = [
-        irods_path.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+        irods_path.format(i=i, ext=ext) for i in (1, 2) for ext in ("bam", "bam.bai")
     ]
     correct_uuid_output_dir_list = [
-        full_out_dir.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+        full_out_dir.format(i=i, ext=ext) for i in (1, 2) for ext in ("bam", "bam.bai")
     ]
     wrong_uuid_output_dir_list = [
         "out_dir/bwa.P00{i}-N1-DNA1-WES1.{ext}".format(i=i, ext=ext)
         for i in (1, 2)
-        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+        for ext in ("bam", "bam.bai")
     ]
     correct_uuid_expected = []
     for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
@@ -532,13 +529,13 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam_retrieve_all(
         irods_path.format(i=i, date=date, ext=ext)
         for i in (1, 2)
         for date in ("1999-09-09", "1975-01-04")
-        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+        for ext in ("bam", "bam.bai")
     ]
     correct_uuid_output_dir_list = [
         full_out_dir.format(i=i, date=date, ext=ext)
         for i in (1, 2)
         for date in ("1999-09-09", "1975-01-04")
-        for ext in ("bam", "bam.bai", "bam.md5", "bam.bai.md5")
+        for ext in ("bam", "bam.bai")
     ]
     correct_uuid_expected = []
     for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
@@ -570,19 +567,15 @@ def test_pull_processed_data_pair_ipath_with_outdir_vcf(pull_processed_data, rem
         "out_dir/P00{i}-N1-DNA1-WES1/1999-09-09/variant_calling/bwa.P00{i}-N1-DNA1-WES1.{ext}"
     )
     irods_files_list = [
-        irods_path.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("vcf.gz", "vcf.gz.tbi", "vcf.gz.md5", "vcf.gz.tbi.md5")
+        irods_path.format(i=i, ext=ext) for i in (1, 2) for ext in ("vcf.gz", "vcf.gz.tbi")
     ]
     correct_uuid_output_dir_list = [
-        full_out_dir.format(i=i, ext=ext)
-        for i in (1, 2)
-        for ext in ("vcf.gz", "vcf.gz.tbi", "vcf.gz.md5", "vcf.gz.tbi.md5")
+        full_out_dir.format(i=i, ext=ext) for i in (1, 2) for ext in ("vcf.gz", "vcf.gz.tbi")
     ]
     wrong_uuid_output_dir_list = [
         "out_dir/bwa.P00{i}-N1-DNA1-WES1.{ext}".format(i=i, ext=ext)
         for i in (1, 2)
-        for ext in ("vcf.gz", "vcf.gz.tbi", "vcf.gz.md5", "vcf.gz.tbi.md5")
+        for ext in ("vcf.gz", "vcf.gz.tbi")
     ]
     correct_uuid_expected = []
     for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):

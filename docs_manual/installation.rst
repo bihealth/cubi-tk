@@ -8,7 +8,7 @@ Prerequisites when using conda:
 
 .. code-block:: bash
 
-  $ conda create -n cubi-tk python=3.7
+  $ conda create -n cubi-tk python=3.10
   $ conda activate cubi-tk
 
 Clone CUBI-TK and install:

@@ -255,7 +255,7 @@ class PullRawDataCommand(PullDataCommon):
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``iRODSDataObject``).
         :type remote_files_dict: dict
 
         :param file_type: File type, example: 'fastq'.
@@ -280,9 +280,9 @@ class PullRawDataCommand(PullDataCommon):
             in_common_links = False
             for irods_obj in value:
                 # Piggyback loop for dir check
-                _irods_path_list.append(irods_obj.irods_path)
+                _irods_path_list.append(irods_obj.path)
                 # Actual check
-                if self._irods_path_in_common_links(irods_obj.irods_path):
+                if self._irods_path_in_common_links(irods_obj.path):
                     in_common_links = True
                     break
 
@@ -302,7 +302,7 @@ class PullRawDataCommand(PullDataCommon):
         """Pair iRODS path with local output directory
 
         :param library_to_irods_dict: Dictionary with iRODS collection information by sample. Key: sample name as
-        string (e.g., 'P001'); Value: iRODS data (``IrodsDataObject``).
+        string (e.g., 'P001'); Value: iRODS data (``iRODSDataObject``).
         :type library_to_irods_dict: dict
 
         :param identifiers_tuples: List of tuples (sample name, folder name) as defined in the sample sheet.
@@ -332,10 +332,10 @@ class PullRawDataCommand(PullDataCommon):
                 # /sodarZone/projects/../<PROJECT_UUID>/sample_data/study_<STUDY_UUID>/assay_<ASSAY_UUID>/<LIBRARY_NAME>
                 try:
                     irods_dir_structure = os.path.dirname(
-                        str(irods_obj.irods_path).split(f"assay_{assay_uuid}/")[1]
+                        str(irods_obj.path).split(f"assay_{assay_uuid}/")[1]
                     )
                     _out_path = os.path.join(
-                        output_dir, folder_name, irods_dir_structure, irods_obj.file_name
+                        output_dir, folder_name, irods_dir_structure, irods_obj.name
                     )
                 except IndexError:
                     logger.warning(
@@ -343,10 +343,9 @@ class PullRawDataCommand(PullDataCommon):
                         f"hence directory structure won't be preserved.\n"
                         f"All files will be stored in root of output directory: {output_list}"
                     )
-                    _out_path = os.path.join(output_dir, folder_name, irods_obj.file_name)
+                    _out_path = os.path.join(output_dir, folder_name, irods_obj.name)
                 # Update output
-                output_list.append((irods_obj.irods_path, _out_path))
-                output_list.append((irods_obj.irods_path + ".md5", _out_path + ".md5"))
+                output_list.append((irods_obj.path, _out_path))
 
         return output_list
 
@@ -358,7 +357,7 @@ class PullRawDataCommand(PullDataCommon):
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001_R1_001.fastq.gz'); Value: iRODS data (``IrodsDataObject``).
+        'P001_R1_001.fastq.gz'); Value: iRODS data (``iRODSDataObject``).
         :type remote_files_dict: dict
 
         :return: Returns dictionary: Key: identifier (sample name [str]); Value: list of iRODS objects.
