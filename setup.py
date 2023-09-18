@@ -49,10 +49,6 @@ setup(
     entry_points={"console_scripts": ("cubi-tk = cubi_tk.__main__:main",)},
     description="Tooling for connecting GitLab, pipelines, and SODAR at CUBI.",
     install_requires=install_requirements,
-    dependency_links=[
-        "git+https://github.com/bihealth/cubi-isa-templates.git@"
-        "13ec5a83c9f7871d64064bbae658a0009d4bf113#egg=cubi-isa-templates"
-    ],
     license="MIT license",
     long_description=readme + "\n\n" + changelog,
     long_description_content_type="text/markdown",

@@ -4,8 +4,9 @@
 attrs
 cattrs
 
-# Cookiecutter for templating ISA-tab directories.
-cookiecutter >=1.7.3
+# For ISA-tab templates.
+cookiecutter==2.3.0
+cubi-isa-templates==0.1.0
 
 # Easy logging.
 logzero
