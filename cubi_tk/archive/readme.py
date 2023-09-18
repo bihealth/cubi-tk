@@ -18,7 +18,6 @@ from logzero import logger
 from . import common
 from ..common import execute_shell_commands
 
-
 _TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
 
 TEMPLATE = IsaTabTemplate(

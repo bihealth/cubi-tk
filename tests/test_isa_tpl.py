@@ -38,9 +38,7 @@ def test_run_cookiecutter_isatab_germline(tmp_path):
 
     assert output_path.exists()
     assert (output_path / "i_Investigation.txt").exists()
-    assert (
-        output_path / "a_investigation_title_exome_sequencing.txt"
-    ).exists()
+    assert (output_path / "a_investigation_title_exome_sequencing.txt").exists()
     assert (output_path / "s_investigation_title.txt").exists()
 
 
