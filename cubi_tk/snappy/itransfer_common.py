@@ -73,7 +73,7 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
         raise
 
     with counter.get_lock():
-        counter.value += job.bytes
+        counter.value = job.bytes
         try:
             t.update(counter.value)
         except TypeError:
@@ -697,7 +697,7 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
         raise e
 
     with counter.get_lock():
-        counter.value += os.path.getsize(job.path_src[: -len(".md5")])
+        counter.value = os.path.getsize(job.path_src[: -len(".md5")])
         try:
             t.update(counter.value)
         except TypeError:

@@ -300,7 +300,7 @@ def download_folder(job: TransferJob, counter: Value, t: tqdm.tqdm):
         raise
 
     with counter.get_lock():
-        counter.value += job.bytes
+        counter.value = job.bytes
         t.update(counter.value)
 
 
