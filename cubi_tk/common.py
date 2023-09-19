@@ -158,9 +158,11 @@ def yield_files_recursively(path, print_=False, file=sys.stderr):
     """Recursively yield below path to ``file`` in sorted order, print optionally"""
     while len(path) > 1 and path[-1] == "/":  # trim trailing slashes
         path = path[:-1]  # pragma: no cover
-    paths = glob.glob(os.path.join(path, "**"))
+    paths = glob.glob(os.path.join(path, "**"), recursive=True)
     for p in sorted(paths):
         p = p[len(path) + 1 :]
+        if not p:
+            continue
         if print_:
             print(p, file=file)  # pragma: no cover
         yield p
