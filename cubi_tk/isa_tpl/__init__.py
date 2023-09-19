@@ -37,7 +37,10 @@ Also see ``cubi-tk isa-tpl`` CLI documentation and ``cubi-tk isa-tab --help`` fo
 import argparse
 from functools import partial
 from pathlib import Path
+import shutil
+import warnings
 
+import altamisa
 from cookiecutter.main import cookiecutter
 from cubi_isa_templates import TEMPLATES
 from logzero import logger
@@ -134,4 +137,27 @@ def run(args, parser, subparser):  # pragma: nocover
     if not args.tpl:  # pragma: nocover
         return run_nocmd(args, parser, subparser)
     else:
-        return args.isa_tpl_cmd(args, parser, subparser)
+        status = args.isa_tpl_cmd(args, parser, subparser)
+
+        # output validation
+        if not status:
+            logger.info("Running AltamISA validator:")
+            i_files = Path(args.output_dir).rglob("i_*")
+            args.show_duplicate_warnings = False
+            warnings.filterwarnings(
+                "error", category=altamisa.exceptions.CriticalIsaValidationWarning
+            )
+            for i in i_files:
+                try:
+                    with i.open() as i_file:
+                        args.input_investigation_file = i_file
+                        altamisa.apps.isatab_validate.run(args)
+                except (
+                    altamisa.exceptions.ParseIsatabException,
+                    altamisa.exceptions.CriticalIsaValidationWarning,
+                ):
+                    shutil.rmtree(args.output_dir)
+                    raise
+            return 0
+        else:
+            return status
