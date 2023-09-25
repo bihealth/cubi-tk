@@ -5,8 +5,8 @@ attrs
 cattrs
 
 # For ISA-tab templates.
-cookiecutter==2.3.0
-cubi-isa-templates==0.1.0
+cookiecutter==2.3.1
+cubi-isa-templates==0.1.1
 
 # Easy logging.
 logzero
