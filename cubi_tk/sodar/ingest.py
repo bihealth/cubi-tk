@@ -196,25 +196,42 @@ class SodarIngest:
                 {p["ipath"].parent for p in source_paths if not p["ipath"].parent == Path(".")}
             )
 
-            logger.info("Planning to create the following sub-collections:")
-            for d in dirs:
-                output_logger.info(f"{self.target_coll}/{str(d)}")
-            if not self.args.yes:
-                if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-                    logger.info("Aborting at your request.")
-                    sys.exit(0)
+            # Filter out existing sub-collections
+            try:
+                dirs = [
+                    d
+                    for d in dirs
+                    if not irods_session.collections.exists(
+                        f"{self.lz_irods_path}/{self.target_coll}/{str(d)}"
+                    )
+                ]
+            except Exception as e:  # pragma: no cover
+                logger.error("Error checking for sub-collections.")
+                logger.error(e)
+                sys.exit(1)
+            finally:
+                irods_session.cleanup()
 
-            for d in dirs:
-                coll_name = f"{self.lz_irods_path}/{self.target_coll}/{str(d)}"
-                try:
-                    irods_session.collections.create(coll_name)
-                except Exception as e:  # pragma: no cover
-                    logger.error("Error creating sub-collection.")
-                    logger.error(e)
-                    sys.exit(1)
-                finally:
-                    irods_session.cleanup()
-            logger.info("Sub-collections created.")
+            if dirs:
+                logger.info("Planning to create the following sub-collections:")
+                for d in dirs:
+                    output_logger.info(f"{self.target_coll}/{str(d)}")
+                if not self.args.yes:
+                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                        logger.info("Aborting at your request.")
+                        sys.exit(0)
+
+                for d in dirs:
+                    coll_name = f"{self.lz_irods_path}/{self.target_coll}/{str(d)}"
+                    try:
+                        irods_session.collections.create(coll_name)
+                    except Exception as e:  # pragma: no cover
+                        logger.error("Error creating sub-collection.")
+                        logger.error(e)
+                        sys.exit(1)
+                    finally:
+                        irods_session.cleanup()
+                logger.info("Sub-collections created.")
 
         # Build transfer jobs
         jobs = self.build_jobs(source_paths, irods_session)
