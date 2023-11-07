@@ -23,18 +23,8 @@ def fake_filesystem(fs):
 @pytest.fixture
 def jobs():
     return (
-        TransferJob(
-            path_src="myfile.csv",
-            path_dest="dest_dir/myfile.csv",
-            bytes=123,
-            md5="ed3b3cbb18fd148bc925944ff0861ce6",
-        ),
-        TransferJob(
-            path_src="folder/file.csv",
-            path_dest="dest_dir/folder/file.csv",
-            bytes=1024,
-            md5="a6e9e3c859b803adb0f1d5f08a51d0f6",
-        ),
+        TransferJob(path_src="myfile.csv", path_dest="dest_dir/myfile.csv", bytes=123),
+        TransferJob(path_src="folder/file.csv", path_dest="dest_dir/folder/file.csv", bytes=1024),
     )
 
 
@@ -56,7 +46,7 @@ def test_get_irods_error():
     assert get_irods_error(e) == "Connection reset"
 
 
-@patch("cubi_tk.irods_utils.iRODSSession")
+@patch("cubi_tk.irods_common.iRODSSession")
 @patch("getpass.getpass")
 def test_init_irods(mockpass, mocksession, fs):
     ienv = Path(".irods/irods_environment.json")
@@ -76,7 +66,7 @@ def test_init_irods(mockpass, mocksession, fs):
     mocksession.assert_called_with(irods_env_file=ienv)
 
 
-@patch("cubi_tk.irods_utils.encode", return_value="it works")
+@patch("cubi_tk.irods_common.encode", return_value="it works")
 def test_write_token(mockencode, fs):
     ienv = Path(".irods/irods_environment.json")
 
@@ -104,9 +94,6 @@ def test_irods_transfer_put(fs, itransfer, jobs):
 
     for job in jobs:
         assert Path(job.path_dest).exists()
-        assert Path(job.path_dest + ".md5").exists()
-        with Path(job.path_dest + ".md5").open() as file:
-            assert file.readline() == f"{job.md5}  {Path(job.path_dest).name}"
 
 
 def test_irods_transfer_chksum(itransfer):
