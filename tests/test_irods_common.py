@@ -97,8 +97,14 @@ def test_irods_transfer_put(fs, itransfer, jobs):
 
 
 def test_irods_transfer_chksum(itransfer):
-    with patch.object(itransfer.session.data_objects, "get") as mock:
+    with patch.object(itransfer.session.data_objects, "get") as mockget:
+        mock_data_object = MagicMock()
+        mockget.return_value = mock_data_object
+        mock_data_object.checksum = None
+        mock_data_object.chksum = MagicMock()
+
         itransfer.chksum()
 
+        assert mock_data_object.chksum.call_count == len(itransfer.destinations)
         for path in itransfer.destinations:
-            mock.assert_any_call(path)
+            mockget.assert_any_call(path)
