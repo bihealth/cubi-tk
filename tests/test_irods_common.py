@@ -104,10 +104,10 @@ def test_irods_transfer_init(jobs, itransfer):
     assert itransfer.total_bytes == sum([job.bytes for job in jobs])
     assert itransfer.destinations == [job.path_dest for job in jobs]
 
-    with patch("cubi_tk.irods_common.iRODSSession") as mocksession:
+    with patch("cubi_tk.irods_common.iRODSSession"):
         itransferc = iRODSTransfer(jobs=jobs, irods_env_path="a/b/c", ask=True)
         assert itransferc.irods_env_path == "a/b/c"
-        assert itransferc.ask == True
+        assert itransferc.ask is True
 
 
 def test_irods_transfer_put(fs, itransfer, jobs):
