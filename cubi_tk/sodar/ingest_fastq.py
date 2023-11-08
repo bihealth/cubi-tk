@@ -27,6 +27,7 @@ from ..snappy.itransfer_common import (
 
 DEFAULT_SRC_REGEX = (
     r"(.*/)?(?P<sample>.+?)"
+    r"(?:_(S[0-9]+)?"
     r"(?:_(?P<lane>L[0-9]+?))?"
     r"(?:_(?P<mate>R[0-9]+?))?"
     r"(?:_(?P<batch>[0-9]+?))?"
@@ -34,7 +35,7 @@ DEFAULT_SRC_REGEX = (
 )
 
 #: Default value for --dest-pattern
-DEFAULT_DEST_PATTERN = r"{collection_name}/{date}/{filename}"
+DEFAULT_DEST_PATTERN = r"{collection_name}/raw_data/{date}/{filename}"
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
