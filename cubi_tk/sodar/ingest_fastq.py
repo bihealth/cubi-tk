@@ -405,7 +405,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         transfer_jobs.append(
                             TransferJob(
                                 path_src=real_path + ext,
-                                path_dest=os.path.join(remote_file + ext),
+                                path_dest=str(remote_file) + ext,
                                 bytes=size,
                             )
                         )
