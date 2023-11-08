@@ -11,6 +11,7 @@ from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
+
 from .conftest import my_get_sodar_info
 
 
