@@ -191,7 +191,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
-        return lz.sodar_uuid
+        return lz.project
 
     def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
         raise NotImplementedError(
