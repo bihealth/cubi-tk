@@ -161,7 +161,7 @@ class iRODSTransfer(iRODSCommon):
                     t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_src}")
-                    logger.error(get_irods_error(e))
+                    logger.error(self.get_irods_error(e))
                     sys.exit(1)
                 finally:
                     self.session.cleanup()
@@ -179,6 +179,6 @@ class iRODSTransfer(iRODSCommon):
                         data_object.chksum()
                 except Exception as e:  # pragma: no cover
                     logger.error("Problem during iRODS checksumming.")
-                    logger.error(get_irods_error(e))
+                    logger.error(self.get_irods_error(e))
                 finally:
                     self.session.cleanup()

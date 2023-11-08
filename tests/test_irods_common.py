@@ -1,9 +1,9 @@
 from pathlib import Path
 import shutil
-from unittest.mock import ANY, MagicMock, PropertyMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import irods.exception
-from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
+from irods.session import NonAnonymousLoginWithoutPassword
 import pytest
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
@@ -94,7 +94,7 @@ def jobs():
 
 @pytest.fixture
 def itransfer(jobs):
-    with patch("cubi_tk.irods_common.iRODSSession") as mocksession:
+    with patch("cubi_tk.irods_common.iRODSSession"):
         return iRODSTransfer(jobs)
 
 
