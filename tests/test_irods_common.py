@@ -17,6 +17,8 @@ def fake_filesystem(fs):
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_common_init(mocksession):
     assert iRODSCommon().irods_env_path is not None
+    icommon = iRODSCommon(irods_env_path="a/b/c.json")
+    assert icommon.irods_env_path == "a/b/c.json"
     assert type(iRODSCommon().ask) is bool
 
 
@@ -101,6 +103,11 @@ def itransfer(jobs):
 def test_irods_transfer_init(jobs, itransfer):
     assert itransfer.total_bytes == sum([job.bytes for job in jobs])
     assert itransfer.destinations == [job.path_dest for job in jobs]
+
+    with patch("cubi_tk.irods_common.iRODSSession") as mocksession:
+        itransferc = iRODSTransfer(jobs=jobs, irods_env_path="a/b/c", ask=True)
+        assert itransferc.irods_env_path == "a/b/c"
+        assert itransferc.ask == True
 
 
 def test_irods_transfer_put(fs, itransfer, jobs):

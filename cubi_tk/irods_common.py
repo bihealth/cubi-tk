@@ -35,12 +35,20 @@ class TransferJob:
 
 
 class iRODSCommon:
-    """Implementation of common iRODS utility functions."""
+    """
+    Implementation of common iRODS utility functions.
 
-    def __init__(self, ask: bool = False):
-        #: Path to iRODS environment file
-        # TODO: custom env path
-        self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
+    Attributes:
+    ask -- Confirm with user before certain actions.
+    irods_env_path -- Path to irods_environment.json
+    """
+
+    def __init__(self, ask: bool = False, irods_env_path: Path = None):
+        # Path to iRODS environment file
+        if irods_env_path is None:
+            self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
+        else:
+            self.irods_env_path = irods_env_path
         self.ask = ask
 
         # check for outdated .irodsA file
@@ -136,8 +144,8 @@ class iRODSTransfer(iRODSCommon):
     jobs -- iterable of TransferJob objects
     """
 
-    def __init__(self, jobs: Iterable[TransferJob]):
-        super().__init__()
+    def __init__(self, jobs: Iterable[TransferJob], **kwargs):
+        super().__init__(**kwargs)
         with self._get_irods_sessions(1) as s:
             self.session = s[0]  # TODO: use more sessions
         self.jobs = jobs
