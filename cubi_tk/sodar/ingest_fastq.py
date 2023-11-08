@@ -367,7 +367,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     )
 
                     # `-m` regex now only applied to extracted sample name
-                    sample_name = match_wildcards["sample"]
+                    sample_name = m.groupdict(default="")["sample"]
                     for m_pat, r_pat in self.args.sample_collection_mapping:
                         sample_name = re.sub(m_pat, r_pat, sample_name)
 
