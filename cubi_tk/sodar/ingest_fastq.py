@@ -228,7 +228,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
 
         assay_tsv = isa_dict["assays"][assay.file_name]["tsv"]
-        assay_header, *assay_lines = assay_tsv.split("\n")
+        assay_header, *assay_lines = assay_tsv.rstrip("\n").split("\n")
         assay_header = assay_header.split("\t")
         assay_lines = map(lambda x: x.split("\t"), assay_lines)
 
