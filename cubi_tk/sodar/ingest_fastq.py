@@ -18,7 +18,6 @@ import tqdm
 
 from ..common import sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException
-
 from ..snappy.itransfer_common import (
     SnappyItransferCommandBase,
     TransferJob,
@@ -95,16 +94,16 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "--src-regex",
             default=DEFAULT_SRC_REGEX,
             help=f"Regular expression to use for matching input fastq files, default: {DEFAULT_SRC_REGEX}. "
-                "All capture groups can be used for --remote-dir-pattern, but only 'sample' is used by default. "
-                "Only this regex controls which files are ingested, so other files than fastq.gz can be used too."
+            "All capture groups can be used for --remote-dir-pattern, but only 'sample' is used by default. "
+            "Only this regex controls which files are ingested, so other files than fastq.gz can be used too.",
         )
         parser.add_argument(
             "--remote-dir-pattern",
             default=DEFAULT_DEST_PATTERN,
             help=f"Pattern to use for constructing remote pattern, default: {DEFAULT_DEST_PATTERN}. "
-                 "'collection_name' is the target irods collection and will be filled with the (-m regex modified) "
-                 "'sample' unless --match-column is not used to fill it from the assay table. Any capture group of the "
-                 "src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'."
+            "'collection_name' is the target irods collection and will be filled with the (-m regex modified) "
+            "'sample' unless --match-column is not used to fill it from the assay table. Any capture group of the "
+            "src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'.",
         )
 
         parser.add_argument(
@@ -150,9 +149,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             action="store_true",
             help="After files are transferred to SODAR, it will proceed with validation and move.",
         )
-        parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to use."
-        )
+        parser.add_argument("--assay", dest="assay", default=None, help="UUID of assay to use.")
 
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
 
@@ -176,16 +173,16 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
         return lz.sodar_uuid
 
-
     def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
         raise NotImplementedError(
             "build_base_dir_glob_pattern() not implemented in SodarIngestFastq!"
         )
 
-    def get_match_to_collection_mapping(self, project_uuid: str, in_column: str, out_column: typing.Optional[str] = None) -> typing.Dict[str, str]:
+    def get_match_to_collection_mapping(
+        self, project_uuid: str, in_column: str, out_column: typing.Optional[str] = None
+    ) -> typing.Dict[str, str]:
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
-
 
         # This part is only needed to get `assay.file_name`
         # -> could be removed if we can get around that
@@ -210,10 +207,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             project_uuid=project_uuid,
         )
 
-        assay_tsv = isa_dict['assays'][assay.file_name]['tsv']
-        assay_header, *assay_lines = assay_tsv.split('\n')
-        assay_header = assay_header.split('\t')
-        assay_lines = map(lambda x: x.split('\t'), assay_lines)
+        assay_tsv = isa_dict["assays"][assay.file_name]["tsv"]
+        assay_header, *assay_lines = assay_tsv.split("\n")
+        assay_header = assay_header.split("\t")
+        assay_lines = map(lambda x: x.split("\t"), assay_lines)
 
         in_column_index = [i for i, head in enumerate(assay_header) if re.match(in_column, head)]
         if not in_column_index or len(in_column_index) > 1:
@@ -225,10 +222,25 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         if out_column is None:
             # Get index of last material column
-            ignore_cols = ('Performer', 'Date', 'Protocol REF', 'Unit', 'Term Source REF', 'Term Accession Number')
-            out_column_index = max([i for i, head in enumerate(assay_header) if head not in ignore_cols and not re.match('Parameter Value', head)])
+            ignore_cols = (
+                "Performer",
+                "Date",
+                "Protocol REF",
+                "Unit",
+                "Term Source REF",
+                "Term Accession Number",
+            )
+            out_column_index = max(
+                [
+                    i
+                    for i, head in enumerate(assay_header)
+                    if head not in ignore_cols and not re.match("Parameter Value", head)
+                ]
+            )
         else:
-            out_column_index = [i for i, head in enumerate(assay_header) if re.match(out_column, head)]
+            out_column_index = [
+                i for i, head in enumerate(assay_header) if re.match(out_column, head)
+            ]
             if not out_column_index or len(out_column_index) > 1:
                 msg = "Could not identify a valid unique column of the assay sheet matching provided data. Please review input: --collection-column={0}".format(
                     out_column
@@ -236,10 +248,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 logger.error(msg)
                 raise ParameterException(msg)
 
-        return {
-            line[in_column_index[0]]: line[out_column_index[0]]
-            for line in assay_lines
-        }
+        return {line[in_column_index[0]]: line[out_column_index[0]] for line in assay_lines}
 
     def download_webdav(self, sources):
         download_jobs = []
@@ -287,7 +296,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         lz_uuid, lz_irods_path = self.get_sodar_info()
         project_uuid = self.get_project_uuid(lz_uuid)
         if self.args.match_column is not None:
-            column_match = self.get_match_to_collection_mapping(project_uuid, self.args.match_column, self.args.collection_column)
+            column_match = self.get_match_to_collection_mapping(
+                project_uuid, self.args.match_column, self.args.collection_column
+            )
         else:
             column_match = None
 
@@ -325,21 +336,27 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     )
 
                     # `-m` regex now only applied to extracted sample name
-                    sample_name = match_wildcards['sample']
+                    sample_name = match_wildcards["sample"]
                     for m_pat, r_pat in self.args.sample_collection_mapping:
                         sample_name = re.sub(m_pat, r_pat, sample_name)
 
                     try:
-                        remote_file = pathlib.Path(lz_irods_path) / self.args.remote_dir_pattern.format(
+                        remote_file = pathlib.Path(
+                            lz_irods_path
+                        ) / self.args.remote_dir_pattern.format(
                             # Removed the `+ self.args.add_suffix` here, since anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
                             date=self.args.remote_dir_date,
-                            collection_name=column_match[sample_name] if column_match else sample_name,
+                            collection_name=column_match[sample_name]
+                            if column_match
+                            else sample_name,
                             **match_wildcards,
                         )
                     except KeyError:
-                        msg = (f"Could not match extracted sample name '{sample_name}' to any value in the "
-                               "--match-column. Please review the assay table, src-regex and sample-collection-mapping args.")
+                        msg = (
+                            f"Could not match extracted sample name '{sample_name}' to any value in the "
+                            "--match-column. Please review the assay table, src-regex and sample-collection-mapping args."
+                        )
                         logger.error(msg)
                         raise ParameterException(msg)
 
@@ -388,7 +405,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         total_bytes = sum([job.bytes for job in transfer_jobs])
         logger.info(
-            "Transferring %d files with a total size of %s", len(transfer_jobs), sizeof_fmt(total_bytes)
+            "Transferring %d files with a total size of %s",
+            len(transfer_jobs),
+            sizeof_fmt(total_bytes),
         )
 
         counter = Value(c_ulonglong, 0)
