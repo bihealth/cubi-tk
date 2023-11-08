@@ -255,6 +255,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             )
             logger.error(msg)
             raise ParameterException(msg)
+        in_column_index = in_column_index[0]
 
         if out_column is None:
             # Get index of last material column that is not 'Raw Data File'
@@ -276,8 +277,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 )
                 logger.error(msg)
                 raise ParameterException(msg)
+            out_column_index = out_column_index[0]
 
-        return {line[in_column_index[0]]: line[out_column_index[0]] for line in assay_lines}
+        return {line[in_column_index]: line[out_column_index] for line in assay_lines}
 
     def download_webdav(self, sources):
         download_jobs = []
