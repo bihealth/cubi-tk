@@ -171,7 +171,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             "--assay", dest="assay", default=None, help="UUID of assay to download data for."
         )
         parser.add_argument(
-            "destination", help="UUID from Landing Zone or Project - where files will be moved to."
+            "destination", help="Landing zone path or UUID from Landing Zone or Project"
         )
 
     @classmethod

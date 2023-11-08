@@ -81,9 +81,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             help="Assume the answer to all prompts is 'yes'",
         )
         parser.add_argument(
-            "--remote-dir-date",
-            default=datetime.date.today().strftime("%Y-%m-%d"),
-            help="Date to use in remote directory, defaults to YYYY-MM-DD of today.",
+            "--validate-and-move",
+            default=False,
+            action="store_true",
+            help="After files are transferred to SODAR, it will proceed with validation and move.",
         )
         parser.add_argument(
             "--src-regex",
@@ -100,7 +101,13 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "'sample' unless --match-column is not used to fill it from the assay table. Any capture group of the "
             "src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'.",
         )
-
+        parser.add_argument(
+            "--match-column",
+            default=None,
+            help="Alternative assay column against which the {sample} from the src-regex should be matched, "
+            "in order to determine collections based on the assay table (e.g. last material or collection-column). "
+            "If not set it is assumed that {sample} matches the irods collections directly.",
+        )
         parser.add_argument(
             "-m",
             "--sample-collection-mapping",
@@ -118,32 +125,22 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "(i.e. '-m <regex1> <repl1> -m <regex2> <repl2>' ...).",
         )
         parser.add_argument(
-            "--tmp",
-            default="temp/",
-            help="Folder to save files from WebDAV temporarily, if set as source.",
+            "--remote-dir-date",
+            default=datetime.date.today().strftime("%Y-%m-%d"),
+            help="Date to use in remote directory, defaults to YYYY-MM-DD of today.",
         )
-
         parser.add_argument(
             "--collection-column",
             default=None,
             help="Assay column from that matchs irods collection names. "
             "If not set, the last material column will be used.",
         )
-
         parser.add_argument(
-            "--match-column",
-            default=None,
-            help="Alternative assay column against which the {sample} from the src-regex should be matched, "
-            "in order to determine collections based on the assay table (e.g. last material or collection-column). "
-            "If not set it is assumed that {sample} matches the irods collections directly.",
+            "--tmp",
+            default="temp/",
+            help="Folder to save files from WebDAV temporarily, if set as source.",
         )
 
-        parser.add_argument(
-            "--validate-and-move",
-            default=False,
-            action="store_true",
-            help="After files are transferred to SODAR, it will proceed with validation and move.",
-        )
         parser.add_argument("--assay", dest="assay", default=None, help="UUID of assay to use.")
 
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
