@@ -27,7 +27,7 @@ from ..snappy.itransfer_common import (
 
 DEFAULT_SRC_REGEX = (
     r"(.*/)?(?P<sample>.+?)"
-    r"(?:_(S[0-9]+)?"
+    r"(?:_(S[0-9]+))?"
     r"(?:_(?P<lane>L[0-9]+?))?"
     r"(?:_(?P<mate>R[0-9]+?))?"
     r"(?:_(?P<batch>[0-9]+?))?"

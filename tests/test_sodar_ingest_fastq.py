@@ -11,6 +11,7 @@ from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
+from .conftest import my_get_sodar_info
 
 
 def test_run_sodar_ingest_fastq_help(capsys):
@@ -41,7 +42,7 @@ def test_run_sodar_ingest_fastq_nothing(capsys):
 def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     # --- setup arguments
     irods_path = "/irods/dest"
-    landing_zone_uuid = "landing_zone_uuid"
+    landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     dest_path = "target/folder/generic_file.fq.gz"
     fake_base_path = "/base/path"
     argv = [
@@ -86,9 +87,11 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
 
     # --- mock modules
     mocker.patch("glob.os", fake_os)
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.pathlib", fake_pl)
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
+    mocker.patch(
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
+        my_get_sodar_info,
+    )
 
     mock_check_output = mock.MagicMock(return_value=0)
     mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
