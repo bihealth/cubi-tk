@@ -379,11 +379,34 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                             msg = "Not possible to continue the process without a landing zone path. Breaking..."
                             logger.info(msg)
                             raise UserCanceledException(msg)
+        # Check if `in_destination` is a Landing zone path.
+        elif in_destination.startswith("/"):
+            # We expect to find one UUID - the LZ one - in the LZ path
+            # Note: it might bet better to split on irods.path_sep if that can be determined
+            uuids = [p for p in in_destination.split("/") if is_uuid(p)]
+            if len(uuids) == 1:
+                lz_uuid = uuids[0]
+                lz_irods_path = in_destination
+                # validate that the LZ exists & user has access
+                try:
+                    lz_path = self.get_landing_zone_by_uuid(lz_uuid=lz_uuid)
+                except requests.exceptions.HTTPError as e:
+                    exception_str = str(e)
+                    logger.error(
+                        "Unable to access LZ from extracted UUID %s. HTTP error %s "
+                        % (in_destination, exception_str)
+                    )
+                    raise
+                if lz_path != lz_irods_path:
+                    raise ParameterException(
+                        "Supplied Landing zone path %s seems malformed and does not match API given path from extracted UUID: %s"
+                        % (in_destination, lz_path)
+                    )
 
         # Not able to process - raise exception.
-        # UUID provided is not associated with project nor lz.
+        # UUID provided is not associated with project nor lz, or could not extract UUID from LZ path.
         if lz_irods_path is None:
-            msg = "Data provided by user is not a valid UUID. Please review input: {0}".format(
+            msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
                 in_destination
             )
             logger.error(msg)
