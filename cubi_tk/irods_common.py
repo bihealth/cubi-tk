@@ -50,8 +50,6 @@ class iRODSCommon:
         else:
             self.irods_env_path = irods_env_path
         self.ask = ask
-
-        # check for outdated .irodsA file
         self._check_auth()
 
     @staticmethod

@@ -9,11 +9,6 @@ import pytest
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 
 
-@pytest.fixture
-def fake_filesystem(fs):
-    yield fs
-
-
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_common_init(mocksession):
     assert iRODSCommon().irods_env_path is not None
