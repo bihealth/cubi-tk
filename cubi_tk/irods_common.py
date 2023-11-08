@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import getpass
 import os.path
 from pathlib import Path
@@ -16,6 +17,8 @@ from tqdm import tqdm
 formatter = logzero.LogFormatter(fmt="%(message)s")
 output_logger = logzero.setup_logger(formatter=formatter)
 
+NUM_PARALLEL_SESSIONS = 4
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class TransferJob:
@@ -31,79 +34,93 @@ class TransferJob:
     bytes: int
 
 
-def get_irods_error(e: Exception):
-    """Return logger friendly iRODS exception."""
-    es = str(e)
-    return es if es and es != "None" else e.__class__.__name__
+class iRODSCommon:
+    """Implementation of common iRODS utility functions."""
 
+    def __init__(self, ask: bool = False):
+        #: Path to iRODS environment file
+        self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
+        self.ask = ask
 
-def init_irods(irods_env_path: Path, ask: bool = False) -> iRODSSession:
-    """Connect to iRODS."""
-    irods_auth_path = irods_env_path.parent.joinpath(".irodsA")
-    if irods_auth_path.exists():
+        # check for outdated .irodsA file
+        self._check_auth()
+
+    @staticmethod
+    def get_irods_error(e: Exception):
+        """Return logger friendly iRODS exception."""
+        es = str(e)
+        return es if es and es != "None" else e.__class__.__name__
+
+    def _init_irods(self) -> iRODSSession:
+        """Connect to iRODS."""
         try:
-            session = iRODSSession(irods_env_file=irods_env_path)
-            session.server_version  # check for outdated .irodsA file
+            session = iRODSSession(irods_env_file=self.irods_env_path)
             session.connection_timeout = 300
             return session
         except Exception as e:  # pragma: no cover
-            logger.error(f"iRODS connection failed: {get_irods_error(e)}")
-            pass
-        finally:
-            session.cleanup()
+            logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
+            raise
 
-    # No valid .irodsA file. Query user for password.
-    logger.info("No valid iRODS authentication file found.")
-    attempts = 0
-    while attempts < 3:
+    def _check_auth(self):
+        """Check auth status and login if needed."""
         try:
-            session = iRODSSession(
-                irods_env_file=irods_env_path,
-                password=getpass.getpass(prompt="Please enter SODAR password:"),
-            )
-            session.server_version  # check for exceptions
-            break
-        except PAM_AUTH_PASSWORD_FAILED:  # pragma: no cover
-            if attempts < 2:
-                logger.warning("Wrong password. Please try again.")
-                attempts += 1
-                continue
-            else:
-                logger.error("iRODS connection failed.")
-                sys.exit(1)
+            self._init_irods().server_version
+            return 0
         except Exception as e:  # pragma: no cover
-            logger.error(f"iRODS connection failed: {get_irods_error(e)}")
-            sys.exit(1)
+            logger.info("No valid iRODS authentication file found.")
+            pass
+
+        # No valid .irodsA file. Query user for password.
+        attempts = 0
+        while attempts < 3:
+            try:
+                session = iRODSSession(
+                    irods_env_file=self.irods_env_path,
+                    password=getpass.getpass(prompt="Please enter SODAR password:"),
+                )
+                token = session.pam_pw_negotiated
+                session.cleanup()
+                break
+            except PAM_AUTH_PASSWORD_FAILED:  # pragma: no cover
+                if attempts < 2:
+                    logger.warning("Wrong password. Please try again.")
+                    attempts += 1
+                    continue
+                else:
+                    logger.error("iRODS connection failed.")
+                    sys.exit(1)
+            except Exception as e:  # pragma: no cover
+                logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
+                sys.exit(1)
+
+        if self.ask and input(
+            "Save iRODS session for passwordless operation? [y/N] "
+        ).lower().startswith("y"):
+            self._save_irods_token(token)  # pragma: no cover
+        elif not self.ask:
+            self._save_irods_token(token)
+
+    def _save_irods_token(self, token: str):
+        """Retrieve PAM temp auth token 'obfuscate' it and save to disk."""
+        irods_auth_path = self.irods_env_path.parent.joinpath(".irodsA")
+        irods_auth_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(token, list) and token:
+            irods_auth_path.write_text(encode(token[0]))
+            irods_auth_path.chmod(0o600)
+        else:
+            logger.warning("No token found to be saved.")
+
+    @contextmanager
+    def _get_irods_sessions(self, count=NUM_PARALLEL_SESSIONS):
+        if count < 1:
+            count = 1
+        irods_sessions = [self._init_irods() for _ in range(count)]
+        try:
+            yield irods_sessions
         finally:
-            session.cleanup()
-
-    if ask and input("Save iRODS session for passwordless operation? [y/N] ").lower().startswith(
-        "y"
-    ):
-        save_irods_token(session)  # pragma: no cover
-    elif not ask:
-        save_irods_token(session)
-
-    return session
-
-
-def save_irods_token(session: iRODSSession, irods_env_path=None):
-    """Retrieve PAM temp auth token 'obfuscate' it and save to disk."""
-    if not irods_env_path:
-        irods_auth_path = Path.home().joinpath(".irods", ".irodsA")
-    else:
-        irods_auth_path = Path(irods_env_path).parent.joinpath(".irodsA")
-
-    irods_auth_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        token = session.pam_pw_negotiated
-    except CAT_INVALID_AUTHENTICATION:  # pragma: no cover
-        raise
-
-    if isinstance(token, list) and token:
-        irods_auth_path.write_text(encode(token[0]))
-        irods_auth_path.chmod(0o600)
+            for irods in irods_sessions:
+                irods.cleanup()
 
 
 class iRODSTransfer:
