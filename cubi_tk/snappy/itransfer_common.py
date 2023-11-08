@@ -381,27 +381,23 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                             raise UserCanceledException(msg)
         # Check if `in_destination` is a Landing zone path.
         elif in_destination.startswith("/"):
-            # We expect to find one UUID - the LZ one - in the LZ path
+            # We expect to find one UUID in the LZ path, this will be the project UUID
             # Note: it might bet better to split on irods.path_sep if that can be determined
             uuids = [p for p in in_destination.split("/") if is_uuid(p)]
             if len(uuids) == 1:
-                lz_uuid = uuids[0]
+                sodar_uuid = uuids[0]
                 lz_irods_path = in_destination
+                # Get uuid of lz that matches lz_path, this validates the path is correct & we have access
                 # validate that the LZ exists & user has access
                 try:
-                    lz_path = self.get_landing_zone_by_uuid(lz_uuid=lz_uuid)
+                    lz_uuid = self.get_landing_zone_uuid_by_path(lz_irods_path, sodar_uuid, self.args.assay)
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(
-                        "Unable to access LZ from extracted UUID %s. HTTP error %s "
+                        "Unable to identify UUID of given LZ %s. HTTP error %s "
                         % (in_destination, exception_str)
                     )
                     raise
-                if lz_path != lz_irods_path:
-                    raise ParameterException(
-                        "Supplied Landing zone path %s seems malformed and does not match API given path from extracted UUID: %s"
-                        % (in_destination, lz_path)
-                    )
 
         # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz, or could not extract UUID from LZ path.
@@ -453,6 +449,48 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             landingzone_uuid=lz_uuid,
         )
         return lz.irods_path
+
+    def get_landing_zone_uuid_by_path(self, lz_irods_path, project_uuid, assay_uuid=None):
+        """
+        :param lz_path: Landing zone path.
+        :type lz_path: str
+
+        :param project_uuid: Project UUID.
+        :type project_uuid: str
+
+        :param assay_uuid: Assay UUID (optional).
+        :type assay_uuid: str
+
+        :return: Returns LZ UUID.
+        """
+        from sodar_cli.api import landingzone
+
+        # List existing lzs
+        existing_lzs = sorted(
+            landingzone.list_(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                project_uuid=project_uuid,
+            ),
+            key=lambda x: x.date_modified,
+            reverse=True,
+        )
+
+        # Filter for assay
+        if assay_uuid:
+            existing_lzs = list(filter(lambda x: x.assay == assay_uuid, existing_lzs))
+
+        matching_lzs = list(filter(lambda x: x.irods_path == lz_irods_path, existing_lzs))
+        if matching_lzs:
+            lz_uuid = matching_lzs[0].sodar_uuid
+        else:
+            msg = "Could not find LZ with given path. Please review input: {0}".format(
+                lz_irods_path
+            )
+            logger.error(msg)
+            raise ParameterException(msg)
+
+        return lz_uuid
 
     def create_landing_zone(self, project_uuid, assay_uuid=None):
         """
