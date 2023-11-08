@@ -390,7 +390,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 # Get uuid of lz that matches lz_path, this validates the path is correct & we have access
                 # validate that the LZ exists & user has access
                 try:
-                    lz_uuid = self.get_landing_zone_uuid_by_path(lz_irods_path, sodar_uuid, self.args.assay)
+                    lz_uuid = self.get_landing_zone_uuid_by_path(
+                        lz_irods_path, sodar_uuid, self.args.assay
+                    )
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(

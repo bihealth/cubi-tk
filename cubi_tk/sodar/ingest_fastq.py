@@ -339,7 +339,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         for folder in folders:
             for path in glob.iglob(f"{folder}/**/*", recursive=True):
-
                 real_path = os.path.realpath(path)
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
