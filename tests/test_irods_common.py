@@ -1,18 +1,12 @@
 from pathlib import Path
 import shutil
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import ANY, MagicMock, PropertyMock, patch
 
 import irods.exception
-from irods.session import iRODSSession
+from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
 import pytest
 
-from cubi_tk.irods_common import (
-    TransferJob,
-    get_irods_error,
-    init_irods,
-    iRODSTransfer,
-    save_irods_token,
-)
+from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 
 
 @pytest.fixture
@@ -30,53 +24,77 @@ def jobs():
 
 @pytest.fixture
 def itransfer(jobs):
-    session = iRODSSession(
-        irods_host="localhost",
-        irods_port=1247,
-        irods_user_name="pytest",
-        irods_zone_name="pytest",
-    )
-    return iRODSTransfer(session, jobs)
-
-
-def test_get_irods_error():
-    e = irods.exception.NetworkException()
-    assert get_irods_error(e) == "NetworkException"
-    e = irods.exception.NetworkException("Connection reset")
-    assert get_irods_error(e) == "Connection reset"
+   with patch("irods.session.iRODSSession") as mocksession:
+       return iRODSTransfer(jobs)
 
 
 @patch("cubi_tk.irods_common.iRODSSession")
+def test_common_init(mocksession):
+    assert iRODSCommon().irods_env_path is not None
+    assert type(iRODSCommon().ask) is bool
+
+
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_get_irods_error(mocksession):
+    e = irods.exception.NetworkException()
+    assert iRODSCommon().get_irods_error(e) == "NetworkException"
+    e = irods.exception.NetworkException("Connection reset")
+    assert iRODSCommon().get_irods_error(e) == "Connection reset"
+
+
 @patch("getpass.getpass")
-def test_init_irods(mockpass, mocksession, fs):
-    ienv = Path(".irods/irods_environment.json")
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_check_auth(mocksession, mockpass, fs):
+    fs.create_file(".irods/irods_environment.json")
     password = "1234"
 
-    # .irodsA not found, asks for password
+    icommon = iRODSCommon()
     mockpass.return_value = password
-    init_irods(ienv)
-    mockpass.assert_called()
-    mocksession.assert_called_with(irods_env_file=ienv, password=password)
+    with patch.object(icommon, "_init_irods") as mockinit:
+        mockinit.side_effect = NonAnonymousLoginWithoutPassword()
+
+        # .irodsA not found, asks for password
+        icommon._check_auth()
+        mockpass.assert_called()
+        mocksession.assert_any_call(irods_env_file=ANY, password=password)
 
     # .irodsA there, does not ask for password
-    fs.create_file(".irods/.irodsA")
     mockpass.reset_mock()
-    init_irods(ienv)
+    mocksession.reset_mock()
+    icommon._check_auth()
     mockpass.assert_not_called()
-    mocksession.assert_called_with(irods_env_file=ienv)
+    mocksession.assert_called_once()
 
 
 @patch("cubi_tk.irods_common.encode", return_value="it works")
-def test_write_token(mockencode, fs):
-    ienv = Path(".irods/irods_environment.json")
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_save_irods_token(mocksession, mockencode, fs):
+    token = [
+        "secure",
+    ]
+    icommon = iRODSCommon()
+    icommon.irods_env_path = Path("testdir/env.json")
+    icommon._save_irods_token(token=token)
 
-    mocksession = MagicMock()
-    pam_pw = PropertyMock(return_value=["secure"])
-    type(mocksession).pam_pw_negotiated = pam_pw
-
-    save_irods_token(mocksession, ienv)
-    assert ienv.parent.joinpath(".irodsA").exists()
+    assert icommon.irods_env_path.parent.joinpath(".irodsA").exists()
     mockencode.assert_called_with("secure")
+
+
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_init_irods(mocksession, fs):
+    fs.create_file(".irods/irods_environment.json")
+    fs.create_file(".irods/.irodsA")
+
+    iRODSCommon()._init_irods()
+    mocksession.assert_called()
+
+
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_get_irods_sessions(mocksession):
+    with iRODSCommon()._get_irods_sessions(count=3) as sessions:
+        assert len(sessions) == 3
+    with iRODSCommon()._get_irods_sessions(count=-1) as sessions:
+        assert len(sessions) == 1
 
 
 def test_irods_transfer_init(jobs, itransfer):

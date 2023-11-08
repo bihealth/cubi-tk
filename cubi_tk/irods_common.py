@@ -8,7 +8,7 @@ from typing import Iterable
 import attr
 from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
 from irods.password_obfuscation import encode
-from irods.session import iRODSSession
+from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
 import logzero
 from logzero import logger
 from tqdm import tqdm
@@ -66,8 +66,12 @@ class iRODSCommon:
         try:
             self._init_irods().server_version
             return 0
-        except Exception as e:  # pragma: no cover
-            logger.info("No valid iRODS authentication file found.")
+        except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
+            logger.info(self.get_irods_error(e))
+            pass
+        except CAT_INVALID_AUTHENTICATION:  # pragma: no cover
+            logger.warning("Problem with your session token.")
+            self.irods_env_path.parent.joinpath(".irodsA").unlink()
             pass
 
         # No valid .irodsA file. Query user for password.
