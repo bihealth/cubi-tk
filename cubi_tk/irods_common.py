@@ -148,21 +148,33 @@ class iRODSTransfer(iRODSCommon):
         super().__init__(**kwargs)
         with self._get_irods_sessions(1) as s:
             self.session = s[0]  # TODO: use more sessions
-        self.jobs = jobs
-        self.total_bytes = sum([job.bytes for job in self.jobs])
-        self.destinations = [job.path_dest for job in self.jobs]
+        self.__jobs = jobs
+        self.__total_bytes = sum([job.bytes for job in self.__jobs])
+        self.__destinations = [job.path_dest for job in self.__jobs]
+
+    @property
+    def jobs(self):
+        return self.__jobs
+
+    @property
+    def size(self):
+        return self.__total_bytes
+
+    @property
+    def destinations(self):
+        return self.__destinations
 
     def put(self):
         # Double tqdm for currently transferred file info
         # TODO: add more parenthesis after python 3.10
         with tqdm(
-            total=self.total_bytes,
+            total=self.__total_bytes,
             unit="B",
             unit_scale=True,
             unit_divisor=1024,
             position=1,
         ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
-            for job in self.jobs:
+            for job in self.__jobs:
                 file_log.set_description_str(f"Current file: {job.path_src}")
                 try:
                     self.session.data_objects.put(job.path_src, job.path_dest)
@@ -177,8 +189,8 @@ class iRODSTransfer(iRODSCommon):
 
     def chksum(self):
         """Compute remote md5 checksums for all jobs."""
-        common_prefix = os.path.commonpath(self.destinations)
-        for job in self.jobs:
+        common_prefix = os.path.commonpath(self.__destinations)
+        for job in self.__jobs:
             if not job.path_src.endswith(".md5"):
                 output_logger.info(Path(job.path_dest).relative_to(common_prefix))
                 try:
