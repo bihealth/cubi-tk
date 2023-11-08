@@ -39,6 +39,7 @@ class iRODSCommon:
 
     def __init__(self, ask: bool = False):
         #: Path to iRODS environment file
+        # TODO: custom env path
         self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
         self.ask = ask
 
@@ -127,17 +128,18 @@ class iRODSCommon:
                 irods.cleanup()
 
 
-class iRODSTransfer:
+class iRODSTransfer(iRODSCommon):
     """
     Transfer files to iRODS.
 
     Attributes:
-    session -- initialised iRODSSession
     jobs -- iterable of TransferJob objects
     """
 
-    def __init__(self, session: iRODSSession, jobs: Iterable[TransferJob]):
-        self.session = session
+    def __init__(self, jobs: Iterable[TransferJob]):
+        super().__init__()
+        with self._get_irods_sessions(1) as s:
+            self.session = s[0]  # TODO: use more sessions
         self.jobs = jobs
         self.total_bytes = sum([job.bytes for job in self.jobs])
         self.destinations = [job.path_dest for job in self.jobs]

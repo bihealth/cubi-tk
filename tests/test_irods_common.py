@@ -14,20 +14,6 @@ def fake_filesystem(fs):
     yield fs
 
 
-@pytest.fixture
-def jobs():
-    return (
-        TransferJob(path_src="myfile.csv", path_dest="dest_dir/myfile.csv", bytes=123),
-        TransferJob(path_src="folder/file.csv", path_dest="dest_dir/folder/file.csv", bytes=1024),
-    )
-
-
-@pytest.fixture
-def itransfer(jobs):
-   with patch("irods.session.iRODSSession") as mocksession:
-       return iRODSTransfer(jobs)
-
-
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_common_init(mocksession):
     assert iRODSCommon().irods_env_path is not None
@@ -95,6 +81,21 @@ def test_get_irods_sessions(mocksession):
         assert len(sessions) == 3
     with iRODSCommon()._get_irods_sessions(count=-1) as sessions:
         assert len(sessions) == 1
+
+
+# Test iRODSTransfer #########
+@pytest.fixture
+def jobs():
+    return (
+        TransferJob(path_src="myfile.csv", path_dest="dest_dir/myfile.csv", bytes=123),
+        TransferJob(path_src="folder/file.csv", path_dest="dest_dir/folder/file.csv", bytes=1024),
+    )
+
+
+@pytest.fixture
+def itransfer(jobs):
+    with patch("cubi_tk.irods_common.iRODSSession") as mocksession:
+        return iRODSTransfer(jobs)
 
 
 def test_irods_transfer_init(jobs, itransfer):
