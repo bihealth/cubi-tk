@@ -232,7 +232,23 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         assay_header = assay_header.split("\t")
         assay_lines = map(lambda x: x.split("\t"), assay_lines)
 
-        in_column_index = [i for i, head in enumerate(assay_header) if re.match(in_column, head)]
+        # Never match these assay cols
+        ignore_cols = (
+            "Performer",
+            "Date",
+            "Protocol REF",
+            "Unit",
+            "Term Source REF",
+            "Term Accession Number",
+        )
+
+        in_column_index = [
+            i
+            for i, head in enumerate(assay_header)
+            if head not in ignore_cols
+            and in_column.lower()
+            in re.sub("(Parameter Value|Comment|Characteristics)\[", "", head).lower()
+        ]
         if not in_column_index or len(in_column_index) > 1:
             msg = "Could not identify a valid unique column of the assay sheet matching provided data. Please review input: --match-column={0}".format(
                 in_column
@@ -241,20 +257,13 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             raise ParameterException(msg)
 
         if out_column is None:
-            # Get index of last material column
-            ignore_cols = (
-                "Performer",
-                "Date",
-                "Protocol REF",
-                "Unit",
-                "Term Source REF",
-                "Term Accession Number",
-            )
+            # Get index of last material column that is not 'Raw Data File'
             out_column_index = max(
                 [
                     i
                     for i, head in enumerate(assay_header)
-                    if head not in ignore_cols and not re.match("Parameter Value", head)
+                    if head not in ignore_cols
+                    and not re.match("Raw Data File|Parameter Value|Comment|Characteristics", head)
                 ]
             )
         else:
