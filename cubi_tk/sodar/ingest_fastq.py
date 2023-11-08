@@ -244,7 +244,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             for i, head in enumerate(assay_header)
             if head not in ignore_cols
             and in_column.lower()
-            in re.sub("(Parameter Value|Comment|Characteristics)\[", "", head).lower()
+            in re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
         ]
         if not in_column_index or len(in_column_index) > 1:
             msg = "Could not identify a valid unique column of the assay sheet matching provided data. Please review input: --match-column={0}".format(
