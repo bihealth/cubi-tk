@@ -10,13 +10,14 @@ import os
 import pathlib
 import re
 from subprocess import SubprocessError, check_output
+import sys
 import typing
 
 from logzero import logger
 from sodar_cli import api
 import tqdm
 
-from ..common import sizeof_fmt
+from ..common import check_irods_icommands, load_toml_config, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException
 from ..snappy.itransfer_common import (
     SnappyItransferCommandBase,
@@ -79,12 +80,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             action="store_true",
             help="Assume the answer to all prompts is 'yes'",
         )
-        # parser.add_argument(
-        #     "--base-path",
-        #     default=os.getcwd(),
-        #     required=False,
-        #     help="Base path of project (contains 'ngs_mapping/' etc.), defaults to current path.",
-        # )
         parser.add_argument(
             "--remote-dir-date",
             default=datetime.date.today().strftime("%Y-%m-%d"),
@@ -156,6 +151,31 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         parser.add_argument(
             "destination", help="UUID from Landing Zone or Project - where files will be moved to."
         )
+
+    def check_args(self, args):
+        """Called for checking arguments, override to change behaviour."""
+        # Check presence of icommands when not testing.
+        if "pytest" not in sys.modules:  # pragma: nocover
+            check_irods_icommands(warn_only=False)
+        res = 0
+
+        toml_config = load_toml_config(args)
+        if not args.sodar_url:
+            if toml_config:
+                args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+            else:
+                logger.error("SODAR URL not found in config files. Please specify on command line.")
+                res = 1
+        if not args.sodar_api_token:
+            if toml_config:
+                args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+            else:
+                logger.error(
+                    "SODAR API token not found in config files. Please specify on command line."
+                )
+                res = 1
+
+        return res
 
     def get_project_uuid(self, lz_uuid: str):
         """Get project UUID from landing zone UUID.
