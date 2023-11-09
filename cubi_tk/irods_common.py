@@ -38,9 +38,10 @@ class iRODSCommon:
     """
     Implementation of common iRODS utility functions.
 
-    Attributes:
-    ask -- Confirm with user before certain actions.
-    irods_env_path -- Path to irods_environment.json
+    :param ask: Confirm with user before certain actions.
+    :type ask: bool, optional
+    :param irods_env_path: Path to irods_environment.json
+    :type irods_env_path: pathlib.Path, optional
     """
 
     def __init__(self, ask: bool = False, irods_env_path: Path = None):
@@ -138,8 +139,8 @@ class iRODSTransfer(iRODSCommon):
     """
     Transfer files to iRODS.
 
-    Attributes:
-    jobs -- iterable of TransferJob objects
+    :param jobs: Iterable of TransferJob objects
+    :type jobs: Union[list,tuple,dict,set]
     """
 
     def __init__(self, jobs: Iterable[TransferJob], **kwargs):
