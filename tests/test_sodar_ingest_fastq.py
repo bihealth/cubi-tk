@@ -5,6 +5,7 @@ We only run some smoke tests here.
 
 import json
 import os
+import re
 from unittest import mock
 
 from pyfakefs import fake_filesystem, fake_pathlib
@@ -38,6 +39,22 @@ def test_run_sodar_ingest_fastq_nothing(capsys):
     res = capsys.readouterr()
     assert not res.out
     assert res.err
+
+
+def test_run_sodar_ingest_fastq_src_regex():
+    from cubi_tk.sodar.ingest_fastq import DEFAULT_SRC_REGEX
+
+    # Collection of example filenames and the expected {sample} value the regex should capture
+    test_filenames = {
+        "Sample1-N1-RNA1-RNA_seq1.fastq.gz": "Sample1-N1-RNA1-RNA_seq1",
+        "P1234_Samplename_S14_L006_R2_001.fastq.gz": "P1234_Samplename",
+        "P1234_Samplename2_R1.fastq.gz": "P1234_Samplename2",
+    }
+
+    for test_filename, expected_sample in test_filenames.items():
+        res = re.match(DEFAULT_SRC_REGEX, test_filename)
+        assert res is not None
+        assert res.groupdict()["sample"] == expected_sample
 
 
 def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):

@@ -18,7 +18,7 @@ from sodar_cli import api
 import tqdm
 
 from ..common import check_irods_icommands, load_toml_config, sizeof_fmt
-from ..exceptions import MissingFileException, ParameterException
+from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..snappy.itransfer_common import (
     SnappyItransferCommandBase,
     TransferJob,
@@ -98,7 +98,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "--remote-dir-pattern",
             default=DEFAULT_DEST_PATTERN,
             help=f"Pattern to use for constructing remote pattern, default: {DEFAULT_DEST_PATTERN}. "
-            "'collection_name' is the target irods collection and will be filled with the (-m regex modified) "
+            "'collection_name' is the target iRODS collection and will be filled with the (-m regex modified) "
             "'sample' unless --match-column is not used to fill it from the assay table. Any capture group of the "
             "src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'.",
         )
@@ -107,7 +107,8 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             default=None,
             help="Alternative assay column against which the {sample} from the src-regex should be matched, "
             "in order to determine collections based on the assay table (e.g. last material or collection-column). "
-            "If not set it is assumed that {sample} matches the irods collections directly.",
+            "If not set it is assumed that {sample} matches the iRODS collections directly. If it matches multiple "
+            "columns the last one can be used.",
         )
         parser.add_argument(
             "-m",
@@ -118,7 +119,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             default=[],
             type=str,
             help="Substitutions applied to the extracted sample name, "
-            "which is used to determine iRods collections."
+            "which is used to determine iRODS collections."
             "Can be used to change extracted string to correct collections names "
             "or to match the values of '--match-column'."
             "Use pythons regex syntax of 're.sub' package. "
@@ -133,8 +134,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         parser.add_argument(
             "--collection-column",
             default=None,
-            help="Assay column from that matchs irods collection names. "
-            "If not set, the last material column will be used.",
+            help="Assay column from that matches iRODS collection names. "
+            "If not set, the last material column will be used. If it matches multiple "
+            "columns the last one can be used.",
         )
         parser.add_argument(
             "--tmp",
@@ -159,15 +161,21 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         toml_config = load_toml_config(args)
         if not args.sodar_url:
-            if toml_config:
-                args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
-            else:
+            if not toml_config:
+                logger.error("SODAR URL not found in config files. Please specify on command line.")
+                res = 1
+            args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+            if not args.sodar_url:
                 logger.error("SODAR URL not found in config files. Please specify on command line.")
                 res = 1
         if not args.sodar_api_token:
-            if toml_config:
-                args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            else:
+            if not toml_config:
+                logger.error(
+                    "SODAR API token not found in config files. Please specify on command line."
+                )
+                res = 1
+            args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+            if not args.sodar_api_token:
                 logger.error(
                     "SODAR API token not found in config files. Please specify on command line."
                 )
@@ -180,7 +188,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         :param lz_uuid: Landing zone UUID.
         :type lz_uuid: str
 
-        :return: Returns Sodar UUID of corresponding project.
+        :return: Returns SODAR UUID of corresponding project.
         """
         from sodar_cli.api import landingzone
 
@@ -202,35 +210,77 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
 
-        # This part is only needed to get `assay.file_name`
-        # -> could be removed if we can get around that
-        investigation = api.samplesheet.retrieve(
-            sodar_url=self.args.sodar_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=project_uuid,
-        )
-        assay = None
-        for study in investigation.studies.values():
-            for assay_uuid in study.assays.keys():
-                if (self.args.assay is None) and (assay is None):
-                    assay = study.assays[assay_uuid]
-                if (self.args.assay is not None) and (self.args.assay == assay_uuid):
-                    assay = study.assays[assay_uuid]
-                    logger.info("Using irods path of assay %s: %s", assay_uuid, assay.irods_path)
-                    break
-
         isa_dict = api.samplesheet.export(
             sodar_url=self.args.sodar_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
         )
+        if len(isa_dict["assays"]) > 1:
+            if not self.args.assay:
+                msg = "Multiple assays found in investigation, please specify which one to use with --assay."
+                logger.error(msg)
+                raise ParameterException(msg)
 
-        assay_tsv = isa_dict["assays"][assay.file_name]["tsv"]
+            investigation = api.samplesheet.retrieve(
+                sodar_url=self.args.sodar_url,
+                sodar_api_token=self.args.sodar_api_token,
+                project_uuid=project_uuid,
+            )
+            for study in investigation.studies.values():
+                for assay_uuid in study.assays.keys():
+                    if self.args.assay == assay_uuid:
+                        assay_file_name = study.assays[assay_uuid].file_name
+                        break
+                # First break can only break out of inner loop
+                else:
+                    continue
+                break
+            else:
+                msg = f"Assay with UUID {self.args.assay} not found in investigation."
+                logger.error(msg)
+                raise ParameterException(msg)
+        else:
+            assay_file_name = list(isa_dict["assays"].keys())[0]
+
+        assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]
         assay_header, *assay_lines = assay_tsv.rstrip("\n").split("\n")
         assay_header = assay_header.split("\t")
         assay_lines = map(lambda x: x.split("\t"), assay_lines)
 
-        # Never match these assay cols
+        def check_col_index(column_index):
+            if not column_index:
+                msg = "Could not identify any column in the assay sheet matching provided data. Please review input: --match-column={0}".format(
+                    in_column
+                )
+                logger.error(msg)
+                raise ParameterException(msg)
+            elif len(column_index) > 1:
+                column_index = max(column_index)
+                if self.args.yes:
+                    logger.info(
+                        "Multiple columns in the assay sheet match the provided column name ({}), using the last one.".format(
+                            assay_header[column_index]
+                        )
+                    )
+                elif (
+                    input(
+                        "Multiple columns in the assay sheet match the provided column name ({}), use the last one? [yN] ".format(
+                            assay_header[column_index]
+                        )
+                    )
+                    .lower()
+                    .startswith("y")
+                ):
+                    pass
+                else:
+                    msg = "Not possible to continue the process without a defined match-column. Breaking..."
+                    logger.info(msg)
+                    raise UserCanceledException(msg)
+            else:
+                column_index = column_index[0]
+            return column_index
+
+        # Never match these (hidden) assay columns
         ignore_cols = (
             "Performer",
             "Date",
@@ -247,35 +297,27 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             and in_column.lower()
             in re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
         ]
-        if not in_column_index or len(in_column_index) > 1:
-            msg = "Could not identify a valid unique column of the assay sheet matching provided data. Please review input: --match-column={0}".format(
-                in_column
-            )
-            logger.error(msg)
-            raise ParameterException(msg)
-        in_column_index = in_column_index[0]
+        in_column_index = check_col_index(in_column_index)
 
         if out_column is None:
             # Get index of last material column that is not 'Raw Data File'
-            out_column_index = max(
-                [
-                    i
-                    for i, head in enumerate(assay_header)
-                    if head not in ignore_cols
-                    and not re.match("Raw Data File|Parameter Value|Comment|Characteristics", head)
-                ]
+            materials = (
+                "Extract Name",
+                "Labeled Extract Name",
+                "Library Name",
+                "Sample Name",
+                "Source Name",
             )
+            out_column_index = max([i for i, head in enumerate(assay_header) if head in materials])
         else:
             out_column_index = [
-                i for i, head in enumerate(assay_header) if re.match(out_column, head)
+                i
+                for i, head in enumerate(assay_header)
+                if head not in ignore_cols
+                and out_column.lower()
+                in re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
             ]
-            if not out_column_index or len(out_column_index) > 1:
-                msg = "Could not identify a valid unique column of the assay sheet matching provided data. Please review input: --collection-column={0}".format(
-                    out_column
-                )
-                logger.error(msg)
-                raise ParameterException(msg)
-            out_column_index = out_column_index[0]
+            out_column_index = check_col_index(out_column_index)
 
         return {line[in_column_index]: line[out_column_index] for line in assay_lines}
 

@@ -190,15 +190,21 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         toml_config = load_toml_config(args)
         if not args.sodar_url:
-            if toml_config:
-                args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
-            else:
+            if not toml_config:
+                logger.error("SODAR URL not found in config files. Please specify on command line.")
+                res = 1
+            args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+            if not args.sodar_url:
                 logger.error("SODAR URL not found in config files. Please specify on command line.")
                 res = 1
         if not args.sodar_api_token:
-            if toml_config:
-                args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            else:
+            if not toml_config:
+                logger.error(
+                    "SODAR API token not found in config files. Please specify on command line."
+                )
+                res = 1
+            args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+            if not args.sodar_api_token:
                 logger.error(
                     "SODAR API token not found in config files. Please specify on command line."
                 )
@@ -454,8 +460,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
     def get_landing_zone_uuid_by_path(self, lz_irods_path, project_uuid, assay_uuid=None):
         """
-        :param lz_path: Landing zone path.
-        :type lz_path: str
+        :param lz_irods_path: Landing zone path.
+        :type lz_irods_path: str
 
         :param project_uuid: Project UUID.
         :type project_uuid: str
