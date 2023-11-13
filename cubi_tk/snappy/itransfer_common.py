@@ -489,10 +489,10 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             existing_lzs = list(filter(lambda x: x.assay == assay_uuid, existing_lzs))
 
         matching_lzs = list(filter(lambda x: x.irods_path == lz_irods_path, existing_lzs))
-        if matching_lzs:
+        if matching_lzs and matching_lzs[0].status == 'ACTIVE':
             lz_uuid = matching_lzs[0].sodar_uuid
         else:
-            msg = "Could not find LZ with given path. Please review input: {0}".format(
+            msg = "Could not find an active LZ with the given path. Please review input: {0}".format(
                 lz_irods_path
             )
             logger.error(msg)

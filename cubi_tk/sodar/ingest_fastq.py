@@ -361,7 +361,8 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         """Build file transfer jobs."""
         if library_names:
             logger.warning(
-                "will ignore parameter 'library_names' = %s in build_jobs()", str(library_names)
+                "will ignore parameter 'library_names' = %s in ingest_fastq.build_jobs()",
+                str(library_names),
             )
 
         lz_uuid, lz_irods_path = self.get_sodar_info()
@@ -373,9 +374,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         else:
             column_match = None
 
-        # This collects input folders and downloads them if they are webdav locations
-        # Note: the webdav support here might not be documented. If useful it should maybe be
-        # made available for all itransfer commands.
         folders = self.download_webdav(self.args.sources)
         transfer_jobs = []
 
@@ -414,7 +412,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         remote_file = pathlib.Path(
                             lz_irods_path
                         ) / self.args.remote_dir_pattern.format(
-                            # Removed the `+ self.args.add_suffix` here, since anything after the file extension is a bad idea
+                            # Removed the `+ self.args.add_suffix` here, since adding anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
                             date=self.args.remote_dir_date,
                             collection_name=column_match[sample_name]
@@ -424,13 +422,13 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         )
                     except KeyError:
                         msg = (
-                            f"Could not match extracted sample name '{sample_name}' to any value in the "
-                            "--match-column. Please review the assay table, src-regex and sample-collection-mapping args."
+                            f"Could not match extracted sample value '{sample_name}' to any value in the "
+                            f"--match-column {self.args.match_column}. Please review the assay table, src-regex and sample-collection-mapping args."
                         )
                         logger.error(msg)
                         raise ParameterException(msg)
 
-                    # This would the original code, but there is no need to change the remote file names once they are
+                    # This was the original code, but there is no need to change the remote file names once they are
                     # mapped to the correct collections:
                     # remote_file = str(remote_file)
                     # for m_pat, r_pat in self.args.remote_dir_mapping:
