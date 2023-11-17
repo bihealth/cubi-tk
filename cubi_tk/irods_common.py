@@ -22,7 +22,7 @@ NUM_PARALLEL_SESSIONS = 4
 
 @attr.s(frozen=True, auto_attribs=True)
 class TransferJob:
-    """Encodes a transfer job from the local file system to the remote iRODS collection."""
+    """Encodes a transfer job from the local file system to a remote iRODS collection."""
 
     #: Source path.
     path_src: str
@@ -30,8 +30,9 @@ class TransferJob:
     #: Destination path.
     path_dest: str
 
-    #: Number of bytes to transfer.
+    #: Number of bytes to transfer (optional).
     bytes: str = attr.field()
+
     @bytes.default
     def _get_file_size(self):
         return Path(self.path_src).stat().st_size

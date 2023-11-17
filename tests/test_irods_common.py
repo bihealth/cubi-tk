@@ -13,6 +13,7 @@ def test_transfer_job_bytes(fs):
     fs.create_file("test_file", st_size=123)
     assert TransferJob("test_file", "remote/path").bytes == 123
 
+
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_common_init(mocksession):
     assert iRODSCommon().irods_env_path is not None
