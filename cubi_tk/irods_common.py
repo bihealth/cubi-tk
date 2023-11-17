@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from typing import Iterable
 
-import attr
+import attrs
 from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
@@ -20,7 +20,7 @@ output_logger = logzero.setup_logger(formatter=formatter)
 NUM_PARALLEL_SESSIONS = 4
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attrs.frozen(auto_attribs=True)
 class TransferJob:
     """Encodes a transfer job from the local file system to a remote iRODS collection."""
 
@@ -31,7 +31,7 @@ class TransferJob:
     path_dest: str
 
     #: Number of bytes to transfer (optional).
-    bytes: str = attr.field()
+    bytes: str = attrs.field()
 
     @bytes.default
     def _get_file_size(self):
