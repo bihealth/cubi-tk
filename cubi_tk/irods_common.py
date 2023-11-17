@@ -31,7 +31,10 @@ class TransferJob:
     path_dest: str
 
     #: Number of bytes to transfer.
-    bytes: int
+    bytes: str = attr.field()
+    @bytes.default
+    def _get_file_size(self):
+        return Path(self.path_src).stat().st_size
 
 
 class iRODSCommon:
