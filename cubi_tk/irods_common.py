@@ -167,7 +167,11 @@ class iRODSTransfer(iRODSCommon):
     def destinations(self):
         return self.__destinations
 
-    def put(self):
+    def _create_collections(self, job: TransferJob):
+        collection = str(Path(job.path_dest).parent)
+        self.session.collections.create(collection)
+
+    def put(self, recursive: bool = False):
         # Double tqdm for currently transferred file info
         # TODO: add more parenthesis after python 3.10
         with tqdm(
@@ -178,8 +182,12 @@ class iRODSTransfer(iRODSCommon):
             position=1,
         ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
             for n, job in enumerate(self.__jobs):
-                file_log.set_description_str(f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_src).name}")
+                file_log.set_description_str(
+                    f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_src).name}"
+                )
                 try:
+                    if recursive:
+                        self._create_collections(job)
                     self.session.data_objects.put(job.path_src, job.path_dest)
                     t.update(job.bytes)
                 except Exception as e:  # pragma: no cover

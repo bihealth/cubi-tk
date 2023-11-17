@@ -118,9 +118,20 @@ def test_irods_transfer_put(fs, itransfer, jobs):
 
     with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
         itransfer.put()
+        with patch("cubi_tk.irods_common.iRODSTransfer._create_collections") as mockrecursive:
+            itransfer.put(recursive=True)
 
     for job in jobs:
         assert Path(job.path_dest).exists()
+    mockrecursive.assert_called()
+
+
+def test_create_collections(itransfer):
+    itransfer.session.collections.create = MagicMock()
+    itransfer._create_collections(itransfer.jobs[1])
+
+    coll_path = str(Path(itransfer.jobs[1].path_dest).parent)
+    itransfer.session.collections.create.assert_called_with(coll_path)
 
 
 def test_irods_transfer_chksum(itransfer):
