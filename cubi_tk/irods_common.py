@@ -76,7 +76,8 @@ class iRODSCommon:
     def _check_auth(self):
         """Check auth status and login if needed."""
         try:
-            self._init_irods().server_version
+            with self._init_irods() as session:
+                session.server_version
             return 0
         except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
             logger.info(self.get_irods_error(e))
