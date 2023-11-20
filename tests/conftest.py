@@ -74,3 +74,26 @@ def my_exists(self):
 def my_get_sodar_info(_self):
     """Method is used to patch cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info"""
     return "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
+
+
+def my_sodar_api_export(n_assays=1):
+    """Return contents for api.samplesheet.export"""
+    assay = textwrap.dedent(
+        """
+        Sample Name\tProtocol REF\tParameter Value[Concentration measurement]\tPerformer\tDate\tExtract Name\tCharacteristics[Concentration]\tUnit\tTerm Source REF\tTerm Accession Number\tProtocol REF\tParameter Value[Provider name]\tParameter Value[Provider contact]\tParameter Value[Provider project ID]\tParameter Value[Provider sample ID]\tParameter Value[Provider QC status]\tParameter Value[Requestor contact]\tParameter Value[Requestor project]\tParameter Value[Requestor sample ID]\tParameter Value[Concentration measurement]\tParameter Value[Library source]\tParameter Value[Library strategy]\tParameter Value[Library selection]\tParameter Value[Library layout]\tParameter Value[Library kit]\tComment[Library kit catalogue ID]\tParameter Value[Target insert size]\tParameter Value[Wet-lab insert size]\tParameter Value[Barcode kit]\tParameter Value[Barcode kit catalogue ID]\tParameter Value[Barcode name]\tParameter Value[Barcode sequence]\tPerformer\tDate\tLibrary Name\tCharacteristics[Folder name]\tCharacteristics[Concentration]\tUnit\tTerm Source REF\tTerm Accession Number\tProtocol REF\tParameter Value[Platform]\tParameter Value[Instrument model]\tParameter Value[Base quality encoding]\tParameter Value[Center name]\tParameter Value[Center contact]\tPerformer\tDate\tRaw Data File
+        Sample1-N1\tNucleic acid extraction WES\t\t\t\tSample1-N1-DNA1\t\t\t\t\tLibrary construction WES\t\t\t\t\t\t\t\t\t\tGENOMIC\tWXS\tHybrid Selection\tPAIRED\tAgilent SureSelect Human All Exon V7\t\t\t\t\t\t\t\t\t\tSample1-N1-DNA1-WES1\tFolder1\t\t\t\t\tNucleic acid sequencing WES\tILLUMINA\tIllumina NovaSeq 6000\tPhred+33
+        Sample2-N1\tNucleic acid extraction WES\t\t\t\tSample2-N1-DNA1\t\t\t\t\tLibrary construction WES\t\t\t\t\t\t\t\t\t\tGENOMIC\tWXS\tHybrid Selection\tPAIRED\tAgilent SureSelect Human All Exon V7\t\t\t\t\t\t\t\t\t\tSample2-N1-DNA1-WES1\tFolder2\t\t\t\t\tNucleic acid sequencing WES\tILLUMINA\tIllumina NovaSeq 6000\tPhred+33
+        Sample3-N1\tNucleic acid extraction WES\t\t\t\tSample3-N1-DNA1\t\t\t\t\tLibrary construction WES\t\t\t\t\t\t\t\t\t\tGENOMIC\tWXS\tHybrid Selection\tPAIRED\tAgilent SureSelect Human All Exon V7\t\t\t\t\t\t\t\t\t\tSample3-N1-DNA1-WES1\tFolder3\t\t\t\t\tNucleic acid sequencing WES\tILLUMINA\tIllumina NovaSeq 6000\tPhred+33
+        """
+    ).lstrip()
+
+    isa_dict = {
+        "investigation": {"path": "i_Investigation.txt", "tsv": None},
+        "studies": {"s_Study_0.txt": {"tsv": None}},
+        "assays": {"a_name_0": {"tsv": assay}},
+    }
+    if n_assays > 1:
+        for i in range(1, n_assays):
+            isa_dict["assays"]["a_name_%d" % i] = {"tsv": assay}
+
+    return isa_dict
