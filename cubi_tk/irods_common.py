@@ -172,7 +172,7 @@ class iRODSTransfer(iRODSCommon):
         collection = str(Path(job.path_dest).parent)
         self.session.collections.create(collection)
 
-    def put(self, recursive: bool = False):
+    def put(self, recursive: bool = False, sync: bool = False):
         # Double tqdm for currently transferred file info
         # TODO: add more parenthesis after python 3.10
         with tqdm(
@@ -189,6 +189,9 @@ class iRODSTransfer(iRODSCommon):
                 try:
                     if recursive:
                         self._create_collections(job)
+                    if sync and self.session.data_objects.exists(job.path_dest):
+                        t.update(job.bytes)
+                        continue
                     self.session.data_objects.put(job.path_src, job.path_dest)
                     t.update(job.bytes)
                 except Exception as e:  # pragma: no cover

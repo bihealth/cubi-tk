@@ -111,19 +111,24 @@ def test_irods_transfer_init(jobs, itransfer):
         assert itransferc.ask is True
 
 
-def test_irods_transfer_put(fs, itransfer, jobs):
+@patch("cubi_tk.irods_common.iRODSTransfer._create_collections")
+def test_irods_transfer_put(mockrecursive, fs, itransfer, jobs):
     for job in jobs:
         fs.create_file(job.path_src)
         fs.create_dir(Path(job.path_dest).parent)
 
     with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
         itransfer.put()
-        with patch("cubi_tk.irods_common.iRODSTransfer._create_collections") as mockrecursive:
-            itransfer.put(recursive=True)
+        itransfer.put(recursive=True)
 
     for job in jobs:
         assert Path(job.path_dest).exists()
     mockrecursive.assert_called()
+
+    with patch.object(itransfer.session.data_objects, "put") as mocktransfer:
+        with patch.object(itransfer.session.data_objects, "exists", return_value=True):
+            itransfer.put(sync=True)
+        mocktransfer.assert_not_called()
 
 
 def test_create_collections(itransfer):
