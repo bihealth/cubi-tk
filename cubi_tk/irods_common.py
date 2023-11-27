@@ -22,20 +22,26 @@ NUM_PARALLEL_SESSIONS = 4
 
 @attrs.frozen(auto_attribs=True)
 class TransferJob:
-    """Encodes a transfer job from the local file system to a remote iRODS collection."""
+    """
+    Encodes a transfer job between the local file system
+    and a remote iRODS collection.
+    """
 
     #: Source path.
-    path_src: str
+    path_local: str
 
     #: Destination path.
-    path_dest: str
+    path_remote: str
 
     #: Number of bytes to transfer (optional).
     bytes: str = attrs.field()
 
     @bytes.default
     def _get_file_size(self):
-        return Path(self.path_src).stat().st_size
+        try:
+            return Path(self.path_local).stat().st_size
+        except FileNotFoundError:
+            return -1
 
 
 class iRODSCommon:
@@ -154,7 +160,7 @@ class iRODSTransfer(iRODSCommon):
             self.session = s[0]  # TODO: use more sessions
         self.__jobs = jobs
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
-        self.__destinations = [job.path_dest for job in self.__jobs]
+        self.__destinations = [job.path_remote for job in self.__jobs]
 
     @property
     def jobs(self):
@@ -169,7 +175,7 @@ class iRODSTransfer(iRODSCommon):
         return self.__destinations
 
     def _create_collections(self, job: TransferJob):
-        collection = str(Path(job.path_dest).parent)
+        collection = str(Path(job.path_remote).parent)
         self.session.collections.create(collection)
 
     def put(self, recursive: bool = False, sync: bool = False):
@@ -184,18 +190,18 @@ class iRODSTransfer(iRODSCommon):
         ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
-                    f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_src).name}"
+                    f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
                     if recursive:
                         self._create_collections(job)
-                    if sync and self.session.data_objects.exists(job.path_dest):
+                    if sync and self.session.data_objects.exists(job.path_remote):
                         t.update(job.bytes)
                         continue
-                    self.session.data_objects.put(job.path_src, job.path_dest)
+                    self.session.data_objects.put(job.path_local, job.path_remote)
                     t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
-                    logger.error(f"Problem during transfer of {job.path_src}")
+                    logger.error(f"Problem during transfer of {job.path_local}")
                     logger.error(self.get_irods_error(e))
                     sys.exit(1)
             t.clear()
@@ -204,10 +210,10 @@ class iRODSTransfer(iRODSCommon):
         """Compute remote md5 checksums for all jobs."""
         common_prefix = os.path.commonpath(self.__destinations)
         for job in self.__jobs:
-            if not job.path_src.endswith(".md5"):
-                output_logger.info(Path(job.path_dest).relative_to(common_prefix))
+            if not job.path_local.endswith(".md5"):
+                output_logger.info(Path(job.path_remote).relative_to(common_prefix))
                 try:
-                    data_object = self.session.data_objects.get(job.path_dest)
+                    data_object = self.session.data_objects.get(job.path_remote)
                     if not data_object.checksum:
                         data_object.chksum()
                 except Exception as e:  # pragma: no cover

@@ -89,8 +89,8 @@ def test_get_irods_sessions(mocksession):
 @pytest.fixture
 def jobs():
     return (
-        TransferJob(path_src="myfile.csv", path_dest="dest_dir/myfile.csv", bytes=123),
-        TransferJob(path_src="folder/file.csv", path_dest="dest_dir/folder/file.csv", bytes=1024),
+        TransferJob(path_local="myfile.csv", path_remote="dest_dir/myfile.csv", bytes=123),
+        TransferJob(path_local="folder/file.csv", path_remote="dest_dir/folder/file.csv", bytes=1024),
     )
 
 
@@ -103,7 +103,7 @@ def itransfer(jobs):
 def test_irods_transfer_init(jobs, itransfer):
     assert itransfer.jobs == jobs
     assert itransfer.size == sum([job.bytes for job in jobs])
-    assert itransfer.destinations == [job.path_dest for job in jobs]
+    assert itransfer.destinations == [job.path_remote for job in jobs]
 
     with patch("cubi_tk.irods_common.iRODSSession"):
         itransferc = iRODSTransfer(jobs=jobs, irods_env_path="a/b/c", ask=True)
@@ -114,15 +114,15 @@ def test_irods_transfer_init(jobs, itransfer):
 @patch("cubi_tk.irods_common.iRODSTransfer._create_collections")
 def test_irods_transfer_put(mockrecursive, fs, itransfer, jobs):
     for job in jobs:
-        fs.create_file(job.path_src)
-        fs.create_dir(Path(job.path_dest).parent)
+        fs.create_file(job.path_local)
+        fs.create_dir(Path(job.path_remote).parent)
 
     with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
         itransfer.put()
         itransfer.put(recursive=True)
 
     for job in jobs:
-        assert Path(job.path_dest).exists()
+        assert Path(job.path_remote).exists()
     mockrecursive.assert_called()
 
     with patch.object(itransfer.session.data_objects, "put") as mocktransfer:
@@ -135,7 +135,7 @@ def test_create_collections(itransfer):
     itransfer.session.collections.create = MagicMock()
     itransfer._create_collections(itransfer.jobs[1])
 
-    coll_path = str(Path(itransfer.jobs[1].path_dest).parent)
+    coll_path = str(Path(itransfer.jobs[1].path_remote).parent)
     itransfer.session.collections.create.assert_called_with(coll_path)
 
 
