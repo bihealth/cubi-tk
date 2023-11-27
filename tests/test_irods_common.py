@@ -12,6 +12,7 @@ from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 def test_transfer_job_bytes(fs):
     fs.create_file("test_file", st_size=123)
     assert TransferJob("test_file", "remote/path").bytes == 123
+    assert TransferJob("no_file.no", "remote/path").bytes == -1
 
 
 @patch("cubi_tk.irods_common.iRODSSession")
@@ -90,7 +91,9 @@ def test_get_irods_sessions(mocksession):
 def jobs():
     return (
         TransferJob(path_local="myfile.csv", path_remote="dest_dir/myfile.csv", bytes=123),
-        TransferJob(path_local="folder/file.csv", path_remote="dest_dir/folder/file.csv", bytes=1024),
+        TransferJob(
+            path_local="folder/file.csv", path_remote="dest_dir/folder/file.csv", bytes=1024
+        ),
     )
 
 
@@ -151,3 +154,16 @@ def test_irods_transfer_chksum(itransfer):
         assert mock_data_object.chksum.call_count == len(itransfer.destinations)
         for path in itransfer.destinations:
             mockget.assert_any_call(path)
+
+
+def test_irods_transfer_get(itransfer, jobs, fs):
+    with patch.object(itransfer.session.data_objects, "get") as mockget:
+        mockget.return_value.size = 111
+        itransfer.get()
+
+        for job in jobs:
+            # size check
+            mockget.assert_any_call(job.path_remote)
+            # download
+            mockget.assert_any_call(job.path_remote, job.path_local)
+        assert itransfer.size == 222

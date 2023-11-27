@@ -220,3 +220,33 @@ class iRODSTransfer(iRODSCommon):
                     logger.error("Problem during iRODS checksumming.")
                     logger.error(self.get_irods_error(e))
 
+    def get(self):
+        """Download files from SODAR."""
+        self.__jobs = [
+            attrs.evolve(job, bytes=self.session.data_objects.get(job.path_remote).size)
+            for job in self.__jobs
+        ]
+        self.__total_bytes = sum([job.bytes for job in self.__jobs])
+        # Double tqdm for currently transferred file info
+        # TODO: add more parenthesis after python 3.10
+        with tqdm(
+            total=self.__total_bytes,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            position=1,
+        ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
+            for n, job in enumerate(self.__jobs):
+                file_log.set_description_str(
+                    f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
+                )
+                try:
+                    self.session.data_objects.get(job.path_remote, job.path_local)
+                    t.update(job.bytes)
+                except FileNotFoundError:  # pragma: no cover
+                    raise
+                except Exception as e:  # pragma: no cover
+                    logger.error(f"Problem during transfer of {job.path_remote}")
+                    logger.error(self.get_irods_error(e))
+                    sys.exit(1)
+            t.clear()
