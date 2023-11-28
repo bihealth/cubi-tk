@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 import getpass
 import os.path
 from pathlib import Path
@@ -21,8 +20,6 @@ from tqdm import tqdm
 # no-frills logger
 formatter = logzero.LogFormatter(fmt="%(message)s")
 output_logger = logzero.setup_logger(formatter=formatter)
-
-NUM_PARALLEL_SESSIONS = 4
 
 
 @attrs.frozen(auto_attribs=True)
@@ -139,17 +136,6 @@ class iRODSCommon:
         else:
             logger.warning("No token found to be saved.")
 
-    @contextmanager
-    def _get_irods_sessions(self, count=NUM_PARALLEL_SESSIONS):
-        if count < 1:
-            count = 1
-        irods_sessions = [self._init_irods() for _ in range(count)]
-        try:
-            yield irods_sessions
-        finally:
-            for irods in irods_sessions:
-                irods.cleanup()
-
     @property
     def session(self):
         return self._init_irods()
@@ -183,8 +169,8 @@ class iRODSTransfer(iRODSCommon):
 
     def _create_collections(self, job: TransferJob):
         collection = str(Path(job.path_remote).parent)
-        with self._get_irods_sessions(1) as session:
-            session[0].collections.create(collection)
+        with self.session as session:
+            session.collections.create(collection)
 
     def put(self, recursive: bool = False, sync: bool = False):
         # Double tqdm for currently transferred file info
@@ -201,13 +187,13 @@ class iRODSTransfer(iRODSCommon):
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
-                    with self._get_irods_sessions(1) as session:
+                    with self.session as session:
                         if recursive:
                             self._create_collections(job)
-                        if sync and session[0].data_objects.exists(job.path_remote):
+                        if sync and session.data_objects.exists(job.path_remote):
                             t.update(job.bytes)
                             continue
-                        session[0].data_objects.put(job.path_local, job.path_remote)
+                        session.data_objects.put(job.path_local, job.path_remote)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
@@ -222,8 +208,8 @@ class iRODSTransfer(iRODSCommon):
             if not job.path_local.endswith(".md5"):
                 output_logger.info(Path(job.path_remote).relative_to(common_prefix))
                 try:
-                    with self._get_irods_sessions(1) as session:
-                        data_object = session[0].data_objects.get(job.path_remote)
+                    with self.session as session:
+                        data_object = session.data_objects.get(job.path_remote)
                         if not data_object.checksum:
                             data_object.chksum()
                 except Exception as e:  # pragma: no cover
@@ -232,9 +218,9 @@ class iRODSTransfer(iRODSCommon):
 
     def get(self):
         """Download files from SODAR."""
-        with self._get_irods_sessions(1) as session:
+        with self.session as session:
             self.__jobs = [
-                attrs.evolve(job, bytes=session[0].data_objects.get(job.path_remote).size)
+                attrs.evolve(job, bytes=session.data_objects.get(job.path_remote).size)
                 for job in self.__jobs
             ]
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
@@ -252,8 +238,8 @@ class iRODSTransfer(iRODSCommon):
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
-                    with self._get_irods_sessions(1) as session:
-                        session[0].data_objects.get(job.path_remote, job.path_local)
+                    with self.session as session:
+                        session.data_objects.get(job.path_remote, job.path_local)
                     t.update(job.bytes)
                 except FileNotFoundError:  # pragma: no cover
                     raise

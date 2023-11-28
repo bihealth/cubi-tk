@@ -66,14 +66,6 @@ def test_save_irods_token(mocksession, mockencode, fs):
     mockencode.assert_called_with("secure")
 
 
-@patch("cubi_tk.irods_common.iRODSSession")
-def test_get_irods_sessions(mocksession):
-    with iRODSCommon()._get_irods_sessions(count=3) as sessions:
-        assert len(sessions) == 3
-    with iRODSCommon()._get_irods_sessions(count=-1) as sessions:
-        assert len(sessions) == 1
-
-
 # Test iRODSTransfer #########
 @pytest.fixture
 def jobs():
@@ -95,15 +87,17 @@ def test_irods_transfer_init(jobs):
         assert itransfer.destinations == [job.path_remote for job in jobs]
 
 
-@patch("cubi_tk.irods_common.iRODSSession")
+@patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
 @patch("cubi_tk.irods_common.iRODSTransfer._create_collections")
 def test_irods_transfer_put(mockrecursive, mocksession, jobs):
     mockput = MagicMock()
-    mockexists = MagicMock()
+    mockexists = MagicMock(return_value=True)
     mockobj = MagicMock()
     mockobj.put = mockput
     mockobj.exists = mockexists
-    mocksession.return_value.data_objects = mockobj
+
+    # fit for context management
+    mocksession.return_value.__enter__.return_value.data_objects = mockobj
     itransfer = iRODSTransfer(jobs)
 
     # put
@@ -123,12 +117,12 @@ def test_irods_transfer_put(mockrecursive, mocksession, jobs):
     mockexists.assert_called()
 
 
-@patch("cubi_tk.irods_common.iRODSSession")
+@patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
 def test_create_collections(mocksession, jobs):
     mockcreate = MagicMock()
     mockcoll = MagicMock()
     mockcoll.create = mockcreate
-    mocksession.return_value.collections = mockcoll
+    mocksession.return_value.__enter__.return_value.collections = mockcoll
     itransfer = iRODSTransfer(jobs)
 
     itransfer._create_collections(itransfer.jobs[1])
@@ -136,12 +130,12 @@ def test_create_collections(mocksession, jobs):
     mockcreate.assert_called_with(coll_path)
 
 
-@patch("cubi_tk.irods_common.iRODSSession")
+@patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
 def test_irods_transfer_chksum(mocksession, jobs):
     mockget = MagicMock()
     mockobj = MagicMock()
     mockobj.get = mockget
-    mocksession.return_value.data_objects = mockobj
+    mocksession.return_value.__enter__.return_value.data_objects = mockobj
 
     mock_data_object = MagicMock()
     mock_data_object.checksum = None
@@ -156,12 +150,12 @@ def test_irods_transfer_chksum(mocksession, jobs):
         mockget.assert_any_call(path)
 
 
-@patch("cubi_tk.irods_common.iRODSSession")
+@patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
 def test_irods_transfer_get(mocksession, jobs):
     mockget = MagicMock()
     mockobj = MagicMock()
     mockobj.get = mockget
-    mocksession.return_value.data_objects = mockobj
+    mocksession.return_value.__enter__.return_value.data_objects = mockobj
     itransfer = iRODSTransfer(jobs)
 
     mockget.return_value.size = 111
