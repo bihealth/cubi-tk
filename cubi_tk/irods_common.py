@@ -150,6 +150,10 @@ class iRODSCommon:
             for irods in irods_sessions:
                 irods.cleanup()
 
+    @property
+    def session(self):
+        return self._init_irods()
+
 
 class iRODSTransfer(iRODSCommon):
     """

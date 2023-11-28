@@ -21,7 +21,7 @@ def test_common_init(mocksession):
     icommon = iRODSCommon(irods_env_path="a/b/c.json")
     assert icommon.irods_env_path == "a/b/c.json"
     assert type(iRODSCommon().ask) is bool
-
+    assert iRODSCommon().session is mocksession.return_value
 
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_get_irods_error(mocksession):
