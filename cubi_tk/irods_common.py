@@ -6,7 +6,11 @@ import sys
 from typing import Iterable
 
 import attrs
-from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED, CAT_PASSWORD_EXPIRED
+from irods.exception import (
+    CAT_INVALID_AUTHENTICATION,
+    PAM_AUTH_PASSWORD_FAILED,
+    CAT_PASSWORD_EXPIRED,
+)
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
 import logzero
@@ -151,8 +155,6 @@ class iRODSTransfer(iRODSCommon):
 
     def __init__(self, jobs: Iterable[TransferJob], **kwargs):
         super().__init__(**kwargs)
-        with self._get_irods_sessions(1) as s:
-            self.session = s[0]  # TODO: use more sessions
         self.__jobs = jobs
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
         self.__destinations = [job.path_remote for job in self.__jobs]
@@ -171,7 +173,8 @@ class iRODSTransfer(iRODSCommon):
 
     def _create_collections(self, job: TransferJob):
         collection = str(Path(job.path_remote).parent)
-        self.session.collections.create(collection)
+        with self._get_irods_sessions(1) as session:
+            session[0].collections.create(collection)
 
     def put(self, recursive: bool = False, sync: bool = False):
         # Double tqdm for currently transferred file info
@@ -188,13 +191,14 @@ class iRODSTransfer(iRODSCommon):
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
-                    if recursive:
-                        self._create_collections(job)
-                    if sync and self.session.data_objects.exists(job.path_remote):
+                    with self._get_irods_sessions(1) as session:
+                        if recursive:
+                            self._create_collections(job)
+                        if sync and session[0].data_objects.exists(job.path_remote):
+                            t.update(job.bytes)
+                            continue
+                        session[0].data_objects.put(job.path_local, job.path_remote)
                         t.update(job.bytes)
-                        continue
-                    self.session.data_objects.put(job.path_local, job.path_remote)
-                    t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
                     logger.error(self.get_irods_error(e))
@@ -208,19 +212,21 @@ class iRODSTransfer(iRODSCommon):
             if not job.path_local.endswith(".md5"):
                 output_logger.info(Path(job.path_remote).relative_to(common_prefix))
                 try:
-                    data_object = self.session.data_objects.get(job.path_remote)
-                    if not data_object.checksum:
-                        data_object.chksum()
+                    with self._get_irods_sessions(1) as session:
+                        data_object = session[0].data_objects.get(job.path_remote)
+                        if not data_object.checksum:
+                            data_object.chksum()
                 except Exception as e:  # pragma: no cover
                     logger.error("Problem during iRODS checksumming.")
                     logger.error(self.get_irods_error(e))
 
     def get(self):
         """Download files from SODAR."""
-        self.__jobs = [
-            attrs.evolve(job, bytes=self.session.data_objects.get(job.path_remote).size)
-            for job in self.__jobs
-        ]
+        with self._get_irods_sessions(1) as session:
+            self.__jobs = [
+                attrs.evolve(job, bytes=session[0].data_objects.get(job.path_remote).size)
+                for job in self.__jobs
+            ]
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
         # Double tqdm for currently transferred file info
         # TODO: add more parenthesis after python 3.10
@@ -236,7 +242,8 @@ class iRODSTransfer(iRODSCommon):
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
-                    self.session.data_objects.get(job.path_remote, job.path_local)
+                    with self._get_irods_sessions(1) as session:
+                        session[0].data_objects.get(job.path_remote, job.path_local)
                     t.update(job.bytes)
                 except FileNotFoundError:  # pragma: no cover
                     raise

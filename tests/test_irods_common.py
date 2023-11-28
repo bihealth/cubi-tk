@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, call, MagicMock, patch
 
 import irods.exception
 from irods.session import NonAnonymousLoginWithoutPassword
@@ -31,28 +31,26 @@ def test_get_irods_error(mocksession):
     assert iRODSCommon().get_irods_error(e) == "Connection reset"
 
 
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_init_irods(mocksession, fs):
+    fs.create_file(".irods/irods_environment.json")
+    fs.create_file(".irods/.irodsA")
+
+    iRODSCommon()._init_irods()
+    mocksession.assert_called()
+
+
 @patch("getpass.getpass")
 @patch("cubi_tk.irods_common.iRODSSession")
-def test_check_auth(mocksession, mockpass, fs):
+def test_irods_login(mocksession, mockpass, fs):
     fs.create_file(".irods/irods_environment.json")
     password = "1234"
-
     icommon = iRODSCommon()
     mockpass.return_value = password
-    with patch.object(icommon, "_init_irods") as mockinit:
-        mockinit.side_effect = NonAnonymousLoginWithoutPassword()
 
-        # .irodsA not found, asks for password
-        icommon._check_auth()
-        mockpass.assert_called()
-        mocksession.assert_any_call(irods_env_file=ANY, password=password)
-
-    # .irodsA there, does not ask for password
-    mockpass.reset_mock()
-    mocksession.reset_mock()
-    icommon._check_auth()
-    mockpass.assert_not_called()
-    mocksession.assert_called_once()
+    icommon._irods_login()
+    mockpass.assert_called()
+    mocksession.assert_any_call(irods_env_file=ANY, password=password)
 
 
 @patch("cubi_tk.irods_common.encode", return_value="it works")
@@ -67,15 +65,6 @@ def test_save_irods_token(mocksession, mockencode, fs):
 
     assert icommon.irods_env_path.parent.joinpath(".irodsA").exists()
     mockencode.assert_called_with("secure")
-
-
-@patch("cubi_tk.irods_common.iRODSSession")
-def test_init_irods(mocksession, fs):
-    fs.create_file(".irods/irods_environment.json")
-    fs.create_file(".irods/.irodsA")
-
-    iRODSCommon()._init_irods()
-    mocksession.assert_called()
 
 
 @patch("cubi_tk.irods_common.iRODSSession")
@@ -97,73 +86,91 @@ def jobs():
     )
 
 
-@pytest.fixture
-def itransfer(jobs):
+def test_irods_transfer_init(jobs):
     with patch("cubi_tk.irods_common.iRODSSession"):
-        return iRODSTransfer(jobs)
+        itransfer = iRODSTransfer(jobs=jobs, irods_env_path="a/b/c", ask=True)
+        assert itransfer.irods_env_path == "a/b/c"
+        assert itransfer.ask is True
+        assert itransfer.jobs == jobs
+        assert itransfer.size == sum([job.bytes for job in jobs])
+        assert itransfer.destinations == [job.path_remote for job in jobs]
 
 
-def test_irods_transfer_init(jobs, itransfer):
-    assert itransfer.jobs == jobs
-    assert itransfer.size == sum([job.bytes for job in jobs])
-    assert itransfer.destinations == [job.path_remote for job in jobs]
-
-    with patch("cubi_tk.irods_common.iRODSSession"):
-        itransferc = iRODSTransfer(jobs=jobs, irods_env_path="a/b/c", ask=True)
-        assert itransferc.irods_env_path == "a/b/c"
-        assert itransferc.ask is True
-
-
+@patch("cubi_tk.irods_common.iRODSSession")
 @patch("cubi_tk.irods_common.iRODSTransfer._create_collections")
-def test_irods_transfer_put(mockrecursive, fs, itransfer, jobs):
-    for job in jobs:
-        fs.create_file(job.path_local)
-        fs.create_dir(Path(job.path_remote).parent)
+def test_irods_transfer_put(mockrecursive, mocksession, jobs):
+    mockput = MagicMock()
+    mockexists = MagicMock()
+    mockobj = MagicMock()
+    mockobj.put = mockput
+    mockobj.exists = mockexists
+    mocksession.return_value.data_objects = mockobj
+    itransfer = iRODSTransfer(jobs)
 
-    with patch.object(itransfer.session.data_objects, "put", wraps=shutil.copy):
-        itransfer.put()
-        itransfer.put(recursive=True)
+    # put
+    itransfer.put()
+    calls = [call(j.path_local, j.path_remote) for j in jobs]
+    mockput.assert_has_calls(calls)
 
-    for job in jobs:
-        assert Path(job.path_remote).exists()
-    mockrecursive.assert_called()
+    # recursive
+    itransfer.put(recursive=True)
+    calls = [call(j) for j in jobs]
+    mockrecursive.assert_has_calls(calls)
 
-    with patch.object(itransfer.session.data_objects, "put") as mocktransfer:
-        with patch.object(itransfer.session.data_objects, "exists", return_value=True):
-            itransfer.put(sync=True)
-        mocktransfer.assert_not_called()
+    # sync
+    mockput.reset_mock()
+    itransfer.put(sync=True)
+    mockput.assert_not_called()
+    mockexists.assert_called()
 
 
-def test_create_collections(itransfer):
-    itransfer.session.collections.create = MagicMock()
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_create_collections(mocksession, jobs):
+    mockcreate = MagicMock()
+    mockcoll = MagicMock()
+    mockcoll.create = mockcreate
+    mocksession.return_value.collections = mockcoll
+    itransfer = iRODSTransfer(jobs)
+
     itransfer._create_collections(itransfer.jobs[1])
-
     coll_path = str(Path(itransfer.jobs[1].path_remote).parent)
-    itransfer.session.collections.create.assert_called_with(coll_path)
+    mockcreate.assert_called_with(coll_path)
 
 
-def test_irods_transfer_chksum(itransfer):
-    with patch.object(itransfer.session.data_objects, "get") as mockget:
-        mock_data_object = MagicMock()
-        mockget.return_value = mock_data_object
-        mock_data_object.checksum = None
-        mock_data_object.chksum = MagicMock()
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_irods_transfer_chksum(mocksession, jobs):
+    mockget = MagicMock()
+    mockobj = MagicMock()
+    mockobj.get = mockget
+    mocksession.return_value.data_objects = mockobj
 
-        itransfer.chksum()
+    mock_data_object = MagicMock()
+    mock_data_object.checksum = None
+    mock_data_object.chksum = MagicMock()
+    mockget.return_value = mock_data_object
 
-        assert mock_data_object.chksum.call_count == len(itransfer.destinations)
-        for path in itransfer.destinations:
-            mockget.assert_any_call(path)
+    itransfer = iRODSTransfer(jobs)
+    itransfer.chksum()
+
+    assert mock_data_object.chksum.call_count == len(itransfer.destinations)
+    for path in itransfer.destinations:
+        mockget.assert_any_call(path)
 
 
-def test_irods_transfer_get(itransfer, jobs, fs):
-    with patch.object(itransfer.session.data_objects, "get") as mockget:
-        mockget.return_value.size = 111
-        itransfer.get()
+@patch("cubi_tk.irods_common.iRODSSession")
+def test_irods_transfer_get(mocksession, jobs):
+    mockget = MagicMock()
+    mockobj = MagicMock()
+    mockobj.get = mockget
+    mocksession.return_value.data_objects = mockobj
+    itransfer = iRODSTransfer(jobs)
 
-        for job in jobs:
-            # size check
-            mockget.assert_any_call(job.path_remote)
-            # download
-            mockget.assert_any_call(job.path_remote, job.path_local)
-        assert itransfer.size == 222
+    mockget.return_value.size = 111
+    itransfer.get()
+
+    for job in jobs:
+        # size check
+        mockget.assert_any_call(job.path_remote)
+        # download
+        mockget.assert_any_call(job.path_remote, job.path_local)
+    assert itransfer.size == 222
