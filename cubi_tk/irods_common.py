@@ -10,6 +10,7 @@ from irods.exception import (
     CAT_INVALID_AUTHENTICATION,
     PAM_AUTH_PASSWORD_FAILED,
     CAT_PASSWORD_EXPIRED,
+    CAT_INVALID_USER,
 )
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
@@ -78,11 +79,16 @@ class iRODSCommon:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
                 session.connection_timeout = 300
+                session.server_version
                 return session
             except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
                 logger.info(self.get_irods_error(e))
                 self._irods_login()
-            except (CAT_INVALID_AUTHENTICATION, CAT_PASSWORD_EXPIRED):  # pragma: no cover
+            except (
+                CAT_INVALID_AUTHENTICATION,
+                CAT_INVALID_USER,
+                CAT_PASSWORD_EXPIRED,
+            ):  # pragma: no cover
                 logger.warning("Problem with your session token.")
                 self.irods_env_path.parent.joinpath(".irodsA").unlink()
                 self._irods_login()
