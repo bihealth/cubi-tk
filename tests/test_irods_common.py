@@ -1,9 +1,7 @@
 from pathlib import Path
-import shutil
-from unittest.mock import ANY, call, MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import irods.exception
-from irods.session import NonAnonymousLoginWithoutPassword
 import pytest
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
@@ -22,6 +20,7 @@ def test_common_init(mocksession):
     assert icommon.irods_env_path == "a/b/c.json"
     assert type(iRODSCommon().ask) is bool
     assert iRODSCommon().session is mocksession.return_value
+
 
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_get_irods_error(mocksession):

@@ -8,9 +8,9 @@ from typing import Iterable
 import attrs
 from irods.exception import (
     CAT_INVALID_AUTHENTICATION,
-    PAM_AUTH_PASSWORD_FAILED,
-    CAT_PASSWORD_EXPIRED,
     CAT_INVALID_USER,
+    CAT_PASSWORD_EXPIRED,
+    PAM_AUTH_PASSWORD_FAILED,
 )
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
