@@ -6,7 +6,7 @@ import sys
 from typing import Iterable
 
 import attrs
-from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED
+from irods.exception import CAT_INVALID_AUTHENTICATION, PAM_AUTH_PASSWORD_FAILED, CAT_PASSWORD_EXPIRED
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
 import logzero
@@ -61,7 +61,6 @@ class iRODSCommon:
         else:
             self.irods_env_path = irods_env_path
         self.ask = ask
-        self._check_auth()
 
     @staticmethod
     def get_irods_error(e: Exception):
@@ -70,29 +69,25 @@ class iRODSCommon:
         return es if es and es != "None" else e.__class__.__name__
 
     def _init_irods(self) -> iRODSSession:
-        """Connect to iRODS."""
-        try:
-            session = iRODSSession(irods_env_file=self.irods_env_path)
-            session.connection_timeout = 300
-            return session
-        except Exception as e:  # pragma: no cover
-            logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-            raise
+        """Connect to iRODS. Login if needed."""
+        while True:
+            try:
+                session = iRODSSession(irods_env_file=self.irods_env_path)
+                session.connection_timeout = 300
+                return session
+            except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
+                logger.info(self.get_irods_error(e))
+                self._irods_login()
+            except (CAT_INVALID_AUTHENTICATION, CAT_PASSWORD_EXPIRED):  # pragma: no cover
+                logger.warning("Problem with your session token.")
+                self.irods_env_path.parent.joinpath(".irodsA").unlink()
+                self._irods_login()
+            except Exception as e:  # pragma: no cover
+                logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
+                raise
 
-    def _check_auth(self):
-        """Check auth status and login if needed."""
-        try:
-            with self._init_irods() as session:
-                session.server_version
-            return 0
-        except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
-            logger.info(self.get_irods_error(e))
-            pass
-        except CAT_INVALID_AUTHENTICATION:  # pragma: no cover
-            logger.warning("Problem with your session token.")
-            self.irods_env_path.parent.joinpath(".irodsA").unlink()
-            pass
-
+    def _irods_login(self):
+        """Ask user to log into iRODS."""
         # No valid .irodsA file. Query user for password.
         attempts = 0
         while attempts < 3:
@@ -104,14 +99,14 @@ class iRODSCommon:
                 token = session.pam_pw_negotiated
                 session.cleanup()
                 break
-            except PAM_AUTH_PASSWORD_FAILED:  # pragma: no cover
+            except PAM_AUTH_PASSWORD_FAILED as e:  # pragma: no cover
                 if attempts < 2:
                     logger.warning("Wrong password. Please try again.")
                     attempts += 1
                     continue
                 else:
                     logger.error("iRODS connection failed.")
-                    sys.exit(1)
+                    raise e
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
                 sys.exit(1)
