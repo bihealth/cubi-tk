@@ -186,7 +186,7 @@ class SodarIngest:
                 user_input = input(input_message)
                 if user_input.isdigit():
                     user_input = int(user_input)
-                    if 0 < user_input < len(collections):
+                    if 0 < user_input <= len(collections):
                         input_valid = True
 
             self.target_coll = collections[user_input - 1]
