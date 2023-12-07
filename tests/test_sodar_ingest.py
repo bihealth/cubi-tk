@@ -1,7 +1,6 @@
 """Tests for ``cubi_tk.sodar.ingest``."""
 
 from argparse import ArgumentParser
-import os
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
@@ -70,7 +69,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_symlink("/loop_src2", "/loop_src")
 
     args = DummyArgs()
-    args.sources = ["broken_link", "not_here", "loop_src", "testdir", "testdir", "file5"]
+    args.sources = ["broken_link", "not_here", "loop_src", "testdir", "testdir", "file5", "file6"]
     args.recursive = True
     args.exclude = ["file4", "file5"]
     dummy = MagicMock()
@@ -84,6 +83,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_file("/file3")
     fs.create_file("/testdir/file4")
     fs.create_file("/file5")
+    fs.create_file("/file6")
     fs.create_symlink("/testdir/file3", "/file3")
 
     paths = SodarIngest.build_file_list(dummy)
@@ -120,6 +120,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     assert {"spath": Path("/testdir/file3"), "ipath": Path("file3")} in paths
     assert {"spath": Path("/testdir/file4"), "ipath": Path("file4")} not in paths
     assert {"spath": Path("file5"), "ipath": Path("file5")} not in paths
+    assert {"spath": Path("file6"), "ipath": Path("file6")} in paths
 
 
 @patch("cubi_tk.sodar.ingest.TransferJob")
@@ -145,66 +146,98 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
         )
 
 
-# @patch("cubi_tk.sodar.ingest.init_irods")
-# @patch("cubi_tk.sodar.ingest.api.landingzone.retrieve")
-# def test_sodar_ingest_smoketest(mockapi, mocksession, fs):
-#     class DummyAPI(object):
-#         pass
+@patch("cubi_tk.sodar.ingest.TransferJob")
+@patch("cubi_tk.sodar.ingest.iRODSTransfer")
+@patch("cubi_tk.sodar.ingest.iRODSCommon.session")
+@patch("cubi_tk.sodar.ingest.api.landingzone.retrieve")
+def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs):
+    class DummyAPI(object):
+        pass
 
-#     class DummyColl(object):
-#         pass
+    class DummyColl(object):
+        pass
 
-#     fs.create_dir(Path.home().joinpath(".irods"))
-#     fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
+    fs.create_dir("/source/subdir")
+    fs.create_dir("/target/coll/")
+    fs.create_file("/source/file1")
+    fs.create_file("/source/subdir/file2")
+    lz_uuid = "f46b4fc3-0927-449d-b725-9ffed231507b"
+    argv = [
+        "sodar",
+        "ingest",
+        "--sodar-url",
+        "sodar_url",
+        "--sodar-api-token",
+        "token",
+        "--collection",
+        "coll",
+        "--yes",
+        "--recursive",
+        "source",
+        lz_uuid,
+    ]
 
-#     fs.create_dir("/source/subdir")
-#     fs.create_dir("/target/coll/")
-#     fs.create_file("/source/file1")
-#     fs.create_file("/source/subdir/file2")
-#     lz_uuid = "f46b4fc3-0927-449d-b725-9ffed231507b"
-#     argv = [
-#         "sodar",
-#         "ingest",
-#         "--sodar-url",
-#         "sodar_url",
-#         "--sodar-api-token",
-#         "token",
-#         "--collection",
-#         "coll",
-#         "--yes",
-#         "--recursive",
-#         "source",
-#         lz_uuid,
-#     ]
+    # Test env file missing
+    with pytest.raises(SystemExit):
+        main(argv)
 
-#     # Test cancel no invalid LZ
-#     api_return = DummyAPI()
-#     api_return.status = "DELETED"
-#     api_return.irods_path = "target"
-#     mockapi.return_value = api_return
+    fs.create_dir(Path.home().joinpath(".irods"))
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
-#     with pytest.raises(SystemExit):
-#         main(argv)
-#         mockapi.assert_called_with(
-#             sodar_url="sodar_url", sodar_api_token="token", landingzone_uuid=lz_uuid
-#         )
+    # Test args no api token
+    with pytest.raises(SystemExit):
+        argv2 = argv.copy()
+        argv2.remove("--sodar-api-token")
+        argv2.remove("token")
+        main(argv2)
 
-#     # Test calls when LZ is active
-#     api_return.status = "ACTIVE"
-#     dcoll = DummyColl()
-#     dcoll.subcollections = [
-#         DummyColl(),
-#     ]
-#     dcoll.subcollections[0].name = "coll"
-#     mocksession.return_value.collections.get.return_value = dcoll
-#     mocksession.return_value.collections.create = MagicMock(wraps=os.mkdir)
+    # Test cancel no invalid LZ
+    api_return = DummyAPI()
+    api_return.status = "DELETED"
+    api_return.irods_path = "target"
+    mockapi.return_value = api_return
 
-#     main(argv)
-#     assert call().collections.get("target") in mocksession.mock_calls
-#     assert call().collections.create("target/coll/subdir") in mocksession.mock_calls
+    with pytest.raises(SystemExit):
+        main(argv)
+        mockapi.assert_called_with(
+            sodar_url="sodar_url", sodar_api_token="token", landingzone_uuid=lz_uuid
+        )
 
-#     # TODO: more assertions, but I don't know how to query this out of the mock...
-#     # assert Path("/target/coll/file1").exists()
-#     # assert Path("/target/coll/file1.md5").exists()
-#     assert Path("/target/coll/subdir/").exists()
-#     # assert Path("/target/coll/subdir/file2.md5").exists()
+    # Test cancel if no files to transfer
+    api_return.status = "ACTIVE"
+    with pytest.raises(SystemExit):
+        argv2 = argv.copy()
+        argv2[-2] = "empty"
+        main(argv2)
+
+    # Test user input for subcollection
+    dcoll = DummyColl()
+    dcoll.subcollections = [
+        DummyColl(),
+    ]
+    dcoll.subcollections[0].name = "coll"
+    mocki = MagicMock()  # returned by the session context manager
+    mocksession.__enter__.return_value = mocki
+    mocki.collections.get.return_value = dcoll
+    mocktransfer.return_value.size = 1234
+
+    argv2 = argv.copy()
+    argv2.remove("--collection")
+    argv2.remove("coll")
+    with patch("builtins.input", side_effect=["a", "100", "1"]) as mockinput:
+        main(argv2)
+        assert mockinput.call_count == 3
+        mockjob.assert_called()
+
+    # Test upload logic
+    mockjob.reset_mock()
+    main(argv)
+    assert call.collections.get("target") in mocki.mock_calls
+    mockjob.assert_any_call(path_local="/source/file1", path_remote="target/coll/file1")
+    mockjob.assert_any_call(path_local="/source/file1.md5", path_remote="target/coll/file1.md5")
+    mockjob.assert_any_call(
+        path_local="/source/subdir/file2", path_remote="target/coll/subdir/file2"
+    )
+    mockjob.assert_any_call(
+        path_local="/source/subdir/file2.md5", path_remote="target/coll/subdir/file2.md5"
+    )

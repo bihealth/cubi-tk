@@ -11,8 +11,9 @@ import logzero
 from logzero import logger
 from sodar_cli import api
 
-from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
+
+from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
 
 # for testing
 logger.propagate = True
@@ -46,7 +47,7 @@ class SodarIngest:
 
         # Get SODAR API info
         toml_config = load_toml_config(Config())
-        if toml_config:
+        if toml_config:  # pragma: no cover
             config_url = toml_config.get("global", {}).get("sodar_server_url")
             if self.args.sodar_url == "https://sodar.bihealth.org/" and config_url:
                 self.args.sodar_url = config_url
