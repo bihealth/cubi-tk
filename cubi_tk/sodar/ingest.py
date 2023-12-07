@@ -1,4 +1,4 @@
-"""``cubi-tk sodar ingest``: add arbitrary files to SODAR"""
+"""``cubi-tk sodar ingest``: upload arbitrary files and folders into a specific SODAR landing zone collection"""
 
 import argparse
 import os
@@ -175,7 +175,10 @@ class SodarIngest:
             sys.exit(1)
 
         # Query user for target sub-collection
-        if self.args.collection is None:
+        if not collections:
+            self.target_coll = self.lz_irods_path
+            logger.info("No subcollections found. Moving on.")
+        elif self.args.collection is None:
             user_input = ""
             input_valid = False
             input_message = "####################\nPlease choose target collection:\n"
@@ -190,10 +193,10 @@ class SodarIngest:
                     if 0 < user_input <= len(collections):
                         input_valid = True
 
-            self.target_coll = collections[user_input - 1]
+            self.target_coll = f"{self.lz_irods_path}/{collections[user_input - 1]}"
 
         elif self.args.collection in collections:
-            self.target_coll = self.args.collection
+            self.target_coll = f"{self.lz_irods_path}/{self.args.collection}"
         else:  # pragma: no cover
             logger.error("Selected target collection does not exist in landing zone.")
             sys.exit(1)
@@ -209,7 +212,7 @@ class SodarIngest:
             output_logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
         logger.info("Into this iRODS collection:")
-        output_logger.info(f"{self.lz_irods_path}/{self.target_coll}/")
+        output_logger.info(f"{self.target_coll}/")
 
         if not self.args.yes:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
@@ -262,7 +265,7 @@ class SodarIngest:
         transfer_jobs = []
 
         for p in source_paths:
-            path_remote = f"{self.lz_irods_path}/{self.target_coll}/{str(p['ipath'])}"
+            path_remote = f"{self.target_coll}/{str(p['ipath'])}"
             md5_path = p["spath"].parent / (p["spath"].name + ".md5")
 
             if md5_path.exists():

@@ -138,11 +138,11 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
     for p in paths:
         mockjob.assert_any_call(
             path_local=str(p["spath"]),
-            path_remote=f"{ingest.lz_irods_path}/{ingest.target_coll}/{str(p['ipath'])}",
+            path_remote=f"{ingest.target_coll}/{str(p['ipath'])}",
         )
         mockjob.assert_any_call(
             path_local=str(p["spath"]) + ".md5",
-            path_remote=f"{ingest.lz_irods_path}/{ingest.target_coll}/{str(p['ipath']) + '.md5'}",
+            path_remote=f"{ingest.target_coll}/{str(p['ipath']) + '.md5'}",
         )
 
 
@@ -212,19 +212,25 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
 
     # Test user input for subcollection
     dcoll = DummyColl()
-    dcoll.subcollections = [
-        DummyColl(),
-    ]
-    dcoll.subcollections[0].name = "coll"
+    dcoll.subcollections = []
     mocki = MagicMock()  # returned by the session context manager
     mocksession.__enter__.return_value = mocki
     mocki.collections.get.return_value = dcoll
     mocktransfer.return_value.size = 1234
-
     argv2 = argv.copy()
     argv2.remove("--collection")
     argv2.remove("coll")
+
     with patch("builtins.input", side_effect=["a", "100", "1"]) as mockinput:
+        # Test for no subcollections
+        main(argv2)
+        mockinput.assert_not_called()
+
+        # Test for 1 subcollection
+        dcoll.subcollections = [
+            DummyColl(),
+        ]
+        dcoll.subcollections[0].name = "coll"
         main(argv2)
         assert mockinput.call_count == 3
         mockjob.assert_called()
