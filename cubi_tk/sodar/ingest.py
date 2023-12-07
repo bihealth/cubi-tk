@@ -6,15 +6,13 @@ from pathlib import Path
 import sys
 import typing
 
-import attr
-from irods.exception import DataObjectDoesNotExist
+import attrs
 import logzero
 from logzero import logger
 from sodar_cli import api
 
-from cubi_tk.irods_utils import TransferJob, get_irods_error, init_irods, iRODSTransfer
-
 from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
+from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 
 # for testing
 logger.propagate = True
@@ -24,13 +22,13 @@ formatter = logzero.LogFormatter(fmt="%(message)s")
 output_logger = logzero.setup_logger(formatter=formatter)
 
 
-@attr.s(frozen=True, auto_attribs=True)
+@attrs.frozen(auto_attribs=True)
 class Config:
     """Configuration for the ingest command."""
 
-    config: str = attr.field(default=None)
-    sodar_server_url: str = attr.field(default=None)
-    sodar_api_token: str = attr.field(default=None, repr=lambda value: "***")  # type: ignore
+    config: str = attrs.field(default=None)
+    sodar_server_url: str = attrs.field(default=None)
+    sodar_api_token: str = attrs.field(default=None, repr=lambda value: "***")  # type: ignore
 
 
 class SodarIngest:
@@ -80,6 +78,13 @@ class SodarIngest:
             default=False,
             action="store_true",
             help="Recursively match files in subdirectories. Creates iRODS sub-collections to match directory structure.",
+        )
+        parser.add_argument(
+            "-s",
+            "--sync",
+            default=False,
+            action="store_true",
+            help="Skip upload of files already present in remote collection.",
         )
         parser.add_argument(
             "-e",
@@ -132,7 +137,7 @@ class SodarIngest:
                 )
             except Exception as e:  # pragma: no cover
                 logger.error("Failed to retrieve landing zone information.")
-                logger.error(e)
+                logger.exception(e)
                 sys.exit(1)
 
             # TODO: Replace with status_locked check once implemented in sodar_cli
@@ -145,28 +150,30 @@ class SodarIngest:
         else:
             self.lz_irods_path = self.args.destination  # pragma: no cover
 
-        # Build file list and add missing md5 files
+        # Build file list
         source_paths = self.build_file_list()
         if len(source_paths) == 0:
             logger.info("Nothing to do. Quitting.")
             sys.exit(0)
 
         # Initiate iRODS session
-        irods_session = init_irods(self.irods_env_path, ask=not self.args.yes)
+        irods_session = iRODSCommon().session
 
         # Query target collection
         logger.info("Querying landing zone collections…")
         collections = []
         try:
-            coll = irods_session.collections.get(self.lz_irods_path)
-            for c in coll.subcollections:
-                collections.append(c.name)
+            with irods_session as i:
+                coll = i.collections.get(self.lz_irods_path)
+                for c in coll.subcollections:
+                    collections.append(c.name)
         except Exception as e:  # pragma: no cover
-            logger.error(f"Failed to query landing zone collections: {get_irods_error(e)}")
+            logger.error(
+                f"Failed to query landing zone collections: {iRODSCommon().get_irods_error(e)}"
+            )
             sys.exit(1)
-        finally:
-            irods_session.cleanup()
 
+        # Query user for target sub-collection
         if self.args.collection is None:
             user_input = ""
             input_valid = False
@@ -190,64 +197,16 @@ class SodarIngest:
             logger.error("Selected target collection does not exist in landing zone.")
             sys.exit(1)
 
-        # Create sub-collections for folders
-        if self.args.recursive:
-            dirs = sorted(
-                {p["ipath"].parent for p in source_paths if not p["ipath"].parent == Path(".")}
-            )
-
-            # Filter out existing sub-collections
-            try:
-                dirs = [
-                    d
-                    for d in dirs
-                    if not irods_session.collections.exists(
-                        f"{self.lz_irods_path}/{self.target_coll}/{str(d)}"
-                    )
-                ]
-            except Exception as e:  # pragma: no cover
-                logger.error("Error checking for sub-collections.")
-                logger.error(e)
-                sys.exit(1)
-            finally:
-                irods_session.cleanup()
-
-            if dirs:
-                logger.info("Planning to create the following sub-collections:")
-                for d in dirs:
-                    output_logger.info(f"{self.target_coll}/{str(d)}")
-                if not self.args.yes:
-                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-                        logger.info("Aborting at your request.")
-                        sys.exit(0)
-
-                for d in dirs:
-                    coll_name = f"{self.lz_irods_path}/{self.target_coll}/{str(d)}"
-                    try:
-                        irods_session.collections.create(coll_name)
-                    except Exception as e:  # pragma: no cover
-                        logger.error("Error creating sub-collection.")
-                        logger.error(e)
-                        sys.exit(1)
-                    finally:
-                        irods_session.cleanup()
-                logger.info("Sub-collections created.")
-
-        # Build transfer jobs
-        jobs = self.build_jobs(source_paths, irods_session)
+        # Build transfer jobs and add missing md5 files
+        jobs = self.build_jobs(source_paths)
+        jobs = sorted(jobs, key=lambda x: x.path_local)
 
         # Final go from user & transfer
-        if len(jobs) == 0:
-            logger.info("Nothing to do. Quitting.")
-            sys.exit(0)
-
-        jobs = sorted(jobs, key=lambda x: x.path_src)
-        itransfer = iRODSTransfer(irods_session, jobs)
-        total_bytes = itransfer.total_bytes
+        itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
         logger.info("Planning to transfer the following files:")
         for job in jobs:
-            output_logger.info(job.path_src)
-        logger.info(f"With a total size of {sizeof_fmt(total_bytes)}")
+            output_logger.info(job.path_local)
+        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
         logger.info("Into this iRODS collection:")
         output_logger.info(f"{self.lz_irods_path}/{self.target_coll}/")
 
@@ -256,7 +215,7 @@ class SodarIngest:
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put()
+        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
         logger.info("File transfer complete.")
 
         # Compute server-side checksums
@@ -264,7 +223,7 @@ class SodarIngest:
             logger.info("Computing server-side checksums.")
             itransfer.chksum()
 
-    def build_file_list(self):
+    def build_file_list(self) -> typing.List[typing.Dict[Path, Path]]:
         """
         Build list of source files to transfer.
         iRODS paths are relative to target collection.
@@ -296,55 +255,37 @@ class SodarIngest:
                     output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
-    def build_jobs(self, source_paths, irods_session) -> typing.Set[TransferJob]:
+    def build_jobs(self, source_paths: typing.Iterable[Path]) -> typing.Set[TransferJob]:
         """Build file transfer jobs."""
 
         transfer_jobs = []
 
         for p in source_paths:
-            path_dest = f"{self.lz_irods_path}/{self.target_coll}/{str(p['ipath'])}"
+            path_remote = f"{self.lz_irods_path}/{self.target_coll}/{str(p['ipath'])}"
             md5_path = p["spath"].parent / (p["spath"].name + ".md5")
 
             if md5_path.exists():
-                with md5_path.open() as f:
-                    md5sum = f.readline()[:32]
                 logger.info(f"Found md5 hash on disk for {p['spath']}")
             else:
                 md5sum = compute_md5_checksum(p["spath"])
                 with md5_path.open("w", encoding="utf-8") as f:
                     f.write(f"{md5sum}  {p['spath'].name}")
 
-            try:
-                obj = irods_session.data_objects.get(path_dest)
-                if not obj.checksum and self.args.remote_checksums:
-                    obj.checksum = obj.chksum()
-                if obj.checksum == md5sum:
-                    logger.info(
-                        f"File {Path(path_dest).name} already exists in iRODS with matching checksum. Skipping upload."
-                    )
-                    continue
-            except DataObjectDoesNotExist:  # pragma: no cover
-                pass
-            finally:
-                irods_session.cleanup()
-
             transfer_jobs.append(
                 TransferJob(
-                    path_src=str(p["spath"]),
-                    path_dest=path_dest,
-                    bytes=p["spath"].stat().st_size,
+                    path_local=str(p["spath"]),
+                    path_remote=path_remote,
                 )
             )
 
             transfer_jobs.append(
                 TransferJob(
-                    path_src=str(md5_path),
-                    path_dest=path_dest + ".md5",
-                    bytes=md5_path.stat().st_size,
+                    path_local=str(md5_path),
+                    path_remote=path_remote + ".md5",
                 )
             )
 
-        return set(sorted(transfer_jobs))
+        return set(transfer_jobs)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
