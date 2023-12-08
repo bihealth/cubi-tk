@@ -1,7 +1,6 @@
 import getpass
 import os.path
 from pathlib import Path
-import sys
 from typing import Iterable
 
 import attrs
@@ -116,7 +115,7 @@ class iRODSCommon:
                     raise e
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                sys.exit(1)
+                raise RuntimeError
 
         if self.ask and input(
             "Save iRODS session for passwordless operation? [y/N] "
@@ -198,7 +197,6 @@ class iRODSTransfer(iRODSCommon):
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
                     logger.error(self.get_irods_error(e))
-                    sys.exit(1)
             t.clear()
 
     def chksum(self):
@@ -249,5 +247,4 @@ class iRODSTransfer(iRODSCommon):
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_remote}")
                     logger.error(self.get_irods_error(e))
-                    sys.exit(1)
             t.clear()
