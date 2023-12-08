@@ -177,6 +177,9 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         lz_uuid,
     ]
 
+    # to make it sortable
+    mockjob.return_value.path_local = 1
+
     # Test env file missing
     with pytest.raises(SystemExit):
         main(argv)

@@ -259,7 +259,7 @@ class SodarIngest:
                     output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
-    def build_jobs(self, source_paths: typing.Iterable[Path]) -> typing.Set[TransferJob]:
+    def build_jobs(self, source_paths: typing.Iterable[Path]) -> typing.Tuple[TransferJob]:
         """Build file transfer jobs."""
 
         transfer_jobs = []
@@ -289,7 +289,7 @@ class SodarIngest:
                 )
             )
 
-        return set(transfer_jobs)
+        return tuple(transfer_jobs)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
