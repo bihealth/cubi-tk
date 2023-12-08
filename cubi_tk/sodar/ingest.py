@@ -107,7 +107,7 @@ class SodarIngest:
             "--yes",
             default=False,
             action="store_true",
-            help="Don't ask for permission.",
+            help="Don't ask for permission. Does not skip manual selection input.",
         )
         parser.add_argument(
             "--collection",
