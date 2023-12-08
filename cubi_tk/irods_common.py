@@ -204,17 +204,20 @@ class iRODSTransfer(iRODSCommon):
     def chksum(self):
         """Compute remote md5 checksums for all jobs."""
         common_prefix = os.path.commonpath(self.__destinations)
-        for job in self.__jobs:
-            if not job.path_local.endswith(".md5"):
-                output_logger.info(Path(job.path_remote).relative_to(common_prefix))
-                try:
-                    with self.session as session:
-                        data_object = session.data_objects.get(job.path_remote)
-                        if not data_object.checksum:
-                            data_object.chksum()
-                except Exception as e:  # pragma: no cover
-                    logger.error("Problem during iRODS checksumming.")
-                    logger.error(self.get_irods_error(e))
+        checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith(".md5"))
+        logger.info(f"Triggering remote checksum computation for {len(checkjobs)} files.")
+        for n, job in enumerate(checkjobs):
+            output_logger.info(
+                f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
+            )
+            try:
+                with self.session as session:
+                    data_object = session.data_objects.get(job.path_remote)
+                    if not data_object.checksum:
+                        data_object.chksum()
+            except Exception as e:  # pragma: no cover
+                logger.error("Problem during iRODS checksumming.")
+                logger.error(self.get_irods_error(e))
 
     def get(self):
         """Download files from SODAR."""
