@@ -75,7 +75,7 @@ class iRODSCommon:
         while True:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
-                session.connection_timeout = 300
+                session.connection_timeout = 600
                 session.server_version
                 return session
             except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
