@@ -132,12 +132,12 @@ class IrodsCheckCommand(iRODSCommon):
         if res:  # pragma: nocover
             return res
         logger.info("Starting cubi-tk irods %s", self.command_name)
-        logger.info("Args: %s", self.args)
+        logger.debug("Args: %s", self.args)
 
         # Load iRODS environment
         with open(self.irods_env_path, "r", encoding="utf-8") as f:
             irods_env = json.load(f)
-        logger.info("iRODS environment: %s", irods_env)
+        logger.debug("iRODS environment: %s", irods_env)
 
         # Connect to iRODS
         with self._get_irods_sessions(self.args.num_parallel_tests) as irods_sessions:
@@ -156,7 +156,6 @@ class IrodsCheckCommand(iRODSCommon):
             logger.info("Querying for data objects")
             data_objs = self.get_data_objs(root_coll)
             self.run_checks(data_objs)
-            logger.info("All done")
 
     def run_checks(self, data_objs: dict):
         """Run checks on files, in parallel if enabled."""
@@ -175,7 +174,6 @@ class IrodsCheckCommand(iRODSCommon):
             lst_files,
         )
 
-        # counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=num_files, unit="files", unit_scale=False) as t:
             if self.args.num_parallel_tests < 2:
                 for obj in data_objs["files"]:
