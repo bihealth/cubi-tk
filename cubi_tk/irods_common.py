@@ -1,5 +1,6 @@
 import getpass
 import os.path
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable
 
@@ -134,6 +135,17 @@ class iRODSCommon:
             irods_auth_path.chmod(0o600)
         else:
             logger.warning("No token found to be saved.")
+
+    @contextmanager
+    def _get_irods_sessions(self, count: int):
+        if count < 1:
+            count = 1
+        irods_sessions = [self._init_irods() for _ in range(count)]
+        try:
+            yield irods_sessions
+        finally:
+            for irods in irods_sessions:
+                irods.cleanup()
 
     @property
     def session(self):
