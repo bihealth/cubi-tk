@@ -7,7 +7,6 @@ import os
 import re
 import typing
 
-from cubi_tk.irods_common import iRODSCommon
 from irods.collection import iRODSCollection
 from irods.column import Like
 from irods.data_object import iRODSDataObject
@@ -15,6 +14,8 @@ from irods.models import Collection as CollectionModel
 from irods.models import DataObject as DataObjectModel
 from logzero import logger
 import tqdm
+
+from cubi_tk.irods_common import iRODSCommon
 
 MIN_NUM_REPLICAS = 2
 NUM_PARALLEL_TESTS = 4

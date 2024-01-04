@@ -1,6 +1,6 @@
+from contextlib import contextmanager
 import getpass
 import os.path
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterable
 
