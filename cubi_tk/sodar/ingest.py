@@ -107,12 +107,12 @@ class SodarIngest:
             "--yes",
             default=False,
             action="store_true",
-            help="Don't ask for permission. Does not skip manual selection input.",
+            help="Don't ask for permission. Does not skip manual target collection selection.",
         )
         parser.add_argument(
             "--collection",
             type=str,
-            help="Target iRODS collection. Skips manual selection input.",
+            help="Target iRODS collection. Skips manual target collection selection.",
         )
         parser.add_argument(
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
