@@ -15,15 +15,18 @@ Basic usage
 
     $ cubi-tk sodar ingest [OPTION]... SOURCE [SOURCE ...] DESTINATION
 
-Where each ``SOURCE`` is a path to a folder containing files and ``DESTINATION`` is either an iRODS path to a *landing zone* in SODAR or the UUID of that *landing zone*.
+Where each ``SOURCE`` is a path to a folder containing files and ``DESTINATION`` is either a SODAR iRODS path or a *landing zone* UUID.
 
 For seamless usage `~/.irods/irods_environment.json <https://sodar-server.readthedocs.io/en/dev/ui_irods_info.html>`_ and :ref:`~/.cubitkrc.toml<sodar-auth>` should be present.
+This command automatically handles your iRODS session and authentication (i.e. `iinit`).
 
 ----------------
 Parameters
 ----------------
 
 - ``-r, --recursive``: Recursively find files in subdirectories and create iRODS sub-collections to match directory structure.
+- ``-e, --exclude``: Exclude files matching the given pattern.
+- ``-s, --sync``: Skip upload of files that already exist in iRODS.
 - ``-K, --remote-checksums``: Instruct iRODS to compute MD5 checksums of uploaded files for SODAR validation step.
 - ``-y, --yes``: Don't stop for user permission. Enables scripting with this command.
 - ``--collection``: Set target iRODS collection in landing zone. Skips user input for this selection.
