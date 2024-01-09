@@ -13,7 +13,8 @@ The basic usage is:
 
     $ cubi-tk sodar ingest-fastq SOURCE [SOURCE ...] DESTINATION
 
-where each ``SOURCE`` is a path to a folder containing relevant files and ``DESTINATION`` is either an iRODS path to a *landing zone* in SODAR or the UUID of that *landing zone*.
+where each ``SOURCE`` is a path to a folder containing relevant files (this can also be a WebDav URL, see below) and
+``DESTINATION`` is either an iRODS path to a *landing zone* in SODAR, the UUID of that *landing zone*, or and SODAR project UUID.
 
 ----------------
 Other file types
@@ -37,20 +38,25 @@ The default ``--remote-dir-pattern`` is
 
 .. code-block:: bash
 
-    {sample}/{date}/{filename}
+    {collection_name}/{date}/{filename}
 
-It contains the wildcard ``{sample}``, which will be filled with the captured content of group ``(?P<sample>...)``.
-In addition, the wildcards ``{date}`` and ``{filename}`` can always be used and will be filled with the current date and full filename (the basename of a matched file), respectively.
+It contains the wildcard ``{collection_name}``, which represents and irods collection and will be filled with the captured
+content of group ``(?P<sample>...)``, potentially modified by a regex (see 'Mapping of file names' below).
+Alternatively the irods collection name can be derived by mapping the extracted (and modified) ``(?P<sample>...)``
+group to any column of the assay table associated with the LZ or project. In this case the ``{library_name}`` will be
+filled with the content of the last material column of the assay table (or ``--collection-column`` if defined).
+In addition, the wildcards ``{date}`` and ``{filename}`` can always be used in ``--remote-dir-pattern`` and will be
+filled with the current date (or ``--remote-dir-date``) and full filename (the basename of a matched file), respectively.
 
 ---------------------
 Mapping of file names
 ---------------------
 
-In some cases additional mapping of filenames is required (for example the samples should be renamed).
-This can be done via the parameter ``--remote-dir-mapping`` or short ``-m``.
+In some cases additional mapping of filenames is required (for example to fully macth the irods collections).
+This can be done via the parameter ``--sample-collection-mapping`` or short ``-m``.
 It can be supplied several times, each time for another mapping.
 With each ``-m MATCH REPL`` a pair of a regular expression and a replacement string are specified.
-Internally, pythons ``re.sub`` command is executed on the ``--remote-dir-pattern`` after wildcards have been filled.
+Internally, pythons ``re.sub`` command is executed on the extracted ``(?P<sample>...)`` capture group.
 Therefore, you can refer to the documentation of the `re package <https://docs.python.org/3/library/re.html>`_ for syntax questions.
 
 ----------------------
@@ -70,8 +76,7 @@ To use this command, which internally executes iRODS icommands, you need to auth
 
     $ iinit
 
-To be able to access the SODAR API (which is only required, if you specify a landing zone UUID instead of an iRODS path), you also need an API token.
-For token management for SODAR, the following docs can be used:
+To be able to access the SODAR API you also need an API token. For token management for SODAR, the following docs can be used:
 
 - https://sodar.bihealth.org/manual/ui_user_menu.html
 - https://sodar.bihealth.org/manual/ui_api_tokens.html
