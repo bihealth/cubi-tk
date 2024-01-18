@@ -21,7 +21,7 @@ requests
 biomedsheets >=0.11.1
 
 # ISA-tab parsing.
-altamisa
+altamisa==0.2.9
 
 # Table access.
 pandas
