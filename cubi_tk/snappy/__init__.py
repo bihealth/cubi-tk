@@ -13,6 +13,8 @@ Available Commands
     Transfer results and logs from ``output`` directory of ``ngs_mapping``.
 ``itransfer-variant-calling``
     Transfer results and logs from ``output`` directory of ``variant_calling``.
+``itransfer-sv-calling``
+    Transfer results and logs from ``output`` directory of ``sv_calling`` or ``sv_calling_targeted``.
 ``itransfer-step``
     Transfer results and logs from ``output`` directory of any snappy pipeline step.
 ``pull-sheet``
@@ -47,6 +49,9 @@ from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_d
 from .itransfer_step import setup_argparse as setup_argparse_itransfer_step
 from .itransfer_variant_calling import (
     setup_argparse as setup_argparse_itransfer_variant_calling,
+)
+from .itransfer_sv_calling import (
+    setup_argparse as setup_argparse_itransfer_sv_calling,
 )
 from .kickoff import setup_argparse as setup_argparse_kickoff
 from .pull_all_data import setup_argparse as setup_argparse_pull_all_data
@@ -87,6 +92,13 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "itransfer-variant-calling",
             help="Transfer variant_calling results into iRODS landing zone",
+        )
+    )
+
+    setup_argparse_itransfer_sv_calling(
+        subparsers.add_parser(
+            "itransfer-sv-calling",
+            help="Transfer sv_calling or sv_calling_targeted results into iRODS landing zone",
         )
     )
 
