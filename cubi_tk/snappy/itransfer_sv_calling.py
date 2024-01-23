@@ -30,17 +30,16 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
         super().__init__(args)
 
         path = common.find_snappy_root_dir(self.args.base_path or os.getcwd())
-        config = common.load_snappy_config(path / "config.yaml")
+        config = common.load_snappy_config(path / ".snappy_pipeline/config.yaml")
         self.step_name = None
         for step_name in self.__class__.step_names:
             if not self.step_name and step_name in config["step_config"]:
                 self.step_name = step_name
-                break
-            elif step_name in config["step_config"]:
+            elif self.step_name and step_name in config["step_config"]:
                 raise SnappyStepNotFoundException(
                     f"Found multiple sv-calling step names in config.yaml. Only one of {', '.join(self.__class__.step_names)} is allowed."
                 )
-        else:
+        if not self.step_name:
             raise SnappyStepNotFoundException(
                 f"Could not find any sv-calling step name in 'config.yaml'. Was looking for one of: {', '.join(self.__class__.step_names)}"
             )
@@ -70,7 +69,6 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
 
     def execute_multi(self) -> typing.Optional[int]:
         """Execute the transfer."""
-
         ret = 0
         if self.args.caller == "all-defined":
             logger.info("Starting cubi-tk snappy sv-calling for multiple callers")

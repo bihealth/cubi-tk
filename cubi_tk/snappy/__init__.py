@@ -47,11 +47,9 @@ from .itransfer_ngs_mapping import (
 )
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
 from .itransfer_step import setup_argparse as setup_argparse_itransfer_step
+from .itransfer_sv_calling import setup_argparse as setup_argparse_itransfer_sv_calling
 from .itransfer_variant_calling import (
     setup_argparse as setup_argparse_itransfer_variant_calling,
-)
-from .itransfer_sv_calling import (
-    setup_argparse as setup_argparse_itransfer_sv_calling,
 )
 from .kickoff import setup_argparse as setup_argparse_kickoff
 from .pull_all_data import setup_argparse as setup_argparse_pull_all_data
