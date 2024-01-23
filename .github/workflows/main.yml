@@ -77,9 +77,6 @@ jobs:
       - name: Update environment using mamba
         run: mamba env update --name root --file /tmp/environment.yaml
 
-      - name: Save time by installing packages via mamba.
-        run: mamba install -y pysam
-
       - name: Install dependencies
         run: |
             pip install -r requirements/test_black.txt
