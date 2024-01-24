@@ -43,8 +43,10 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
+        # We are missing bioconda pysam packages for 3.11 and 3.12, cf.
+        # https://github.com/bioconda/bioconda-recipes/issues/37805
+        # "Programming Language :: Python :: 3.11",
+        # "Programming Language :: Python :: 3.12",
     ],
     entry_points={"console_scripts": ("cubi-tk = cubi_tk.__main__:main",)},
     description="Tooling for connecting GitLab, pipelines, and SODAR at CUBI.",
