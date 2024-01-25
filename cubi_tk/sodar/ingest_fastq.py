@@ -505,8 +505,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         for job in transfer_jobs:
             output_logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
-        # logger.info("Into this iRODS collection:")
-        # output_logger.info(f"{self.target_coll}/")
 
         if not self.args.yes:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
