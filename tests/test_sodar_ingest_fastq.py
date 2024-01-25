@@ -128,7 +128,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
-    dest_path = "target/folder/generic_file.fq.gz"
+    dest_path = "target/folder/"
     fake_base_path = "/base/path"
     argv = [
         "--verbose",
@@ -179,16 +179,18 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     )
 
     mock_check_output = mock.MagicMock(return_value=0)
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
+    mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
     mock_check_call = mock.MagicMock(return_value=0)
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
+    mocker.patch("cubi_tk.sodar.ingest_fastq.check_call", mock_check_call)
 
     mocker.patch("cubi_tk.sodar.ingest_fastq.pathlib", fake_pl)
     mocker.patch("cubi_tk.sodar.ingest_fastq.os", fake_os)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
+    mocker.patch("cubi_tk.sodar.ingest_fastq.open", fake_open)
 
     # necessary because independent test fail
     mock_value = mock.MagicMock()
@@ -218,20 +220,16 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
 
     assert not res
 
-    # TODO: make mock check_output actually create the file?
-    # assert fs.exists(fake_file_paths[3])
-
     assert mock_check_call.call_count == 1
     assert mock_check_call.call_args[0] == (["md5sum", "sample1-N1-DNA1-WES1.fq.gz"],)
 
-    assert mock_check_output.call_count == len(fake_file_paths) * 3
-    remote_path = os.path.join(irods_path, dest_path)
-    for path in fake_file_paths:
-        expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
-        ext = ".md5" if path.split(".")[-1] == "md5" else ""
-        expected_irsync_argv = ["irsync", "-a", "-K", path, ("i:%s" + ext) % remote_path]
-        expected_ils_argv = ["ils", os.path.dirname(remote_path)]
+    # The upload logic for multiple transfers/files has been moved into the iRODScommon classes
+    # We just need one call to that here
+    assert mock_check_output.call_count == 1
 
-        assert ((expected_mkdir_argv,),) in mock_check_output.call_args_list
-        assert ((expected_irsync_argv,),) in mock_check_output.call_args_list
-        assert ((expected_ils_argv,), {"stderr": -2}) in mock_check_output.call_args_list
+    # Test that the TransferJob contain all files (setting the remote_dest with this mock setup does not work)
+    parser, _subparsers = setup_argparse()
+    args = parser.parse_args(argv)
+    ingestfastq = SodarIngestFastq(args)
+    lz, actual = ingestfastq.build_jobs()
+    assert len(actual) == len(fake_file_paths)
