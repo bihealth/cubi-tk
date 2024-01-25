@@ -31,7 +31,7 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
         super().__init__(args)
 
         path = common.find_snappy_root_dir(self.args.base_path or os.getcwd())
-        with open(str(path / ".snappy_pipeline/config.yaml", "rt")) as f:
+        with open(path / ".snappy_pipeline/config.yaml", "rt") as f:
             config = yaml.safe_load(f)
         self.step_name = None
         for step_name in self.__class__.step_names:

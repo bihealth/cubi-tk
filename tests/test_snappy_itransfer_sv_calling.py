@@ -221,6 +221,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mocker, germline_trio_sheet_
     mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
+    mocker.patch("cubi_tk.snappy.itransfer_sv_calling.open", fake_open)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
 
