@@ -44,7 +44,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
-        # "Programming Language :: Python :: 3.12", # blocked by snappy-pipeline #483
+        "Programming Language :: Python :: 3.12",
     ],
     entry_points={"console_scripts": ("cubi-tk = cubi_tk.__main__:main",)},
     description="Tooling for connecting GitLab, pipelines, and SODAR at CUBI.",
