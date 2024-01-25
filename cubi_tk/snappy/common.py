@@ -16,18 +16,6 @@ class CouldNotFindBioMedSheet(Exception):
     """Raised when BioMedSheet could not be found in configuration file."""
 
 
-def load_snappy_config(path_yaml):
-    """Load SNAPPY configuration file.
-
-    :param path_yaml: Path to SNAPPY configuration file.
-    :type path_yaml: pathlib.Path
-
-    :return: Returns configuration dictionary.
-    """
-    with open(path_yaml, "rt") as f:
-        return yaml.safe_load(f)
-
-
 def load_sheet_tsv(path_tsv, tsv_shortcut="germline"):
     """Load sample sheet.
 

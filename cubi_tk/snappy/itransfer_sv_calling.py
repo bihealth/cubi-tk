@@ -5,6 +5,7 @@ import os
 import typing
 
 from logzero import logger
+import yaml
 
 from . import common
 from .itransfer_common import IndexLibrariesOnlyMixin, SnappyItransferCommandBase
@@ -15,7 +16,7 @@ TPL_INPUT_DIR = "%(step_name)s/output/%(mapper)s.%(caller)s.%(library_name)s"
 
 class SnappyStepNotFoundException(Exception):
     def __str__(self):
-        return "snappy-pipeline is not installed. This function will not work."
+        return "snappy-pipeline config does not define the expected steps this function needs."
 
 
 class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCommandBase):
@@ -30,7 +31,8 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
         super().__init__(args)
 
         path = common.find_snappy_root_dir(self.args.base_path or os.getcwd())
-        config = common.load_snappy_config(path / ".snappy_pipeline/config.yaml")
+        with open(str(path / ".snappy_pipeline/config.yaml", "rt")) as f:
+            config = yaml.safe_load(f)
         self.step_name = None
         for step_name in self.__class__.step_names:
             if not self.step_name and step_name in config["step_config"]:
