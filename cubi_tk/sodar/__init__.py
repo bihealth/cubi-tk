@@ -18,7 +18,7 @@ Sub Commands
 ``landing-zone-create``
     Create a landing zone.
 
-``landing-zone-validate`` (planned)
+``landing-zone-validate``
     Validate a landing zone.
 
 ``landing-zone-move``
@@ -61,6 +61,7 @@ from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move
+from .lz_validate import setup_argparse as setup_argparse_lz_validate
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 
@@ -85,6 +86,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_lz_list(subparsers.add_parser("landing-zone-list", help="List landing zones"))
     setup_argparse_lz_move(
         subparsers.add_parser("landing-zone-move", help="Submit landing zone for moving")
+    )
+    setup_argparse_lz_validate(
+        subparsers.add_parser("landing-zone-validate", help="Submit landing zone for validation")
     )
     setup_argparse_ingest_fastq(
         subparsers.add_parser(
