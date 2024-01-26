@@ -269,8 +269,8 @@ class SnappyVarFishUploadCommand:
                 "varfish-cli",
                 "--no-verify-ssl",
                 "--verbose",
-                "case",
-                "create-import-info",
+                "importer",
+                "caseimportinfo-create",
                 sodar_uuid,
                 *sorted(found.values()),
             ]
