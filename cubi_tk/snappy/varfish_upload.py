@@ -4,11 +4,11 @@ import argparse
 import glob
 import os
 import pathlib
+from subprocess import check_call
 import typing
 
 from biomedsheets import shortcuts
 from logzero import logger
-from varfish_cli.__main__ import main as varfish_cli_main
 
 from ..common import find_base_path
 from .common import load_sheet_tsv
@@ -284,7 +284,7 @@ class SnappyVarFishUploadCommand:
                 answer = answer_str == "y"
             if answer:
                 logger.info("Executing '%s'", " ".join(args))
-                varfish_cli_main(args[1:])
+                check_call(args)
         logger.info("  -> all done with %s", name)
 
 
