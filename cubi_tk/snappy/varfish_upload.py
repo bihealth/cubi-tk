@@ -4,11 +4,11 @@ import argparse
 import glob
 import os
 import pathlib
+from subprocess import check_call
 import typing
 
 from biomedsheets import shortcuts
 from logzero import logger
-from subprocess import check_call
 
 from ..common import find_base_path
 from .common import load_sheet_tsv
