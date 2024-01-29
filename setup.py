@@ -5,8 +5,6 @@ import os.path
 
 from setuptools import find_packages, setup
 
-import versioneer
-
 
 def parse_requirements(path):
     """Parse ``requirements.txt`` at ``path``."""
@@ -31,6 +29,12 @@ with open("CHANGELOG.md") as changelog_file:
 
 test_requirements = parse_requirements("requirements/test.txt")
 install_requirements = parse_requirements("requirements/base.txt")
+
+package_root = os.path.abspath(os.path.dirname(__file__))
+version = {}
+with open(os.path.join(package_root, "cubi-tk/version.py")) as fp:
+    exec(fp.read(), version)
+version = version["__version__"]
 
 setup(
     author="Manuel Holtgrewe, Patrick Pett",
@@ -61,7 +65,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/bihealth/cubi-tk",
-    version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    version=version,
     zip_safe=False,
 )
