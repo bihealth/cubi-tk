@@ -143,6 +143,13 @@ class SnappyVarFishUploadCommand:
             help="Assume yes to all answers",
         )
         parser.add_argument(
+            "--force-resubmit",
+            "-f",
+            action="store_true",
+            required=False,
+            help="Force re-submission of exitsing cases in varfish.",
+        )
+        parser.add_argument(
             "--samples",
             help=(
                 "Limits the submission to the listed sample names. Don't include the full library name just the "
@@ -271,6 +278,7 @@ class SnappyVarFishUploadCommand:
                 "--verbose",
                 "importer",
                 "caseimportinfo-create",
+                "--resubmit" if self.args.force_resubmit else "",
                 sodar_uuid,
                 *sorted(found.values()),
             ]
