@@ -278,7 +278,7 @@ class SnappyVarFishUploadCommand:
                 "--verbose",
                 "importer",
                 "caseimportinfo-create",
-                "--resubmit" if self.args.force_resubmit else "",
+                "--resubmit" if self.args.force_resubmit else "--no-resubmit",
                 sodar_uuid,
                 *sorted(found.values()),
             ]
