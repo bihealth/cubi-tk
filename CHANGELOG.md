@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.0](https://www.github.com/bihealth/cubi-tk/compare/v0.4.0...v0.5.0) (2024-02-12)
+
+
+### Features
+
+* Add common functions for interfacing with python-irodsclient ([#202](https://www.github.com/bihealth/cubi-tk/issues/202)) ([67e6e49](https://www.github.com/bihealth/cubi-tk/commit/67e6e492642d13d2561ff313e84849dd21a298cb))
+* Add generic SODAR ingest command ([#199](https://www.github.com/bihealth/cubi-tk/issues/199)) ([8548c97](https://www.github.com/bihealth/cubi-tk/commit/8548c9763565901596b5d2675657b7940a6440a1))
+* Add new command sodar landing-zone-validate ([#219](https://www.github.com/bihealth/cubi-tk/issues/219)) ([98e21c1](https://www.github.com/bihealth/cubi-tk/commit/98e21c199e25f4ca99bc5376de5bcc21da265129))
+* Adding cubi-tk snappy itransfer_sv_calling ([#213](https://www.github.com/bihealth/cubi-tk/issues/213)) ([5a00e40](https://www.github.com/bihealth/cubi-tk/commit/5a00e40c9c12d02935326a24e0a0fda83329183d))
+* allow varfish case resubmission ([#224](https://www.github.com/bihealth/cubi-tk/issues/224)) ([964bcac](https://www.github.com/bihealth/cubi-tk/commit/964bcacfe665818bcafc4466b2358011e13c0f89))
+* Switching `cubi-tk sodar ingest-fastq` from icommands to irods_common ([#217](https://www.github.com/bihealth/cubi-tk/issues/217)) ([cd9a3b9](https://www.github.com/bihealth/cubi-tk/commit/cd9a3b9d6ccfa49ccf44e10152b17df30009b2a4))
+* Update ingest-fastq, allow to match samples against assay table to determine collections names ([#198](https://www.github.com/bihealth/cubi-tk/issues/198)) ([#203](https://www.github.com/bihealth/cubi-tk/issues/203)) ([8b3662d](https://www.github.com/bihealth/cubi-tk/commit/8b3662daeacfa18a320a2168c2cdc5013213ad3c))
+
+
+### Bug Fixes
+
+* adapt to varfish-cli >=0.6.2 syntax ([#221](https://www.github.com/bihealth/cubi-tk/issues/221)) ([9619609](https://www.github.com/bihealth/cubi-tk/commit/9619609483f1f0f753d19354ab8957692b7f7898))
+* varfish cli 06x uses new import syntax ([#220](https://www.github.com/bihealth/cubi-tk/issues/220)) ([#222](https://www.github.com/bihealth/cubi-tk/issues/222)) ([cb10dbb](https://www.github.com/bihealth/cubi-tk/commit/cb10dbbcedd9e9d287428f14873420c5b6d4898c))
+* varfish-upload subprocess submission ([#225](https://www.github.com/bihealth/cubi-tk/issues/225)) ([0f7f5b2](https://www.github.com/bihealth/cubi-tk/commit/0f7f5b2d46d0f955eb70faf8741cc44033fe63ce))
+
 ## [0.4.0](https://www.github.com/bihealth/cubi-tk/compare/v0.3.0...v0.4.0) (2023-10-27)
 
 
