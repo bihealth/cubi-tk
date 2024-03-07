@@ -8,15 +8,14 @@ import argparse
 from collections import defaultdict
 import os
 from pathlib import Path
-from types import SimpleNamespace
 import typing
 
 from biomedsheets import shortcuts
 from logzero import logger
 
 from ..common import load_toml_config
+from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
-from .retrieve_irods_collection import DEFAULT_HASH_SCHEME, RetrieveIrodsCollection
 
 
 class FindFilesCommon:
@@ -684,9 +683,7 @@ class SnappyCheckRemoteCommand:
             variant_caller_class = VariantCallingChecker
 
         # Find all remote files (iRODS)
-        pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
-        library_remote_files_dict = RetrieveIrodsCollection(
-            pseudo_args,
+        library_remote_files_dict = RetrieveSodarCollection(
             self.args.sodar_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
