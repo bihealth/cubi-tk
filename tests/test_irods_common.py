@@ -39,6 +39,18 @@ def test_init_irods(mocksession, fs):
     mocksession.assert_called()
 
 
+@patch("cubi_tk.irods_common.iRODSCommon._init_irods")
+def test_get_irods_sessions(mockinit):
+    with iRODSCommon()._get_irods_sessions(count=4) as sessions:
+        [s for s in sessions]
+    assert mockinit.call_count == 4
+
+    mockinit.reset_mock()
+    with iRODSCommon()._get_irods_sessions(count=-1) as sessions:
+        [s for s in sessions]
+    assert mockinit.call_count == 1
+
+
 @patch("getpass.getpass")
 @patch("cubi_tk.irods_common.iRODSSession")
 def test_irods_login(mocksession, mockpass, fs):
