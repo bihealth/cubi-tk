@@ -261,7 +261,7 @@ class iRODSTransfer(iRODSCommon):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
-                if os.path.exists(job.path_local) and not force_overwrite:
+                if os.path.exists(job.path_local) and not force_overwrite:  # pragma: no cover
                     logger.info(
                         f"{Path(job.path_local).name} already exists. Skipping, use force_overwrite to re-download."
                     )
@@ -320,7 +320,7 @@ class iRODSRetrieveCollection(iRODSCommon):
                     irods_obj_dict = self.parse_irods_collection(irods_data_objs)
                     return irods_obj_dict
 
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
                 raise
 
