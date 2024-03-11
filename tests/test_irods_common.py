@@ -4,7 +4,12 @@ from unittest.mock import ANY, MagicMock, call, patch
 import irods.exception
 import pytest
 
-from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer, iRODSRetrieveCollection
+from cubi_tk.irods_common import (
+    TransferJob,
+    iRODSCommon,
+    iRODSRetrieveCollection,
+    iRODSTransfer,
+)
 
 
 def test_transfer_job_bytes(fs):

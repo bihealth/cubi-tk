@@ -1,12 +1,12 @@
 from copy import deepcopy
+import pathlib
+import re
 from unittest.mock import MagicMock
 
-import pathlib
 import pytest
-import re
 
-from cubi_tk.sodar.pull_data_collection import PullDataCollection
 from cubi_tk.irods_common import TransferJob
+from cubi_tk.sodar.pull_data_collection import PullDataCollection
 
 
 class MockDataObject:
