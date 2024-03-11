@@ -295,7 +295,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        super.__init__(ask, irods_env_path)
+        super().__init__(ask, irods_env_path)
         self.hash_scheme = hash_scheme
 
     def retrieve_irods_data_objects(self, irods_path: str) -> Dict[str, List[iRODSDataObject]]:
@@ -308,15 +308,15 @@ class iRODSRetrieveCollection(iRODSCommon):
         """
 
         # Connect to iRODS
-        with self.session as irods_session:
+        with self.session as session:
             try:
-                root_coll = irods_session.collections.get(irods_path)
+                root_coll = session.collections.get(irods_path)
 
                 # Get files and run checks
                 logger.info("Querying for data objects")
 
                 if root_coll is not None:
-                    irods_data_objs = self.get_data_objs(root_coll)
+                    irods_data_objs = self._irods_query(session, root_coll)
                     irods_obj_dict = self.parse_irods_collection(irods_data_objs)
                     return irods_obj_dict
 
@@ -326,24 +326,27 @@ class iRODSRetrieveCollection(iRODSCommon):
 
         return {}
 
-    def get_data_objs(
-        self, root_coll: iRODSCollection
+    def _irods_query(
+        self,
+        session: iRODSSession,
+        root_coll: iRODSCollection,
     ) -> Dict[str, Union[Dict[str, iRODSDataObject], List[iRODSDataObject]]]:
         """Get data objects recursively under the given iRODS path."""
-        data_objs = dict(files=[], checksums={})
-        ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.hash_scheme.upper()]
-        irods_sess = root_coll.manager.sess
 
-        query = irods_sess.query(DataObjectModel, CollectionModel).filter(
+        ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.hash_scheme.upper()]
+
+        query = session.query(DataObjectModel, CollectionModel).filter(
             Like(CollectionModel.name, f"{root_coll.path}%")
         )
 
+        data_objs = dict(files=[], checksums={})
         for res in query:
-            # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional, likely because a name/path/... attribute is overwritten somewhere
+            # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
+            # likely because a name/path/... attribute is overwritten somewhere
             coll_res = {k: v for k, v in res.items() if k.icat_id >= 500}
             obj_res = {k: v for k, v in res.items() if k.icat_id < 500}
             coll = iRODSCollection(root_coll.manager, coll_res)
-            obj = iRODSDataObject(irods_sess.data_objects, parent=coll, results=[obj_res])
+            obj = iRODSDataObject(session.data_objects, parent=coll, results=[obj_res])
 
             if obj.path.endswith("." + self.hash_scheme.lower()):
                 data_objs["checksums"][obj.path] = obj

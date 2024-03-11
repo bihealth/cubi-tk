@@ -26,7 +26,9 @@ class PullDataCollection(PullDataCommon):
         "dragen": [
             "**/*_FAM_dragen.fam.hard-filtered.vcf.gz"
             "**/*_FAM_dragen.fam.hard-filtered.vcf.gz.tbi",
-            "**/*dragen.qc-coverage*",
+            "**/*.qc-coverage*.csv",
+            "**/*.ped",
+            "**/*.mapping_metrics.csv",
         ],
     }
 
@@ -76,9 +78,8 @@ class PullDataCollection(PullDataCommon):
             help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
 
-        group_files = parser.add_argument_group(
-            "File Selection", mutually_exclusive=True, required=True
-        )
+        group_files = parser.add_mutually_exclusive_group(required=True)
+
         group_files.add_argument(
             "-p", "--preset", help="Preset to use for file selection.", choices=cls.presets.keys()
         )
@@ -108,7 +109,7 @@ class PullDataCollection(PullDataCommon):
         )
         group_samples.add_argument(
             "--biomedsheet",
-            help="Biomedsheet file for filtering collections. Sets tes-column to 2 and "
+            help="Biomedsheet file for filtering collections. Sets tsv-column to 2 and "
             "tsv-header to 13. Takes precedence over --tsv.",
         )
         group_samples.add_argument(
@@ -133,7 +134,7 @@ class PullDataCollection(PullDataCommon):
         )
         parser.add_argument(
             "--output-regex",
-            nargs="3",
+            nargs=3,
             action="append",
             metavar=("FILEPART", "MATCH", "REPL"),
             default=[],
@@ -206,15 +207,15 @@ class PullDataCollection(PullDataCommon):
             samples = None
 
         # Find all remote files (iRODS)
-        FileSearcher = RetrieveSodarCollection(
+        filesearcher = RetrieveSodarCollection(
             self.args.sodar_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,
         )
 
-        remote_files_dict = FileSearcher.perform()
-        assay_path = FileSearcher.get_assay_irods_path(self.args.assay_uuid)
+        remote_files_dict = filesearcher.perform()
+        assay_path = filesearcher.get_assay_irods_path(self.args.assay_uuid)
 
         if self.args.all_files:
             file_patterns = []
@@ -223,8 +224,8 @@ class PullDataCollection(PullDataCommon):
         else:  # self.args.file_pattern
             file_patterns = self.args.file_pattern
 
-        filtered_remote_files_dict = self.filter_irods_collection(
-            remote_files_dict, file_patterns, samples, self.args.substring_match, assay_path
+        filtered_remote_files_dict = self.filter_irods_file_list(
+            file_patterns, samples, self.args.substring_match, assay_path
         )
 
         if len(filtered_remote_files_dict) == 0:
@@ -265,8 +266,8 @@ class PullDataCollection(PullDataCommon):
 
         return samples
 
-    def filter_irods_collection(
-        self,
+    @staticmethod
+    def filter_irods_file_list(
         remote_files_dict: Dict[str, List[iRODSDataObject]],
         common_assay_path: str,
         file_patterns: List[str],
@@ -353,6 +354,8 @@ class PullDataCollection(PullDataCommon):
                         self.args.output_dir, self.args.output_pattern.format(**out_parts)
                     ),
                     irods_obj.path,
+                    # # Unclear if this is available or not
+                    # irods_obj.size,
                 )
                 output_list.append(job)
 
