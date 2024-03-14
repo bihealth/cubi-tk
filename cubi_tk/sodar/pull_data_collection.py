@@ -3,6 +3,7 @@
 import argparse
 from collections import defaultdict
 import os
+import pandas as pd
 from pathlib import PurePosixPath
 import re
 import typing
@@ -26,6 +27,10 @@ class PullDataCollection(PullDataCommon):
         "dragen": [
             "**/*_FAM_dragen.fam.hard-filtered.vcf.gz"
             "**/*_FAM_dragen.fam.hard-filtered.vcf.gz.tbi",
+            "**/*_FAM_dragen.fam.cnv.vcf.gz",
+            "**/*_FAM_dragen.fam.cnv.vcf.gz.tbi",
+            "**/*_FAM_dragen.fam.sv.vcf.gz",
+            "**/*_FAM_dragen.fam.sv.vcf.gz.tbi",
             "**/*.qc-coverage*.csv",
             "**/*.ped",
             "**/*.mapping_metrics.csv",
@@ -110,7 +115,7 @@ class PullDataCollection(PullDataCommon):
         group_samples.add_argument(
             "--biomedsheet",
             help="Biomedsheet file for filtering collections. Sets tsv-column to 2 and "
-            "tsv-header to 13. Takes precedence over --tsv.",
+            "tsv-skip-rows to 12. Takes precedence over --tsv.",
         )
         group_samples.add_argument(
             "--tsv", help="Tabular file with sample names to use for filtering collections."
@@ -121,7 +126,7 @@ class PullDataCollection(PullDataCommon):
             help="Column index for sample entries in tsv file. Default: 1.",
         )
         group_samples.add_argument(
-            "--tsv-header", default=1, help="Number of header lines in tsv file. Default: 1."
+            "--tsv-skip-rows", default=0, help="Number of header lines in tsv file. Default: 0."
         )
 
         parser.add_argument(
@@ -198,10 +203,10 @@ class PullDataCollection(PullDataCommon):
         if self.args.sample_list:
             samples = self.args.sample_list
         elif self.args.biomedsheet:
-            samples = self.parse_sample_tsv(self.args.biomedsheet, sample_col=2, n_header_cols=13)
+            samples = self.parse_sample_tsv(self.args.biomedsheet, sample_col=2, skip_rows=12)
         elif self.args.tsv:
             samples = self.parse_sample_tsv(
-                self.args.tsv, sample_col=self.args.tsv_column, n_header_cols=self.args.tsv_header
+                self.args.tsv, sample_col=self.args.tsv_column, skip_rows=self.args.tsv_skip_rows
             )
         else:
             samples = None
@@ -245,24 +250,15 @@ class PullDataCollection(PullDataCommon):
         return 0
 
     @staticmethod
-    def parse_sample_tsv(tsv_path, sample_col=1, n_header_cols=1, skip_comments=True) -> List[str]:
-        samples = []
-        with open(tsv_path, "r") as f:
-            for _ in range(n_header_cols):
-                f.readline()
-            for line in f:
-                if not line.strip():
-                    continue
-                if line.startswith("#") and skip_comments:
-                    continue
-                try:
-                    samples.append(line.split("\t")[sample_col - 1])
-                except IndexError:
-                    logger.error(
-                        f"Error extracting column no. {sample_col} from {tsv_path}."
-                        f"Occured in line: {line}"
-                    )
-                    raise
+    def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> List[str]:
+
+        extra_args = {'comment': '#'} if skip_comments else {}
+        df = pd.read_csv(tsv_path, sep='\t', skiprows=skip_rows, **extra_args)
+        try:
+            samples = list(df.iloc[:, sample_col-1])
+        except IndexError:
+            logger.error(f"Error extracting column no. {sample_col} from {tsv_path}, only {len(df.columns)} where detected.")
+            raise
 
         return samples
 
@@ -307,9 +303,9 @@ class PullDataCollection(PullDataCommon):
 
                 # Check if collection (=1st element of striped path) matches any of the samples
                 if samples and not substring_match:
-                    sample_match = any([s.lower() == collection.lower() for s in samples])
+                    sample_match = any([s == collection for s in samples])
                 elif samples:
-                    sample_match = any([s.lower() in collection.lower() for s in samples])
+                    sample_match = any([s in collection for s in samples])
                 else:
                     sample_match = True
 

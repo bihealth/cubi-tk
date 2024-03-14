@@ -146,7 +146,7 @@ def test_parse_samplesheet():
     samples = PullDataCollection.parse_sample_tsv(
         pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet.tsv",
         sample_col=2,
-        n_header_cols=13,
+        skip_rows=12,
     )
 
     assert samples == ["index", "mother", "father"]
