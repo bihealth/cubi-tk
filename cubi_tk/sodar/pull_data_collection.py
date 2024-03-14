@@ -3,7 +3,6 @@
 import argparse
 from collections import defaultdict
 import os
-import pandas as pd
 from pathlib import PurePosixPath
 import re
 import typing
@@ -11,6 +10,7 @@ from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from logzero import logger
+import pandas as pd
 
 from ..common import load_toml_config
 from ..irods_common import TransferJob, iRODSTransfer
@@ -251,13 +251,14 @@ class PullDataCollection(PullDataCommon):
 
     @staticmethod
     def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> List[str]:
-
-        extra_args = {'comment': '#'} if skip_comments else {}
-        df = pd.read_csv(tsv_path, sep='\t', skiprows=skip_rows, **extra_args)
+        extra_args = {"comment": "#"} if skip_comments else {}
+        df = pd.read_csv(tsv_path, sep="\t", skiprows=skip_rows, **extra_args)
         try:
-            samples = list(df.iloc[:, sample_col-1])
+            samples = list(df.iloc[:, sample_col - 1])
         except IndexError:
-            logger.error(f"Error extracting column no. {sample_col} from {tsv_path}, only {len(df.columns)} where detected.")
+            logger.error(
+                f"Error extracting column no. {sample_col} from {tsv_path}, only {len(df.columns)} where detected."
+            )
             raise
 
         return samples
