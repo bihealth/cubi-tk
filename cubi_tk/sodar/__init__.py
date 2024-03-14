@@ -30,6 +30,9 @@ Sub Commands
 ``add-ped``
     Download sample sheet, add rows from PED file, and re-upload.
 
+``pull-data-collection``
+    Download data collection from iRODS.
+
 ``pull-raw-data``
     Download raw data from iRODS for samples from the sample sheet.
 
@@ -62,6 +65,7 @@ from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move
 from .lz_validate import setup_argparse as setup_argparse_lz_validate
+from .pull_data_collection import setup_argparse as setup_argparse_pull_data_collection
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 
@@ -76,6 +80,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_download_sheet(subparsers.add_parser("download-sheet", help="Download ISA-tab"))
     setup_argparse_upload_sheet(
         subparsers.add_parser("upload-sheet", help="Upload and replace ISA-tab")
+    )
+    setup_argparse_pull_data_collection(
+        subparsers.add_parser("pull-data-collection", help="Download data collections from iRODS")
     )
     setup_argparse_pull_raw_data(
         subparsers.add_parser("pull-raw-data", help="Download raw data from iRODS")

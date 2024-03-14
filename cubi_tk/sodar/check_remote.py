@@ -14,7 +14,6 @@ import argparse
 from collections import defaultdict
 import os
 from pathlib import Path
-from types import SimpleNamespace
 import typing
 
 import attr
@@ -23,11 +22,7 @@ from logzero import logger
 from ..common import compute_md5_checksum, load_toml_config
 from ..exceptions import FileMd5MismatchException
 from ..snappy.check_remote import Checker as SnappyChecker
-from ..snappy.retrieve_irods_collection import RetrieveIrodsCollection
-
-# RetrieveIrodsCollection needs this in the namespace
-# either define it explicitly or import it
-DEFAULT_HASH_SCHEME = "MD5"
+from ..sodar_common import RetrieveSodarCollection
 
 
 # Adapted from snappy.retrieve_irods_collection
@@ -393,9 +388,7 @@ class SodarCheckRemoteCommand:
         logger.info("  args: %s", self.args)
 
         # Find all remote files (iRODS)
-        pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
-        irodscollector = RetrieveIrodsCollection(
-            pseudo_args,
+        irodscollector = RetrieveSodarCollection(
             self.args.sodar_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,

@@ -1,68 +1,46 @@
 """``cubi-tk irods check``: Check target iRODS collection (all md5 files? metadata md5 consistent? enough replicas?)."""
 
 import argparse
-from contextlib import contextmanager
 import json
 from multiprocessing.pool import ThreadPool
 import os
 import re
 import typing
 
-from irods.collection import iRODSCollection
-from irods.column import Like
 from irods.data_object import iRODSDataObject
-from irods.models import Collection as CollectionModel
-from irods.models import DataObject as DataObjectModel
-from irods.session import iRODSSession
 from logzero import logger
 import tqdm
+
+from ..irods_common import DEFAULT_HASH_SCHEME, HASH_SCHEMES, iRODSRetrieveCollection
 
 MIN_NUM_REPLICAS = 2
 NUM_PARALLEL_TESTS = 4
 NUM_DISPLAY_FILES = 20
-HASH_SCHEMES = {
-    "MD5": {"regex": re.compile(r"[0-9a-fA-F]{32}")},
-    "SHA256": {"regex": re.compile(r"[0-9a-fA-F]{64}")},
-}
-DEFAULT_HASH_SCHEME = "MD5"
 
 
-class IrodsCheckCommand:
+class IrodsCheckCommand(iRODSRetrieveCollection):
     """Implementation of iRDOS check command."""
 
     command_name = "check"
 
-    def __init__(self, args):
+    def __init__(self, args, hash_scheme=DEFAULT_HASH_SCHEME, ask=False, irods_env_path=None):
+        """Constructor.
+
+        :param args: argparse object with command line arguments.
+        :type args: argparse.Namespace
+
+        :param hash_scheme: iRODS hash scheme, default MD5.
+        :type hash_scheme: str, optional
+
+        :param ask: Confirm with user before certain actions.
+        :type ask: bool, optional
+
+        :param irods_env_path: Path to irods_environment.json
+        :type irods_env_path: pathlib.Path, optional
+        """
+        super.__init__(hash_scheme, ask, irods_env_path)
         #: Command line arguments.
         self.args = args
-
-        #: Path to iRODS environment file
-        self.irods_env_path = os.path.join(
-            os.path.expanduser("~"), ".irods", "irods_environment.json"
-        )
-
-        #: iRODS environment
-        self.irods_env = None
-
-    def _init_irods(self):
-        """Connect to iRODS."""
-        try:
-            return iRODSSession(irods_env_file=self.irods_env_path)
-        except Exception as e:
-            logger.error("iRODS connection failed: %s", self.get_irods_error(e))
-            logger.error("Are you logged in? try 'iinit'")
-            raise
-
-    @contextmanager
-    def _get_irods_sessions(self, count=NUM_PARALLEL_TESTS):
-        if count < 1:
-            count = 1
-        irods_sessions = [self._init_irods() for _ in range(count)]
-        try:
-            yield irods_sessions
-        finally:
-            for irods in irods_sessions:
-                irods.cleanup()
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -100,40 +78,6 @@ class IrodsCheckCommand:
         )
         parser.add_argument("irods_path", help="Path to an iRODS collection.")
 
-    @classmethod
-    def get_irods_error(cls, e: Exception):
-        """Return logger friendly iRODS exception."""
-        es = str(e)
-        return es if es != "None" else e.__class__.__name__
-
-    def get_data_objs(
-        self, root_coll: iRODSCollection
-    ) -> typing.Dict[
-        str, typing.Union[typing.Dict[str, iRODSDataObject], typing.List[iRODSDataObject]]
-    ]:
-        """Get data objects recursively under the given iRODS path."""
-        data_objs = dict(files=[], checksums={})
-        ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.args.hash_scheme.upper()]
-        irods_sess = root_coll.manager.sess
-
-        query = irods_sess.query(DataObjectModel, CollectionModel).filter(
-            Like(CollectionModel.name, f"{root_coll.path}%")
-        )
-
-        for res in query:
-            # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional, likely because a name/path/... attribute is overwritten somewhere
-            coll_res = {k: v for k, v in res.items() if k.icat_id >= 500}
-            obj_res = {k: v for k, v in res.items() if k.icat_id < 500}
-            coll = iRODSCollection(root_coll.manager, coll_res)
-            obj = iRODSDataObject(irods_sess.data_objects, parent=coll, results=[obj_res])
-
-            if obj.path.endswith("." + self.args.hash_scheme.lower()):
-                data_objs["checksums"][obj.path] = obj
-            elif obj.path.split(".")[-1] not in ignore_schemes:
-                data_objs["files"].append(obj)
-
-        return data_objs
-
     def check_args(self, _args):
         # Check hash scheme
         if _args.hash_scheme.upper() not in HASH_SCHEMES:
@@ -170,18 +114,9 @@ class IrodsCheckCommand:
         logger.info("iRODS environment: %s", irods_env)
 
         # Connect to iRODS
-        with self._get_irods_sessions(self.args.num_parallel_tests) as irods_sessions:
-            try:
-                root_coll = irods_sessions[0].collections.get(self.args.irods_path)
-                logger.info(
-                    "{} iRODS connection{} initialized".format(
-                        len(irods_sessions), "s" if len(irods_sessions) != 1 else ""
-                    )
-                )
-            except Exception as e:
-                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
-                raise
-
+        with self.session as irods_session:
+            root_coll = irods_session.collections.get(self.args.irods_path)
+            logger.info("1 iRODS connection initialized")
             # Get files and run checks
             logger.info("Querying for data objects")
             data_objs = self.get_data_objs(root_coll)
