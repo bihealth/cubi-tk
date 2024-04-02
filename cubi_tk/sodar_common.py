@@ -42,7 +42,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        super.__init__(hash_scheme, ask, irods_env_path)
+        super().__init__(hash_scheme, ask, irods_env_path)
         self.sodar_url = sodar_url
         self.sodar_api_token = sodar_api_token
         self.assay_uuid = assay_uuid

@@ -49,7 +49,7 @@ class PullDataCollection(PullDataCommon):
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        PullDataCommon.__init__(self)
+        super().__init__()
         #: Command line arguments.
         self.args = args
 
@@ -57,7 +57,7 @@ class PullDataCollection(PullDataCommon):
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup arguments for ``check-remote`` command."""
         parser.add_argument(
-            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+            "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
         parser.add_argument(
             "--sodar-url",
@@ -182,7 +182,7 @@ class PullDataCollection(PullDataCommon):
                 )
                 logger.debug(e)
                 res = 1
-        elif not os.access(args.output_directory, os.W_OK):
+        elif not os.access(args.output_dir, os.W_OK):
             logger.error(
                 f"Output directory path either does not exist or it is not writable: {args.base_path}"
             )
@@ -230,7 +230,7 @@ class PullDataCollection(PullDataCommon):
             file_patterns = self.args.file_pattern
 
         filtered_remote_files_dict = self.filter_irods_file_list(
-            file_patterns, samples, self.args.substring_match, assay_path
+            remote_files_dict, assay_path, file_patterns, samples, self.args.substring_match
         )
 
         if len(filtered_remote_files_dict) == 0:

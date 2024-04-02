@@ -267,6 +267,7 @@ class iRODSTransfer(iRODSCommon):
                     )
                     continue
                 try:
+                    Path(job.path_local).parent.mkdir(parents=True, exist_ok=True)
                     with self.session as session:
                         session.data_objects.get(job.path_remote, job.path_local, **kw_options)
                     t.update(job.bytes)
