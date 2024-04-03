@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from cubi_tk.__main__ import setup_argparse
 from cubi_tk.irods_common import TransferJob
 from cubi_tk.sodar.pull_data_collection import PullDataCollection
 
@@ -150,3 +151,30 @@ def test_parse_samplesheet():
     )
 
     assert samples == ["index", "mother", "father"]
+
+
+def test_run_sodar_pull_data_collection_help(capsys):
+    """Test ``cubi-tk sodar pull-data-collection --help``"""
+    parser, _subparsers = setup_argparse()
+    with pytest.raises(SystemExit) as e:
+        parser.parse_args(["sodar", "pull-data-collection", "--help"])
+
+    assert e.value.code == 0
+
+    res = capsys.readouterr()
+    assert res.out
+    assert not res.err
+
+
+def test_run_sodar_pull_data_collection_nothing(capsys):
+    """Test ``cubi-tk sodar pull-data-collection``"""
+    parser, _subparsers = setup_argparse()
+
+    with pytest.raises(SystemExit) as e:
+        parser.parse_args(["sodar", "pull-data-collection"])
+
+    assert e.value.code == 2
+
+    res = capsys.readouterr()
+    assert not res.out
+    assert res.err
