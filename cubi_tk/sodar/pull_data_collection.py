@@ -5,8 +5,6 @@ from collections import defaultdict
 import os
 from pathlib import PurePosixPath
 import re
-import typing
-from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from logzero import logger
@@ -270,7 +268,7 @@ class PullDataCollection(PullDataCommon):
         file_patterns: list[str],
         samples: set[str],
         substring_match: bool = False,
-    ) -> Dict[str, list[iRODSDataObject]]:
+    ) -> dict[str, list[iRODSDataObject]]:
         """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
@@ -326,8 +324,8 @@ class PullDataCollection(PullDataCommon):
         return filtered_dict
 
     def build_download_jobs(
-        self, remote_files_dict: Dict[str, List[iRODSDataObject]], assay_path: str
-    ) -> List[TransferJob]:
+        self, remote_files_dict: dict[str, list[iRODSDataObject]], assay_path: str
+    ) -> list[TransferJob]:
         """Build list of download jobs for iRODS files."""
         # Initiate output
         output_list = []
