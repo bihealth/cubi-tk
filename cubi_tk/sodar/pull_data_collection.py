@@ -55,7 +55,7 @@ class PullDataCollection(PullDataCommon):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup arguments for ``check-remote`` command."""
+        """Setup arguments for ``pull-data-collection`` command."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -157,11 +157,11 @@ class PullDataCollection(PullDataCommon):
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-    ) -> typing.Optional[int]:
+    ) -> int | None:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args):
+    def check_args(self, args) -> int:
         """Called for checking arguments."""
         res = 0
 
@@ -190,18 +190,18 @@ class PullDataCollection(PullDataCommon):
 
         return res
 
-    def execute(self) -> typing.Optional[int]:
+    def execute(self) -> int | None:
         """Execute the transfer."""
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk snappy pull-processed-data")
+        logger.info("Starting cubi-tk sodar pull-data-collection")
         logger.info("  args: %s", self.args)
 
         # Get list of sample ids
         if self.args.sample_list:
-            samples = self.args.sample_list
+            samples = set(self.args.sample_list)
         elif self.args.biomedsheet:
             samples = self.parse_sample_tsv(self.args.biomedsheet, sample_col=2, skip_rows=12)
         elif self.args.tsv:
@@ -250,11 +250,11 @@ class PullDataCollection(PullDataCommon):
         return 0
 
     @staticmethod
-    def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> List[str]:
+    def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> set[str]:
         extra_args = {"comment": "#"} if skip_comments else {}
         df = pd.read_csv(tsv_path, sep="\t", skiprows=skip_rows, **extra_args)
         try:
-            samples = list(df.iloc[:, sample_col - 1])
+            samples = set(df.iloc[:, sample_col - 1])
         except IndexError:
             logger.error(
                 f"Error extracting column no. {sample_col} from {tsv_path}, only {len(df.columns)} where detected."
@@ -265,12 +265,12 @@ class PullDataCollection(PullDataCommon):
 
     @staticmethod
     def filter_irods_file_list(
-        remote_files_dict: Dict[str, List[iRODSDataObject]],
+        remote_files_dict: dict[str, list[iRODSDataObject]],
         common_assay_path: str,
-        file_patterns: List[str],
-        samples: List[str],
+        file_patterns: list[str],
+        samples: set[str],
         substring_match: bool = False,
-    ) -> Dict[str, List[iRODSDataObject]]:
+    ) -> Dict[str, list[iRODSDataObject]]:
         """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
@@ -304,9 +304,9 @@ class PullDataCollection(PullDataCommon):
 
                 # Check if collection (=1st element of striped path) matches any of the samples
                 if samples and not substring_match:
-                    sample_match = any([s == collection for s in samples])
+                    sample_match = any(s == collection for s in samples)
                 elif samples:
-                    sample_match = any([s in collection for s in samples])
+                    sample_match = any(s in collection for s in samples)
                 else:
                     sample_match = True
 
@@ -314,7 +314,7 @@ class PullDataCollection(PullDataCommon):
                     continue
 
                 if file_patterns:
-                    file_pattern_match = any([p for p in file_patterns if path.match(p)])
+                    file_pattern_match = any(p for p in file_patterns if path.match(p))
                 else:
                     file_pattern_match = True
 

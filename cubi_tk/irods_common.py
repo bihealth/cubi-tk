@@ -3,7 +3,7 @@ import getpass
 import os.path
 from pathlib import Path
 import re
-from typing import Dict, Iterable, List, Union
+from typing import Iterable, Union
 
 import attrs
 from irods.collection import iRODSCollection
@@ -299,7 +299,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         super().__init__(ask, irods_env_path)
         self.hash_scheme = hash_scheme
 
-    def retrieve_irods_data_objects(self, irods_path: str) -> Dict[str, List[iRODSDataObject]]:
+    def retrieve_irods_data_objects(self, irods_path: str) -> dict[str, list[iRODSDataObject]]:
         """Retrieve data objects from iRODS.
 
         :param irods_path: iRODS path.
@@ -331,7 +331,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         self,
         session: iRODSSession,
         root_coll: iRODSCollection,
-    ) -> Dict[str, Union[Dict[str, iRODSDataObject], List[iRODSDataObject]]]:
+    ) -> dict[str, Union[dict[str, iRODSDataObject], list[iRODSDataObject]]]:
         """Get data objects recursively under the given iRODS path."""
 
         ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.hash_scheme.upper()]
@@ -344,8 +344,9 @@ class iRODSRetrieveCollection(iRODSCommon):
         for res in query:
             # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
             # likely because a name/path/... attribute is overwritten somewhere
-            coll_res = {k: v for k, v in res.items() if k.icat_id >= 500}
-            obj_res = {k: v for k, v in res.items() if k.icat_id < 500}
+            magic_icat_id_separator = 500
+            coll_res = {k: v for k, v in res.items() if k.icat_id >= magic_icat_id_separator}
+            obj_res = {k: v for k, v in res.items() if k.icat_id < magic_icat_id_separator}
             coll = iRODSCollection(root_coll.manager, coll_res)
             obj = iRODSDataObject(session.data_objects, parent=coll, results=[obj_res])
 
@@ -357,7 +358,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         return data_objs
 
     @staticmethod
-    def parse_irods_collection(irods_data_objs) -> Dict[str, List[iRODSDataObject]]:
+    def parse_irods_collection(irods_data_objs) -> dict[str, list[iRODSDataObject]]:
         """Parse iRODS collection
 
         :param irods_data_objs: iRODS collection.
