@@ -1,22 +1,24 @@
-"""Contains classes and methods used to retrieve iRODS collections from SODAR.
-"""
-from collections import defaultdict
-import typing
+from pathlib import Path
+from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from logzero import logger
 from sodar_cli import api
 
-from ..irods.check import IrodsCheckCommand
-
-#: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
-DEFAULT_HASH_SCHEME = "MD5"
+from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
 
 
-class RetrieveIrodsCollection(IrodsCheckCommand):
-    """Class retrieves iRODS Collection associated with Assay"""
-
-    def __init__(self, args, sodar_url, sodar_api_token, assay_uuid, project_uuid):
+class RetrieveSodarCollection(iRODSRetrieveCollection):
+    def __init__(
+        self,
+        sodar_url,
+        sodar_api_token,
+        assay_uuid,
+        project_uuid,
+        hash_scheme: str = DEFAULT_HASH_SCHEME,
+        ask: bool = False,
+        irods_env_path: Path = None,
+    ):
         """Constructor.
 
         :param sodar_url: SODAR url.
@@ -30,14 +32,23 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
 
         :param project_uuid: Project UUID.
         :type project_uuid: str
+
+        :param hash_scheme: iRODS hash scheme, default MD5.
+        :type hash_scheme: str, optional
+
+        :param ask: Confirm with user before certain actions.
+        :type ask: bool, optional
+
+        :param irods_env_path: Path to irods_environment.json
+        :type irods_env_path: pathlib.Path, optional
         """
-        IrodsCheckCommand.__init__(self, args=args)
+        super().__init__(hash_scheme, ask, irods_env_path)
         self.sodar_url = sodar_url
         self.sodar_api_token = sodar_api_token
         self.assay_uuid = assay_uuid
         self.project_uuid = project_uuid
 
-    def perform(self) -> typing.Dict[str, typing.List[iRODSDataObject]]:
+    def perform(self) -> Dict[str, List[iRODSDataObject]]:
         """Perform class routines."""
         logger.info("Starting remote files search ...")
 
@@ -97,51 +108,3 @@ class RetrieveIrodsCollection(IrodsCheckCommand):
             f"Project contains multiple Assays, will only consider UUID '{assays[0]}'.\n"
             f"All available UUIDs:\n{multi_assay_str}"
         )
-
-    def retrieve_irods_data_objects(
-        self, irods_path: str
-    ) -> typing.Dict[str, typing.List[iRODSDataObject]]:
-        """Retrieve data objects from iRODS.
-
-        :param irods_path: iRODS path.
-
-        :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of iRODSDataObject (native python-irodsclient object).
-        """
-
-        # Connect to iRODS
-        with self._get_irods_sessions(1) as irods_sessions:
-            try:
-                root_coll = irods_sessions[0].collections.get(irods_path)
-
-                # Get files and run checks
-                logger.info("Querying for data objects")
-
-                if root_coll is not None:
-                    irods_data_objs = self.get_data_objs(root_coll)
-                    irods_obj_dict = self.parse_irods_collection(irods_data_objs)
-                    return irods_obj_dict
-
-            except Exception as e:
-                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
-                raise
-
-        return {}
-
-    @staticmethod
-    def parse_irods_collection(irods_data_objs) -> typing.Dict[str, typing.List[iRODSDataObject]]:
-        """Parse iRODS collection
-
-        :param irods_collection: iRODS collection.
-        :type irods_collection: dict
-
-        :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of iRODSDataObject (native python-irodsclient object).
-        """
-        # Initialise variables
-        output_dict = defaultdict(list)
-
-        for obj in irods_data_objs["files"]:
-            output_dict[obj.name].append(obj)
-
-        return output_dict

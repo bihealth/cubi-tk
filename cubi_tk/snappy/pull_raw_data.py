@@ -10,7 +10,6 @@ import argparse
 from collections import defaultdict
 import os
 import pathlib
-from types import SimpleNamespace
 import typing
 
 import attr
@@ -18,10 +17,10 @@ from logzero import logger
 import yaml
 
 from ..common import load_toml_config
+from ..sodar_common import RetrieveSodarCollection
 from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 from .pull_data_common import PullDataCommon
-from .retrieve_irods_collection import DEFAULT_HASH_SCHEME, RetrieveIrodsCollection
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -189,9 +188,7 @@ class PullRawDataCommand(PullDataCommon):
             )
 
         # Find all remote files (iRODS)
-        pseudo_args = SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME)
-        remote_files_dict = RetrieveIrodsCollection(
-            pseudo_args,
+        remote_files_dict = RetrieveSodarCollection(
             self.config.sodar_url,
             self.config.sodar_api_token,
             self.config.assay_uuid,
