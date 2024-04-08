@@ -149,8 +149,7 @@ def test_parse_samplesheet():
         sample_col=2,
         skip_rows=12,
     )
-
-    assert samples == ["index", "mother", "father"]
+    assert samples == {"index", "mother", "father"}
 
 
 def test_run_sodar_pull_data_collection_help(capsys):
