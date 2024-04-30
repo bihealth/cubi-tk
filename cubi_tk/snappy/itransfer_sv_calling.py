@@ -15,8 +15,7 @@ TPL_INPUT_DIR = "%(step_name)s/output/%(mapper)s.%(caller)s.%(library_name)s"
 
 
 class SnappyStepNotFoundException(Exception):
-    def __str__(self):
-        return "snappy-pipeline config does not define the expected steps this function needs."
+    """Raise when snappy-pipeline config does not define the expected steps this function needs."""
 
 
 class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCommandBase):
@@ -24,7 +23,7 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
 
     fix_md5_files = True
     command_name = "itransfer-sv-calling"
-    step_names = ("sv_calling", "sv_calling_targeted")
+    step_names = ("sv_calling_wgs", "sv_calling_targeted")
     start_batch_in_family = True
 
     def __init__(self, args):
@@ -46,7 +45,15 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
                 f"Could not find any sv-calling step name in 'config.yaml'. Was looking for one of: {', '.join(self.__class__.step_names)}"
             )
 
-        self.defined_callers = config["step_config"][self.step_name]["tools"]
+        if self.step_name == "sv_calling_targeted":
+            self.defined_callers = config["step_config"][self.step_name]["tools"]
+        else:  # if self.step_name == 'sv_calling_wgs'
+            # For WGS config looks like: sv_calling_wgs::tools::<dna>::[...]
+            self.defined_callers = [
+                tool
+                for subcat in config["step_config"][self.step_name]["tools"]
+                for tool in config["step_config"][self.step_name]["tools"][subcat]
+            ]
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
