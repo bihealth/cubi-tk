@@ -47,8 +47,8 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
 
         if self.step_name == "sv_calling_targeted":
             self.defined_callers = config["step_config"][self.step_name]["tools"]
-        else:  # if self.step_name == 'sv-calling_wgs'
-            # For WGS config looks like: sv-calling_wgs::tools::<dna>::[...]
+        else:  # if self.step_name == 'sv_calling_wgs'
+            # For WGS config looks like: sv_calling_wgs::tools::<dna>::[...]
             self.defined_callers = [
                 tool
                 for subcat in config["step_config"][self.step_name]["tools"]
