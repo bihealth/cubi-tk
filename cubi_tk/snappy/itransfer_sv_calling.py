@@ -45,7 +45,7 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
                 f"Could not find any sv-calling step name in 'config.yaml'. Was looking for one of: {', '.join(self.__class__.step_names)}"
             )
 
-        if self.step_name == "sv-calling_targeted":
+        if self.step_name == "sv_calling_targeted":
             self.defined_callers = config["step_config"][self.step_name]["tools"]
         else:  # if self.step_name == 'sv-calling_wgs'
             # For WGS config looks like: sv-calling_wgs::tools::<dna>::[...]

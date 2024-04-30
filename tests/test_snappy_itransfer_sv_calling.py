@@ -42,10 +42,11 @@ def fake_config(n_tools=1):
 
     tool2 = textwrap.dedent(
         r"""
-          sv_calling:
-            tools:
-              - gcnv
-              - manta
+          sv_calling_wgs:
+            dna:
+              tools:
+                - gcnv
+                - manta
         dummy_line
         """
     ).rstrip("dummy_line\n")
