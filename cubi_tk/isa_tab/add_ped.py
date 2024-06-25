@@ -178,11 +178,10 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
 
     def on_visit_process(self, process, node_path, study=None, assay=None):
         super().on_visit_process(process, node_path, study, assay)
-        donor_name = (
-            node_path[0].name
-            if _is_source(node_path[0])
-            else _sample_to_donor_name(node_path[0].name)
-        )
+        if _is_source(node_path[0]):
+            donor_name = node_path[0].name
+        else:
+            donor_name = _sample_to_donor_name(node_path[0].name)
         if donor_name not in self.donor_map:
             return None
         proc_config_pairs = {
