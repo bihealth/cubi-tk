@@ -77,10 +77,8 @@ jobs:
       - name: Update environment using mamba
         run: mamba env update --name root --file /tmp/environment.yaml
 
-        # We are missing bioconda pysam packages for 3.11 and 3.12, cf.
-        # https://github.com/bioconda/bioconda-recipes/issues/37805
-        # - name: Save time by installing packages via mamba.
-        # run: mamba install -y pysam
+      - name: Save time by installing packages via mamba.
+        run: mamba install -y pysam
 
       - name: Install dependencies
         run: |
