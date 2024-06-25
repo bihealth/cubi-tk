@@ -100,3 +100,27 @@ def test_add_ped_just_update(tmpdir):
         str(scratch_dir),
         str(pathlib.Path(__file__).parent / "data" / "isa_tab" / "expected_output"),
     )
+
+def test_add_ped_sheet_subset_update(tmpdir):
+    """Test updating study and assay, but only a subset of the sheet."""
+    scratch_dir = tmpdir / "scratch"
+    path_ped = pathlib.Path(__file__).parent / "data" / "isa_tab" / "in_sheet_subset" / "input.ped"
+    shutil.copytree(
+        str(pathlib.Path(__file__).parent / "data" / "isa_tab" / "in_just_update"), str(scratch_dir)
+    )
+
+    # Update metadata
+    args = BASE_ARGS[:]
+    args[12] = "S00000XYZ"
+
+    argv = args + [str(scratch_dir / "i_Investigation.txt"), str(path_ped)]
+
+    # Actually exercise code and perform test.
+    res = main(argv)
+
+    assert not res
+
+    compare_input_output(
+        str(scratch_dir),
+        str(pathlib.Path(__file__).parent / "data" / "isa_tab" / "expected_output2"),
+    )

@@ -178,6 +178,9 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
 
     def on_visit_process(self, process, node_path, study=None, assay=None):
         super().on_visit_process(process, node_path, study, assay)
+        donor_name = node_path[0].name if _is_source(node_path[0]) else _sample_to_donor_name(node_path[0].name)
+        if donor_name not in self.donor_map:
+            return None
         proc_config_pairs = {
             "library construction ": {
                 "library type": "library_type",
@@ -478,6 +481,8 @@ def _append_assay_line_protocol(
     counter += 1
     return counter, curr
 
+def _sample_to_donor_name(sample_name):
+    return sample_name.rstrip("-N1")
 
 def _donor_to_sample_name(donor_name):
     return "%s-N1" % donor_name
