@@ -4,7 +4,12 @@ from unittest.mock import ANY, MagicMock, call, patch
 import irods.exception
 import pytest
 
-from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
+from cubi_tk.irods_common import (
+    TransferJob,
+    iRODSCommon,
+    iRODSRetrieveCollection,
+    iRODSTransfer,
+)
 
 
 def test_transfer_job_bytes(fs):
@@ -167,3 +172,44 @@ def test_irods_transfer_get(mocksession, jobs):
         # download
         mockget.assert_any_call(job.path_remote, job.path_local)
     assert itransfer.size == 222
+
+
+# Test iRODSRetrieveCollection #########
+
+
+# This tests `retrieve_irods_data_objects` and by extension `parse_irods_collection`
+# A test for _irods_query would require mocking `session.query` results in a
+# way that allows creation of iRODSDataObject instances from those results
+@patch("cubi_tk.irods_common.iRODSCommon._init_irods")
+@patch("cubi_tk.irods_common.iRODSRetrieveCollection._irods_query")
+def test_irods_retrieve_data_objects(mockquery, mocksession):
+    # Possible alternative to MagicMocks here:
+    # create a fake iRODSDataObject class with a path attribute
+    mockobj1 = MagicMock()
+    mockobj1.path = "/root/coll1/file1.vcf.gz"
+    mockobj1.name = "file1.vcf.gz"
+    mockobj2 = MagicMock()
+    mockobj2.path = "/root/coll2/file2.vcf.gz"
+    mockobj2.name = "file2.vcf.gz"
+    mockobj3 = MagicMock()
+    mockobj3.path = "/root/coll1/subcol/file1.vcf.gz"
+    mockobj3.name = "file1.vcf.gz"
+
+    mockcksum = MagicMock()
+
+    mockquery.return_value = {
+        "files": [mockobj1, mockobj2, mockobj3],
+        "checksums": {
+            "/root/coll1/file1.vcf.gz": mockcksum,
+            "/root/coll2/file2.vcf.gz": mockcksum,
+            "/root/coll1/subcol/file1.vcf.gz": mockcksum,
+        },
+    }
+
+    mocksession.collections.get.return_value = "path"
+
+    data_objs = iRODSRetrieveCollection().retrieve_irods_data_objects("/fake/path")
+
+    expected_data_objs = {"file1.vcf.gz": [mockobj1, mockobj3], "file2.vcf.gz": [mockobj2]}
+
+    assert data_objs == expected_data_objs

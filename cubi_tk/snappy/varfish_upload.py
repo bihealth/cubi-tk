@@ -4,11 +4,11 @@ import argparse
 import glob
 import os
 import pathlib
+from subprocess import check_call
 import typing
 
 from biomedsheets import shortcuts
 from logzero import logger
-from varfish_cli.__main__ import main as varfish_cli_main
 
 from ..common import find_base_path
 from .common import load_sheet_tsv
@@ -143,6 +143,13 @@ class SnappyVarFishUploadCommand:
             help="Assume yes to all answers",
         )
         parser.add_argument(
+            "--force-resubmit",
+            "-f",
+            action="store_true",
+            required=False,
+            help="Force re-submission of exitsing cases in varfish.",
+        )
+        parser.add_argument(
             "--samples",
             help=(
                 "Limits the submission to the listed sample names. Don't include the full library name just the "
@@ -269,8 +276,9 @@ class SnappyVarFishUploadCommand:
                 "varfish-cli",
                 "--no-verify-ssl",
                 "--verbose",
-                "case",
-                "create-import-info",
+                "importer",
+                "caseimportinfo-create",
+                "--resubmit" if self.args.force_resubmit else "--no-resubmit",
                 sodar_uuid,
                 *sorted(found.values()),
             ]
@@ -284,7 +292,7 @@ class SnappyVarFishUploadCommand:
                 answer = answer_str == "y"
             if answer:
                 logger.info("Executing '%s'", " ".join(args))
-                varfish_cli_main(args[1:])
+                check_call(args)
         logger.info("  -> all done with %s", name)
 
 

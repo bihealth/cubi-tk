@@ -1,15 +1,23 @@
+from collections import defaultdict
 import getpass
 import os.path
 from pathlib import Path
-from typing import Iterable
+import re
+from typing import Iterable, Union
 
 import attrs
+from irods.collection import iRODSCollection
+from irods.column import Like
+from irods.data_object import iRODSDataObject
 from irods.exception import (
     CAT_INVALID_AUTHENTICATION,
     CAT_INVALID_USER,
     CAT_PASSWORD_EXPIRED,
     PAM_AUTH_PASSWORD_FAILED,
 )
+from irods.keywords import FORCE_FLAG_KW
+from irods.models import Collection as CollectionModel
+from irods.models import DataObject as DataObjectModel
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
 import logzero
@@ -19,6 +27,13 @@ from tqdm import tqdm
 # no-frills logger
 formatter = logzero.LogFormatter(fmt="%(message)s")
 output_logger = logzero.setup_logger(formatter=formatter)
+
+#: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
+HASH_SCHEMES = {
+    "MD5": {"regex": re.compile(r"[0-9a-fA-F]{32}")},
+    "SHA256": {"regex": re.compile(r"[0-9a-fA-F]{64}")},
+}
+DEFAULT_HASH_SCHEME = "MD5"
 
 
 @attrs.frozen(auto_attribs=True)
@@ -173,14 +188,16 @@ class iRODSTransfer(iRODSCommon):
 
     def put(self, recursive: bool = False, sync: bool = False):
         # Double tqdm for currently transferred file info
-        # TODO: add more parenthesis after python 3.10
-        with tqdm(
-            total=self.__total_bytes,
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            position=1,
-        ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
+        with (
+            tqdm(
+                total=self.__total_bytes,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                position=1,
+            ) as t,
+            tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
+        ):
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
@@ -217,7 +234,7 @@ class iRODSTransfer(iRODSCommon):
                 logger.error("Problem during iRODS checksumming.")
                 logger.error(self.get_irods_error(e))
 
-    def get(self):
+    def get(self, force_overwrite: bool = False):
         """Download files from SODAR."""
         with self.session as session:
             self.__jobs = [
@@ -225,22 +242,34 @@ class iRODSTransfer(iRODSCommon):
                 for job in self.__jobs
             ]
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
+
+        kw_options = {}
+        if force_overwrite:
+            kw_options = {FORCE_FLAG_KW: None}  # Keyword has no value, just needs to be present
         # Double tqdm for currently transferred file info
-        # TODO: add more parenthesis after python 3.10
-        with tqdm(
-            total=self.__total_bytes,
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            position=1,
-        ) as t, tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log:
+        with (
+            tqdm(
+                total=self.__total_bytes,
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+                position=1,
+            ) as t,
+            tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
+        ):
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
+                if os.path.exists(job.path_local) and not force_overwrite:  # pragma: no cover
+                    logger.info(
+                        f"{Path(job.path_local).name} already exists. Skipping, use force_overwrite to re-download."
+                    )
+                    continue
                 try:
+                    Path(job.path_local).parent.mkdir(parents=True, exist_ok=True)
                     with self.session as session:
-                        session.data_objects.get(job.path_remote, job.path_local)
+                        session.data_objects.get(job.path_remote, job.path_local, **kw_options)
                     t.update(job.bytes)
                 except FileNotFoundError:  # pragma: no cover
                     raise
@@ -248,3 +277,100 @@ class iRODSTransfer(iRODSCommon):
                     logger.error(f"Problem during transfer of {job.path_remote}")
                     logger.error(self.get_irods_error(e))
             t.clear()
+
+
+class iRODSRetrieveCollection(iRODSCommon):
+    """Class retrieves iRODS Collection associated with Assay"""
+
+    def __init__(
+        self, hash_scheme: str = DEFAULT_HASH_SCHEME, ask: bool = False, irods_env_path: Path = None
+    ):
+        """Constructor.
+
+        :param hash_scheme: iRODS hash scheme, default MD5.
+        :type hash_scheme: str, optional
+
+        :param ask: Confirm with user before certain actions.
+        :type ask: bool, optional
+
+        :param irods_env_path: Path to irods_environment.json
+        :type irods_env_path: pathlib.Path, optional
+        """
+        super().__init__(ask, irods_env_path)
+        self.hash_scheme = hash_scheme
+
+    def retrieve_irods_data_objects(self, irods_path: str) -> dict[str, list[iRODSDataObject]]:
+        """Retrieve data objects from iRODS.
+
+        :param irods_path: iRODS path.
+
+        :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
+        Value: list of iRODSDataObject (native python-irodsclient object).
+        """
+
+        # Connect to iRODS
+        with self.session as session:
+            try:
+                root_coll = session.collections.get(irods_path)
+
+                # Get files and run checks
+                logger.info("Querying for data objects")
+
+                if root_coll is not None:
+                    irods_data_objs = self._irods_query(session, root_coll)
+                    irods_obj_dict = self.parse_irods_collection(irods_data_objs)
+                    return irods_obj_dict
+
+            except Exception as e:  # pragma: no cover
+                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
+                raise
+
+        return {}
+
+    def _irods_query(
+        self,
+        session: iRODSSession,
+        root_coll: iRODSCollection,
+    ) -> dict[str, Union[dict[str, iRODSDataObject], list[iRODSDataObject]]]:
+        """Get data objects recursively under the given iRODS path."""
+
+        ignore_schemes = [k.lower() for k in HASH_SCHEMES if k != self.hash_scheme.upper()]
+
+        query = session.query(DataObjectModel, CollectionModel).filter(
+            Like(CollectionModel.name, f"{root_coll.path}%")
+        )
+
+        data_objs = dict(files=[], checksums={})
+        for res in query:
+            # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
+            # likely because a name/path/... attribute is overwritten somewhere
+            magic_icat_id_separator = 500
+            coll_res = {k: v for k, v in res.items() if k.icat_id >= magic_icat_id_separator}
+            obj_res = {k: v for k, v in res.items() if k.icat_id < magic_icat_id_separator}
+            coll = iRODSCollection(root_coll.manager, coll_res)
+            obj = iRODSDataObject(session.data_objects, parent=coll, results=[obj_res])
+
+            if obj.path.endswith("." + self.hash_scheme.lower()):
+                data_objs["checksums"][obj.path] = obj
+            elif obj.path.split(".")[-1] not in ignore_schemes:
+                data_objs["files"].append(obj)
+
+        return data_objs
+
+    @staticmethod
+    def parse_irods_collection(irods_data_objs) -> dict[str, list[iRODSDataObject]]:
+        """Parse iRODS collection
+
+        :param irods_data_objs: iRODS collection.
+        :type irods_data_objs: dict
+
+        :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
+        Value: list of iRODSDataObject (native python-irodsclient object).
+        """
+        # Initialise variables
+        output_dict = defaultdict(list)
+
+        for obj in irods_data_objs["files"]:
+            output_dict[obj.name].append(obj)
+
+        return output_dict

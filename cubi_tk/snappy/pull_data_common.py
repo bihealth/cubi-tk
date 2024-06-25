@@ -1,37 +1,38 @@
 from datetime import datetime
-import os
-from pathlib import Path
-from types import SimpleNamespace
+from typing import Dict, List
 
-from irods.exception import OVERWRITE_WITHOUT_FORCE_FLAG
-from irods.keywords import FORCE_FLAG_KW
+from irods.data_object import iRODSDataObject
 from logzero import logger
 from sodar_cli import api
 
-from ..irods.check import IrodsCheckCommand
-from .retrieve_irods_collection import DEFAULT_HASH_SCHEME
+from ..irods_common import TransferJob, iRODSTransfer
 
 #: Valid file extensions
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
 
 
-class PullDataCommon(IrodsCheckCommand):
+class PullDataCommon:
     """Implementation of common pull data methods."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
     file_type_to_extensions_dict = None
 
     def __init__(self):
-        IrodsCheckCommand.__init__(self, args=SimpleNamespace(hash_scheme=DEFAULT_HASH_SCHEME))
+        pass
 
-    def filter_irods_collection(self, identifiers, remote_files_dict, file_type):
+    def filter_irods_collection(
+        self,
+        identifiers: List[str],
+        remote_files_dict: Dict[str, List[iRODSDataObject]],
+        file_type: str,
+    ) -> Dict[str, List[iRODSDataObject]]:
         """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
 
         :param identifiers: List of sample identifiers or library names.
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``iRODSDataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: list of iRODS data (``iRODSDataObject``).
         :type remote_files_dict: dict
 
         :param file_type: File type, example: 'bam' or 'vcf'.
@@ -104,7 +105,8 @@ class PullDataCommon(IrodsCheckCommand):
                 return _assay_uuid
         return None
 
-    def get_irods_files(self, irods_local_path_pairs, force_overwrite=False):
+    @staticmethod
+    def get_irods_files(irods_local_path_pairs, force_overwrite=False):
         """Get iRODS files
 
         Retrieves iRODS path and stores it locally.
@@ -115,37 +117,12 @@ class PullDataCommon(IrodsCheckCommand):
         :param force_overwrite: Flag to indicate if local files should be overwritten.
         :type force_overwrite: bool
         """
-        kw_options = {}
-        if force_overwrite:
-            kw_options = {FORCE_FLAG_KW: None}  # Keyword has no value, just needs to be present
-        # Connect to iRODS
-        with self._get_irods_sessions(count=1) as irods_sessions:
-            try:
-                for pair in irods_local_path_pairs:
-                    # Set variable
-                    file_name = pair[0].split("/")[-1]
-                    irods_path = pair[0]
-                    local_out_path = pair[1]
-                    # Create output directory if necessary
-                    Path(local_out_path).parent.mkdir(parents=True, exist_ok=True)
-                    # Get file
-                    if os.path.exists(local_out_path) and not force_overwrite:
-                        logger.info(f"{file_name} already exists. Force_overwrite to re-download.")
-                    else:
-                        logger.info(f"Retrieving '{file_name}' from: {irods_path}")
-                        irods_sessions[0].data_objects.get(irods_path, local_out_path, **kw_options)
 
-            except OVERWRITE_WITHOUT_FORCE_FLAG:
-                logger.error(
-                    f"Failed to retrieve '{file_name}', it already exists in output directory: {local_out_path}"
-                )
-                raise
-
-            except Exception as e:
-                logger.error(f"Failed to retrieve iRODS path: {irods_path}")
-                logger.error(f"Attempted to copy file to directory: {local_out_path}")
-                logger.error(self.get_irods_error(e))
-                raise
+        transfer_jobs = [
+            TransferJob(local_out_path, irods_path)
+            for irods_path, local_out_path in irods_local_path_pairs
+        ]
+        iRODSTransfer(transfer_jobs).get(force_overwrite)
 
     @staticmethod
     def report_no_file_found(available_files):

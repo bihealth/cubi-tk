@@ -18,7 +18,7 @@ Sub Commands
 ``landing-zone-create``
     Create a landing zone.
 
-``landing-zone-validate`` (planned)
+``landing-zone-validate``
     Validate a landing zone.
 
 ``landing-zone-move``
@@ -29,6 +29,9 @@ Sub Commands
 
 ``add-ped``
     Download sample sheet, add rows from PED file, and re-upload.
+
+``pull-data-collection``
+    Download data collection from iRODS.
 
 ``pull-raw-data``
     Download raw data from iRODS for samples from the sample sheet.
@@ -61,6 +64,8 @@ from .ingest_fastq import setup_argparse as setup_argparse_ingest_fastq
 from .lz_create import setup_argparse as setup_argparse_lz_create
 from .lz_list import setup_argparse as setup_argparse_lz_list
 from .lz_move import setup_argparse as setup_argparse_lz_move
+from .lz_validate import setup_argparse as setup_argparse_lz_validate
+from .pull_data_collection import setup_argparse as setup_argparse_pull_data_collection
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
 from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 
@@ -76,6 +81,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_upload_sheet(
         subparsers.add_parser("upload-sheet", help="Upload and replace ISA-tab")
     )
+    setup_argparse_pull_data_collection(
+        subparsers.add_parser("pull-data-collection", help="Download data collections from iRODS")
+    )
     setup_argparse_pull_raw_data(
         subparsers.add_parser("pull-raw-data", help="Download raw data from iRODS")
     )
@@ -85,6 +93,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_lz_list(subparsers.add_parser("landing-zone-list", help="List landing zones"))
     setup_argparse_lz_move(
         subparsers.add_parser("landing-zone-move", help="Submit landing zone for moving")
+    )
+    setup_argparse_lz_validate(
+        subparsers.add_parser("landing-zone-validate", help="Submit landing zone for validation")
     )
     setup_argparse_ingest_fastq(
         subparsers.add_parser(
