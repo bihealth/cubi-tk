@@ -101,6 +101,7 @@ def test_add_ped_just_update(tmpdir):
         str(pathlib.Path(__file__).parent / "data" / "isa_tab" / "expected_output"),
     )
 
+
 def test_add_ped_sheet_subset_update(tmpdir):
     """Test updating study and assay, but only a subset of the sheet."""
     scratch_dir = tmpdir / "scratch"
