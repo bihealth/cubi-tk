@@ -1,6 +1,5 @@
 ignore-paths:
-  - cubi_tk/_version.py
-  - versioneer.py
+  - cubi_tk/version.py
 
 pep257:
   disable:
