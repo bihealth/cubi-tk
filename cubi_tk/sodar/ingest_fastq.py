@@ -30,17 +30,40 @@ logger.propagate = True
 formatter = logzero.LogFormatter(fmt="%(message)s")
 output_logger = logzero.setup_logger(formatter=formatter)
 
-DEFAULT_SRC_REGEX = (
-    r"(.*/)?(?P<sample>.+?)"
-    r"(?:_S[0-9]+)?"
-    r"(?:_(?P<lane>L[0-9]+?))?"
-    r"(?:_(?P<mate>R[0-9]+?))?"
-    r"(?:_(?P<batch>[0-9]+?))?"
-    r"\.f(?:ast)?q\.gz"
-)
+SRC_REGEX_PRESETS = {
+    "default": (
+        r"(.*/)?(?P<sample>.+?)"
+        r"(?:_S[0-9]+)?"
+        r"(?:_(?P<lane>L[0-9]+?))?"
+        r"(?:_(?P<mate>R[0-9]+?))?"
+        r"(?:_(?P<batch>[0-9]+?))?"
+        r"\.f(?:ast)?q\.gz"
+    ),
+    "digestiflow": (
+        r"(.*/)?(?P<flowcell>[A-Z0-9]{9,10}?)/"
+        r"(?P<lane>L[0-9]{3}?)/"
+        r"(?P<sample>.+?)_"
+        r"S[0-9]+_L[0-9]{3}_R[0-9]_[0-9]{3}"
+        r"\.fastq\.gz"
+    ),
+    "ONT": (
+        r"(.*/)?"
+        r"[0-9]{8}_"  # Date
+        # Sample could be <ProjectID>_<LibID>_<SampleID>, but this is not given and may change between projects
+        r"(?P<sample>[a-zA-Z0-9_-]+?)/"
+        # RunID is <date>_<time>_<position>_<flowcellID>_<hash>
+        # Flowcells can be re-used, so taking the whole thing for uniqueness is best
+        r"(?P<RunID>[0-9]{8}_[0-9]+_[A-Z0-9]+_[A-Z0-9]+_[0-9a-z]+?)/"
+        r"(?:(?P<subfolder>[a-z0-9_]+/))?"
+        r".+\.(bam|pod5|txt|json)"
+    ),
+}
 
-#: Default value for --dest-pattern
-DEFAULT_DEST_PATTERN = r"{collection_name}/raw_data/{date}/{filename}"
+DEST_PATTERN_PRESETS = {
+    "default": r"{collection_name}/raw_data/{date}/{filename}",
+    "digestiflow": r"{collection_name}/raw_data/{flowcell}/{filename}",
+    "ONT": r"{collection_name}/raw_data/{RunID}/{subfolder}{filename}",
+}
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -82,7 +105,11 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     def __init__(self, args):
         super().__init__(args)
-        self.dest_pattern_fields = set(re.findall(r"(?<={).+?(?=})", self.args.remote_dir_pattern))
+        if self.args.remote_dir_pattern:
+            self.remote_dir_pattern = self.args.remote_dir_pattern
+        else:
+            self.remote_dir_pattern = DEST_PATTERN_PRESETS[self.args.preset]
+        self.dest_pattern_fields = set(re.findall(r"(?<={).+?(?=})", self.remote_dir_pattern))
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -129,19 +156,28 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             help="After files are transferred to SODAR, it will proceed with validation and move.",
         )
         parser.add_argument(
+            "--preset",
+            default="default",
+            choices=DEST_PATTERN_PRESETS.keys(),
+            help=f"Use predefined values for regular expression to find local files (--src-regex) and pattern to for "
+            f"constructing remote file paths.\nDefault src-regex: {SRC_REGEX_PRESETS['default']}.\n"
+            f"Default --remote-dir-pattern: {DEST_PATTERN_PRESETS['default']}.",
+        )
+        parser.add_argument(
             "--src-regex",
-            default=DEFAULT_SRC_REGEX,
-            help=f"Regular expression to use for matching input fastq files, default: {DEFAULT_SRC_REGEX}. "
-            "All capture groups can be used for --remote-dir-pattern, but only 'sample' is used by default. "
-            "Only this regex controls which files are ingested, so other files than fastq.gz can be used too.",
+            default=None,
+            help="Manually defined regular expression to use for matching input fastq files. Takes precedence over "
+            "--preset.  This regex controls which files are ingested, so it can be used for any file type. "
+            "Any named capture group in the regex can be used with --remote-dir-pattern. The 'sample' group is "
+            "used to set irods collection names (as-is or via --match-column).",
         )
         parser.add_argument(
             "--remote-dir-pattern",
-            default=DEFAULT_DEST_PATTERN,
-            help=f"Pattern to use for constructing remote pattern, default: {DEFAULT_DEST_PATTERN}. "
-            "'collection_name' is the target iRODS collection and will be filled with the (-m regex modified) "
-            "'sample' unless --match-column is not used to fill it from the assay table. Any capture group of the "
-            "src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'.",
+            default=None,
+            help="Manually defined pattern to use for constructing remote file paths. Takes precedence over "
+            "--preset. 'collection_name' is the target iRODS collection and will be filled with the (-m regex "
+            "modified) 'sample', or if --match-column is used with teh corresponding value from the  assay table. "
+            "Any capture group of the src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'.",
         )
         parser.add_argument(
             "--match-column",
@@ -417,6 +453,12 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         folders = self.download_webdav(self.args.sources)
         transfer_jobs = []
 
+        if self.args.src_regex:
+            use_regex = self.args.src_regex
+        else:
+            use_regex = SRC_REGEX_PRESETS[self.args.preset]
+        # logger.debug(f"Using regex: {use_regex}")
+
         for folder in folders:
             for path in glob.iglob(f"{folder}/**/*", recursive=True):
                 real_path = os.path.realpath(path)
@@ -432,11 +474,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 ):  # pragma: nocover
                     raise MissingFileException("Missing file %s" % (real_path + ".md5"))
 
-                m = re.match(self.args.src_regex, path)
+                # logger.debug(f"Checking file: {path}")
+                m = re.match(use_regex, path)
                 if m:
-                    logger.debug(
-                        "Matched %s with regex %s: %s", path, self.args.src_regex, m.groupdict()
-                    )
+                    logger.debug("Matched %s with regex %s: %s", path, use_regex, m.groupdict())
                     match_wildcards = dict(
                         item
                         for item in m.groupdict(default="").items()
@@ -449,9 +490,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         sample_name = re.sub(m_pat, r_pat, sample_name)
 
                     try:
-                        remote_file = pathlib.Path(
-                            lz_irods_path
-                        ) / self.args.remote_dir_pattern.format(
+                        remote_file = pathlib.Path(lz_irods_path) / self.remote_dir_pattern.format(
                             # Removed the `+ self.args.add_suffix` here, since adding anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
                             date=self.args.remote_dir_date,
@@ -495,6 +534,15 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         lz_uuid, transfer_jobs = self.build_jobs()
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
+        # Exit early if no files were found/matched
+        if not transfer_jobs:
+            if self.args.src_regex:
+                used_regex = self.args.src_regex
+            else:
+                used_regex = SRC_REGEX_PRESETS[self.args.preset]
+
+            logger.warning("No matching files were found!\nUsed regex: %s", used_regex)
+            return None
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
