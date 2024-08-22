@@ -76,28 +76,6 @@ def test_run_sodar_ingest_fastq_default_preset_regex():
         assert res is not None
         assert res.groupdict()["sample"] == expected_sample
 
-def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
-    from cubi_tk.sodar.ingest_fastq import SRC_REGEX_PRESETS
-
-    ## Test default regex
-    # Collection of example filenames and the expected {sample} value the regex should capture
-    pattern = "240101_XY01234_0000_B{flowcell}/A0000_{sample}/{flowcell}/{lane}/A0000_{sample}_S1_{lane}_R1_001.fastq.gz"
-    samples = ("sample1", "sample2")
-    flowcells = ("AB123XY456", "CD678LT000")
-    lanes = ("L001", "L002")
-    test_filenames = dict()
-    for flowcell in flowcells:
-        for sample in samples:
-            for lane in lanes:
-                test_filename = pattern.format(flowcell=flowcell, sample=sample, lane=lane)
-                test_filenames[test_filename] = (sample, flowcell)
-
-    for test_filename, expected in test_filenames.items():
-        res = re.match(SRC_REGEX_PRESETS["digestiflow"], test_filename)
-        assert res is not None
-        assert res.groupdict()["sample"] == expected[0]
-        assert res.groupdict()["flowcell"] == expected[1]
-
 
 def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
     from cubi_tk.sodar.ingest_fastq import SRC_REGEX_PRESETS
