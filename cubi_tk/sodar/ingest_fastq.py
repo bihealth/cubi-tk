@@ -42,6 +42,7 @@ SRC_REGEX_PRESETS = {
     "digestiflow": (
         r"(.*/)?(?P<flowcell>[A-Z0-9]{9,10}?)/"
         r"(?P<lane>L[0-9]{3}?)/"
+        r"(?:(?P<project>[A-Z][0-9]+_?))?"
         r"(?P<sample>.+?)_"
         r"S[0-9]+_L[0-9]{3}_R[0-9]_[0-9]{3}"
         r"\.fastq\.gz"
@@ -176,7 +177,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             default=None,
             help="Manually defined pattern to use for constructing remote file paths. Takes precedence over "
             "--preset. 'collection_name' is the target iRODS collection and will be filled with the (-m regex "
-            "modified) 'sample', or if --match-column is used with teh corresponding value from the  assay table. "
+            "modified) 'sample', or if --match-column is used with the corresponding value from the  assay table. "
             "Any capture group of the src-regex ('sample', 'lane', ...) can be used along with 'date' and 'filename'.",
         )
         parser.add_argument(
@@ -258,6 +259,13 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     "SODAR API token not found in config files. Please specify on command line."
                 )
                 res = 1
+
+        if args.src_regex and args.remote_dir_pattern and args.preset != "default":
+            logger.error(
+                "Using both --src-regex and --remote-dir-pattern at the same time overwrites all values defined "
+                "by --preset. Please drop the use of --preset or at least one of the other manual definitions."
+            )
+            res = 1
 
         return res
 
@@ -454,9 +462,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         transfer_jobs = []
 
         if self.args.src_regex:
-            use_regex = self.args.src_regex
+            use_regex = re.compile(self.args.src_regex)
         else:
-            use_regex = SRC_REGEX_PRESETS[self.args.preset]
+            use_regex = re.compile(SRC_REGEX_PRESETS[self.args.preset])
         # logger.debug(f"Using regex: {use_regex}")
 
         for folder in folders:
