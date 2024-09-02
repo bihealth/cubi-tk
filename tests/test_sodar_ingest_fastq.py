@@ -331,7 +331,6 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
-    # dest_path = "target/folder/"
     fake_base_path = "/base/path"
     argv = [
         "--verbose",
@@ -361,6 +360,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
     fake_file_paths = []
     date = "20240101"
     project_sample_id = "A0000_sample{n}"
+    fake_dest_paths = []
     for sample_n in (1, 2, 3):
         sample_path = project_sample_id.format(n=sample_n)
         # date _ time _ positions _ ID _ hash
@@ -378,6 +378,18 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
             for ext in ("", ".md5"):
                 fake_file_paths.append(file_pattern + ext)
                 fs.create_file(fake_file_paths[-1])
+                # html files will NOT be recognised by the preset
+                if 'html' in fake_file_paths[-1]:
+                    continue
+                fake_dest_paths.append(
+                    TransferJob(
+                        path_local=fake_file_paths[-1],
+                        path_remote=os.path.join(
+                            f"/irods/dest/{sample_path}/raw_data/{flowcellrun}/",
+                            os.path.relpath(fake_file_paths[-1], f"{fake_base_path}/{date}_{sample_path}/{flowcellrun}"),
+                        )
+                    )
+                )
 
     # Remove MD5 file for sample 1 fail bam, so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -444,4 +456,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
     args = parser.parse_args(argv)
     ingestfastq = SodarIngestFastq(args)
     lz, actual = ingestfastq.build_jobs()
+    assert sorted(actual, key=lambda x: x.path_remote) == sorted(
+        fake_dest_paths, key=lambda x: x.path_remote
+    )
     assert len(actual) == len(fake_file_paths) - 6
