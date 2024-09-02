@@ -3,6 +3,7 @@
 We only run some smoke tests here.
 """
 
+import datetime
 import json
 import os
 import re
@@ -15,7 +16,12 @@ import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
 from cubi_tk.exceptions import ParameterException
-from cubi_tk.sodar.ingest_fastq import SodarIngestFastq
+from cubi_tk.irods_common import TransferJob
+from cubi_tk.sodar.ingest_fastq import (
+    DEST_PATTERN_PRESETS,
+    SRC_REGEX_PRESETS,
+    SodarIngestFastq,
+)
 
 from .conftest import my_get_sodar_info, my_sodar_api_export
 from .factories import InvestigationFactory
@@ -47,8 +53,6 @@ def test_run_sodar_ingest_fastq_nothing(capsys):
 
 
 def test_run_sodar_ingest_fastq_preset_definitions():
-    from cubi_tk.sodar.ingest_fastq import DEST_PATTERN_PRESETS, SRC_REGEX_PRESETS
-
     regexes = SRC_REGEX_PRESETS.keys()
     patterns = DEST_PATTERN_PRESETS.keys()
 
@@ -62,8 +66,6 @@ def test_run_sodar_ingest_fastq_preset_definitions():
 
 
 def test_run_sodar_ingest_fastq_default_preset_regex():
-    from cubi_tk.sodar.ingest_fastq import SRC_REGEX_PRESETS
-
     ## Test default regex
     # Collection of example filenames and the expected {sample} value the regex should capture
     test_filenames = {
@@ -78,8 +80,6 @@ def test_run_sodar_ingest_fastq_default_preset_regex():
 
 
 def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
-    from cubi_tk.sodar.ingest_fastq import SRC_REGEX_PRESETS
-
     ## Test default regex
     # Collection of example filenames and the expected {sample} value the regex should capture
     pattern = "240101_XY01234_0000_B{flowcell}/A0000_{sample}/{flowcell}/{lane}/A0000_{sample}_S1_{lane}_R1_001.fastq.gz"
@@ -101,8 +101,6 @@ def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
 
 
 def test_run_sodar_ingest_fastq_ont_preset_regex():
-    from cubi_tk.sodar.ingest_fastq import SRC_REGEX_PRESETS
-
     test_filenames = {
         "fake_base_path/20240101_A0000_sample1/20240101_0000_A1_AB12345_000xyz/bam_fail/"
         "AB12345_000xyz_pass_1c1234_0.bam": (
@@ -195,7 +193,6 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
-    # dest_path = "target/folder/"
     fake_base_path = "/base/path"
     argv = [
         "--verbose",
@@ -206,8 +203,6 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
         "--sodar-api-token",
         "XXXX",
         "--yes",
-        # "--remote-dir-pattern",
-        # dest_path,
         fake_base_path,
         landing_zone_uuid,
     ]
@@ -223,16 +218,31 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
 
     # --- add test files
     fake_file_paths = []
+    fake_dest_paths = []
+    date = datetime.date.today().strftime("%Y-%m-%d")
     for member in ("sample1", "sample2", "sample3"):
         for ext in ("", ".md5"):
             fake_file_paths.append(
                 "%s/%s/%s-N1-RNA1-RNA_seq1.fastq.gz%s" % (fake_base_path, member, member, ext)
             )
             fs.create_file(fake_file_paths[-1])
+            fake_dest_paths.append(
+                TransferJob(
+                    path_local=fake_file_paths[-1],
+                    path_remote=f"/irods/dest/{member}-N1-RNA1-RNA_seq1/raw_data/{date}/{member}-N1-RNA1-RNA_seq1.fastq.gz{ext}",
+                )
+            )
+
             fake_file_paths.append(
                 "%s/%s/%s-N1-DNA1-WES1.fq.gz%s" % (fake_base_path, member, member, ext)
             )
             fs.create_file(fake_file_paths[-1])
+            fake_dest_paths.append(
+                TransferJob(
+                    path_local=fake_file_paths[-1],
+                    path_remote=f"/irods/dest/{member}-N1-DNA1-WES1/raw_data/{date}/{member}-N1-DNA1-WES1.fq.gz{ext}",
+                )
+            )
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -298,8 +308,23 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestfastq = SodarIngestFastq(args)
+    assert ingestfastq.remote_dir_pattern == DEST_PATTERN_PRESETS["default"]
     lz, actual = ingestfastq.build_jobs()
-    assert len(actual) == len(fake_file_paths)
+    assert sorted(actual, key=lambda x: x.path_remote) == sorted(
+        fake_dest_paths, key=lambda x: x.path_remote
+    )
+
+    remote_pattern = "{collection_name}/target/folder/{filename}"
+    argv[-2:] = [
+        "--remote-dir-pattern",
+        remote_pattern,
+        fake_base_path,
+        landing_zone_uuid,
+    ]
+    parser, _subparsers = setup_argparse()
+    args = parser.parse_args(argv)
+    ingestfastq = SodarIngestFastq(args)
+    assert ingestfastq.remote_dir_pattern == remote_pattern
 
 
 def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
@@ -319,8 +344,6 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
         "--yes",
         "--preset",
         "ONT",
-        # "--remote-dir-pattern",
-        # dest_path,
         fake_base_path,
         landing_zone_uuid,
     ]
