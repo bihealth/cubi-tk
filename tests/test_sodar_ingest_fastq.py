@@ -379,15 +379,18 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
                 fake_file_paths.append(file_pattern + ext)
                 fs.create_file(fake_file_paths[-1])
                 # html files will NOT be recognised by the preset
-                if 'html' in fake_file_paths[-1]:
+                if "html" in fake_file_paths[-1]:
                     continue
                 fake_dest_paths.append(
                     TransferJob(
                         path_local=fake_file_paths[-1],
                         path_remote=os.path.join(
                             f"/irods/dest/{sample_path}/raw_data/{flowcellrun}/",
-                            os.path.relpath(fake_file_paths[-1], f"{fake_base_path}/{date}_{sample_path}/{flowcellrun}"),
-                        )
+                            os.path.relpath(
+                                fake_file_paths[-1],
+                                f"{fake_base_path}/{date}_{sample_path}/{flowcellrun}",
+                            ),
+                        ),
                     )
                 )
 
