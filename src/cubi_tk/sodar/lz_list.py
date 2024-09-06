@@ -62,13 +62,14 @@ class ListLandingZoneCommand:
             help="Format string for printing, e.g. %%(uuid)s",
         )
 
+        status = ["ACTIVE", "FAILED", "VALIDATING"]
         parser.add_argument(
             "--filter-status",
             dest="filter_status",
-            default=set(),
+            default=set(status),
             action="append",
-            choices=["ACTIVE", "FAILED", "VALIDATING"],
-            help="Filter landing zone by status",
+            choices=status,
+            help="Filter landing zone by status. Defaults to listing all.",
         )
 
         parser.add_argument("project_uuid", help="UUID of project to create the landing zone in.")
@@ -110,7 +111,7 @@ class ListLandingZoneCommand:
             key=lambda lz: lz.date_modified,
         )
         for lz in existing_lzs:
-            if lz.status in self.args.filter_status:
+            if lz.status not in self.args.filter_status:
                 continue
             values = cattr.unstructure(lz)
             if self.args.format_string:
