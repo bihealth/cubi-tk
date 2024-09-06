@@ -68,7 +68,7 @@ class ListLandingZoneCommand:
             default=set(),
             action="append",
             choices=["ACTIVE", "FAILED", "VALIDATING"],
-            help="Filter landing zones by status",
+            help="Filter landing zone by status",
         )
 
         parser.add_argument("project_uuid", help="UUID of project to create the landing zone in.")
