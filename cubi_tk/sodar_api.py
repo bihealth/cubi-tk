@@ -1,13 +1,13 @@
 import argparse
+from collections import namedtuple
 import os
 from typing import Literal
 
-from collections import namedtuple
 from logzero import logger
 import requests
 
-from .exceptions import SodarAPIException, ParameterException
 from .common import is_uuid, load_toml_config
+from .exceptions import ParameterException, SodarAPIException
 
 
 # FIXME: maybe this should be used as a MixIn for other functions?
@@ -24,10 +24,14 @@ class SodarAPI:
         toml_config = load_toml_config(args(config=None))
         if not self.sodar_url:
             if not toml_config:
-                raise ParameterException("SODAR URL not given on command line and not found in toml config files.")
+                raise ParameterException(
+                    "SODAR URL not given on command line and not found in toml config files."
+                )
             self.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
             if not self.sodar_url:
-                raise ParameterException("SODAR URL not found in config files. Please specify on command line.")
+                raise ParameterException(
+                    "SODAR URL not found in config files. Please specify on command line."
+                )
         if not self.sodar_api_token:
             if not toml_config:
                 raise ParameterException(
@@ -130,9 +134,9 @@ class SodarAPI:
                 "import",
                 method="post",
                 files={
-                    "file_investigation": (*investigation, 'text/plain'),
-                    "file_study": (*study, 'text/plain'),
-                    "file_assay": (*assay, 'text/plain'),
+                    "file_investigation": (*investigation, "text/plain"),
+                    "file_study": (*study, "text/plain"),
+                    "file_assay": (*assay, "text/plain"),
                 },
             )
             if "sodar_warnings" in ret_val:

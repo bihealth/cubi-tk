@@ -14,7 +14,6 @@ from cubi_tk.sodar.update_samplehseet import UpdateSamplesheetCommand
 from cubi_tk.sodar_api import SodarAPI
 
 
-
 @pytest.fixture
 def MV_isa_json():
     with open(pathlib.Path(__file__).resolve().parent / "data" / "isa_mv.json") as f:
@@ -56,7 +55,21 @@ def UCS_class_object():
 def sample_df():
     return pd.DataFrame(
         [
-            ["Ana_01", "FAM_01", "0", "0", "male", "affected", "Ind_01", "Probe_01", "ATCG", "A1", "Ana_01-N1", "Ana_01-N1-DNA1", "Ana_01-N1-DNA1-WGS1"],
+            [
+                "Ana_01",
+                "FAM_01",
+                "0",
+                "0",
+                "male",
+                "affected",
+                "Ind_01",
+                "Probe_01",
+                "ATCG",
+                "A1",
+                "Ana_01-N1",
+                "Ana_01-N1-DNA1",
+                "Ana_01-N1-DNA1-WGS1",
+            ],
             [
                 "Ana_02",
                 "FAM_02",
@@ -104,7 +117,6 @@ def sample_df():
             "Library Name",
         ],
     )
-
 
 
 def helper_update_UCS(arg_list, UCS):
@@ -218,7 +230,16 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
     assert USC.parse_sampledata_args(isa_names) == expected
 
     # missing required fields (from default)
-    arg_list = ["-s", "Ind_01", "Probe_01", "Ana_01", "ATCG", "-d", "MV-barcodes", "dummy-project-UUID"]
+    arg_list = [
+        "-s",
+        "Ind_01",
+        "Probe_01",
+        "Ana_01",
+        "ATCG",
+        "-d",
+        "MV-barcodes",
+        "dummy-project-UUID",
+    ]
     USC = helper_update_UCS(arg_list, UCS_class_object)
     with pytest.raises(ValueError):
         USC.parse_sampledata_args(isa_names)
@@ -288,7 +309,7 @@ def test_get_dynamic_columns(UCS_class_object):
     UCS = helper_update_UCS(arg_list, UCS_class_object)
     assert UCS.get_dynamic_columns(existing_names, existing_names) == expected
 
-    #FIXME: test auto-exclusion of Library name from defaults if not in existing_names
+    # FIXME: test auto-exclusion of Library name from defaults if not in existing_names
 
 
 def test_collect_sample_data(
@@ -390,7 +411,17 @@ def test_collect_sample_data(
 
     # test germlinesheet default
     # - only -ped
-    expected_cols = ["Family-ID", "Analysis-ID", "Paternal-ID", "Maternal-ID", "Sex", "Phenotype", "Sample Name", "Extract Name", "Library Name"]
+    expected_cols = [
+        "Family-ID",
+        "Analysis-ID",
+        "Paternal-ID",
+        "Maternal-ID",
+        "Sex",
+        "Phenotype",
+        "Sample Name",
+        "Extract Name",
+        "Library Name",
+    ]
     expected = expected.loc[:, expected_cols]
     expected_cols[1] = "Sample-ID"
     expected.columns = expected_cols
@@ -434,11 +465,28 @@ def test_collect_sample_data(
 
     # - --ped and -s (different samples)
     arg_list[-1] = "mv_extra_sample.ped"
-    expected2 = pd.concat([
-        pd.DataFrame([[
-            "FAM_03", "Ana_04", "0", "0", "male", "affected", "Ana_04-N1", "Ana_04-N1-DNA1", "Ana_04-N1-DNA1-WGS1"
-        ]], columns=expected.columns),
-        expected], ignore_index=True)
+    expected2 = pd.concat(
+        [
+            pd.DataFrame(
+                [
+                    [
+                        "FAM_03",
+                        "Ana_04",
+                        "0",
+                        "0",
+                        "male",
+                        "affected",
+                        "Ana_04-N1",
+                        "Ana_04-N1-DNA1",
+                        "Ana_04-N1-DNA1-WGS1",
+                    ]
+                ],
+                columns=expected.columns,
+            ),
+            expected,
+        ],
+        ignore_index=True,
+    )
     pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected2)
 
     # - --ped and -s (mismatch in sample-info)
@@ -446,14 +494,26 @@ def test_collect_sample_data(
     arg_list[6] = "female"
     with pytest.raises(ParameterException):
         run_usc_collect_sampledata(arg_list)
-        assert "Sample with different values found in combined sample data:" in caplog.records[-1].message
-
+        assert (
+            "Sample with different values found in combined sample data:"
+            in caplog.records[-1].message
+        )
 
     #   >> that one might only fail in ISA validation?
 
 
 def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
-    arg_list = ["-s", "Ind", "Probe", "Ana", "ACTG", "A1", "-d", "MV-barcodes", "dummy-project-UUID"]
+    arg_list = [
+        "-s",
+        "Ind",
+        "Probe",
+        "Ana",
+        "ACTG",
+        "A1",
+        "-d",
+        "MV-barcodes",
+        "dummy-project-UUID",
+    ]
     UCS = helper_update_UCS(arg_list, UCS_class_object)
     isa_names = UCS.gather_ISA_column_names(mock_isa_data[1], mock_isa_data[2])
     sampledata_fields = UCS.parse_sampledata_args(isa_names)
@@ -462,7 +522,17 @@ def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
     expected_study = pd.DataFrame(
         [
             ["Ana_01", "FAM_01", "0", "0", "male", "affected", "Ind_01", "Probe_01", "Ana_01-N1"],
-            ["Ana_02", "FAM_02", "0", "Ana_03", "female", "affected", "Ind_02", "Probe_02", "Ana_02-N1"],
+            [
+                "Ana_02",
+                "FAM_02",
+                "0",
+                "Ana_03",
+                "female",
+                "affected",
+                "Ind_02",
+                "Probe_02",
+                "Ana_02-N1",
+            ],
             ["Ana_03", "FAM_02", "0", "0", "female", "affected", "Ind_03", "Probe_03", "Ana_03-N1"],
         ],
         columns=[
@@ -489,7 +559,7 @@ def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
             "Parameter Value[Barcode name]",
             "Sample Name",
             "Extract Name",
-            "Library Name"
+            "Library Name",
         ],
     )
 

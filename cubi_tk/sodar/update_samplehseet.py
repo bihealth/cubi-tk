@@ -4,7 +4,7 @@ import argparse
 from collections import OrderedDict, defaultdict
 from io import StringIO
 import re
-from typing import Optional, Iterable
+from typing import Iterable, Optional
 
 from logzero import logger
 import pandas as pd
@@ -187,9 +187,9 @@ class UpdateSamplesheetCommand:
             action="append",
             metavar=("COLUMN", "FORMAT_STR"),
             help="Dyanmically fill columns in the ISA sheet based on other columns."
-                 "Use this option if some columns with sample-sepcific Data can be derived from other columns."
-                 "FORMAT_STR can contain other columns as placeholders, i.e.: '{Source Name}-N1' for a new Sample Name."
-                 "Note: only columns from the ped/sampledata can be used as placeholders.",
+            "Use this option if some columns with sample-sepcific Data can be derived from other columns."
+            "FORMAT_STR can contain other columns as placeholders, i.e.: '{Source Name}-N1' for a new Sample Name."
+            "Note: only columns from the ped/sampledata can be used as placeholders.",
         )
 
         parser.add_argument(
@@ -225,7 +225,7 @@ class UpdateSamplesheetCommand:
             "--snappy-compatible",
             action="store_true",
             help="Transform IDs so they are compatible with snappy processing "
-                 "(replaces '-' with '_' in required ISA fields).",
+            "(replaces '-' with '_' in required ISA fields).",
         )
 
     @classmethod
@@ -269,7 +269,9 @@ class UpdateSamplesheetCommand:
         study_new, assay_new = self.match_sample_data_to_isa(
             samples, isa_names, sample_fields_mapping
         )
-        req_cols = set(REQUIRED_COLUMNS) | (set(REQUIRED_IF_EXISTING_COLUMNS) & set(isa_names.keys()))
+        req_cols = set(REQUIRED_COLUMNS) | (
+            set(REQUIRED_IF_EXISTING_COLUMNS) & set(isa_names.keys())
+        )
         colset = set(study.columns.tolist() + assay.columns.tolist())
         if not req_cols.issubset(colset):
             missing_cols = req_cols - colset
@@ -277,10 +279,10 @@ class UpdateSamplesheetCommand:
         if self.args.sanppy_compatible:
             for col in study_new.columns:
                 if orig_col_name(col) in req_cols:
-                    study_new[col] = study_new[col].str.replace('-', '_')
+                    study_new[col] = study_new[col].str.replace("-", "_")
             for col in assay_new.columns:
                 if orig_col_name(col) in req_cols:
-                    assay_new[col] = assay_new[col].str.replace('-', '_')
+                    assay_new[col] = assay_new[col].str.replace("-", "_")
 
         # Update ISA tables with new data
         study_final = self.update_isa_table(
@@ -390,10 +392,14 @@ class UpdateSamplesheetCommand:
         isa_names: Iterable[str],
     ) -> OrderedDict[str, str]:
         dynamic_cols = OrderedDict()
-        re_format_names = re.compile(r'\{(.*?)}')
+        re_format_names = re.compile(r"\{(.*?)}")
         if self.args.dynamic_column:
             for col, format_str in self.args.dynamic_column:
-                missing_deps = set(re_format_names.findall(format_str)) - set(existing_names) - set(dynamic_cols)
+                missing_deps = (
+                    set(re_format_names.findall(format_str))
+                    - set(existing_names)
+                    - set(dynamic_cols)
+                )
                 if missing_deps:
                     raise ValueError(
                         f"Dynamic column '{col}' depends on non-existing columns: {', '.join(missing_deps)}"
@@ -405,7 +411,9 @@ class UpdateSamplesheetCommand:
             dynamic_cols = sheet_default_config[self.args.defaults]["dynamic_columns"]
             # Hardcoded dep check for defaults: see if 'Library Name' is actually defined
             if "Library Name" in dynamic_cols and "Library Name" not in isa_names:
-                logger.warning('Skipping "Library Name" dynamic column, as it is not used in the ISA samplesheet.')
+                logger.warning(
+                    'Skipping "Library Name" dynamic column, as it is not used in the ISA samplesheet.'
+                )
                 del dynamic_cols["Library Name"]
 
         # #Sample Name needs to be set before other assay columns, so ensure it goes first
@@ -414,7 +422,9 @@ class UpdateSamplesheetCommand:
         return dynamic_cols
 
     def collect_sample_data(
-        self, isa_names: dict[str, list[tuple[str, str]]], sample_field_mapping: dict[str, str],
+        self,
+        isa_names: dict[str, list[tuple[str, str]]],
+        sample_field_mapping: dict[str, str],
     ) -> pd.DataFrame:
         ped_mapping = sheet_default_config[self.args.defaults]["ped_to_sampledata"]
         if self.args.ped_field_mapping:
@@ -483,9 +493,7 @@ class UpdateSamplesheetCommand:
         for col_name, format_str in dynamic_cols.items():
             # MAYBE: allow dynamic columns to change based on fill order?
             # i.e. first Extract name = -DNA1, then -DNA1-WXS1
-            samples[col_name] = samples.apply(
-                lambda row: format_str.format(**row), axis=1
-            )
+            samples[col_name] = samples.apply(lambda row: format_str.format(**row), axis=1)
 
         return samples
 

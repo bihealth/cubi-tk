@@ -60,7 +60,6 @@ import argparse
 
 from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
-from .update_samplehseet import setup_argparse as setup_argparse_update_samplesheet
 from .check_remote import setup_argparse as setup_argparse_check_remote
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
 from .ingest import setup_argparse as setup_argparse_ingest
@@ -71,6 +70,7 @@ from .lz_move import setup_argparse as setup_argparse_lz_move
 from .lz_validate import setup_argparse as setup_argparse_lz_validate
 from .pull_data_collection import setup_argparse as setup_argparse_pull_data_collection
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
+from .update_samplehseet import setup_argparse as setup_argparse_update_samplesheet
 from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 
 
