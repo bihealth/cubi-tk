@@ -30,6 +30,9 @@ Sub Commands
 ``add-ped``
     Download sample sheet, add rows from PED file, and re-upload.
 
+``update-samplesheet``
+    Directly update ISA sample sheet (without intermediate files), based on ped file &/ command line specified data.
+
 ``pull-data-collection``
     Download data collection from iRODS.
 
@@ -57,6 +60,7 @@ import argparse
 
 from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
+from .update_samplehseet import setup_argparse as setup_argparse_update_samplesheet
 from .check_remote import setup_argparse as setup_argparse_check_remote
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
 from .ingest import setup_argparse as setup_argparse_ingest
@@ -76,6 +80,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_add_ped(
         subparsers.add_parser("add-ped", help="Augment sample sheet from PED file")
+    )
+    setup_argparse_update_samplesheet(
+        subparsers.add_parser("update-samplesheet", help="Update sample sheet")
     )
     setup_argparse_download_sheet(subparsers.add_parser("download-sheet", help="Download ISA-tab"))
     setup_argparse_upload_sheet(

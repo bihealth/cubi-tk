@@ -9,8 +9,10 @@ from unittest.mock import patch
 import pandas as pd
 import pytest
 
+from cubi_tk.exceptions import ParameterException
 from cubi_tk.sodar.update_samplehseet import UpdateSamplesheetCommand
 from cubi_tk.sodar_api import SodarAPI
+
 
 
 @pytest.fixture
@@ -21,12 +23,12 @@ def MV_isa_json():
 
 @pytest.fixture
 def MV_ped_extra_sample():
-    return """FAM_03\tInd_04\t0\t0\t1\t2\n"""
+    return """FAM_03\tAna_04\t0\t0\t1\t2\n"""
 
 
 @pytest.fixture
 def MV_ped_samples():
-    return """FAM_01\tInd_01\t0\t0\t1\t2\nFAM_02\tInd_02\t0\tInd_03\t2\t2\nFAM_02\tInd_03\t0\t0\t2\t2\n"""
+    return """FAM_01\tAna_01\t0\t0\t1\t2\nFAM_02\tAna_02\t0\tAna_03\t2\t2\nFAM_02\tAna_03\t0\t0\t2\t2\n"""
 
 
 @pytest.fixture
@@ -48,6 +50,61 @@ def UCS_class_object():
     args = parser.parse_args(["dummy-project-UUID"])
     UCS = UpdateSamplesheetCommand(args)
     return UCS
+
+
+@pytest.fixture
+def sample_df():
+    return pd.DataFrame(
+        [
+            ["Ana_01", "FAM_01", "0", "0", "male", "affected", "Ind_01", "Probe_01", "ATCG", "A1", "Ana_01-N1", "Ana_01-N1-DNA1", "Ana_01-N1-DNA1-WGS1"],
+            [
+                "Ana_02",
+                "FAM_02",
+                "0",
+                "Ana_03",
+                "female",
+                "affected",
+                "Ind_02",
+                "Probe_02",
+                "ACTG",
+                "A2",
+                "Ana_02-N1",
+                "Ana_02-N1-DNA1",
+                "Ana_02-N1-DNA1-WGS1",
+            ],
+            [
+                "Ana_03",
+                "FAM_02",
+                "0",
+                "0",
+                "female",
+                "affected",
+                "Ind_03",
+                "Probe_03",
+                "ATGC",
+                "A3",
+                "Ana_03-N1",
+                "Ana_03-N1-DNA1",
+                "Ana_03-N1-DNA1-WGS1",
+            ],
+        ],
+        columns=[
+            "Analysis-ID",
+            "Family-ID",
+            "Paternal-ID",
+            "Maternal-ID",
+            "Sex",
+            "Phenotype",
+            "Individual-ID",
+            "Probe-ID",
+            "Barcode",
+            "Barcode-Name",
+            "Sample Name",
+            "Extract Name",
+            "Library Name",
+        ],
+    )
+
 
 
 def helper_update_UCS(arg_list, UCS):
@@ -106,19 +163,19 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
         "ATGC",
         "A3",
         "-d",
-        "MV-ped",
+        "MV-barcodes",
         "dummy-project-UUID",
     ]
     expected = OrderedDict(
         [
             ("Family-ID", "Family"),
-            ("Individual-ID", "Source Name"),
+            ("Analysis-ID", "Source Name"),
             ("Paternal-ID", "Father"),
             ("Maternal-ID", "Mother"),
             ("Sex", "Sex"),
             ("Phenotype", "Disease status"),
-            ("Probe-ID", "Sample Name"),
-            ("Analysis-ID", "Extract Name"),
+            ("Individual-ID", "Individual-ID"),
+            ("Probe-ID", "Probe-ID"),
             ("Barcode", "Barcode sequence"),
             ("Barcode-Name", "Barcode name"),
         ]
@@ -129,7 +186,7 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
     # manually defined mapping
     arg_list = [
         "--sample-fields",
-        "Individual-ID=Source Name",
+        "Dummy-ID=Source Name",
         "Sample Name",
         "Extract Name",
         "barcode=Barcode sequence",
@@ -149,9 +206,10 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
         "Ana_03",
         "ATGC",
         "-d",
-        "MV-ped",
+        "MV-barcodes",
         "dummy-project-UUID",
     ]
+    expected["Dummy-ID"] = "Source Name"
     expected["Sample Name"] = "Sample Name"
     expected["Extract Name"] = "Extract Name"
     expected["barcode"] = "Barcode sequence"
@@ -160,7 +218,7 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
     assert USC.parse_sampledata_args(isa_names) == expected
 
     # missing required fields (from default)
-    arg_list = ["-s", "Ind_01", "Probe_01", "Ana_01", "ATCG", "-d", "MV-ped", "dummy-project-UUID"]
+    arg_list = ["-s", "Ind_01", "Probe_01", "Ana_01", "ATCG", "-d", "MV-barcodes", "dummy-project-UUID"]
     USC = helper_update_UCS(arg_list, UCS_class_object)
     with pytest.raises(ValueError):
         USC.parse_sampledata_args(isa_names)
@@ -188,26 +246,25 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
 
 
 def test_get_dynamic_columns(UCS_class_object):
-    isa_names = {
-        name: [("", "")]
-        for name in (
-            "Source Name",
-            "Sample Name",
-            "Extract Name",
-            "Library Name",
-            "Library Strategy",
-            "Dummy",
-        )
-    }
+    # Use this both for exisiting (sampledata) and for allowed (isa) columns
+    existing_names = (
+        "Sample-ID",
+        "Source Name",
+        "Sample Name",
+        "Extract Name",
+        "Library Name",
+        "Library Strategy",
+        "Dummy",
+    )
 
     expected = OrderedDict(
         [
-            ("Sample Name", "{Source Name}-N1"),
-            ("Extract Name", "{Sample Name}-DNA1"),
-            ("Library Name", "{Sample Name}-DNA1-{Library Strategy}1"),
+            ("Sample Name", "{Sample-ID}-N1"),
+            ("Extract Name", "{Sample-ID}-N1-DNA1"),
+            ("Library Name", "{Sample-ID}-N1-DNA1-WGS1"),
         ]
     )
-    assert UCS_class_object.get_dynamic_columns(isa_names) == expected
+    assert UCS_class_object.get_dynamic_columns(existing_names, existing_names) == expected
 
     arg_list = [
         "--dynamic-column",
@@ -221,91 +278,58 @@ def test_get_dynamic_columns(UCS_class_object):
         "{Sample Name}-DNA1-{Library Strategy}1",
         "dummy-project-UUID",
     ]
-    del expected["Library Name"]
-    expected["Dummy"] = "{Sample Name}-DNA1-{Library Strategy}1"
+    expected = OrderedDict(
+        [
+            ("Sample Name", "{Source Name}-N1"),
+            ("Extract Name", "{Sample Name}-DNA1"),
+            ("Dummy", "{Sample Name}-DNA1-{Library Strategy}1"),
+        ]
+    )
     UCS = helper_update_UCS(arg_list, UCS_class_object)
-    assert UCS.get_dynamic_columns(isa_names) == expected
+    assert UCS.get_dynamic_columns(existing_names, existing_names) == expected
+
+    #FIXME: test auto-exclusion of Library name from defaults if not in existing_names
 
 
 def test_collect_sample_data(
-    mock_isa_data, UCS_class_object, MV_ped_samples, MV_ped_extra_sample, fs
+    mock_isa_data, UCS_class_object, MV_ped_samples, MV_ped_extra_sample, sample_df, fs, caplog
 ):
     fs.create_file("mv_samples.ped", contents=MV_ped_samples)
     fs.create_file("mv_extra_sample.ped", contents=MV_ped_extra_sample)
 
-    expected = pd.DataFrame(
-        [
-            ["Ind_01", "FAM_01", "0", "0", "male", "affected", "Probe_01", "Ana_01", "ATCG", "A1"],
-            [
-                "Ind_02",
-                "FAM_02",
-                "0",
-                "Ind_03",
-                "female",
-                "affected",
-                "Probe_02",
-                "Ana_02",
-                "ACTG",
-                "A2",
-            ],
-            [
-                "Ind_03",
-                "FAM_02",
-                "0",
-                "0",
-                "female",
-                "affected",
-                "Probe_03",
-                "Ana_03",
-                "ATGC",
-                "A3",
-            ],
-        ],
-        columns=[
-            "Individual-ID",
-            "Family-ID",
-            "Paternal-ID",
-            "Maternal-ID",
-            "Sex",
-            "Phenotype",
-            "Probe-ID",
-            "Analysis-ID",
-            "Barcode",
-            "Barcode-Name",
-        ],
-    )
+    expected = sample_df
     arg_list = [
         "-s",
         "FAM_01",
-        "Ind_01",
+        "Ana_01",
         "0",
         "0",
         "male",
         "affected",
+        "Ind_01",
         "Probe_01",
-        "Ana_01",
         "ATCG",
         "A1",
         "-s",
         "FAM_02",
-        "Ind_02",
+        "Ana_02",
         "0",
-        "Ind_03",
+        "Ana_03",
         "female",
         "affected",
+        "Ind_02",
         "Probe_02",
-        "Ana_02",
         "ACTG",
         "A2",
         "-s",
         "FAM_02",
-        "Ind_03",
+        "Ana_03",
         "0",
         "0",
         "female",
         "affected",
+        "Ind_03",
         "Probe_03",
-        "Ana_03",
         "ATGC",
         "A3",
         "-d",
@@ -321,15 +345,16 @@ def test_collect_sample_data(
         sampledata_fields = USC.parse_sampledata_args(isa_names)
         return USC.collect_sample_data(isa_names, sampledata_fields)
 
-    # test merginf of --ped & -s info (same samples)
+    # test merging of --ped & -s info (same samples)
     pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
 
     # incomplete info for sample only given via ped
     arg_list[36] = "mv_extra_sample.ped"
-    with pytest.raises(ValueError):
+    with pytest.raises(ParameterException):
         run_usc_collect_sampledata(arg_list)
+        assert "Combination of ped and sample data has missing values" in caplog.records[-1].message
 
-    # Test 'MV-ped' default, to allow specifying only the info missing from ped file (+ one column for merging)
+    # Test 'MV-barcodes' default, to allow specifying only the info missing from ped file (+ one column for merging)
     arg_list = [
         "-s",
         "Ind_01",
@@ -350,7 +375,7 @@ def test_collect_sample_data(
         "ATGC",
         "A3",
         "-d",
-        "MV-ped",
+        "MV-barcodes",
         "-p",
         "mv_samples.ped",
         "dummy-project-UUID",
@@ -359,70 +384,86 @@ def test_collect_sample_data(
 
     # Should still fail if ped has sample where additional info is missing
     arg_list[21] = "mv_extra_sample.ped"
-    with pytest.raises(ValueError):
+    with pytest.raises(ParameterException):
         run_usc_collect_sampledata(arg_list)
+        assert "Combination of ped and sample data has missing values" in caplog.records[-1].message
 
-    # TODO: test germlinesheet default
-    # - only --ped
+    # test germlinesheet default
+    # - only -ped
+    expected_cols = ["Family-ID", "Analysis-ID", "Paternal-ID", "Maternal-ID", "Sex", "Phenotype", "Sample Name", "Extract Name", "Library Name"]
+    expected = expected.loc[:, expected_cols]
+    expected_cols[1] = "Sample-ID"
+    expected.columns = expected_cols
+    arg_list = [
+        "-p",
+        "mv_samples.ped",
+        "dummy-project-UUID",
+    ]
+    pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
+
     # - only -s
+    arg_list = [
+        "dummy-project-UUID",
+        "-s",
+        "FAM_01",
+        "Ana_01",
+        "0",
+        "0",
+        "male",
+        "affected",
+        "-s",
+        "FAM_02",
+        "Ana_02",
+        "0",
+        "Ana_03",
+        "female",
+        "affected",
+        "-s",
+        "FAM_02",
+        "Ana_03",
+        "0",
+        "0",
+        "female",
+        "affected",
+    ]
+    pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
+
     # - --ped and -s (same samples)
+    arg_list += ["-p", "mv_samples.ped"]
+    pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
+
     # - --ped and -s (different samples)
+    arg_list[-1] = "mv_extra_sample.ped"
+    expected2 = pd.concat([
+        pd.DataFrame([[
+            "FAM_03", "Ana_04", "0", "0", "male", "affected", "Ana_04-N1", "Ana_04-N1-DNA1", "Ana_04-N1-DNA1-WGS1"
+        ]], columns=expected.columns),
+        expected], ignore_index=True)
+    pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected2)
+
     # - --ped and -s (mismatch in sample-info)
+    arg_list[-1] = "mv_samples.ped"
+    arg_list[6] = "female"
+    with pytest.raises(ParameterException):
+        run_usc_collect_sampledata(arg_list)
+        assert "Sample with different values found in combined sample data:" in caplog.records[-1].message
+
+
     #   >> that one might only fail in ISA validation?
 
 
-def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object):
-    arg_list = ["-s", "Ind", "Probe", "Ana", "ACTG", "A1", "-d", "MV-ped", "dummy-project-UUID"]
+def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
+    arg_list = ["-s", "Ind", "Probe", "Ana", "ACTG", "A1", "-d", "MV-barcodes", "dummy-project-UUID"]
     UCS = helper_update_UCS(arg_list, UCS_class_object)
     isa_names = UCS.gather_ISA_column_names(mock_isa_data[1], mock_isa_data[2])
     sampledata_fields = UCS.parse_sampledata_args(isa_names)
-    samples = pd.DataFrame(
-        [
-            ["Ind_01", "FAM_01", "0", "0", "male", "affected", "Probe_01", "Ana_01", "ATCG", "A1"],
-            [
-                "Ind_02",
-                "FAM_02",
-                "0",
-                "Ind_03",
-                "female",
-                "affected",
-                "Probe_02",
-                "Ana_02",
-                "ACTG",
-                "A2",
-            ],
-            [
-                "Ind_03",
-                "FAM_02",
-                "0",
-                "0",
-                "female",
-                "affected",
-                "Probe_03",
-                "Ana_03",
-                "ATGC",
-                "A3",
-            ],
-        ],
-        columns=[
-            "Individual-ID",
-            "Family-ID",
-            "Paternal-ID",
-            "Maternal-ID",
-            "Sex",
-            "Phenotype",
-            "Probe-ID",
-            "Analysis-ID",
-            "Barcode",
-            "Barcode-Name",
-        ],
-    )
+    samples = sample_df
 
     expected_study = pd.DataFrame(
         [
-            ["Ind_01", "FAM_01", "0", "0", "male", "affected", "Probe_01"],
-            ["Ind_02", "FAM_02", "0", "Ind_03", "female", "affected", "Probe_02"],
-            ["Ind_03", "FAM_02", "0", "0", "female", "affected", "Probe_03"],
+            ["Ana_01", "FAM_01", "0", "0", "male", "affected", "Ind_01", "Probe_01", "Ana_01-N1"],
+            ["Ana_02", "FAM_02", "0", "Ana_03", "female", "affected", "Ind_02", "Probe_02", "Ana_02-N1"],
+            ["Ana_03", "FAM_02", "0", "0", "female", "affected", "Ind_03", "Probe_03", "Ana_03-N1"],
         ],
         columns=[
             "Source Name",
@@ -431,22 +472,24 @@ def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object):
             "Characteristics[Mother]",
             "Characteristics[Sex]",
             "Characteristics[Disease status]",
+            "Characteristics[Individual-ID]",
+            "Characteristics[Probe-ID]",
             "Sample Name",
         ],
     )
-    # All extract name columns are added at the same time, sorting comes later
+    # Order of columns here does not matter yet
     expected_assay = pd.DataFrame(
         [
-            ["Probe_01", "Ana_01", "Ana_01", "ATCG", "A1"],
-            ["Probe_02", "Ana_02", "Ana_02", "ACTG", "A2"],
-            ["Probe_03", "Ana_03", "Ana_03", "ATGC", "A3"],
+            ["ATCG", "A1", "Ana_01-N1", "Ana_01-N1-DNA1", "Ana_01-N1-DNA1-WGS1"],
+            ["ACTG", "A2", "Ana_02-N1", "Ana_02-N1-DNA1", "Ana_02-N1-DNA1-WGS1"],
+            ["ATGC", "A3", "Ana_03-N1", "Ana_03-N1-DNA1", "Ana_03-N1-DNA1-WGS1"],
         ],
         columns=[
-            "Sample Name",
-            "Extract Name",
-            "Extract Name.1",
             "Parameter Value[Barcode sequence]",
             "Parameter Value[Barcode name]",
+            "Sample Name",
+            "Extract Name",
+            "Library Name"
         ],
     )
 
@@ -511,4 +554,5 @@ def test_update_isa_table(UCS_class_object, caplog):
     pd.testing.assert_frame_equal(actual, expected)
 
 
-# FIXME: smoke test for execute
+# FIXME: smoke test for execute (MV & germline-sheet)
+# - test --sanppy_compatible

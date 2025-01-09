@@ -2,10 +2,12 @@ import argparse
 import os
 from typing import Literal
 
+from collections import namedtuple
 from logzero import logger
 import requests
 
-from .exceptions import SodarAPIException
+from .exceptions import SodarAPIException, ParameterException
+from .common import is_uuid, load_toml_config
 
 
 # FIXME: maybe this should be used as a MixIn for other functions?
@@ -14,6 +16,30 @@ class SodarAPI:
         self.sodar_url = sodar_url
         self.sodar_api_token = sodar_api_token
         self.project_uuid = project_uuid
+        self.check_args()
+
+    def check_args(self):
+        # toml_config needs an object with attribute named config
+        args = namedtuple("args", ["config"])
+        toml_config = load_toml_config(args(config=None))
+        if not self.sodar_url:
+            if not toml_config:
+                raise ParameterException("SODAR URL not given on command line and not found in toml config files.")
+            self.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
+            if not self.sodar_url:
+                raise ParameterException("SODAR URL not found in config files. Please specify on command line.")
+        if not self.sodar_api_token:
+            if not toml_config:
+                raise ParameterException(
+                    "SODAR API token not given on command line and not found in toml config files."
+                )
+            self.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+            if not self.sodar_api_token:
+                raise ParameterException(
+                    "SODAR API token not found in config files. Please specify on command line."
+                )
+        if not is_uuid(self.project_uuid):
+            logger.warning("Project UUID does not look like valid UUID.")
 
     @staticmethod
     def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -63,9 +89,11 @@ class SodarAPI:
             response = requests.get(url, headers=self._base_api_header())
         elif method == "post":
             response = requests.post(url, headers=self._base_api_header(), files=files, data=data)
+        else:
+            raise ValueError("Unknown HTTP method.")
 
         if response.status_code != 200:
-            raise SodarAPIException(f"Negative API response: {response.text}")
+            raise SodarAPIException(f"API response: {response.text}")
 
         return response.json()
 
@@ -101,15 +129,18 @@ class SodarAPI:
                 "samplesheets",
                 "import",
                 method="post",
-                files=[
-                    ("file", investigation),
-                    ("file", study),
-                    ("file", assay),
-                ],
+                files={
+                    "file_investigation": (*investigation, 'text/plain'),
+                    "file_study": (*study, 'text/plain'),
+                    "file_assay": (*assay, 'text/plain'),
+                },
             )
             if "sodar_warnings" in ret_val:
+                logger.info("ISA-tab uploaded with warnings.")
                 for warning in ret_val["sodar_warnings"]:
                     logger.warning(f"SODAR warning: {warning}")
+            else:
+                logger.info("ISA-tab uploaded successfully.")
             return 0
         except SodarAPIException as e:
             logger.error(f"Failed to upload ISA-tab:\n{e}")

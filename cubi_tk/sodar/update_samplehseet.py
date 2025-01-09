@@ -4,12 +4,13 @@ import argparse
 from collections import OrderedDict, defaultdict
 from io import StringIO
 import re
-import typing
+from typing import Optional, Iterable
 
 from logzero import logger
 import pandas as pd
 from ruamel.yaml import YAML
 
+from ..exceptions import ParameterException
 from ..parse_ped import parse_ped
 from ..sodar_api import SodarAPI
 
@@ -28,37 +29,43 @@ ped_defaults: &ped
     disease: Phenotype
 
 Modellvorhaben: &MV
-    sample_field_mapping:
+    sample_fields:
         - Family-ID
-        - Individual-ID
+        - Analysis-ID
         - Paternal-ID
         - Maternal-ID
         - Sex
         - Phenotype
+        - Individual-ID
         - Probe-ID
-        - Analysis-ID
         - Barcode
         - Barcode-Name
     field_column_mapping:
         Family-ID: Family
-        Individual-ID: Source Name
+        Analysis-ID: Source Name
         Paternal-ID: Father
         Maternal-ID: Mother
         Sex: Sex
         Phenotype: "Disease status"
-        Probe-ID: Sample Name
-        Analysis-ID: Extract Name
+        Individual-ID: "Individual-ID"
+        Probe-ID: Probe-ID
         Barcode: "Barcode sequence"
         Barcode-Name: "Barcode name"
-    dynamic_columns: {}
+    dynamic_columns:
+        Sample Name: "{Analysis-ID}-N1"
+        Extract Name: "{Analysis-ID}-N1-DNA1"
+        Library Name: "{Analysis-ID}-N1-DNA1-WGS1"
     ped_to_sampledata:
         <<: *ped
-        name: Individual-ID
-        # name: Analysis-ID
+        name: Analysis-ID
 
-MV-ped:
+#alias
+MV:
     <<: *MV
-    sample_field_mapping:
+
+MV-barcodes:
+    <<: *MV
+    sample_fields:
         - Individual-ID
         - Probe-ID
         - Analysis-ID
@@ -66,7 +73,7 @@ MV-ped:
         - Barcode-Name
 
 germline-sheet:
-    sample_field_mapping:
+    sample_fields:
         - Family-ID
         - Sample-ID
         - Paternal-ID
@@ -81,9 +88,9 @@ germline-sheet:
         Sex: Sex
         Phenotype: "Disease status"
     dynamic_columns:
-        Sample Name: "{Source Name}-N1"
-        Extract Name: "{Sample Name}-DNA1"
-        Library Name: "{Sample Name}-DNA1-{Library Strategy}1"
+        Sample Name: "{Sample-ID}-N1"
+        Extract Name: "{Sample-ID}-N1-DNA1"
+        Library Name: "{Sample-ID}-N1-DNA1-WGS1"
     ped_to_sampledata:
         <<: *ped
 """
@@ -138,8 +145,8 @@ class UpdateSamplesheetCommand:
             "Field definitions are as follows:\n"
             "\n".join(
                 [
-                    f"{default} ({len(settings['sample_field_mapping'])} fields, ped-Name: {settings['ped_to_sampledata']['name']}):\n"
-                    f"{', '.join(settings['sample_field_mapping'])}"
+                    f"{default} ({len(settings['sample_fields'])} fields, ped-Name: {settings['ped_to_sampledata']['name']}):\n"
+                    f"{', '.join(settings['sample_fields'])}"
                     for default, settings in sheet_default_config.items()
                     if default != "ped_defaults"
                 ]
@@ -180,8 +187,9 @@ class UpdateSamplesheetCommand:
             action="append",
             metavar=("COLUMN", "FORMAT_STR"),
             help="Dyanmically fill columns in the ISA sheet based on other columns."
-            "Use this option if some columns with sample-sepcific Data can be derived from other columns."
-            "FORMAT_STR can contain other columns as placeholders, i.e.: '{Source Name}-N1' for a new Sample Name.",
+                 "Use this option if some columns with sample-sepcific Data can be derived from other columns."
+                 "FORMAT_STR can contain other columns as placeholders, i.e.: '{Source Name}-N1' for a new Sample Name."
+                 "Note: only columns from the ped/sampledata can be used as placeholders.",
         )
 
         parser.add_argument(
@@ -210,17 +218,24 @@ class UpdateSamplesheetCommand:
             "--no-autofill",
             action="store_true",
             help="Do not automatically fill values for non-specified metadata columns that have a single unique value "
-            "in the existing samplesheet.",
+            "in the existing samplesheet. Note: ontology terms & references will never be autofilled.",
+        )
+
+        parser.add_argument(
+            "--snappy-compatible",
+            action="store_true",
+            help="Transform IDs so they are compatible with snappy processing "
+                 "(replaces '-' with '_' in required ISA fields).",
         )
 
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-    ) -> typing.Optional[int]:
+    ) -> Optional[int]:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def execute(self) -> typing.Optional[int]:
+    def execute(self) -> Optional[int]:
         """Execute the command."""
 
         if self.args.overwrite:
@@ -247,20 +262,25 @@ class UpdateSamplesheetCommand:
         samples = self.collect_sample_data(isa_names, sample_fields_mapping)
 
         # add metadata values to samples
-        for col, value in dict(self.args.metadata_global).items():
-            samples[col] = value
-
-        req_cols = REQUIRED_COLUMNS[:] + [
-            col for col in REQUIRED_IF_EXISTING_COLUMNS if col in isa_names.keys()
-        ]
-        if not set(req_cols).issubset(samples.columns):
-            missing_cols = set(req_cols) - set(samples.columns)
-            raise ValueError(f"Missing required columns in sample data: {', '.join(missing_cols)}")
+        if self.args.metadata_all:
+            samples = samples.assign(**dict(self.args.metadata_all))
 
         # Match sample data to ISA columns and get new study & assay dataframes
         study_new, assay_new = self.match_sample_data_to_isa(
             samples, isa_names, sample_fields_mapping
         )
+        req_cols = set(REQUIRED_COLUMNS) | (set(REQUIRED_IF_EXISTING_COLUMNS) & set(isa_names.keys()))
+        colset = set(study.columns.tolist() + assay.columns.tolist())
+        if not req_cols.issubset(colset):
+            missing_cols = req_cols - colset
+            raise ValueError(f"Missing required columns in sample data: {', '.join(missing_cols)}")
+        if self.args.sanppy_compatible:
+            for col in study_new.columns:
+                if orig_col_name(col) in req_cols:
+                    study_new[col] = study_new[col].str.replace('-', '_')
+            for col in assay_new.columns:
+                if orig_col_name(col) in req_cols:
+                    assay_new[col] = assay_new[col].str.replace('-', '_')
 
         # Update ISA tables with new data
         study_final = self.update_isa_table(
@@ -309,7 +329,7 @@ class UpdateSamplesheetCommand:
                 )
                 n_fields = len(self.args.sample_fields)
             else:
-                n_fields = len(sheet_default_config[self.args.defaults]["sample_field_mapping"])
+                n_fields = len(sheet_default_config[self.args.defaults]["sample_fields"])
 
             incorrect_n = [sample for sample in self.args.sample_data if len(sample) != n_fields]
             if incorrect_n:
@@ -325,12 +345,12 @@ class UpdateSamplesheetCommand:
                 raise ValueError(msg)
 
             unknown_fields = [
-                tup for tup in sample_field_mapping.items() if tup[1] not in isa_names
+                tup for tup in sample_field_mapping.items() if tup[1] not in isa_names.keys()
             ]
             if unknown_fields:
                 msg = (
                     "Some columns for sample field mapping are not defined in the ISA samplesheet: "
-                    ", ".join([f"{col} (from {field})" for field, col in unknown_fields])
+                    + ", ".join([f"{col} (from {field})" for field, col in unknown_fields])
                 )
                 raise NameError(msg)
 
@@ -361,19 +381,32 @@ class UpdateSamplesheetCommand:
             if col in out:
                 del out[col]
 
-        return out
+        # do NOT retain defaultdict class
+        return dict(out)
 
     def get_dynamic_columns(
-        self, isa_names: dict[str, list[tuple[str, str]]]
+        self,
+        existing_names: Iterable[str],
+        isa_names: Iterable[str],
     ) -> OrderedDict[str, str]:
         dynamic_cols = OrderedDict()
+        re_format_names = re.compile(r'\{(.*?)}')
         if self.args.dynamic_column:
             for col, format_str in self.args.dynamic_column:
+                missing_deps = set(re_format_names.findall(format_str)) - set(existing_names) - set(dynamic_cols)
+                if missing_deps:
+                    raise ValueError(
+                        f"Dynamic column '{col}' depends on non-existing columns: {', '.join(missing_deps)}"
+                    )
                 if col not in isa_names:
                     raise ValueError(f"Column '{col}' is not defined in the ISA samplesheet.")
                 dynamic_cols[col] = format_str
         elif sheet_default_config[self.args.defaults]["dynamic_columns"]:
             dynamic_cols = sheet_default_config[self.args.defaults]["dynamic_columns"]
+            # Hardcoded dep check for defaults: see if 'Library Name' is actually defined
+            if "Library Name" in dynamic_cols and "Library Name" not in isa_names:
+                logger.warning('Skipping "Library Name" dynamic column, as it is not used in the ISA samplesheet.')
+                del dynamic_cols["Library Name"]
 
         # #Sample Name needs to be set before other assay columns, so ensure it goes first
         # if 'Sample Name' in dynamic_cols:
@@ -381,7 +414,7 @@ class UpdateSamplesheetCommand:
         return dynamic_cols
 
     def collect_sample_data(
-        self, isa_names: dict[str, list[tuple[str, str]]], sample_field_mapping: dict[str, str]
+        self, isa_names: dict[str, list[tuple[str, str]]], sample_field_mapping: dict[str, str],
     ) -> pd.DataFrame:
         ped_mapping = sheet_default_config[self.args.defaults]["ped_to_sampledata"]
         if self.args.ped_field_mapping:
@@ -391,7 +424,7 @@ class UpdateSamplesheetCommand:
                     logger.warning(f"Ped column '{ped_col}' is unknown and will be ignored.")
                     continue
                 if sample_col not in allowed_sample_col_values:
-                    raise ValueError(
+                    raise ParameterException(
                         f"'{sample_col}' is neither a known sample field nor a known column of the ISA samplesheet."
                     )
 
@@ -407,31 +440,52 @@ class UpdateSamplesheetCommand:
                     parse_ped(inputf),
                 )
                 ped_data = pd.DataFrame(ped_dicts)
+        else:
+            ped_data = pd.DataFrame()
 
         if self.args.sample_data:
             if self.args.sample_fields:
                 fields = self.args.sample_fields
             else:
-                fields = sheet_default_config[self.args.defaults]["sample_field_mapping"]
+                fields = sheet_default_config[self.args.defaults]["sample_fields"]
             sample_data = pd.DataFrame(self.args.sample_data, columns=fields)
             # FIXME: consistent conversion for Sex & Phenotype values? also empty parent values?
             # ped outputs: male/female, unaffected/affected, 0
+        else:
+            sample_data = pd.DataFrame()
 
         if self.args.ped and self.args.sample_data:
             # Check for matching fields between ped and sample data
             matching_fields = set(ped_data.columns).intersection(sample_data.columns)
             if not matching_fields:
-                raise ValueError("No matching fields found between ped and sample data.")
+                raise ParameterException("No matching fields found between ped and sample data.")
 
             # Combine the two sample sets
             samples = pd.merge(ped_data, sample_data, on=list(matching_fields), how="outer")
-
+            # Check that all values for all samples exist
             if samples.isnull().values.any():
-                # FIXME: add more info to error message, also different Error type?
-                raise ValueError("Combination of ped and sample data has missing values.")
-
+                missing_data = samples.loc[samples.isnull().any(axis=1)]
+                raise ParameterException(
+                    "Combination of ped and sample data has missing values:\n"
+                    + missing_data.to_string(index=False, na_rep="<!!>")
+                )
+            # check that no different values are given for the same sample
+            if samples[ped_mapping["name"]].duplicated().any():
+                duplicated = samples.loc[samples[ped_mapping["name"]].duplicated(keep=False)]
+                raise ParameterException(
+                    "Sample with different values found in combined sample data:\n"
+                    + duplicated.to_string(index=False, na_rep="")
+                )
         else:
             samples = ped_data if self.args.ped else sample_data
+
+        dynamic_cols = self.get_dynamic_columns(samples.columns, isa_names)
+        for col_name, format_str in dynamic_cols.items():
+            # MAYBE: allow dynamic columns to change based on fill order?
+            # i.e. first Extract name = -DNA1, then -DNA1-WXS1
+            samples[col_name] = samples.apply(
+                lambda row: format_str.format(**row), axis=1
+            )
 
         return samples
 
@@ -471,25 +525,6 @@ class UpdateSamplesheetCommand:
             raise ValueError(
                 f"Failed to match these column names/sample fields to ISA column: {', '.join(failed_cols)}"
             )
-
-        dynamic_cols = self.get_dynamic_columns(isa_names)
-        for col_name, format_str in dynamic_cols.items():
-            matched_isa_col, isa_table = isa_names[col_name]
-
-            # FIXME: catch Error if format_str contains non-existing columns?
-            if matched_isa_col == "Sample Name":
-                new_study_data[matched_isa_col] = new_study_data.apply(
-                    lambda row: format_str.format(**row), axis=1
-                )
-                new_assay_data[matched_isa_col] = new_study_data[matched_isa_col]
-            elif isa_table == "study":
-                new_study_data[matched_isa_col] = new_study_data.apply(
-                    lambda row: format_str.format(**row), axis=1
-                )
-            else:
-                new_assay_data[matched_isa_col] = new_study_data.apply(
-                    lambda row: format_str.format(**row), axis=1
-                )
 
         return new_study_data, new_assay_data
 
@@ -546,8 +581,8 @@ class UpdateSamplesheetCommand:
                     clash = isa_table.loc[isa_col.index[clash_rows], mat_cols + [col]]
                     clash["<New values:>" + col] = updates[col].loc[clash_rows].values
                     logger.warning(
-                        f"Given values for ISA column '{col}' have different existing values, these will not be updated."
-                        " Use `--overwrite` to force update.\n"
+                        f"Given values for ISA column '{col}' have different existing values, "
+                        "these will not be updated. Use `--overwrite` to force update.\n"
                         + clash.to_string(index=False, na_rep="")
                     )
 
@@ -555,24 +590,25 @@ class UpdateSamplesheetCommand:
                     updates[col].loc[empty_values].values
                 )
 
-        # Check which cols should be autofilled (some need to be for ISA to work)
+        # Check which cols should be autofilled ("Protocol REF" needs to be, for ISA to work)
         autofill_cols = {
-            col: isa_table[col].unique()
+            col: isa_table[col].unique()[0]
             for col in isa_table.columns
-            if orig_col_name(col) in ISA_NON_SETTABLE
+            if orig_col_name(col) == "Protocol REF"
         }
 
         if not no_autofill:
+            # Do not autofill ontology terms or references (an autofilled ontology reference without values
+            # would not pass altamisa validation)
             autofill_cols.update(
                 {
-                    col: isa_table[col].unique()
+                    col: isa_table[col].unique()[0]
                     for col in isa_table.columns
-                    if isa_table[col].nunique() == 1
+                    if isa_table[col].nunique() == 1 and orig_col_name(col) not in ISA_NON_SETTABLE
                 }
             )
 
-        for col, value in autofill_cols.items():
-            additions[col] = [value] * additions.shape[0]
+        additions = additions.assign(**autofill_cols)
 
         isa_table = pd.concat([isa_table, additions], ignore_index=True).fillna("")
 
