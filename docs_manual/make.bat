@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=altamisa
+set SPHINXPROJ=cubi-tk
 
 if "%1" == "" goto help
 
