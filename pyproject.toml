@@ -99,8 +99,8 @@ exclude = [
     "site-packages",
     "venv",
 ]
-#line-length = 120
-#indent-width = 4
+line-length = 100
+indent-width = 4
 
 [tool.ruff.lint]
 ignore = ["E203", "E266", "E501"]

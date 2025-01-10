@@ -1,4 +1,5 @@
 """Shared fixtures for the unit tests"""
+
 import io
 import textwrap
 

@@ -1,5 +1,4 @@
-"""Tests for ``cubi_tk.snappy.pull_processed_data``.
-"""
+"""Tests for ``cubi_tk.snappy.pull_processed_data``."""
 
 import pytest
 

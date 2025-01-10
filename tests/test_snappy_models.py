@@ -1,4 +1,5 @@
 """Tests for ``cubi_tk.snappy.models``."""
+
 import pathlib
 
 import pytest

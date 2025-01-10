@@ -19,8 +19,7 @@ def test_findlocalmd5_run():
     # combined: all folder + 1 extra
     test_dir_path = pathlib.Path(__file__).resolve().parent / "data" / "sodar_check_remote"
     expected_1 = {
-        test_dir_path
-        / "test1": [
+        test_dir_path / "test1": [
             FileDataObject(
                 "test1.txt",
                 str(test_dir_path / "test1/test1.txt"),
@@ -29,8 +28,7 @@ def test_findlocalmd5_run():
         ]
     }
     expected_2 = {
-        test_dir_path
-        / "test2": [
+        test_dir_path / "test2": [
             FileDataObject(
                 "test2.txt",
                 str(test_dir_path / "test2/test2.txt"),
@@ -39,8 +37,7 @@ def test_findlocalmd5_run():
         ]
     }
     expected_all = {
-        test_dir_path
-        / "test3": [
+        test_dir_path / "test3": [
             FileDataObject(
                 "test3.txt",
                 str(test_dir_path / "test3/test3.txt"),

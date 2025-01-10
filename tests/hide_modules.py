@@ -1,7 +1,7 @@
 """Hide modules from import
 
- ModuleHider - import finder hook and context manager
- hide_modules - decorator using ModuleHider
+ModuleHider - import finder hook and context manager
+hide_modules - decorator using ModuleHider
 """
 
 # Copyright (c) 2019 Rory Yorke

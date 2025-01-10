@@ -1,5 +1,5 @@
-"""Tests for ``cubi_tk.snappy.pull_sheets``.
-"""
+"""Tests for ``cubi_tk.snappy.pull_sheets``."""
+
 import json
 import pathlib
 

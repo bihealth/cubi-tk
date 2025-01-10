@@ -1,4 +1,5 @@
 """Tests for ``cubi_tk.snappy.check_local``."""
+
 import io
 import pathlib
 import textwrap
