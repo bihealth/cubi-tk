@@ -21,13 +21,13 @@ jobs:
           workflows: "main.yml"
         env:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+  linting:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version:
           - "3.10"
-
-  linting:
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
           lfs: true
 
       - name: Install system dependencies
-        run: sudo apt-get install -y libbz2-dev
+        run: sudo apt-get install -y libbz2-dev liblzma-dev
 
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
@@ -67,8 +67,6 @@ jobs:
       matrix:
         python-version:
           - "3.10"
-          # - "3.11"  # no compatible pysam yet
-          # - "3.12"  # no compatible pysam yet
     needs: linting
     steps:
       - name: Checkout repository
@@ -77,7 +75,7 @@ jobs:
           lfs: true
 
       - name: Install system dependencies
-        run: sudo apt-get install -y libbz2-dev
+        run: sudo apt-get install -y libbz2-dev liblzma-dev
 
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
