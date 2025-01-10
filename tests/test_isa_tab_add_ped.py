@@ -1,4 +1,4 @@
-""""Test ``cubi-tk isa-tab add-ped``."""
+"""Test ``cubi-tk isa-tab add-ped``."""
 
 import pathlib
 import shutil
