@@ -1,7 +1,7 @@
 """``cubi-tk sodar update-samplesheet``: update ISA-tab with new values and/or entries."""
 
 import argparse
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from io import StringIO
 import re
 from typing import Iterable, Optional
@@ -17,6 +17,14 @@ from ..sodar_api import SodarAPI
 REQUIRED_COLUMNS = ["Source Name", "Sample Name", "Extract Name"]
 REQUIRED_IF_EXISTING_COLUMNS = ["Library Name"]
 ISA_NON_SETTABLE = ["Term Source REF", "Term Accession Number", "Protocol REF"]
+
+# Type definition:
+IsaColumnDetails = dict[str, list[tuple[str, str]]]
+# dict of short or long column names to list of tuples of (original column name, table name)
+# long names include Column type, i.e. "Characteristics[organism]"
+# short names are without the type, i.e. "organism"
+# original column names are the names as they are returned by pandas.read_csv, this
+#   may include numerical suffixes for duplicate column names (e.g. "Extract Name.1")
 
 
 sheet_default_config_yaml = """
@@ -46,11 +54,11 @@ Modellvorhaben: &MV
         Paternal-ID: Father
         Maternal-ID: Mother
         Sex: Sex
-        Phenotype: "Disease status"
-        Individual-ID: "Individual-ID"
+        Phenotype: Disease status
+        Individual-ID: Individual-ID
         Probe-ID: Probe-ID
-        Barcode: "Barcode sequence"
-        Barcode-Name: "Barcode name"
+        Barcode: Barcode sequence
+        Barcode-Name: Barcode name
     dynamic_columns:
         Sample Name: "{Analysis-ID}-N1"
         Extract Name: "{Analysis-ID}-N1-DNA1"
@@ -102,6 +110,7 @@ sheet_default_config = yaml.load(sheet_default_config_yaml)
 
 def orig_col_name(col_name: str) -> str:
     """Return the original column name without any suffixes."""
+    # Suffixes are added to duplicate ISAtab column names by pandas.read_csv
     return re.sub(r"\.[0-9]+$", "", col_name)
 
 
@@ -112,7 +121,7 @@ class UpdateSamplesheetCommand:
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup arguments for ``update-samplehseet`` command."""
+        """Setup arguments for ``update-samplesheet`` command."""
 
         SodarAPI.setup_argparse(parser)
 
@@ -250,9 +259,9 @@ class UpdateSamplesheetCommand:
             project_uuid=self.args.project_uuid,
         )
         isa_data = sodar_api.get_ISA_samplesheet()
-        investigation = isa_data["investigation"][1]
-        study = pd.read_csv(StringIO(isa_data["study"][1]), sep="\t")
-        assay = pd.read_csv(StringIO(isa_data["assay"][1]), sep="\t")
+        investigation = isa_data["investigation"]["content"]
+        study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t")
+        assay = pd.read_csv(StringIO(isa_data["assay"]["content"]), sep="\t")
         isa_names = self.gather_ISA_column_names(study, assay)
 
         # Check that given sample-data field names can be used
@@ -300,14 +309,14 @@ class UpdateSamplesheetCommand:
             sep="\t", index=False, header=list(map(orig_col_name, assay_final.columns))
         )
         ret = sodar_api.upload_ISA_samplesheet(
-            (isa_data["investigation"][0], investigation),
-            (isa_data["study"][0], study_tsv),
-            (isa_data["assay"][0], assay_tsv),
+            (isa_data["investigation"]["filename"], investigation),
+            (isa_data["study"]["filename"], study_tsv),
+            (isa_data["assay"]["filename"], assay_tsv),
         )
         return ret
 
-    def parse_sampledata_args(self, isa_names) -> OrderedDict[str, str]:
-        """Build a dict of Sample-data filed name mappings and check consistency of provided data."""
+    def parse_sampledata_args(self, isa_names: IsaColumnDetails) -> dict[str, str]:
+        """Build a dict to collect and map the names for ped or sampledata [-s] fields to ISA column names."""
 
         # Some samples are defined, either through ped or sample data
         if not self.args.ped and not self.args.sample_data:
@@ -319,48 +328,45 @@ class UpdateSamplesheetCommand:
         sample_field_mapping = sheet_default_config[self.args.defaults]["field_column_mapping"]
 
         # Sample data, if given, need to matche the defined fields (from default or sample_fields)
-        if self.args.sample_data:
-            if self.args.sample_fields:
-                sample_field_mapping.update(
-                    OrderedDict(
-                        [
-                            (field.split("=")[0], field.split("=")[1 if "=" in field else 0])
-                            for field in self.args.sample_fields
-                        ]
-                    )
-                )
-                n_fields = len(self.args.sample_fields)
-            else:
-                n_fields = len(sheet_default_config[self.args.defaults]["sample_fields"])
+        if not self.args.sample_data:
+            return sample_field_mapping
 
-            incorrect_n = [sample for sample in self.args.sample_data if len(sample) != n_fields]
-            if incorrect_n:
-                msg = (
-                    f"The number of entries for some samples does not match the number of fields defined ({n_fields}):\n"
-                    "\n".join(
-                        [
-                            f"{len(sample)} instead of {n_fields} values: {', '.join(map(str, sample))}"
-                            for sample in incorrect_n
-                        ]
-                    )
-                )
-                raise ValueError(msg)
+        if self.args.sample_fields:
+            sample_field_mapping.update(
+                {k: (v or k) for (k, _, v) in map(lambda s: s.partition("="), self.args.sample_fields)}
+            )
+            n_fields = len(self.args.sample_fields)
+        else:
+            n_fields = len(sheet_default_config[self.args.defaults]["sample_fields"])
 
-            unknown_fields = [
-                tup for tup in sample_field_mapping.items() if tup[1] not in isa_names.keys()
-            ]
-            if unknown_fields:
-                msg = (
-                    "Some columns for sample field mapping are not defined in the ISA samplesheet: "
-                    + ", ".join([f"{col} (from {field})" for field, col in unknown_fields])
+        incorrect_n = [sample for sample in self.args.sample_data if len(sample) != n_fields]
+        if incorrect_n:
+            msg = (
+                f"The number of entries for some samples does not match the number of fields defined ({n_fields}):\n"
+                "\n".join(
+                    [
+                        f"{len(sample)} instead of {n_fields} values: {', '.join(map(str, sample))}"
+                        for sample in incorrect_n
+                    ]
                 )
-                raise NameError(msg)
+            )
+            raise ValueError(msg)
+
+        unknown_fields = [
+            tup for tup in sample_field_mapping.items() if tup[1] not in isa_names.keys()
+        ]
+        if unknown_fields:
+            msg = (
+                "Some columns for sample field mapping are not defined in the ISA samplesheet: "
+                + ", ".join([f"{col} (from {field})" for field, col in unknown_fields])
+            )
+            raise NameError(msg)
 
         return sample_field_mapping
 
     def gather_ISA_column_names(
         self, study: pd.DataFrame, assay: pd.DataFrame
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> IsaColumnDetails:
         isa_regex = re.compile(r"(Characteristics|Parameter Value|Comment)\[(.*?)]")
         study_cols = study.columns.tolist()
         assay_cols = assay.columns.tolist()
@@ -374,7 +380,7 @@ class UpdateSamplesheetCommand:
 
         out = defaultdict(list)
         for short, long, uniq, table in zip(
-            isa_short_names, isa_long_names, isa_names_unique, isa_table
+            isa_short_names, isa_long_names, isa_names_unique, isa_table, strict=True
         ):
             out[short].append((uniq, table))
             out[long].append((uniq, table))
@@ -390,8 +396,8 @@ class UpdateSamplesheetCommand:
         self,
         existing_names: Iterable[str],
         isa_names: Iterable[str],
-    ) -> OrderedDict[str, str]:
-        dynamic_cols = OrderedDict()
+    ) -> dict[str, str]:
+        dynamic_cols = dict()
         re_format_names = re.compile(r"\{(.*?)}")
         if self.args.dynamic_column:
             for col, format_str in self.args.dynamic_column:
@@ -423,7 +429,7 @@ class UpdateSamplesheetCommand:
 
     def collect_sample_data(
         self,
-        isa_names: dict[str, list[tuple[str, str]]],
+        isa_names: IsaColumnDetails,
         sample_field_mapping: dict[str, str],
     ) -> pd.DataFrame:
         ped_mapping = sheet_default_config[self.args.defaults]["ped_to_sampledata"]
@@ -443,10 +449,7 @@ class UpdateSamplesheetCommand:
         if self.args.ped:
             with open(self.args.ped, "rt") as inputf:
                 ped_dicts = map(
-                    lambda donor: OrderedDict(
-                        [field, getattr(donor, attr_name)]
-                        for attr_name, field in ped_mapping.items()
-                    ),
+                    lambda donor: {field: getattr(donor, attr_name) for attr_name, field in ped_mapping.items()},
                     parse_ped(inputf),
                 )
                 ped_data = pd.DataFrame(ped_dicts)
@@ -500,8 +503,8 @@ class UpdateSamplesheetCommand:
     def match_sample_data_to_isa(
         self,
         samples: pd.DataFrame,
-        isa_names: dict[str, list[tuple[str, str]]],
-        sample_field_mapping: OrderedDict[str, str],
+        isa_names: IsaColumnDetails,
+        sample_field_mapping: dict[str, str],
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Take a df with sampledata and build study and assay dataframes with all corresponding ISA column names."""
 

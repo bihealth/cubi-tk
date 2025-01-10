@@ -1,7 +1,9 @@
 import argparse
 from collections import namedtuple
+from functools import reduce
 import os
 from typing import Literal
+import urllib.parse as urlparse
 
 from logzero import logger
 import requests
@@ -10,7 +12,6 @@ from .common import is_uuid, load_toml_config
 from .exceptions import ParameterException, SodarAPIException
 
 
-# FIXME: maybe this should be used as a MixIn for other functions?
 class SodarAPI:
     def __init__(self, sodar_url: str, sodar_api_token: str, project_uuid: str):
         self.sodar_url = sodar_url
@@ -43,7 +44,7 @@ class SodarAPI:
                     "SODAR API token not found in config files. Please specify on command line."
                 )
         if not is_uuid(self.project_uuid):
-            logger.warning("Project UUID does not look like valid UUID.")
+            raise ParameterException("Sodar Project UUID is not a valid UUID.")
 
     @staticmethod
     def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -85,9 +86,15 @@ class SodarAPI:
         data: dict = None,
         files: dict = None,
     ) -> dict:
-        url = self.sodar_url + api + "/api/" + action + "/" + self.project_uuid
+        # need to add trailing slashes to all parts of the URL for urljoin to work correctly
+        # afterward remove the final trailing slash from the joined URL
+        base_url_parts = [
+            part if part.endswith('/') else f"{part}/" for part in
+            (self.sodar_url, "project", self.project_uuid, api, action)
+        ]
+        url = reduce(urlparse.urljoin, base_url_parts)[:-1]
         if params:
-            url += "?" + "&".join([f"{k}={v}" for k, v in params.items()])
+            url += "?" + urlparse.urlencode(params)
 
         if method == "get":
             response = requests.get(url, headers=self._base_api_header())
@@ -101,7 +108,7 @@ class SodarAPI:
 
         return response.json()
 
-    def get_ISA_samplesheet(self) -> dict[str, tuple[str, str]]:
+    def get_ISA_samplesheet(self) -> dict[str, dict[str, str]]:
         samplesheet = self._api_call("samplesheets", "export/json")
 
         # Consider: support multi-assay and multi-study projects?
@@ -114,12 +121,18 @@ class SodarAPI:
         assay = list(samplesheet["assays"].keys())[0]
 
         return {
-            "investigation": (
-                samplesheet["investigation"]["path"],
-                samplesheet["investigation"]["tsv"],
-            ),
-            "study": (study, samplesheet["studies"][study]["tsv"]),
-            "assay": (assay, samplesheet["assays"][assay]["tsv"]),
+            "investigation": {
+                "filename": samplesheet["investigation"]["path"],
+                "content": samplesheet["investigation"]["tsv"],
+            },
+            "study": {
+                "filename": study,
+                "content": samplesheet["studies"][study]["tsv"]
+            },
+            "assay": {
+                "filename": assay,
+                "content": samplesheet["assays"][assay]["tsv"]
+            },
         }
 
     def upload_ISA_samplesheet(

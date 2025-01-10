@@ -1,5 +1,4 @@
 import argparse
-from collections import OrderedDict
 from io import StringIO
 import json
 import pathlib
@@ -34,11 +33,11 @@ def MV_ped_samples():
 @patch("cubi_tk.sodar_api.SodarAPI._api_call")
 def mock_isa_data(API_call, MV_isa_json):
     API_call.return_value = MV_isa_json
-    api = SodarAPI("https://sodar.bihealth.org/", "1234", "dummy-project-UUID")
+    api = SodarAPI("https://sodar.bihealth.org/", "1234", "123e4567-e89b-12d3-a456-426655440000")
     isa_data = api.get_ISA_samplesheet()
-    investigation = isa_data["investigation"][1]
-    study = pd.read_csv(StringIO(isa_data["study"][1]), sep="\t")
-    assay = pd.read_csv(StringIO(isa_data["assay"][1]), sep="\t")
+    investigation = isa_data["investigation"]["content"]
+    study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t")
+    assay = pd.read_csv(StringIO(isa_data["assay"]["content"]), sep="\t")
     return investigation, study, assay
 
 
@@ -46,7 +45,7 @@ def mock_isa_data(API_call, MV_isa_json):
 def UCS_class_object():
     parser = argparse.ArgumentParser()
     UpdateSamplesheetCommand.setup_argparse(parser)
-    args = parser.parse_args(["dummy-project-UUID"])
+    args = parser.parse_args(["123e4567-e89b-12d3-a456-426655440000"])
     UCS = UpdateSamplesheetCommand(args)
     return UCS
 
@@ -176,22 +175,20 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
         "A3",
         "-d",
         "MV-barcodes",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
-    expected = OrderedDict(
-        [
-            ("Family-ID", "Family"),
-            ("Analysis-ID", "Source Name"),
-            ("Paternal-ID", "Father"),
-            ("Maternal-ID", "Mother"),
-            ("Sex", "Sex"),
-            ("Phenotype", "Disease status"),
-            ("Individual-ID", "Individual-ID"),
-            ("Probe-ID", "Probe-ID"),
-            ("Barcode", "Barcode sequence"),
-            ("Barcode-Name", "Barcode name"),
-        ]
-    )
+    expected = {
+        "Family-ID": "Family",
+        "Analysis-ID": "Source Name",
+        "Paternal-ID": "Father",
+        "Maternal-ID": "Mother",
+        "Sex": "Sex",
+        "Phenotype": "Disease status",
+        "Individual-ID": "Individual-ID",
+        "Probe-ID": "Probe-ID",
+        "Barcode": "Barcode sequence",
+        "Barcode-Name": "Barcode name",
+    }
     USC = helper_update_UCS(arg_list, UCS_class_object)
     assert USC.parse_sampledata_args(isa_names) == expected
 
@@ -219,7 +216,7 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
         "ATGC",
         "-d",
         "MV-barcodes",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
     expected["Dummy-ID"] = "Source Name"
     expected["Sample Name"] = "Sample Name"
@@ -238,30 +235,28 @@ def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
         "ATCG",
         "-d",
         "MV-barcodes",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
     USC = helper_update_UCS(arg_list, UCS_class_object)
     with pytest.raises(ValueError):
         USC.parse_sampledata_args(isa_names)
 
     # missing sample data
-    arg_list = ["dummy-project-UUID"]
+    arg_list = ["123e4567-e89b-12d3-a456-426655440000"]
     USC = helper_update_UCS(arg_list, UCS_class_object)
     with pytest.raises(ValueError):
         USC.parse_sampledata_args(isa_names)
 
     # only base ped mapping
-    arg_list = ["-p", "dummy-pedfile", "dummy-project-UUID"]
-    expected = OrderedDict(
-        [
-            ("Family-ID", "Family"),
-            ("Sample-ID", "Source Name"),
-            ("Paternal-ID", "Father"),
-            ("Maternal-ID", "Mother"),
-            ("Sex", "Sex"),
-            ("Phenotype", "Disease status"),
-        ]
-    )
+    arg_list = ["-p", "dummy-pedfile", "123e4567-e89b-12d3-a456-426655440000"]
+    expected = {
+        "Family-ID": "Family",
+        "Sample-ID": "Source Name",
+        "Paternal-ID": "Father",
+        "Maternal-ID": "Mother",
+        "Sex": "Sex",
+        "Phenotype": "Disease status",
+    }
     USC = helper_update_UCS(arg_list, UCS_class_object)
     assert USC.parse_sampledata_args(isa_names) == expected
 
@@ -278,13 +273,11 @@ def test_get_dynamic_columns(UCS_class_object):
         "Dummy",
     )
 
-    expected = OrderedDict(
-        [
-            ("Sample Name", "{Sample-ID}-N1"),
-            ("Extract Name", "{Sample-ID}-N1-DNA1"),
-            ("Library Name", "{Sample-ID}-N1-DNA1-WGS1"),
-        ]
-    )
+    expected = {
+        "Sample Name": "{Sample-ID}-N1",
+        "Extract Name": "{Sample-ID}-N1-DNA1",
+        "Library Name": "{Sample-ID}-N1-DNA1-WGS1",
+    }
     assert UCS_class_object.get_dynamic_columns(existing_names, existing_names) == expected
 
     arg_list = [
@@ -297,15 +290,13 @@ def test_get_dynamic_columns(UCS_class_object):
         "--dynamic-column",
         "Dummy",
         "{Sample Name}-DNA1-{Library Strategy}1",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
-    expected = OrderedDict(
-        [
-            ("Sample Name", "{Source Name}-N1"),
-            ("Extract Name", "{Sample Name}-DNA1"),
-            ("Dummy", "{Sample Name}-DNA1-{Library Strategy}1"),
-        ]
-    )
+    expected = {
+        "Sample Name": "{Source Name}-N1",
+        "Extract Name": "{Sample Name}-DNA1",
+        "Dummy": "{Sample Name}-DNA1-{Library Strategy}1",
+    }
     UCS = helper_update_UCS(arg_list, UCS_class_object)
     assert UCS.get_dynamic_columns(existing_names, existing_names) == expected
 
@@ -357,7 +348,7 @@ def test_collect_sample_data(
         "Modellvorhaben",
         "-p",
         "mv_samples.ped",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
 
     def run_usc_collect_sampledata(arg_list):
@@ -399,7 +390,7 @@ def test_collect_sample_data(
         "MV-barcodes",
         "-p",
         "mv_samples.ped",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
     pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
 
@@ -428,13 +419,13 @@ def test_collect_sample_data(
     arg_list = [
         "-p",
         "mv_samples.ped",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
     pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
 
     # - only -s
     arg_list = [
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
         "-s",
         "FAM_01",
         "Ana_01",
@@ -512,7 +503,7 @@ def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
         "A1",
         "-d",
         "MV-barcodes",
-        "dummy-project-UUID",
+        "123e4567-e89b-12d3-a456-426655440000",
     ]
     UCS = helper_update_UCS(arg_list, UCS_class_object)
     isa_names = UCS.gather_ISA_column_names(mock_isa_data[1], mock_isa_data[2])
@@ -625,4 +616,4 @@ def test_update_isa_table(UCS_class_object, caplog):
 
 
 # FIXME: smoke test for execute (MV & germline-sheet)
-# - test --sanppy_compatible
+# - test --snappy_compatible
