@@ -18,10 +18,11 @@ toolz
 requests
 
 # Biomedsheet access.
-biomedsheets >=0.11.1
+#biomedsheets >=0.11.1
+biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8
 
 # ISA-tab parsing.
-altamisa==0.2.9
+altamisa==0.3.0
 
 # Table access.
 pandas
@@ -63,7 +64,7 @@ retrying
 simplejson
 
 # REST API client for SODAR
-sodar-cli ==0.1.0
+sodar-cli @ git+https://github.com/bihealth/sodar-cli@a62505ff9b1365f150bce54c9b2b5e638f245f86
 
 # Python iRODS client
 python-irodsclient==1.1.8
