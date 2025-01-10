@@ -89,8 +89,8 @@ class SodarAPI:
         # need to add trailing slashes to all parts of the URL for urljoin to work correctly
         # afterward remove the final trailing slash from the joined URL
         base_url_parts = [
-            part if part.endswith('/') else f"{part}/" for part in
-            (self.sodar_url, "project", self.project_uuid, api, action)
+            part if part.endswith("/") else f"{part}/"
+            for part in (self.sodar_url, "project", self.project_uuid, api, action)
         ]
         url = reduce(urlparse.urljoin, base_url_parts)[:-1]
         if params:
@@ -125,14 +125,8 @@ class SodarAPI:
                 "filename": samplesheet["investigation"]["path"],
                 "content": samplesheet["investigation"]["tsv"],
             },
-            "study": {
-                "filename": study,
-                "content": samplesheet["studies"][study]["tsv"]
-            },
-            "assay": {
-                "filename": assay,
-                "content": samplesheet["assays"][assay]["tsv"]
-            },
+            "study": {"filename": study, "content": samplesheet["studies"][study]["tsv"]},
+            "assay": {"filename": assay, "content": samplesheet["assays"][assay]["tsv"]},
         }
 
     def upload_ISA_samplesheet(

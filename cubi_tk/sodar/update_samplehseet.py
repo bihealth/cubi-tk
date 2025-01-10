@@ -333,7 +333,10 @@ class UpdateSamplesheetCommand:
 
         if self.args.sample_fields:
             sample_field_mapping.update(
-                {k: (v or k) for (k, _, v) in map(lambda s: s.partition("="), self.args.sample_fields)}
+                {
+                    k: (v or k)
+                    for (k, _, v) in map(lambda s: s.partition("="), self.args.sample_fields)
+                }
             )
             n_fields = len(self.args.sample_fields)
         else:
@@ -364,9 +367,7 @@ class UpdateSamplesheetCommand:
 
         return sample_field_mapping
 
-    def gather_ISA_column_names(
-        self, study: pd.DataFrame, assay: pd.DataFrame
-    ) -> IsaColumnDetails:
+    def gather_ISA_column_names(self, study: pd.DataFrame, assay: pd.DataFrame) -> IsaColumnDetails:
         isa_regex = re.compile(r"(Characteristics|Parameter Value|Comment)\[(.*?)]")
         study_cols = study.columns.tolist()
         assay_cols = assay.columns.tolist()
@@ -449,7 +450,9 @@ class UpdateSamplesheetCommand:
         if self.args.ped:
             with open(self.args.ped, "rt") as inputf:
                 ped_dicts = map(
-                    lambda donor: {field: getattr(donor, attr_name) for attr_name, field in ped_mapping.items()},
+                    lambda donor: {
+                        field: getattr(donor, attr_name) for attr_name, field in ped_mapping.items()
+                    },
                     parse_ped(inputf),
                 )
                 ped_data = pd.DataFrame(ped_dicts)
