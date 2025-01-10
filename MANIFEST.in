@@ -14,4 +14,3 @@ recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
 
 recursive-include cubi_tk/isa_tpl *.json *.txt
 
-include requirements.txt requirements/*.txt

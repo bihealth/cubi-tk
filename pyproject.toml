@@ -44,18 +44,21 @@ file = "LICENSE"
 cubi-tk = "cubi_tk.__main__:main"
 
 [tool.setuptools.dynamic]
-version = {attr = "cubi_tk.version.__version__"}
+version = { attr = "cubi_tk.version.__version__" }
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
+]
+pythonpath = [
+    ".", "tests"
 ]
 
 [dependency-groups]
 dev = [
     "factory-boy>=3.2.0",
     "pyfakefs>=3.7.1",
-    "pytest>=3.6.0",
+    "pytest>=4.0",
     "pytest-cache>=1.0",
     "pytest-cov>=2.4.0",
     "pytest-mock>=2.0.0",

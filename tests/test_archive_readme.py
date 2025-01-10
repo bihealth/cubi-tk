@@ -46,7 +46,7 @@ def test_run_archive_readme_smoke_test():
 
         argv = [
             "--sodar-server-url",
-            "https://sodar.bihealth.,org",
+            "https://sodar.bihealth.org",
             "archive",
             "readme",
             "--var-PI-name",

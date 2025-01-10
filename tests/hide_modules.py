@@ -28,7 +28,7 @@ try:
     import importlib.abc
 
     # py>=3.3 has MetaPathFinder
-    _ModuleHiderBase = getattr(importlib.abc, "MetaPathFinder", importlib.abc.Finder)
+    _ModuleHiderBase = getattr(importlib.abc, "MetaPathFinder", importlib.abc.MetaPathFinder)
 except ImportError:
     # py2
     _ModuleHiderBase = object
