@@ -64,6 +64,44 @@ dev = [
     "pytest-mock>=2.0.0",
     "pytest-runner>=2.11",
     "requests-mock>=1.7.0",
+    "ruff>=0.9.0",
     "setuptools>=75.8.0",
     "tox>=4.23",
 ]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+#line-length = 120
+#indent-width = 4
+
+[tool.ruff.lint]
+ignore = ["E203", "E266", "E501"]
+select = ["B", "C", "E", "F", "W"]

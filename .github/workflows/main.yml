@@ -17,21 +17,36 @@ jobs:
           workflows: "main.yml"
         env:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+    strategy:
+      matrix:
+        python-version:
+          - 3.10
 
   linting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-
-      - name: Install Python
-        uses: actions/setup-python@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          python-version: "3.10"
+          lfs: true
 
-      - name: Install dependencies
-        run: |
-            pip install -r requirements/test_black.txt
-            pip freeze
+      - name: Setup conda conda.
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge,bioconda,nodefaults
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          # Install a specific version of uv and enable caching.
+          version: "0.5.16"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
 
       - name: Run linting tools
         run: |
@@ -54,38 +69,33 @@ jobs:
           # - "3.12"  # no compatible pysam yet
     needs: linting
     steps:
-      - name: Install Python via conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-          conda-channels: defaults,bioconda,conda-forge
-
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Install mamba
-        run: conda install -y mamba
+      - name: Setup conda conda.
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge,bioconda,nodefaults
 
-      - name: Prepare environment.yaml file
-        run: >
-          cp environment.yaml /tmp/environment.yaml && sed -i -e
-          's/- python/- python=${{ matrix.python-version }}/'
-          /tmp/environment.yaml
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          # Install a specific version of uv and enable caching.
+          version: "0.5.16"
+          enable-cache: true
 
-      - name: Update environment using mamba
-        run: mamba env update --name root --file /tmp/environment.yaml
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Save time by installing packages via mamba.
-        run: mamba install -y pysam
+      - name: Install the project
+        run: uv sync --all-extras --dev
 
-      - name: Install dependencies
-        run: |
-            pip install -r requirements/test_black.txt
-            pip freeze
+      - name: Install hashdeep for testing purposes
+        run: conda install hashdeep
 
       - name: Run tests
-        run: pytest
+        run: uv run pytest
 
       - uses: codecov/codecov-action@v3

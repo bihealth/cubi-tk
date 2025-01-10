@@ -1,35 +1,18 @@
 .PHONY: all
-all: black
+all: lint format
 
-.PHONY: black
-black:
-	black -l 100 .
+.PHONY: format
+format:
+	uv run ruff format .
 
-.PHONY: black-check
-black-check:
-	black -l 100 --check .
-
-.PHONY: isort
-isort:
-	isort --force-sort-within-sections --profile=black .
-
-.PHONY: isort-check
-isort-check:
-	isort --force-sort-within-sections --profile=black --check .
-
-.PHONY: flake8
-flake8:
-	flake8
-
-# .PHONY: mypy
-# mypy: export MYPYPATH=stubs
-# mypy:
-# 	mypy clinvar_this clinvar_api tests
+.PHONY: format-check
+format-check:
+	uv run ruff format --check .
 
 .PHONY: lint
-lint: flake8 isort-check black-check
-# lint: flake8 isort-check black-check mypy
+lint:
+	uv run ruff check
 
 .PHONY: pytest
 pytest:
-	pytest .
+	uv run pytest
