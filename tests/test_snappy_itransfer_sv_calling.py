@@ -38,7 +38,7 @@ def fake_config(n_tools=1):
               - manta
         dummy_line
         """
-    ).rstrip("dummy_line\n")
+    ).removesuffix("dummy_line\n")
 
     tool2 = textwrap.dedent(
         r"""
@@ -49,7 +49,7 @@ def fake_config(n_tools=1):
                 - manta
         dummy_line
         """
-    ).rstrip("dummy_line\n")
+    ).removesuffix("dummy_line\n")
 
     tail = textwrap.dedent(
         r"""
