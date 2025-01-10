@@ -31,9 +31,9 @@ dependencies = [
     "toposort>=1.10",
     "tqdm>=4.67.1",
     "varfish-cli>=0.6.2,<0.7.0",
+    "vcfpy >=0.13.8",
     "biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8",
     "sodar-cli @ git+https://github.com/bihealth/sodar-cli@a62505ff9b1365f150bce54c9b2b5e638f245f86",
-    "vcfpy>=0.13.8",
 ]
 
 [project.license]

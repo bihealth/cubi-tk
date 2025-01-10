@@ -10,3 +10,5 @@ dependencies:
   - pip
   - uv >=0.5
   - hashdeep
+  - pysam >=0.22
+  - vcfpy >=0.13.8

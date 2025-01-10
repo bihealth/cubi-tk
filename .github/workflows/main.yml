@@ -24,7 +24,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - 3.10
+          - "3.10"
 
   linting:
     runs-on: ubuntu-latest
@@ -34,12 +34,11 @@ jobs:
         with:
           lfs: true
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          # Install a specific version of uv and enable caching.
-          version: "0.5.16"
-          enable-cache: true
+          channels: conda-forge,bioconda,nodefaults
+          environment-file: 'environment.yaml'
 
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
@@ -63,7 +62,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.10'
+          - "3.10"
           # - "3.11"  # no compatible pysam yet
           # - "3.12"  # no compatible pysam yet
     needs: linting
@@ -73,26 +72,17 @@ jobs:
         with:
           lfs: true
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          # Install a specific version of uv and enable caching.
-          version: "0.5.16"
-          enable-cache: true
+          channels: conda-forge,bioconda,nodefaults
+          environment-file: 'environment.yaml'
 
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
         run: uv sync --all-extras --dev
-
-      - name: Setup conda.
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          channels: conda-forge,bioconda,nodefaults
-
-      - name: Install hashdeep for testing purposes
-        run: conda install hashdeep
 
       - name: Run tests
         run: uv run pytest
