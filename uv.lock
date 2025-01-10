@@ -350,7 +350,6 @@ dependencies = [
     { name = "toposort" },
     { name = "tqdm" },
     { name = "varfish-cli" },
-    { name = "vcfpy" },
 ]
 
 [package.dev-dependencies]
@@ -394,7 +393,6 @@ requires-dist = [
     { name = "toposort", specifier = ">=1.10" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "varfish-cli", specifier = ">=0.6.2,<0.7.0" },
-    { name = "vcfpy", specifier = ">=0.13.8" },
 ]
 
 [package.metadata.requires-dev]
@@ -1236,30 +1234,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pysam"
-version = "0.22.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a6/bc/e0a79d74137643940f5406121039d1272f29f55c5330e7b43484b2259da5/pysam-0.22.1.tar.gz", hash = "sha256:18a0b97be95bd71e584de698441c46651cdff378db1c9a4fb3f541e560253b22", size = 4643640 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/69/8bb2a2c480f3b50f31da6d2b8a9a8b4439be09def92ead91b2347ba9c962/pysam-0.22.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:f18e72013ef2db9a9bb7e8ac421934d054427f6c03e66ce8abc39b09c846ba72", size = 6025489 },
-    { url = "https://files.pythonhosted.org/packages/23/dc/141cb9377349ad99673764090c483bf2f768768592f0de8fa378a87b8d96/pysam-0.22.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:79cd94eeb96541385fa99e759a8f83d21428e092c8b577d50b4eee5823e757cd", size = 7985505 },
-    { url = "https://files.pythonhosted.org/packages/98/04/02ff5067fd70220d692809fe5f549e81f3d8a287d140aefcc67ebd6c9294/pysam-0.22.1-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:c71ea45461ee596949061f321a799a97c418164485fdd7e8db89aea2ff979092", size = 21383085 },
-    { url = "https://files.pythonhosted.org/packages/9f/9f/046a0a1008235f512077ea2edc96bb59365e3a2abd1b5f8de0dbeaf14b1c/pysam-0.22.1-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:ab3343f221994d163e1ba2691430ce0f6e7da13762473e0d7f9a2d5db3bec235", size = 22012406 },
-    { url = "https://files.pythonhosted.org/packages/3a/95/bc250550d6212bd0c0718264e74fa9f11bf4fc9710f58c7a32ce716df1b4/pysam-0.22.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:503c833e6cf348d87aec9113b1386d5c85c031d64deb914c29f5ad1792d103e6", size = 8354803 },
-    { url = "https://files.pythonhosted.org/packages/87/d7/5084e5488aebf3a89039e95c8133e588aea588b6cc9e32c71becff6e3dcf/pysam-0.22.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:4447fdc2630519a00b6bf598995f1440e6f398eb0c084a7c141db026990ae07a", size = 7993033 },
-    { url = "https://files.pythonhosted.org/packages/49/d3/6939d89144414460af84d67f571469a3759bc7539aa7088b51389d0d5ebf/pysam-0.22.1-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:1be663a73cf56ddd1d309b91d314a0c94c9bf352eaa3c6eda30cef12699843f0", size = 24535100 },
-    { url = "https://files.pythonhosted.org/packages/3e/36/0d478e81f4687e87be1b1cdb3451d41c088669687f28c03ac60ffefb2f71/pysam-0.22.1-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:aeb31472365014fd8b37da4a88af758094b5872a8a16a25635a52cf8ceff5a9f", size = 25126405 },
-    { url = "https://files.pythonhosted.org/packages/43/2a/de24972a7fde545aec7d3e59230f51b004e407d327087f4a90b7912cb679/pysam-0.22.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:e72e129d245574801125029a5892c9e18d2956b13c4203ea585cbd64ccde9351", size = 8373896 },
-    { url = "https://files.pythonhosted.org/packages/f6/2c/d226f2db96fda51f7ab70c5256691def40af4879b6b5ffadda2c676ac5e5/pysam-0.22.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:f8f00bb1fb977fc33c87cf5fe9023eefc2ba3d43d30ab4875a1765827018c949", size = 8005195 },
-    { url = "https://files.pythonhosted.org/packages/f5/6b/27106562f2477d38c0d8efa452839505877e335da12ace6bf993b7bee4dd/pysam-0.22.1-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:c0e051fda433c1c7ff94532f60477bb83b97f4bb183567a0ae23f340e1c200b4", size = 24493675 },
-    { url = "https://files.pythonhosted.org/packages/0c/fe/ce252dce8e5dd7ae06fd2036b5a146c1200598346ee70cbeb0a44740aa6b/pysam-0.22.1-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:860c7c78ddb1539b83d5476502ba14c8b4e8435810dc7a5b715196da3dfb86b6", size = 25164276 },
-    { url = "https://files.pythonhosted.org/packages/9b/2d/e5883ac46afc669e8f1a9d23f630e558980249ce758215925369ac3fa7db/pysam-0.22.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:4aff9b41856d5dba6585ffd60884b8f3778c5d2688f33989662aabe7f4cd0fe0", size = 8343771 },
-    { url = "https://files.pythonhosted.org/packages/d5/79/7a7409705f226a5a887ae271b782c3d8afc4f363658f6f42a11061602f21/pysam-0.22.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:faa5298291b54f185c7b8f84510224918bddc64bbdcb2e8426ff43e83452310f", size = 5673115 },
-    { url = "https://files.pythonhosted.org/packages/63/cc/bb33737c9804cbf072e00e32049680c96a8b3698b63c269fae233f48c77d/pysam-0.22.1-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:4dfae1de006d1c6491a59b00052a3f67c53a136165cf4edd7789b5dcb1e6806f", size = 23713223 },
-    { url = "https://files.pythonhosted.org/packages/7b/e3/237dc1594b1bed6c98eb3156d7791dd96399e78103e8d6bce110feb8c08c/pysam-0.22.1-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:78ed746a39c9cebe489b8f0f86cf23c09c942e76c901260fb2794906e4cd0e26", size = 24331967 },
-]
-
-[[package]]
 name = "pytest"
 version = "7.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2010,15 +1984,6 @@ dependencies = [
     { name = "typer" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/11/aa1841bdacb92d3c8499901a04383c51f58be48a9b356c0dfc41ff637be5/varfish_cli-0.6.4.tar.gz", hash = "sha256:229fbfb2798f5703fc2023b24034e05a6af7356681de0c0fa902f68fe80f1490", size = 176354 }
-
-[[package]]
-name = "vcfpy"
-version = "0.13.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pysam" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/c1/314e8bac0b73b683ecbd23e565f3309173eef3e0f9b6d470ef60f5dfdfae/vcfpy-0.13.8.tar.gz", hash = "sha256:e7d00965105e7ca9567299f073ad60c6bbfc78d685d25ba33353988af9b33160", size = 993203 }
 
 [[package]]
 name = "virtualenv"

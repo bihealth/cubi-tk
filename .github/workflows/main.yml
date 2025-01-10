@@ -55,7 +55,7 @@ jobs:
         if: github.event_name == 'pull_request' && failure()
         uses: marocchino/sticky-pull-request-comment@v1.1.0
         with:
-          message: 'Please format your code with [black](https://black.readthedocs.io): `make black`.'
+          message: 'Please check your code via `make lint`.'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   testing:
