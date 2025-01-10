@@ -57,7 +57,7 @@ def test_findlocalmd5_run():
     empty_dir = test_dir_path / "empty_test"
     empty_dir.mkdir()
     actual_empty = FindLocalMD5Files(empty_dir, recheck_md5=False).run()
-    assert actual_empty == dict()
+    assert actual_empty == {}
     empty_dir.rmdir()
 
     actual = FindLocalMD5Files(test_dir_path, recheck_md5=False).run()

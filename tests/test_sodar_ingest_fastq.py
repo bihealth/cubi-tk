@@ -86,7 +86,7 @@ def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
     samples = ("sample1", "sample2")
     flowcells = ("AB123XY456", "CD678LT000")
     lanes = ("L001", "L002")
-    test_filenames = dict()
+    test_filenames = {}
     for flowcell in flowcells:
         for sample in samples:
             for lane in lanes:
@@ -275,20 +275,20 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     mocker.patch("cubi_tk.snappy.itransfer_common.Value", mock_value)
 
     # requests mock
-    return_value = dict(
-        assay="",
-        config_data="",
-        configuration="",
-        date_modified="",
-        description="",
-        irods_path=irods_path,
-        project="",
-        sodar_uuid="",
-        status="",
-        status_info="",
-        title="",
-        user=dict(sodar_uuid="", username="", name="", email=""),
-    )
+    return_value = {
+        "assay": "",
+        "config_data": "",
+        "configuration": "",
+        "date_modified": "",
+        "description": "",
+        "irods_path": irods_path,
+        "project": "",
+        "sodar_uuid": "",
+        "status": "",
+        "status_info": "",
+        "title": "",
+        "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
+    }
     url = os.path.join(args.sodar_url, "landingzones", "api", "retrieve", args.destination)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
@@ -425,20 +425,20 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
     mocker.patch("cubi_tk.snappy.itransfer_common.Value", mock_value)
 
     # requests mock
-    return_value = dict(
-        assay="",
-        config_data="",
-        configuration="",
-        date_modified="",
-        description="",
-        irods_path=irods_path,
-        project="",
-        sodar_uuid="",
-        status="",
-        status_info="",
-        title="",
-        user=dict(sodar_uuid="", username="", name="", email=""),
-    )
+    return_value = {
+        "assay": "",
+        "config_data": "",
+        "configuration": "",
+        "date_modified": "",
+        "description": "",
+        "irods_path": irods_path,
+        "project": "",
+        "sodar_uuid": "",
+        "status": "",
+        "status_info": "",
+        "title": "",
+        "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
+    }
     url = os.path.join(args.sodar_url, "landingzones", "api", "retrieve", args.destination)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 

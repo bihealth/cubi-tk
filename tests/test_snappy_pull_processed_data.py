@@ -432,13 +432,13 @@ def test_pull_processed_data_filter_irods_collection_txt(pull_processed_data, re
     actual = pull_processed_data.filter_irods_collection(
         identifiers=samples_list, remote_files_dict=remote_files_all, file_type=file_type
     )
-    assert all([key in expected_keys for key in actual.keys()])
+    assert all(key in expected_keys for key in actual.keys())
 
     # Call with library names as identifiers
     actual = pull_processed_data.filter_irods_collection(
         identifiers=library_name_list, remote_files_dict=remote_files_all, file_type=file_type
     )
-    assert all([key in expected_keys for key in actual.keys()])
+    assert all(key in expected_keys for key in actual.keys())
 
 
 def test_pull_processed_data_filter_irods_collection_txt_ignore_common_links(

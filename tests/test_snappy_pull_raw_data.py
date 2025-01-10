@@ -259,7 +259,7 @@ def test_pull_raw_data_get_library_to_irods_dict(pull_raw_data, remote_files_fas
         identifiers=samples_list, remote_files_dict=remote_files_fastq
     )
     for id_ in samples_list:
-        assert all([str(irods.name).startswith(id_) for irods in actual.get(id_)])
+        assert all(str(irods.name).startswith(id_) for irods in actual.get(id_))
 
 
 def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, sample_to_irods_dict):
