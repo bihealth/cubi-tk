@@ -281,9 +281,9 @@ class FileComparisonChecker:
         if len(both_locations) > 0:
             logger.info(f"Files found BOTH locally and remotely:\n{in_both_str}\n{dashed_line}")
         else:
-            logger.warn(f"No file was found both locally and remotely.\n{dashed_line}")
+            logger.warning(f"No file was found both locally and remotely.\n{dashed_line}")
         if len(only_local) > 0:
-            logger.warn(f"Files found ONLY LOCALLY:\n{local_only_str}\n{dashed_line}")
+            logger.warning(f"Files found ONLY LOCALLY:\n{local_only_str}\n{dashed_line}")
         else:
             logger.info(f"No file found only locally.\n{dashed_line}")
         if len(only_remote) > 0:

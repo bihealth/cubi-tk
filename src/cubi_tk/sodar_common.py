@@ -104,7 +104,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         :type assays: list
         """
         multi_assay_str = "\n".join(assays)
-        logger.warn(
+        logger.warning(
             f"Project contains multiple Assays, will only consider UUID '{assays[0]}'.\n"
             f"All available UUIDs:\n{multi_assay_str}"
         )

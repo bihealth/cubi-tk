@@ -43,7 +43,7 @@ class FindFilesCommon:
                     if donor.dna_ngs_library:
                         library_names.append(donor.dna_ngs_library.name)
                     else:
-                        logger.warn(f"Skipping - no NGS library associated with {donor.name}")
+                        logger.warning(f"Skipping - no NGS library associated with {donor.name}")
         elif isinstance(self.sheet, shortcuts.CancerCaseSheet):  # Cancer
             for sample_pair in self.sheet.all_sample_pairs:
                 if not (
@@ -186,7 +186,7 @@ class FindLocalFiles(FindFilesCommon):
             if tmp_path.exists():
                 canonical_paths.update({step: tmp_path})
             else:
-                logger.warn(
+                logger.warning(
                     f"Canonical path for step '{step}' does not exist. Expected: {str(tmp_path)}"
                 )
 
@@ -314,7 +314,7 @@ class Checker:
 
         if len(missing_list) > 0:
             missing_str = "\n".join(missing_list)
-            logger.warn(
+            logger.warning(
                 f"Comparison was not possible for the case(s) below, MD5 file(s) expected but not "
                 f"found locally:\n{missing_str}"
             )
@@ -426,7 +426,7 @@ class Checker:
                 irods_paths_str = "\n".join(value)
                 _tmp_str = f"\n>> {key}\n{irods_paths_str}"
                 pairs_str += _tmp_str
-            logger.warn(f"Files with different versions in SODAR:{pairs_str}")
+            logger.warning(f"Files with different versions in SODAR:{pairs_str}")
 
     @staticmethod
     def report_findings_md5(okay_list, different_list):
@@ -449,7 +449,7 @@ class Checker:
             different_str = "\n".join(
                 ["; i:".join(pair) for pair in sorted(different_list, key=lambda tup: tup[0])]
             )
-            logger.warn(f"Files with DIFFERENT MD5 locally and remotely:\n{different_str}")
+            logger.warning(f"Files with DIFFERENT MD5 locally and remotely:\n{different_str}")
 
     @staticmethod
     def report_findings(both_locations, only_remote, only_local):
@@ -474,13 +474,13 @@ class Checker:
         if len(both_locations) > 0:
             logger.info(f"Files found BOTH locally and remotely:\n{in_both_str}")
         else:
-            logger.warn("No file was found both locally and remotely.")
+            logger.warning("No file was found both locally and remotely.")
         if len(only_remote) > 0:
-            logger.warn(f"Files found ONLY REMOTELY:\n{remote_only_str}")
+            logger.warning(f"Files found ONLY REMOTELY:\n{remote_only_str}")
         else:
             logger.info("No file found only remotely.")
         if len(only_local) > 0:
-            logger.warn(f"Files found ONLY LOCALLY:\n{local_only_str}\n{dashed_line}")
+            logger.warning(f"Files found ONLY LOCALLY:\n{local_only_str}\n{dashed_line}")
         else:
             logger.info(f"No file found only locally.\n{dashed_line}")
 
