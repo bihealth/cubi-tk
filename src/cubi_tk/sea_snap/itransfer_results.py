@@ -82,12 +82,12 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            from sodar_cli.api import landing_zones
+            from sodar_cli.api import landingzone
 
-            lz_irods_path = landing_zones.get(
+            lz_irods_path = landingzone.retrieve(
                 sodar_url=self.args.sodar_url,
                 sodar_api_token=self.args.sodar_api_token,
-                landing_zone_uuid=self.args.destination,
+                landingzone_uuid=self.args.destination,
             ).irods_path
             logger.info("Target iRods path: %s", lz_irods_path)
 
