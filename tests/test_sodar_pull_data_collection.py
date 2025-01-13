@@ -82,7 +82,7 @@ def test_filter_irods_collection(filtered_data_objects):
         {k: l for k, l in deepcopy(filtered_data_objects).items() if k == "coll1-N1-DNA1"},
     ]
 
-    for kwargs, expected in zip(kwarg_list, expected_results):
+    for kwargs, expected in zip(kwarg_list, expected_results, strict=True):
         result = PullDataCollection.filter_irods_file_list(
             fake_irods_data_dict, "/irods/project", **kwargs
         )

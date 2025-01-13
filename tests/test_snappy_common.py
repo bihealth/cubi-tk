@@ -1,4 +1,5 @@
 """Tests for ``cubi_tk.snappy.common``."""
+
 import pathlib
 
 from biomedsheets import models, shortcuts

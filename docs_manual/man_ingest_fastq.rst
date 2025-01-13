@@ -1,8 +1,8 @@
 .. _man_ingest_fastq:
 
-===========================
+=================================
 Manual for ``sodar ingest-fastq``
-===========================
+=================================
 
 The ``cubi-tk sodar ingest-fastq`` command lets you upload raw data files to SODAR.
 It is configured for uploading FASTQ files by default, but the parameters can be adjusted to upload any files.

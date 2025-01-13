@@ -1,4 +1,5 @@
 """``Tests for sodar_lz functions``"""
+
 from argparse import ArgumentParser
 from unittest.mock import patch
 

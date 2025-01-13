@@ -1,6 +1,5 @@
-"""Tests for ``cubi_tk.isa_tab``.
+"""Tests for ``cubi_tk.isa_tab``."""
 
-"""
 import filecmp
 import glob
 import os

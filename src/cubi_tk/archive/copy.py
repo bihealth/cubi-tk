@@ -133,7 +133,7 @@ class ArchiveCopyCommand(common.ArchiveCommandBase):
                     tmpdir.name, datetime.date.today().strftime("%Y-%m-%d_workdir_report.txt")
                 )
                 logger.info(
-                    "Preparing hasheep report of {} to {}".format(self.project_dir, work_report)
+                    "Preparing hashdeep report of {} to {}".format(self.project_dir, work_report)
                 )
                 self._hashdeep_report(self.project_dir, work_report)
 

@@ -52,7 +52,7 @@ class SnappyWorkflowManager:
             from snappy_pipeline.apps.snappy_snake import STEP_TO_MODULE
             from snappy_pipeline.base import snakefile_path
         except ImportError:
-            logger.warn(
+            logger.warning(
                 "snappy_pipeline is not available. snappy pipeline related functions will not work properly."
             )
             return None

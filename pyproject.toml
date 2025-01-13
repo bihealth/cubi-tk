@@ -1,0 +1,118 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cubi-tk"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["version"]
+dependencies = [
+    "argcomplete>=3.5.3",
+    "attrs>=24.3.0",
+    "biomedsheets",
+    "cattrs>=24.1.2",
+    "cookiecutter==2.3.1",
+    "cubi-isa-templates==0.1.1",
+    "hpo-similarity>=0.5.3",
+    "icdiff>=2.0.7",
+    "logzero>=1.7.0",
+    "pandas>=2.2.3",
+    "python-irodsclient==1.1.8",
+    "pyyaml>=6.0.2",
+    "requests>=2.32.3",
+    "retrying>=1.3.4",
+    "simplejson>=3.19.3",
+    "termcolor>=2.5.0",
+    "toml>=0.10.2",
+    "toolz>=1.0.0",
+    "toposort>=1.10",
+    "tqdm>=4.67.1",
+    "varfish-cli>=0.6.2,<0.7.0",
+    "vcfpy >=0.13.8",
+    "altamisa @ git+https://github.com/bihealth/altamisa.git@817dc491ff819e4c80686082bf3e5f602f1ac14c",
+    "biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8",
+    "sodar-cli @ git+https://github.com/bihealth/sodar-cli@a62505ff9b1365f150bce54c9b2b5e638f245f86",
+]
+
+[project.license]
+file = "LICENSE"
+
+[project.scripts]
+cubi-tk = "cubi_tk.__main__:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "cubi_tk.version.__version__" }
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+pythonpath = [
+    ".", "tests"
+]
+
+[project.optional-dependencies]
+snappy = [
+    "snappy-pipeline @ git+https://github.com/bihealth/snappy-pipeline@5d11f311357e75516ba2d7045cc0c1bd61201e14",
+]
+all = ["cubi-tk[snappy]"]
+
+[dependency-groups]
+dev = [
+    "factory-boy>=3.2.0",
+    "pyfakefs>=3.7.1",
+    "pytest>=4.0",
+    "pytest-cache>=1.0",
+    "pytest-cov>=2.4.0",
+    "pytest-mock>=2.0.0",
+    "pytest-runner>=2.11",
+    "requests-mock>=1.7.0",
+    "ruff>=0.9.0",
+    "setuptools>=75.8.0",
+    "tox>=4.23",
+]
+docs = [
+    "sphinx>=1.7.0",
+    "sphinx-rtd-theme>=0.4.3",
+    "sphinx-argparse>=0.2.5",
+    "recommonmark>=0.6.0",
+]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+ignore = ["E203", "E266", "E501", "E741"]
+select = ["B", "C", "E", "F", "W"]

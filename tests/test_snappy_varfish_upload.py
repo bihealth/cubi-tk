@@ -1,4 +1,5 @@
 """Tests for ``cubi_tk.snappy.varfish_upload``."""
+
 import pathlib
 
 from biomedsheets.io_tsv import read_germline_tsv_sheet

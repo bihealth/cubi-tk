@@ -1,5 +1,4 @@
-"""Tests for ``cubi_tk.snappy.snappy_workflows``.
-"""
+"""Tests for ``cubi_tk.snappy.snappy_workflows``."""
 
 from cubi_tk.snappy.snappy_workflows import SnappyWorkflowManager
 
