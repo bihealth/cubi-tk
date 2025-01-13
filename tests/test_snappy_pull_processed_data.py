@@ -491,10 +491,10 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam(pull_processed_data, rem
         for ext in ("bam", "bam.bai")
     ]
     correct_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list, strict=True):
         correct_uuid_expected.append((_irods_path, _out_path))
     wrong_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list, strict=True):
         wrong_uuid_expected.append((_irods_path, _out_path))
 
     # Test with correct assay UUID - directory structure same as in SODAR
@@ -537,7 +537,7 @@ def test_pull_processed_data_pair_ipath_with_outdir_bam_retrieve_all(
         for ext in ("bam", "bam.bai")
     ]
     correct_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list, strict=True):
         correct_uuid_expected.append((_irods_path, _out_path))
 
     # Test with correct assay UUID - directory structure same as in SODAR
@@ -577,10 +577,10 @@ def test_pull_processed_data_pair_ipath_with_outdir_vcf(pull_processed_data, rem
         for ext in ("vcf.gz", "vcf.gz.tbi")
     ]
     correct_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list, strict=True):
         correct_uuid_expected.append((_irods_path, _out_path))
     wrong_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list, strict=True):
         wrong_uuid_expected.append((_irods_path, _out_path))
 
     # Test with correct assay UUID - directory structure same as in SODAR
