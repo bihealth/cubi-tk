@@ -12,7 +12,7 @@ Tooling for connecting GitLab, pipelines, and SODAR at CUBI.
 Prerequisites when using conda:
 
 ```bash
-$ conda create -n cubi-tk python=3.10
+$ conda env create -n cubi-tk -f environment.yaml
 $ conda activate cubi-tk
 ```
 
@@ -21,7 +21,7 @@ Clone CUBI-TK and install.
 ```bash
 $ git clone git@github.com:bihealth/cubi-tk.git
 $ cd cubi-tk
-$ pip install -e .
+$ uv sync
 ```
 
 ## Building the Manual
