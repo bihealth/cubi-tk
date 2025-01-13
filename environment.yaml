@@ -13,3 +13,4 @@ dependencies:
   - pysam >=0.22
   - vcfpy >=0.13.8
   - gcc_linux-64 >=13,<14
+  - zlib ~=1.3.0
