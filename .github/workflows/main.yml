@@ -38,7 +38,7 @@ jobs:
         run: sudo apt-get install -y libbz2-dev liblzma-dev
 
       - name: Setup environment variables
-        run: export GIT_LFS_SKIP_SMUDGE=1
+        run: echo "GIT_LFS_SKIP_SMUDGE=1" >> $GITHUB_ENV
 
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
@@ -82,7 +82,7 @@ jobs:
         run: sudo apt-get install -y libbz2-dev liblzma-dev
 
       - name: Setup environment variables
-        run: export GIT_LFS_SKIP_SMUDGE=1
+        run: echo "GIT_LFS_SKIP_SMUDGE=1" >> $GITHUB_ENV
 
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
