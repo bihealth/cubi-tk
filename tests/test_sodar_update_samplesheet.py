@@ -128,7 +128,7 @@ def helper_update_UCS(arg_list, UCS):
 
 
 def test_gather_ISA_column_names(mock_isa_data, UCS_class_object):
-    from cubi_tk.sodar.update_samplehseet import ISA_NON_SETTABLE, REQUIRED_COLUMNS
+    from cubi_tk.sodar.update_samplesheet import ISA_NON_SETTABLE, REQUIRED_COLUMNS
 
     study = mock_isa_data[1]
     assay = mock_isa_data[2]
