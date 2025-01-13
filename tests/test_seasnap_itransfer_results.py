@@ -37,7 +37,7 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
-def test_run_seasnap_itransfer_results_smoke_test(mocker):
+def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     # --- setup arguments
     dest_path = "/irods/dest"
     fake_base_path = "/base/path"
@@ -57,7 +57,6 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker):
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
     # break biomedsheets.
-    fs = fake_filesystem.FakeFilesystem()
     fake_os = fake_filesystem.FakeOsModule(fs)
     fake_pl = fake_pathlib.FakePathlibModule(fs)
 
@@ -83,7 +82,6 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker):
     fs.remove(fake_file_paths[3])
 
     # --- mock modules
-    mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.sea_snap.itransfer_results.pathlib", fake_pl)
     mocker.patch("cubi_tk.sea_snap.itransfer_results.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
