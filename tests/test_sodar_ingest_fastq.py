@@ -189,7 +189,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
     assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")
 
 
-def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
+def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -212,7 +212,6 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
     # break biomedsheets.
-    fs = fake_filesystem.FakeFilesystem()
     fake_os = fake_filesystem.FakeOsModule(fs)
     fake_pl = fake_pathlib.FakePathlibModule(fs)
 
@@ -248,7 +247,6 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     fs.remove(fake_file_paths[3])
 
     # --- mock modules
-    mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
         "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
@@ -327,7 +325,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock):
     assert ingestfastq.remote_dir_pattern == remote_pattern
 
 
-def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
+def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -352,7 +350,6 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
     # break biomedsheets.
-    fs = fake_filesystem.FakeFilesystem()
     fake_os = fake_filesystem.FakeOsModule(fs)
     fake_pl = fake_pathlib.FakePathlibModule(fs)
 
@@ -398,7 +395,6 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock):
     fs.remove(fake_file_paths[3])
 
     # --- mock modules
-    mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
         "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
