@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from cubi_tk.exceptions import ParameterException
-from cubi_tk.sodar.update_samplehseet import UpdateSamplesheetCommand
+from cubi_tk.sodar.update_samplesheet import UpdateSamplesheetCommand
 from cubi_tk.sodar_api import SodarAPI
 
 
