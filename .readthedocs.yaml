@@ -11,13 +11,14 @@ build:
    tools:
     python: '3.12'
    jobs:
-    post_create_environment:
-      - pip install uv
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install --upgrade pip setuptools
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install --upgrade sphinx readthedocs-sphinx-ext
-    post_install:
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv sync --all-extras --group docs
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install '.[all]'
+    pre_create_environment:
+      - asdf plugin add uv
+      - asdf install uv 0.5.17
+      - asdf global uv 0.5.17
+    create_environment:
+      - uv venv
+    install:
+      - uv sync --all-extras --dev --group docs
     build:
       html:
         - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv run sphinx-build --fail-on-warning --show-traceback --keep-going -D language=de docs_manual $READTHEDOCS_OUTPUT/html
