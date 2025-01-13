@@ -57,6 +57,7 @@ pythonpath = [
 snappy = [
     "snappy-pipeline @ git+https://github.com/bihealth/snappy-pipeline@5d11f311357e75516ba2d7045cc0c1bd61201e14",
 ]
+all = ["cubi-tk[snappy]"]
 
 [dependency-groups]
 dev = [
@@ -72,8 +73,11 @@ dev = [
     "setuptools>=75.8.0",
     "tox>=4.23",
 ]
-all = [
-    "cubi-tk[dev,snappy]"
+docs = [
+    "sphinx>=1.7.0",
+    "sphinx-rtd-theme>=0.4.3",
+    "sphinx-argparse>=0.2.5",
+    "recommonmark>=0.6.0",
 ]
 
 [tool.ruff]
