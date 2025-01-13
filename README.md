@@ -22,6 +22,7 @@ Clone CUBI-TK and install.
 $ git clone git@github.com:bihealth/cubi-tk.git
 $ cd cubi-tk
 $ uv sync
+$ uv pip install -e .  # or -e '.[snappy]' if you need snappy kickoff
 ```
 
 ## Building the Manual
