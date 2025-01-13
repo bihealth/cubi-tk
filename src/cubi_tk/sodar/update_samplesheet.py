@@ -435,7 +435,7 @@ class UpdateSamplesheetCommand:
     ) -> pd.DataFrame:
         ped_mapping = sheet_default_config[self.args.defaults]["ped_to_sampledata"]
         if self.args.ped_field_mapping:
-            allowed_sample_col_values = [*sample_field_mapping] + [*isa_names]
+            allowed_sample_col_values = sample_field_mapping.keys() | isa_names.keys()
             for ped_col, sample_col in self.args.ped_field_mapping:
                 if ped_col not in ped_mapping:
                     logger.warning(f"Ped column '{ped_col}' is unknown and will be ignored.")
@@ -610,7 +610,6 @@ class UpdateSamplesheetCommand:
             for col in isa_table.columns
             if orig_col_name(col) == "Protocol REF"
         }
-
         if not no_autofill:
             # Do not autofill ontology terms or references (an autofilled ontology reference without values
             # would not pass altamisa validation)
