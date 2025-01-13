@@ -7,6 +7,10 @@ on:
   pull_request:
     branches_ignore: []
 
+defaults:
+  run:
+    shell: bash -el {0}
+
 jobs:
   cancel-previous:
     runs-on: ubuntu-latest
@@ -20,18 +24,34 @@ jobs:
 
   linting:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.12"
     steps:
-      - uses: actions/checkout@v1
-
-      - name: Install Python
-        uses: actions/setup-python@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          python-version: "3.10"
+          lfs: true
 
-      - name: Install dependencies
-        run: |
-            pip install -r requirements/test_black.txt
-            pip freeze
+      - name: Install system dependencies
+        run: sudo apt-get install -y libbz2-dev liblzma-dev
+
+      - name: Setup environment variables
+        run: echo "GIT_LFS_SKIP_SMUDGE=1" >> $GITHUB_ENV
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge,bioconda,nodefaults
+          environment-file: 'environment.yaml'
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
 
       - name: Run linting tools
         run: |
@@ -41,7 +61,7 @@ jobs:
         if: github.event_name == 'pull_request' && failure()
         uses: marocchino/sticky-pull-request-comment@v1.1.0
         with:
-          message: 'Please format your code with [black](https://black.readthedocs.io): `make black`.'
+          message: 'Please check your code via `make lint`.'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   testing:
@@ -49,43 +69,34 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.10'
-          # - "3.11"  # no compatible pysam yet
-          # - "3.12"  # no compatible pysam yet
+          - "3.12"
     needs: linting
     steps:
-      - name: Install Python via conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-          conda-channels: defaults,bioconda,conda-forge
-
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           lfs: true
 
-      - name: Install mamba
-        run: conda install -y mamba
+      - name: Install system dependencies
+        run: sudo apt-get install -y libbz2-dev liblzma-dev
 
-      - name: Prepare environment.yaml file
-        run: >
-          cp environment.yaml /tmp/environment.yaml && sed -i -e
-          's/- python/- python=${{ matrix.python-version }}/'
-          /tmp/environment.yaml
+      - name: Setup environment variables
+        run: echo "GIT_LFS_SKIP_SMUDGE=1" >> $GITHUB_ENV
 
-      - name: Update environment using mamba
-        run: mamba env update --name root --file /tmp/environment.yaml
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge,bioconda,nodefaults
+          environment-file: 'environment.yaml'
+          python-version: ${{ matrix.python-version }}
 
-      - name: Save time by installing packages via mamba.
-        run: mamba install -y pysam
+      - name: Set up Python
+        run: uv python install ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: |
-            pip install -r requirements/test_black.txt
-            pip freeze
+      - name: Install the project
+        run: uv sync --all-extras --dev
 
       - name: Run tests
-        run: pytest
+        run: uv run pytest
 
       - uses: codecov/codecov-action@v3

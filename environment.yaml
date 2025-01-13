@@ -1,11 +1,16 @@
 channels:
   - conda-forge
   - bioconda
-  - defaults
+  - nodefaults
 
 name: cubi-tk
 
 dependencies:
-  - python
+  - python >=3.9
   - pip
+  - uv >=0.5
   - hashdeep
+  - pysam >=0.22
+  - vcfpy >=0.13.8
+  - gcc_linux-64 >=13,<14
+  - zlib ~=1.3.0

@@ -4,13 +4,13 @@ include CHANGELOG.md
 include LICENSE
 include README.md
 
+graft src
+
 recursive-include tests *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 
 recursive-include docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif
 
-include cubi_tk/version.py
 recursive-include cubi_tk/isa_tpl *.json *.txt
 
-include requirements.txt requirements/*.txt

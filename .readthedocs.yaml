@@ -1,0 +1,25 @@
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the version of Python and other tools you might need
+build:
+   os: ubuntu-22.04
+   jobs:
+    post_create_environment:
+      - pip install uv
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install --upgrade pip setuptools
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install --upgrade sphinx readthedocs-sphinx-ext
+    post_install:
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv sync --all-extras --group docs
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install '.[all]'
+    build:
+      html:
+        - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv run sphinx-build --fail-on-warning --show-traceback --keep-going -D language=de docs_manual $READTHEDOCS_OUTPUT/html
+
+## Build documentation in the docs/ directory with Sphinx
+#sphinx:
+#   configuration: docs_manual/conf.py

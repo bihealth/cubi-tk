@@ -1,5 +1,4 @@
-"""Tests for ``cubi_tk.snappy.pull_raw_data``.
-"""
+"""Tests for ``cubi_tk.snappy.pull_raw_data``."""
 
 import pytest
 
@@ -260,7 +259,7 @@ def test_pull_raw_data_get_library_to_irods_dict(pull_raw_data, remote_files_fas
         identifiers=samples_list, remote_files_dict=remote_files_fastq
     )
     for id_ in samples_list:
-        assert all([str(irods.name).startswith(id_) for irods in actual.get(id_)])
+        assert all(str(irods.name).startswith(id_) for irods in actual.get(id_))
 
 
 def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, sample_to_irods_dict):
@@ -296,10 +295,10 @@ def test_pull_raw_data_pair_ipath_with_folder_name(pull_raw_data, sample_to_irod
         for ext in ("fastq.gz",)
     ]
     correct_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, correct_uuid_output_dir_list, strict=True):
         correct_uuid_expected.append((_irods_path, _out_path))
     wrong_uuid_expected = []
-    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list):
+    for _irods_path, _out_path in zip(irods_files_list, wrong_uuid_output_dir_list, strict=True):
         wrong_uuid_expected.append((_irods_path, _out_path))
 
     # Test with correct assay UUID - directory structure same as in SODAR

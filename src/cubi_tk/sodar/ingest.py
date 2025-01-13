@@ -242,7 +242,7 @@ class SodarIngest:
             except FileNotFoundError:
                 logger.warning(f"File not found: {src.name}")
                 continue
-            except RuntimeError:
+            except (RuntimeError, OSError):
                 logger.warning(f"Symlink loop: {src.name}")
                 continue
 

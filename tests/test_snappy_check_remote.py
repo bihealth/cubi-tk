@@ -1,4 +1,5 @@
 """Tests for ``cubi_tk.snappy.check_remote``."""
+
 import pathlib
 
 import pytest
