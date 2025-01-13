@@ -27,7 +27,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.10"
+          - "3.12"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -66,7 +66,8 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.10"
+          - "3.12"
+          - "3.13"
     needs: linting
     steps:
       - name: Checkout repository
