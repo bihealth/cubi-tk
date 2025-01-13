@@ -327,7 +327,7 @@ class UpdateSamplesheetCommand:
         # Base field name mapping (also used by ped)
         sample_field_mapping = sheet_default_config[self.args.defaults]["field_column_mapping"]
 
-        # Sample data, if given, need to matche the defined fields (from default or sample_fields)
+        # Sample data, if given, needs to match the defined fields (from default or sample_fields)
         if not self.args.sample_data:
             return sample_field_mapping
 
@@ -471,13 +471,15 @@ class UpdateSamplesheetCommand:
             sample_data = pd.DataFrame()
 
         if self.args.ped and self.args.sample_data:
-            # Check for matching fields between ped and sample data
-            matching_fields = set(ped_data.columns).intersection(sample_data.columns)
+            # Check for matching fields between ped and sample data, but keep original order
+            matching_fields = [col for col in ped_data.columns if col in sample_data.columns]
+            combined_fields = ped_data.columns.tolist()
+            combined_fields += [col for col in sample_data.columns if col not in combined_fields]
             if not matching_fields:
                 raise ParameterException("No matching fields found between ped and sample data.")
 
-            # Combine the two sample sets
-            samples = pd.merge(ped_data, sample_data, on=list(matching_fields), how="outer")
+            # Combine the two sample sets, reorder based on ped & then sample data
+            samples = pd.merge_ordered(sample_data, ped_data, on=matching_fields)[combined_fields]
             # Check that all values for all samples exist
             if samples.isnull().values.any():
                 missing_data = samples.loc[samples.isnull().any(axis=1)]
@@ -489,7 +491,7 @@ class UpdateSamplesheetCommand:
             if samples[ped_mapping["name"]].duplicated().any():
                 duplicated = samples.loc[samples[ped_mapping["name"]].duplicated(keep=False)]
                 raise ParameterException(
-                    "Sample with different values found in combined sample data:\n"
+                    "Sample with different values found in combination of ped and sample data:\n"
                     + duplicated.to_string(index=False, na_rep="")
                 )
         else:

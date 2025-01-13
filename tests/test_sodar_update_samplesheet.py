@@ -458,6 +458,7 @@ def test_collect_sample_data(
     arg_list[-1] = "mv_extra_sample.ped"
     expected2 = pd.concat(
         [
+            expected,
             pd.DataFrame(
                 [
                     [
@@ -474,7 +475,6 @@ def test_collect_sample_data(
                 ],
                 columns=expected.columns,
             ),
-            expected,
         ],
         ignore_index=True,
     )
