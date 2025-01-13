@@ -28,9 +28,9 @@ $ uv pip install -e .  # or -e '.[snappy]' if you need snappy kickoff
 ## Building the Manual
 
 ```bash
-$ pip install -r requirements/develop.txt
+$ uv sync --all-extras --group docs
 $ cd docs_manual
-$ make clean html
+$ uv run make clean html
 $ ls _build/html/index.html
 ```
 
