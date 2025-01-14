@@ -54,4 +54,8 @@ class InvalidReadmeException(CubiTkException):
 
 
 class FileMd5MismatchException(CubiTkException):
-    """Raised if the recored md5 sum for a file does not match the (re)computed value."""
+    """Raised if the recorded md5 sum for a file does not match the (re)computed value."""
+
+
+class SodarAPIException(CubiTkException):
+    """Raised when the SODAR API does not return success."""
