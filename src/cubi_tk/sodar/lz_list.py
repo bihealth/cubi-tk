@@ -12,6 +12,9 @@ from sodar_cli import api
 
 from ..common import load_toml_config
 
+# TODO: Obtain from somewhere else, e.g. sodar-cli or sodar API or sodar-core or …
+LANDING_ZONE_STATES = ["ACTIVE", "FAILED", "VALIDATING"]
+
 
 class ListLandingZoneCommand:
     """Implementation of the ``landing-zone-list`` command."""
@@ -62,13 +65,12 @@ class ListLandingZoneCommand:
             help="Format string for printing, e.g. %%(uuid)s",
         )
 
-        status = ["ACTIVE", "FAILED", "VALIDATING"]
         parser.add_argument(
             "--filter-status",
             dest="filter_status",
-            default=set(status),
+            default=LANDING_ZONE_STATES,
             action="append",
-            choices=status,
+            choices=LANDING_ZONE_STATES,
             help="Filter landing zone by status. Defaults to listing all.",
         )
 
