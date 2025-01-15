@@ -1,9 +1,0 @@
-# Files in project
-Class	FileName	Target	ResolvedName	Size	Dangling	Outside
-outside|dangling	extra_data/dangling_symlink	../../outside/inexistent_data	/filesystem/outside/inexistent_data	0	True	True
-outside|fastq	raw_data/batch2/sample2.fastq.gz	../../../outside/batch2/sample2.fastq.gz	/filesystem/outside/batch2/sample2.fastq.gz	22	False	True
-outside	raw_data/batch2/sample2.fastq.gz.md5	../../../outside/batch2/sample2.fastq.gz.md5	/filesystem/outside/batch2/sample2.fastq.gz.md5	51	False	True
-fastq	raw_data/batch3/sample3.fastq.gz		/filesystem/project/raw_data/batch3/sample3.fastq.gz	22	False	False
-outside|fastq	raw_data/batch1/sample1.fastq.gz		/filesystem/outside/batch1/sample1.fastq.gz	22	False	True
-outside	raw_data/batch1/sample1.fastq.gz.md5		/filesystem/outside/batch1/sample1.fastq.gz.md5	51	False	True
-outside|dangling|fastq	raw_data/batch4/sample4.fastq.gz	../../../outside/batch4/sample4.fastq.gz	/filesystem/outside/batch4/sample4.fastq.gz	0	True	True
