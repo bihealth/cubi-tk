@@ -4,18 +4,13 @@
 Installation
 ============
 
-Prerequisites when using conda:
-
-.. code-block:: bash
-
-  $ conda env create -n cubi-tk -f environment.yaml
-  $ conda activate cubi-tk
-
-Clone CUBI-TK and install:
+Clone CUBI-TK, create a conda environment (containing `hashdeep`) and install using [`uv`](https://docs.astral.sh/uv/).
 
 .. code-block:: bash
 
   $ git clone git@github.com:bihealth/cubi-tk.git
+  $ conda env create -n cubi-tk -f environment.yaml
+  $ conda activate cubi-tk
   $ cd cubi-tk
   $ uv python pin 3.12
   $ uv sync
