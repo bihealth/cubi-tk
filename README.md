@@ -21,6 +21,7 @@ Clone CUBI-TK and install.
 ```bash
 $ git clone git@github.com:bihealth/cubi-tk.git
 $ cd cubi-tk
+$ uv python pin 3.12
 $ uv sync
 $ uv pip install -e .
 # or, if you need snappy kickoff:
@@ -33,7 +34,7 @@ $ uv pip install -e .
 $ uv sync --all-extras --group docs
 $ cd docs_manual
 $ uv run make clean html
-$ ls _build/html/index.html
+$ xdg-open _build/html/index.html
 ```
 
 ## Argument Completion

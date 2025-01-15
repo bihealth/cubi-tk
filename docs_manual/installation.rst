@@ -8,29 +8,28 @@ Prerequisites when using conda:
 
 .. code-block:: bash
 
-  $ conda create -n cubi-tk python=3.10
+  $ conda env create -n cubi-tk -f environment.yaml
   $ conda activate cubi-tk
 
 Clone CUBI-TK and install:
 
 .. code-block:: bash
 
-  $ git clone git@cubi-gitlab.bihealth.org:CUBI/Pipelines/cubi-tk.git
+  $ git clone git@github.com:bihealth/cubi-tk.git
   $ cd cubi-tk
-  $ pip install -e .
+  $ uv python pin 3.12
+  $ uv sync
+  $ uv pip install -e .
+  # or, if you need snappy kickoff:
+  #$ GIT_LFS_SKIP_SMUDGE=1 uv pip install -e '.[snappy]'
 
-For building the manual or running tests you will need some more packages.
-
-.. code-block:: bash
-
-  $ pip install -r requirements/develop.txt
 
 Run tests
 ---------
 
 .. code-block:: bash
 
-  $ make test
+  $ uv run make pytest
 
 Build manual
 ------------
@@ -38,4 +37,4 @@ Build manual
 .. code-block:: bash
 
   $ cd docs_manual
-  $ make clean html
+  $ uv run make clean html
