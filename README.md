@@ -9,7 +9,7 @@ Tooling for connecting GitLab, pipelines, and SODAR at CUBI.
 
 ## Getting Started
 
-Clone CUBI-TK, create a conda environment (containing `hashdeep`) and install using [`uv`](https://docs.astral.sh/uv/).
+Clone CUBI-TK, create a conda environment and install using [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
 $ git clone git@github.com:bihealth/cubi-tk.git

@@ -4,7 +4,7 @@
 Installation
 ============
 
-Clone CUBI-TK, create a conda environment (containing `hashdeep`) and install using [`uv`](https://docs.astral.sh/uv/).
+Clone CUBI-TK, create a conda environment and install using [`uv`](https://docs.astral.sh/uv/).
 
 .. code-block:: bash
 
