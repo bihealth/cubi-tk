@@ -5,7 +5,7 @@
 
 ### ⚠ BREAKING CHANGES
 
-* remove  functionality
+* remove deprecated functionality of `cubi-tk archive`
 
 ### Features
 
