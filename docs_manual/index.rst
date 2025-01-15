@@ -18,14 +18,12 @@ Manual
     | :ref:`Upload fastq files to SODAR <man_ingest_fastq>`
     | :ref:`Upload results of the Seasnap pipeline to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
-    | :ref:`Tools for archiving old projects <man_archive>`
 
 Use cases
     Use cases for common processing tasks.
 
     | :ref:`Exome sequencing <usecase_exomes>`
     | :ref:`Clinical single cell pipeline <usecase_single_cell>`
-    | :ref:`Archiving projects <usecase_archive>`
 
 Project Info
     More information on the project, including the changelog, list of contributing authors, and
@@ -56,7 +54,6 @@ Project Info
     man_ingest_fastq
     man_itransfer_results
     man_write_sample_info
-    man_archive
 
 .. toctree::
     :caption: Use Cases
@@ -66,7 +63,6 @@ Project Info
 
     usecase_exomes
     usecase_single_cell
-    usecase_archive_project
 
 .. toctree::
     :caption: Project Info

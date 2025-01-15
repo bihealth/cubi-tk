@@ -9,7 +9,6 @@ dependencies:
   - python >=3.9
   - pip
   - uv >=0.5
-  - hashdeep
   - pysam >=0.22
   - vcfpy >=0.13.8
   - gcc_linux-64 >=13,<14

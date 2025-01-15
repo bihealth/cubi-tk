@@ -12,8 +12,6 @@ from logzero import logger
 
 from cubi_tk import __version__
 
-from .archive import run as run_archive
-from .archive import setup_argparse as setup_argparse_archive
 from .common import run_nocmd
 from .irods import run as run_irods
 from .irods import setup_argparse as setup_argparse_irods
@@ -83,7 +81,6 @@ def setup_argparse():
     setup_argparse_sea_snap(
         subparsers.add_parser("sea-snap", help="Tools for supporting the RNA-SeASnaP pipeline.")
     )
-    setup_argparse_archive(subparsers.add_parser("archive", help="helper for archiving projects."))
 
     return parser, subparsers
 
@@ -118,7 +115,6 @@ def main(argv=None):
         "sodar": run_sodar,
         "irods": run_irods,
         "org-raw": run_org_raw,
-        "archive": run_archive,
     }
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)
