@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.1](https://github.com/bihealth/cubi-tk/compare/v0.5.0...v0.5.1) (2025-01-24)
+
+
+### Release-As
+
+* 0.5.1 ([4ad4f0f](https://github.com/bihealth/cubi-tk/commit/4ad4f0f747961ec54069737e9a0c32207e5265a0))
+
+
+### Bug Fixes
+
+* require current setuptools version in build-system, update docs ([#246](https://github.com/bihealth/cubi-tk/issues/246)) ([261944b](https://github.com/bihealth/cubi-tk/commit/261944b86ecc6560ca13a7a683217ac5feed11b7))
+
 ## [0.5.0](https://github.com/bihealth/cubi-tk/compare/v0.4.0...v0.5.0) (2025-01-15)
 
 
