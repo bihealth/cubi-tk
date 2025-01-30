@@ -65,6 +65,17 @@ def germline_trio_sheet_object(germline_trio_sheet_tsv):
         sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     )
 
+@pytest.fixture
+def mock_toml_config():
+    return textwrap.dedent(
+        """
+        [global]
+        sodar_server_url = "https://sodar.bihealth.org/"
+        sodar_api_token = "token123"
+        """
+    ).lstrip()
+
+
 
 def my_exists(self):
     """Method is used to patch pathlib.Path.exists"""

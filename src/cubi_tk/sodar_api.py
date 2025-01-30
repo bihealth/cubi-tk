@@ -90,7 +90,7 @@ class SodarAPI:
         # afterward remove the final trailing slash from the joined URL
         base_url_parts = [
             part if part.endswith("/") else f"{part}/"
-            for part in (self.sodar_url, "project", self.project_uuid, api, action)
+            for part in (self.sodar_url, api, "api", action, self.project_uuid)
         ]
         url = reduce(urlparse.urljoin, base_url_parts)[:-1]
         if params:
