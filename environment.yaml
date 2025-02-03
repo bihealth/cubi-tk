@@ -8,7 +8,7 @@ name: cubi-tk
 dependencies:
   - python ~=3.12
   - pip
-  - uv >=0.5
+  - uv >=0.5.26
   - pysam >=0.22
   - vcfpy >=0.13.8
   - gcc_linux-64 >=13,<14
