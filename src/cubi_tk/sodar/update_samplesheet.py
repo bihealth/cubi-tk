@@ -195,7 +195,7 @@ class UpdateSamplesheetCommand:
             nargs=2,
             action="append",
             metavar=("COLUMN", "FORMAT_STR"),
-            help="Dyanmically fill columns in the ISA sheet based on other columns."
+            help="Dynamically fill columns in the ISA sheet based on other columns."
             "Use this option if some columns with sample-sepcific Data can be derived from other columns."
             "FORMAT_STR can contain other columns as placeholders, i.e.: '{Source Name}-N1' for a new Sample Name."
             "Note: only columns from the ped/sampledata can be used as placeholders.",
@@ -260,15 +260,15 @@ class UpdateSamplesheetCommand:
         )
         isa_data = sodar_api.get_ISA_samplesheet()
         investigation = isa_data["investigation"]["content"]
-        study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t")
-        assay = pd.read_csv(StringIO(isa_data["assay"]["content"]), sep="\t")
+        study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t", dtype=str)
+        assay = pd.read_csv(StringIO(isa_data["assay"]["content"]), sep="\t", dtype=str)
         isa_names = self.gather_ISA_column_names(study, assay)
 
         # Check that given sample-data field names can be used
         sample_fields_mapping = self.parse_sampledata_args(isa_names)
 
         # Collect ped & sample data, check that they can be combined
-        samples = self.collect_sample_data(isa_names, sample_fields_mapping)
+        samples = self.collect_sample_data(isa_names, sample_fields_mapping, self.args.snappy_compatible)
 
         # add metadata values to samples
         if self.args.metadata_all:
@@ -285,13 +285,6 @@ class UpdateSamplesheetCommand:
         if not req_cols.issubset(colset):
             missing_cols = req_cols - colset
             raise ValueError(f"Missing required columns in sample data: {', '.join(missing_cols)}")
-        if self.args.sanppy_compatible:
-            for col in study_new.columns:
-                if orig_col_name(col) in req_cols:
-                    study_new[col] = study_new[col].str.replace("-", "_")
-            for col in assay_new.columns:
-                if orig_col_name(col) in req_cols:
-                    assay_new[col] = assay_new[col].str.replace("-", "_")
 
         # Update ISA tables with new data
         study_final = self.update_isa_table(
@@ -432,6 +425,7 @@ class UpdateSamplesheetCommand:
         self,
         isa_names: IsaColumnDetails,
         sample_field_mapping: dict[str, str],
+        snappy_compatible: bool = False,
     ) -> pd.DataFrame:
         ped_mapping = sheet_default_config[self.args.defaults]["ped_to_sampledata"]
         if self.args.ped_field_mapping:
@@ -465,7 +459,7 @@ class UpdateSamplesheetCommand:
             else:
                 fields = sheet_default_config[self.args.defaults]["sample_fields"]
             sample_data = pd.DataFrame(self.args.sample_data, columns=fields)
-            # FIXME: consistent conversion for Sex & Phenotype values? also empty parent values?
+            # FIXME: consider consistent conversion for Sex & Phenotype values? also empty parent values?
             # ped outputs: male/female, unaffected/affected, 0
         else:
             sample_data = pd.DataFrame()
@@ -497,8 +491,18 @@ class UpdateSamplesheetCommand:
         else:
             samples = ped_data if self.args.ped else sample_data
 
+        # Convert to snappy compatible names:
+        # replace '-' with '_' in all ID columns
+        if snappy_compatible:
+            for col in samples.columns:
+                if col.endswith("ID"):
+                    samples[col] = samples[col].str.replace("-", "_")
+
         dynamic_cols = self.get_dynamic_columns(samples.columns, isa_names)
         for col_name, format_str in dynamic_cols.items():
+            if col_name in samples.columns:
+                logger.warning(f'Ignoring dynamic column defintion for "{col_name}", as it is already defined.')
+                continue
             # MAYBE: allow dynamic columns to change based on fill order?
             # i.e. first Extract name = -DNA1, then -DNA1-WXS1
             samples[col_name] = samples.apply(lambda row: format_str.format(**row), axis=1)
