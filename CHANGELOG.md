@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/bihealth/cubi-tk/compare/v0.5.1...v0.5.2) (2025-02-03)
+
+
+### Bug Fixes
+
+* Fix SodarAPI implementation & add tests ([#252](https://github.com/bihealth/cubi-tk/issues/252)) ([109ba3f](https://github.com/bihealth/cubi-tk/commit/109ba3f89f6eeca5eaca59a635ab7ad7d59487c4))
+* update-samplesheet execute test & fix for snappy-compatible ([#254](https://github.com/bihealth/cubi-tk/issues/254)) ([9d309a0](https://github.com/bihealth/cubi-tk/commit/9d309a09ac79ddba99edaa9ff8f49ac2c209d380))
+
 ## [0.5.1](https://github.com/bihealth/cubi-tk/compare/v0.5.0...v0.5.1) (2025-01-24)
 
 
