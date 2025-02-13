@@ -76,15 +76,15 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
             sodar_api_token=self.sodar_api_token,
             project_uuid=self.project_uuid,
         )
+
         for study in investigation.studies.values():
             if assay_uuid:
-                logger.info(f"Using provided Assay UUID: {assay_uuid}")
-                try:
+                #bug fix for rare case that multiple studies and multiple assays exist
+                if assay_uuid in study.assays.keys():
+                    logger.info(f"Using provided Assay UUID: {assay_uuid}")
                     assay = study.assays[assay_uuid]
                     return assay.irods_path
-                except KeyError:
-                    logger.error("Provided Assay UUID is not present in the Study.")
-                    raise
+
             else:
                 # Assumption: there is only one assay per study for `snappy` projects.
                 # If multi-assay project it will only consider the first one and throw a warning.
@@ -94,6 +94,10 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
                 for _assay_uuid in assays_:
                     assay = study.assays[_assay_uuid]
                     return assay.irods_path
+                
+        if assay_uuid:
+            logger.error("Provided Assay UUID is not present in the Ivestifation.")
+            raise Exception("Cannot find assay with UUID %s" % assay_uuid)
         return None
 
     @staticmethod
