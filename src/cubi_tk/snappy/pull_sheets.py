@@ -14,48 +14,18 @@ import pathlib
 import typing
 from uuid import UUID
 
+
 import attr
-from biomedsheets import io_tsv
-from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
+from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
+from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
 from logzero import logger
 from sodar_cli import api
 
 from ..common import CommonConfig, load_toml_config, overwrite_helper
-from ..isa_support import (
-    InvestigationTraversal,
-    IsaNodeVisitor,
-    first_value,
-    isa_dict_to_isa_data,
-)
+
 from .common import find_snappy_root_dir
 from .models import load_datasets
-from .parse_sample_sheet import ParseSampleSheet
 
-#: Template for the to-be-generated file.
-HEADER_TPL = (
-    "[Metadata]",
-    "schema\tgermline_variants",
-    "schema_version\tv1",
-    "",
-    "[Custom Fields]",
-    "key\tannotatedEntity\tdocs\ttype\tminimum\tmaximum\tunit\tchoices\tpattern",
-    "batchNo\tbioEntity\tBatch No.\tinteger\t.\t.\t.\t.\t.",
-    "familyId\tbioEntity\tFamily\tstring\t.\t.\t.\t.\t.",
-    "projectUuid\tbioEntity\tProject UUID\tstring\t.\t.\t.\t.\t.",
-    "libraryKit\tngsLibrary\tEnrichment kit\tstring\t.\t.\t.\t.\t.",
-    "",
-    "[Data]",
-    (
-        "familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName"
-        "\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit"
-    ),
-)
-
-#: Mapping from ISA-tab sex to sample sheet sex.
-MAPPING_SEX = {"female": "F", "male": "M", "unknown": "U", None: "."}
-
-#: Mapping from disease status to sample sheet status.
-MAPPING_STATUS = {"affected": "Y", "carrier": "Y", "unaffected": "N", "unknown": ".", None: "."}
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -74,6 +44,7 @@ class PullSheetsConfig:
     first_batch: int
     last_batch: typing.Union[int, type(None)]
     tsv_shortcut: str
+    assay_txt:str
 
     @staticmethod
     def create(args, global_config, toml_config=None):
@@ -89,29 +60,9 @@ class PullSheetsConfig:
             first_batch=args.first_batch,
             last_batch=args.last_batch,
             tsv_shortcut=args.tsv_shortcut,
+            assay_txt=args.assay_txt
         )
 
-
-@attr.s(frozen=True, auto_attribs=True)
-class Source:
-    family: typing.Optional[str]
-    source_name: str
-    batch_no: int
-    father: str
-    mother: str
-    sex: str
-    affected: str
-    sample_name: str
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class Sample:
-    source: Source
-    library_name: str
-    library_type: str
-    folder_name: str
-    seq_platform: str
-    library_kit: str
 
 
 def strip(x):
@@ -185,6 +136,14 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="The shortcut TSV schema to use; default: 'germline'.",
     )
 
+    parser.add_argument(
+        "--assay-txt",
+        default=None,
+        required=False,
+        type=str,
+        help="Assay Name e.g. 'a_project_exome_sequencing.txt' if multiple assays are present",
+    )
+
 
 def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
@@ -198,92 +157,15 @@ def check_args(args) -> int:
 
     return int(any_error)
 
-
-class SampleSheetBuilder(IsaNodeVisitor):
-    def __init__(self):
-        #: Source by sample name.
-        self.sources = {}
-        #: Sample by sample name.
-        self.samples = {}
-        #: The previous process.
-        self.prev_process = None
-
-    def on_visit_material(self, material, node_path, study=None, assay=None):
-        super().on_visit_material(material, node_path, study, assay)
-        material_path = [x for x in node_path if hasattr(x, "type")]
-        source = material_path[0]
-        if material.type == "Sample Name" and assay is None:
-            sample = material
-            characteristics = {c.name: c for c in source.characteristics}
-            comments = {c.name: c for c in source.comments}
-            batch = characteristics.get("Batch", comments.get("Batch"))
-            family = characteristics.get("Family", comments.get("Family"))
-            father = characteristics.get("Father", comments.get("Father"))
-            mother = characteristics.get("Mother", comments.get("Mother"))
-            sex = characteristics.get("Sex", comments.get("Sex"))
-            affected = characteristics.get("Disease status", comments.get("Disease status"))
-            self.sources[material.name] = Source(
-                family=family.value[0] if family else None,
-                source_name=source.name,
-                batch_no=batch.value[0] if batch else None,
-                father=father.value[0] if father else None,
-                mother=mother.value[0] if mother else None,
-                sex=sex.value[0] if sex else None,
-                affected=affected.value[0] if affected else None,
-                sample_name=sample.name,
-            )
-        elif material.type == "Library Name" or (
-            material.type == "Extract Name"
-            and self.prev_process.protocol_ref.startswith("Library construction")
-        ):
-            library = material
-            sample = material_path[0]
-            if library.name.split("-")[-1].startswith("WGS"):
-                library_type = "WGS"
-            elif library.name.split("-")[-1].startswith("WES"):
-                library_type = "WES"
-            elif library.name.split("-")[-1].startswith("Panel_seq"):
-                library_type = "Panel_seq"
-            elif library.name.split("-")[-1].startswith("mRNA_seq"):
-                library_type = "mRNA_seq"
-            elif library.name.split("-")[-1].startswith("RNA_seq"):
-                library_type = "RNA_seq"
-            else:
-                raise Exception("Cannot infer library type from %s" % library.name)
-
-            folder_name = first_value("Folder name", node_path)
-            if not folder_name:
-                folder_name = library.name
-            self.samples[sample.name] = Sample(
-                source=self.sources[sample.name],
-                library_name=library.name,
-                library_type=library_type,
-                folder_name=folder_name,
-                seq_platform=first_value("Platform", node_path),
-                library_kit=first_value("Library Kit", node_path),
-            )
-
-    def on_visit_process(self, process, node_path, study=None, assay=None):
-        super().on_visit_node(process, study, assay)
-        self.prev_process = process
-        material_path = [x for x in node_path if hasattr(x, "type")]
-        sample = material_path[0]
-        if process.protocol_ref.startswith("Nucleic acid sequencing"):
-            self.samples[sample.name] = attr.evolve(
-                self.samples[sample.name], seq_platform=first_value("Platform", node_path)
-            )
-
-
 def build_sheet(
     config: PullSheetsConfig,
     project_uuid: typing.Union[str, UUID],
     first_batch: typing.Optional[int] = None,
     last_batch: typing.Optional[int] = None,
     tsv_shortcut: str = "germline",
+    assay_txt=None
 ) -> str:
     """Build sheet TSV file."""
-
-    result = []
 
     # Obtain ISA-tab from SODAR REST API.
     isa_dict = api.samplesheet.export(
@@ -291,43 +173,17 @@ def build_sheet(
         sodar_api_token=config.global_config.sodar_api_token,
         project_uuid=project_uuid,
     )
-    isa = isa_dict_to_isa_data(isa_dict)
-
-    builder = SampleSheetBuilder()
+    isa = isa_dict_to_isa_data(isa_dict, assay_txt)
+    if tsv_shortcut == "germline":
+        builder = SampleSheetBuilderGermline() 
+        builder.set_germline_specific_values(config, project_uuid, first_batch, last_batch)
+    else:
+        builder = SampleSheetBuilderCancer()
     iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
     iwalker.run(builder)
 
     # Generate the resulting sample sheet.
-    for sample_name, source in builder.sources.items():
-        sample = builder.samples.get(sample_name, None)
-        if not config.library_types or not sample or sample.library_type in config.library_types:
-            row = [
-                source.family or "FAM",
-                source.source_name or ".",
-                source.father or "0",
-                source.mother or "0",
-                MAPPING_SEX[source.sex.lower()],
-                MAPPING_STATUS[source.affected.lower()],
-                sample.library_type or "." if sample else ".",
-                sample.folder_name or "." if sample else ".",
-                "0" if source.batch_no is None else source.batch_no,
-                ".",
-                str(project_uuid),
-                sample.seq_platform or "." if sample else ".",
-                sample.library_kit or "." if sample else ".",
-            ]
-            result.append("\t".join([c.strip() for c in row]))
-
-    load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % tsv_shortcut)
-    sheet = load_tsv(list(HEADER_TPL) + result, naming_scheme=NAMING_ONLY_SECONDARY_ID)
-    parser = ParseSampleSheet()
-    samples_in_batch = list(parser.yield_sample_names(sheet, first_batch, last_batch))
-    result = (
-        list(HEADER_TPL)
-        + [line if line.split("\t")[1] in samples_in_batch else "#" + line for line in result]
-        + [""]
-    )
-
+    result = builder.generateSheet()
     return "\n".join(result)
 
 
@@ -356,7 +212,7 @@ def run(
             overwrite_helper(
                 config_path / dataset.sheet_file,
                 build_sheet(
-                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut
+                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut, args.assay_txt
                 ),
                 do_write=not args.dry_run,
                 show_diff=True,
