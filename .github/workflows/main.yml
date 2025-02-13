@@ -89,7 +89,8 @@ jobs:
         with:
           channels: conda-forge,bioconda,nodefaults
           environment-file: 'environment.yaml'
-          python-version: ${{ matrix.python-version }}
+          # see above
+          # python-version: ${{ matrix.python-version }}
 
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
