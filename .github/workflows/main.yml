@@ -45,7 +45,8 @@ jobs:
         with:
           channels: conda-forge,bioconda,nodefaults
           environment-file: 'environment.yaml'
-          python-version: ${{ matrix.python-version }}
+          # overriding the python-version here seems to break due to issues with strings/quotes, see https://github.com/bihealth/cubi-tk/actions/runs/13308587922/job/37169672255?pr=258#step:5:386
+          # python-version: ${{ matrix.python-version }}
 
       - name: Set up Python
         run: uv python install ${{ matrix.python-version }}
