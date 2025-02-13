@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.3](https://github.com/bihealth/cubi-tk/compare/v0.5.2...v0.5.3) (2025-02-13)
+
+
+### Bug Fixes
+
+* [[#256](https://github.com/bihealth/cubi-tk/issues/256)] cancer and multiassay support pull_sheets.py ([#258](https://github.com/bihealth/cubi-tk/issues/258)) ([de33b6a](https://github.com/bihealth/cubi-tk/commit/de33b6aba132ae2d50baa0c5af9c39b1323512fc))
+* [[#256](https://github.com/bihealth/cubi-tk/issues/256)] support for multiple studies and multiple assays in sodar_common.py ([#259](https://github.com/bihealth/cubi-tk/issues/259)) ([d9def70](https://github.com/bihealth/cubi-tk/commit/d9def70fff67756424a9b7b345184002a0e87eab))
+
 ## [0.5.2](https://github.com/bihealth/cubi-tk/compare/v0.5.1...v0.5.2) (2025-02-03)
 
 
