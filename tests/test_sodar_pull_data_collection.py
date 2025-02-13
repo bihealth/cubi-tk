@@ -145,7 +145,7 @@ def test_build_download_jobs(filtered_data_objects):
 def test_parse_samplesheet():
     # Test on Biomedsheet
     samples = PullDataCollection.parse_sample_tsv(
-        pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet.tsv",
+        pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv",
         sample_col=2,
         skip_rows=12,
     )
