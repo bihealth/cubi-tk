@@ -112,7 +112,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup common arguments for itransfer commands."""
 
+        # FIXME: outsource the Sodar related (as well as assay & desitnation) to the irods transfer command & sodar API classes
         group_sodar = parser.add_argument_group("SODAR-related")
+        # FIXME: the (non-env-var?) defaults here should NOT take precendence over the toml file entries
         group_sodar.add_argument(
             "--sodar-url",
             default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
@@ -126,11 +128,12 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-        ## Not supported anymore/yet
+        #FIXME: replace this with num_irods_threads
+        # the irods python client should automatically figure out how many threads to use, so this optional
         # parser.add_argument(
         #     "--num-parallel-transfers",
-        #     type=int,
-        #     default=DEFAULT_NUM_TRANSFERS,
+        #     type=int|None,
+        #     default=None,
         #     help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
         # )
         parser.add_argument(
@@ -580,7 +583,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         return lz_uuid, lz_irods_path
 
     def _execute_md5_files_fix(
-        self, transfer_jobs: tuple[TransferJob, ...]
+        self, transfer_jobs: tuple[TransferJob, ...],
+        parallel_jobs: int = 8
     ) -> tuple[TransferJob, ...]:
         """Create missing MD5 files."""
         ok_jobs = []
@@ -598,14 +602,14 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_src, todo_jobs)))
+        logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_local, todo_jobs)))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if self.args.num_parallel_transfers == 0:  # pragma: nocover
+            if parallel_jobs == 0:  # pragma: nocover
                 for job in todo_jobs:
                     compute_md5sum(job, counter, t)
             else:
-                pool = ThreadPool(processes=self.args.num_parallel_transfers)
+                pool = ThreadPool(processes=parallel_jobs)
                 for job in todo_jobs:
                     pool.apply_async(compute_md5sum, args=(job, counter, t))
                 pool.close()
@@ -653,7 +657,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
 
         lz_uuid, transfer_jobs = self.build_jobs(library_names)
-        logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        # logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
@@ -671,7 +675,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         #         logger.info("Aborting at your request.")
         #         sys.exit(0)
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
-        itransfer.put(recursive=True, sync=self.args.remote_overwrite)
+        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
         logger.info("File transfer complete.")
 
 
@@ -778,9 +782,9 @@ class FileWithSize:
 
 def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
     """Compute MD5 sum with ``md5sum`` command."""
-    dirname = os.path.dirname(job.path_src)
-    filename = os.path.basename(job.path_src)[: -len(".md5")]
-    path_md5 = job.path_src
+    dirname = os.path.dirname(job.path_local)
+    filename = os.path.basename(job.path_local)[: -len(".md5")]
+    path_md5 = job.path_local
 
     md5sum_argv = ["md5sum", filename]
     logger.debug("Computing MD5sum %s > %s", " ".join(md5sum_argv), filename + ".md5")
@@ -797,7 +801,7 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
         raise e
 
     with counter.get_lock():
-        counter.value = os.path.getsize(job.path_src[: -len(".md5")])
+        counter.value = os.path.getsize(job.path_local[: -len(".md5")])
         try:
             t.update(counter.value)
         except TypeError:
