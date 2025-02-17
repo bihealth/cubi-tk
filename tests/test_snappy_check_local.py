@@ -49,6 +49,7 @@ def sheet_tsv_missing_normal(header_sheet_tsv_cancer):
         patient1\tN1\tDNA\tWES\tpatient1-N1-DNA1-WES1\tN\tAgilent SureSelect Human All Exon V8
         patient1\tT1\tDNA\tWES\tpatient1-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
         patient2\tT1\tDNA\tWES\tpatient2-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        patient2\tT2\tDNA\tWES\tpatient2-T2-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
         """
     ).lstrip()
 
