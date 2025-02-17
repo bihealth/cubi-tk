@@ -169,7 +169,7 @@ def test_cancer_sheet_checker_missing_tumor(sheet_tsv_missing_tumor):
     sheet = create_cancer_sheet_object(sheet_tsv=sheet_tsv_missing_tumor)
     assert not CancerSheetChecker([sheet]).run_checks()
 
-def test_cancer_sheet_checker_missing_tumor(sheet_tsv_missing_normal):
+def test_cancer_sheet_checker_missing_normal(sheet_tsv_missing_normal):
     """Tests CancerSheetChecker.run_checks() - patient is missing normal sample"""
     sheet = create_cancer_sheet_object(sheet_tsv=sheet_tsv_missing_normal)
     assert not CancerSheetChecker([sheet]).run_checks()
