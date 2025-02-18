@@ -4,6 +4,7 @@ import os.path
 from pathlib import Path
 import re
 from typing import Iterable, Union
+import typing
 
 import attrs
 from irods.collection import iRODSCollection
@@ -51,6 +52,8 @@ class TransferJob:
 
     #: Number of bytes to transfer (optional).
     bytes: str = attrs.field()
+
+    command: typing.Optional[str] = None
 
     @bytes.default
     def _get_file_size(self):

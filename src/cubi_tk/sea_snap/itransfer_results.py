@@ -16,7 +16,7 @@ import tqdm
 
 from ..common import check_irods_icommands, sizeof_fmt
 from ..snappy.itransfer_common import SnappyItransferCommandBase
-from ..irods_common import TransferJob
+from ..irods_common import TransferJob, iRODSTransfer
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -48,12 +48,12 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
 
-        # parser.add_argument(
-        #     "--num-parallel-transfers",
-        #     type=int,
-        #     default=DEFAULT_NUM_TRANSFERS,
-        #     help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
-        # )
+        parser.add_argument(
+            "--num-parallel-transfers",
+            type=int,
+            default=DEFAULT_NUM_TRANSFERS,
+            help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
+        )
         parser.add_argument(
             "transfer_blueprint",
             type=argparse.FileType("rt"),
@@ -130,6 +130,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                         path_local=source + ext,
                         path_remote=dest + ext,
                         bytes=size,
+                        command = cmd_block.replace(source, source + ext).replace(dest, dest + ext),
                     )
                 )
         return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
@@ -158,15 +159,15 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         )
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            # if self.args.num_parallel_transfers == 0:  # pragma: nocover
-            for job in transfer_jobs:
-                irsync_transfer(job, counter, t)
-            # else:
-            #     pool = ThreadPool(processes=self.args.num_parallel_transfers)
-            #     for job in transfer_jobs:
-            #         pool.apply_async(irsync_transfer, args=(job, counter, t))
-            #     pool.close()
-            #     pool.join()
+            if self.args.num_parallel_transfers == 0:  # pragma: nocover
+                for job in transfer_jobs:
+                    irsync_transfer(job, counter, t)
+            else:
+                pool = ThreadPool(processes=self.args.num_parallel_transfers)
+                for job in transfer_jobs:
+                    pool.apply_async(irsync_transfer, args=(job, counter, t))
+                pool.close()
+                pool.join()
 
         logger.info("All done")
         return None
