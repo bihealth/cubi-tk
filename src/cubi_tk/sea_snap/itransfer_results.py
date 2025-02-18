@@ -15,7 +15,8 @@ from logzero import logger
 import tqdm
 
 from ..common import check_irods_icommands, sizeof_fmt
-from ..snappy.itransfer_common import SnappyItransferCommandBase, TransferJob
+from ..snappy.itransfer_common import SnappyItransferCommandBase
+from ..irods_common import TransferJob
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -47,12 +48,12 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
 
-        parser.add_argument(
-            "--num-parallel-transfers",
-            type=int,
-            default=DEFAULT_NUM_TRANSFERS,
-            help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
-        )
+        # parser.add_argument(
+        #     "--num-parallel-transfers",
+        #     type=int,
+        #     default=DEFAULT_NUM_TRANSFERS,
+        #     help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
+        # )
         parser.add_argument(
             "transfer_blueprint",
             type=argparse.FileType("rt"),
@@ -74,7 +75,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
         pass
 
-    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
+    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[str, tuple[TransferJob, ...]]:
         """Build file transfer jobs."""
         transfer_jobs = []
         bp_mod_time = pathlib.Path(blueprint).stat().st_mtime
@@ -126,13 +127,12 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                     size = 0
                 transfer_jobs.append(
                     TransferJob(
-                        path_src=source + ext,
-                        path_dest=dest + ext,
-                        command=cmd_block.replace(source, source + ext).replace(dest, dest + ext),
+                        path_local=source + ext,
+                        path_remote=dest + ext,
                         bytes=size,
                     )
                 )
-        return tuple(sorted(transfer_jobs))
+        return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
@@ -145,7 +145,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         command_blocks = self.args.transfer_blueprint.read().split(os.linesep + os.linesep)
         transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name)
-        logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        #logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
@@ -158,15 +158,15 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         )
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if self.args.num_parallel_transfers == 0:  # pragma: nocover
-                for job in transfer_jobs:
-                    irsync_transfer(job, counter, t)
-            else:
-                pool = ThreadPool(processes=self.args.num_parallel_transfers)
-                for job in transfer_jobs:
-                    pool.apply_async(irsync_transfer, args=(job, counter, t))
-                pool.close()
-                pool.join()
+            # if self.args.num_parallel_transfers == 0:  # pragma: nocover
+            for job in transfer_jobs:
+                irsync_transfer(job, counter, t)
+            # else:
+            #     pool = ThreadPool(processes=self.args.num_parallel_transfers)
+            #     for job in transfer_jobs:
+            #         pool.apply_async(irsync_transfer, args=(job, counter, t))
+            #     pool.close()
+            #     pool.join()
 
         logger.info("All done")
         return None

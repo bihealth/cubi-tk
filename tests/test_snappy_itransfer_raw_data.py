@@ -46,8 +46,8 @@ def test_run_snappy_itransfer_raw_data_smoke_test(mocker, minimal_config, germli
     argv = [
         "snappy",
         "itransfer-raw-data",
-        "--num-parallel-transfers",
-        "1",
+        # "--num-parallel-transfers",
+        # "1",
         "--base-path",
         fake_base_path,
         "--sodar-api-token",
