@@ -34,7 +34,7 @@ def pull_sheet_config():
         "first_batch": 0,
         "last_batch": None,
         "tsv_shortcut": "germline",
-        "assay_txt": None
+        "assay_uuid": None
     }
     return PullSheetsConfig(**args)
 
