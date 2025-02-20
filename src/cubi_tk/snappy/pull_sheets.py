@@ -187,6 +187,8 @@ def build_sheet(
                     assay = study.assays[remote_assay_uuid]
                     assay_filename = assay.file_name
                     break
+        if(assay_filename == None):
+            logger.error("No assay with UUID %s found", assay_uuid)
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
     if tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline() 
@@ -221,6 +223,8 @@ def run(
     config_path = config.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
     logger.info("Pulling for %d datasets", len(datasets))
+    if(len(datasets) >1 and args.assay_uuid != None):
+        logger.warning("Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID")
     for dataset in datasets.values():
         if dataset.sodar_uuid:
             overwrite_helper(
