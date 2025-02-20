@@ -4,16 +4,74 @@ import io
 import pathlib
 import textwrap
 
-from biomedsheets.io_tsv import read_germline_tsv_sheet
+from biomedsheets.io_tsv import read_germline_tsv_sheet, read_cancer_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
-from biomedsheets.shortcuts import GermlineCaseSheet
+from biomedsheets.shortcuts import GermlineCaseSheet, CancerCaseSheet, CancerCaseSheetOptions
 import pytest
 
-from cubi_tk.snappy.check_local import GermlineSheetChecker, PedFileCheck, VcfFileCheck
+from cubi_tk.snappy.check_local import CancerSheetChecker, GermlineSheetChecker, PedFileCheck, VcfFileCheck
 
+# Test Setup Cancer =============================================================================================
+@pytest.fixture
+def header_sheet_tsv_cancer():
+    """Returns TSV file header"""
+    return """
+        [Metadata]
+        schema\tcancer_matched
+        schema_version\tv1
+
+        [Custom Fields]
+        key\tannotatedEntity\tdocs\ttype\tminimum\tmaximum\tunit\tchoices\tpattern
+        extractionType\ttestSample\textraction type\tstring\t.\t.\t.\t.\t.
+        libraryKit\tngsLibrary\texome enrichment kit\tstring\t.\t.\t.\t.\t.
+
+        [Data]
+        """
 
 @pytest.fixture
-def header_sheet_tsv():
+def sheet_tsv_missing_tumor(header_sheet_tsv_cancer):
+    """Return contents for cancer TSV file"""
+    return textwrap.dedent(
+        f"""
+        {header_sheet_tsv_cancer}patientName\tsampleName\textractionType\tlibraryType\tfolderName\tisTumor\tlibraryKit
+        patient1\tN1\tDNA\tWES\tpatient1-N1-DNA1-WES1\tN\tAgilent SureSelect Human All Exon V8
+        patient2\tN1\tDNA\tWES\tpatient2-N1-DNA1-WES1\tN\tAgilent SureSelect Human All Exon V8
+        patient2\tT1\tDNA\tWES\tpatient2-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        """
+    ).lstrip()
+
+@pytest.fixture
+def sheet_tsv_missing_normal(header_sheet_tsv_cancer):
+    """Return contents for cancer TSV file"""
+    return textwrap.dedent(
+        f"""
+        {header_sheet_tsv_cancer}patientName\tsampleName\textractionType\tlibraryType\tfolderName\tisTumor\tlibraryKit
+        patient1\tN1\tDNA\tWES\tpatient1-N1-DNA1-WES1\tN\tAgilent SureSelect Human All Exon V8
+        patient1\tT1\tDNA\tWES\tpatient1-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        patient2\tT1\tDNA\tWES\tpatient2-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        patient2\tT2\tDNA\tWES\tpatient2-T2-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        """
+    ).lstrip()
+
+def create_cancer_sheet_object(sheet_tsv):
+    """Create Cancer Sheet
+
+    :param sheet_tsv: TSV text for sample sheet.
+    :type sheet_tsv: str
+
+    :return: Returns CancerCaseSheet object with provided sheet tsv text.
+    """
+    # Create dna sample sheet based on germline sheet
+    cancer_sheet_io = io.StringIO(sheet_tsv)
+    options = CancerCaseSheetOptions(allow_missing_normal=True, allow_missing_tumor=True)
+    return CancerCaseSheet(
+        sheet=read_cancer_tsv_sheet(cancer_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID),
+        options=options
+    )
+
+# Test Setup Germline ===========================================================================================
+@pytest.fixture
+def header_sheet_tsv_germline():
     """Returns TSV file header"""
     return """
         [Metadata]
@@ -32,11 +90,11 @@ def header_sheet_tsv():
 
 
 @pytest.fixture
-def sheet_tsv_inconsistent_parent_sex(header_sheet_tsv):
+def sheet_tsv_inconsistent_parent_sex(header_sheet_tsv_germline):
     """Return contents for germline TSV file"""
     return textwrap.dedent(
         f"""
-        {header_sheet_tsv}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
+        {header_sheet_tsv_germline}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
         FAM_index\tindex\tfather\tmother\tM\tY\tWES\tindex\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_index\tfather\t0\t0\tU\tN\tWES\tfather\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_index\tmother\t0\t0\tU\tN\tWES\tmother\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
@@ -45,11 +103,11 @@ def sheet_tsv_inconsistent_parent_sex(header_sheet_tsv):
 
 
 @pytest.fixture
-def sheet_tsv_same_family_id_different_pedigrees(header_sheet_tsv):
+def sheet_tsv_same_family_id_different_pedigrees(header_sheet_tsv_germline):
     """Return contents for germline TSV file"""
     return textwrap.dedent(
         f"""
-        {header_sheet_tsv}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
+        {header_sheet_tsv_germline}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
         FAM_index\tindex\tfather\tmother\tM\tY\tWES\tindex\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_index\tfather\t0\t0\tM\tN\tWES\tfather\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_index\tmother\t0\t0\tF\tN\tWES\tmother\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
@@ -61,11 +119,11 @@ def sheet_tsv_same_family_id_different_pedigrees(header_sheet_tsv):
 
 
 @pytest.fixture
-def sheet_tsv_father_wrong_family_id(header_sheet_tsv):
+def sheet_tsv_father_wrong_family_id(header_sheet_tsv_germline):
     """Return contents for germline TSV file"""
     return textwrap.dedent(
         f"""
-        {header_sheet_tsv}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
+        {header_sheet_tsv_germline}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
         FAM_index\tindex\tfather\tmother\tM\tY\tWES\tindex\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_wrong\tfather\t0\t0\tM\tN\tWES\tfather\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_index\tmother\t0\t0\tF\tN\tWES\tmother\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
@@ -74,11 +132,11 @@ def sheet_tsv_father_wrong_family_id(header_sheet_tsv):
 
 
 @pytest.fixture
-def sheet_tsv_mother_wrong_family_id(header_sheet_tsv):
+def sheet_tsv_mother_wrong_family_id(header_sheet_tsv_germline):
     """Return contents for germline TSV file"""
     return textwrap.dedent(
         f"""
-        {header_sheet_tsv}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
+        {header_sheet_tsv_germline}familyId\tpatientName\tfatherName\tmotherName\tsex\tisAffected\tlibraryType\tfolderName\tbatchNo\thpoTerms\tprojectUuid\tseqPlatform\tlibraryKit
         FAM_index\tindex\tfather\tmother\tM\tY\tWES\tindex\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_index\tfather\t0\t0\tM\tN\tWES\tfather\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         FAM_wrong\tmother\t0\t0\tF\tN\tWES\tmother\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
@@ -100,7 +158,21 @@ def create_germline_sheet_object(sheet_tsv):
         sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     )
 
+# Tests CancerSheetChecker =============================================================================================
 
+def test_cancer_sheet_checker_sanity_check(cancer_sheet_object):
+    """Tests CancerSheetChecker.run_checks() - sanity check, sheet correctly set"""
+    assert CancerSheetChecker([cancer_sheet_object]).run_checks()
+
+def test_cancer_sheet_checker_missing_tumor(sheet_tsv_missing_tumor):
+    """Tests CancerSheetChecker.run_checks() - patient is missing tumor sample"""
+    sheet = create_cancer_sheet_object(sheet_tsv=sheet_tsv_missing_tumor)
+    assert not CancerSheetChecker([sheet]).run_checks()
+
+def test_cancer_sheet_checker_missing_normal(sheet_tsv_missing_normal):
+    """Tests CancerSheetChecker.run_checks() - patient is missing normal sample"""
+    sheet = create_cancer_sheet_object(sheet_tsv=sheet_tsv_missing_normal)
+    assert not CancerSheetChecker([sheet]).run_checks()
 # Tests GermlineSheetChecker ===========================================================================================
 
 

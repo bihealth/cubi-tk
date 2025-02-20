@@ -3,9 +3,9 @@
 import io
 import textwrap
 
-from biomedsheets.io_tsv import read_germline_tsv_sheet
+from biomedsheets.io_tsv import read_germline_tsv_sheet, read_cancer_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
-from biomedsheets.shortcuts import GermlineCaseSheet
+from biomedsheets.shortcuts import GermlineCaseSheet, CancerCaseSheet
 import pytest
 
 
@@ -55,6 +55,29 @@ def germline_trio_sheet_tsv():
         """
     ).lstrip()
 
+@pytest.fixture
+def cancer_sheet_tsv():
+    """Return contents for germline trio plus TSV file"""
+    return textwrap.dedent(
+        """
+        [Metadata]
+        schema\tcancer_matched
+        schema_version\tv1
+
+        [Custom Fields]
+        key\tannotatedEntity\tdocs\ttype\tminimum\tmaximum\tunit\tchoices\tpattern
+        extractionType\ttestSample\textraction type\tstring\t.\t.\t.\t.\t.
+        libraryKit\tngsLibrary\texome enrichment kit\tstring\t.\t.\t.\t.\t.
+
+        [Data]
+        patientName\tsampleName\textractionType\tlibraryType\tfolderName\tisTumor\tlibraryKit
+        patient1\tN1\tDNA\tWES\tpatient1-N1-DNA1-WES1\tN\tAgilent SureSelect Human All Exon V8
+        patient1\tT1\tDNA\tWES\tpatient1-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        patient2\tN1\tDNA\tWES\tpatient2-N1-DNA1-WES1\tN\tAgilent SureSelect Human All Exon V8
+        patient2\tT1\tDNA\tWES\tpatient2-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
+        """
+    ).lstrip()
+
 
 @pytest.fixture
 def germline_trio_sheet_object(germline_trio_sheet_tsv):
@@ -63,6 +86,16 @@ def germline_trio_sheet_object(germline_trio_sheet_tsv):
     germline_sheet_io = io.StringIO(germline_trio_sheet_tsv)
     return GermlineCaseSheet(
         sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
+    )
+
+
+@pytest.fixture
+def cancer_sheet_object(cancer_sheet_tsv):
+    """Returns CancerCaseSheet object with trio cohort."""
+    # Create dna sample sheet based on cancer sheet
+    cancer_sheet_io = io.StringIO(cancer_sheet_tsv)
+    return CancerCaseSheet(
+        sheet=read_cancer_tsv_sheet(cancer_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     )
 
 

@@ -44,7 +44,7 @@ class PullSheetsConfig:
     first_batch: int
     last_batch: typing.Union[int, type(None)]
     tsv_shortcut: str
-    assay_txt:str
+    assay_uuid:str
 
     @staticmethod
     def create(args, global_config, toml_config=None):
@@ -60,7 +60,7 @@ class PullSheetsConfig:
             first_batch=args.first_batch,
             last_batch=args.last_batch,
             tsv_shortcut=args.tsv_shortcut,
-            assay_txt=args.assay_txt
+            assay_uuid=args.assay_uuid
         )
 
 
@@ -137,11 +137,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--assay-txt",
+        "--assay-uuid",
         default=None,
         required=False,
         type=str,
-        help="Assay Name e.g. 'a_project_exome_sequencing.txt' if multiple assays are present",
+        help="Assay UUID for assay if multiple assays are present",
     )
 
 
@@ -163,7 +163,7 @@ def build_sheet(
     first_batch: typing.Optional[int] = None,
     last_batch: typing.Optional[int] = None,
     tsv_shortcut: str = "germline",
-    assay_txt=None
+    assay_uuid=None
 ) -> str:
     """Build sheet TSV file."""
 
@@ -173,7 +173,23 @@ def build_sheet(
         sodar_api_token=config.global_config.sodar_api_token,
         project_uuid=project_uuid,
     )
-    isa = isa_dict_to_isa_data(isa_dict, assay_txt)
+    assay_filename = None
+    if(assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
+        investigation = api.samplesheet.retrieve(
+            sodar_url=config.global_config.sodar_server_url,
+            sodar_api_token=config.global_config.sodar_api_token,
+            project_uuid=project_uuid,
+        )
+        assay = None
+        for study in investigation.studies.values():
+            for remote_assay_uuid in study.assays.keys():
+                if assay_uuid== remote_assay_uuid:
+                    assay = study.assays[remote_assay_uuid]
+                    assay_filename = assay.file_name
+                    break
+        if(assay_filename == None):
+            logger.error("No assay with UUID %s found", assay_uuid)
+    isa = isa_dict_to_isa_data(isa_dict, assay_filename)
     if tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline() 
         builder.set_germline_specific_values(config, project_uuid, first_batch, last_batch)
@@ -207,12 +223,14 @@ def run(
     config_path = config.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
     logger.info("Pulling for %d datasets", len(datasets))
+    if(len(datasets) >1 and args.assay_uuid != None):
+        logger.warning("Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID")
     for dataset in datasets.values():
         if dataset.sodar_uuid:
             overwrite_helper(
                 config_path / dataset.sheet_file,
                 build_sheet(
-                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut, args.assay_txt
+                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut, args.assay_uuid
                 ),
                 do_write=not args.dry_run,
                 show_diff=True,

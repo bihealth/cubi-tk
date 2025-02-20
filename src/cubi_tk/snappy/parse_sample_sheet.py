@@ -528,13 +528,7 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
                 raise Exception("Cannot infer exctraction type from %s" % library.name)
             
             #get sample name for biomedsheet
-            samp_name_string = splitted_lib[-3]
-            if samp_name_string.startswith("T"):
-                sample_name_biomed = "T"
-            elif samp_name_string.startswith("N"):
-                sample_name_biomed = "N"
-            else:
-                raise Exception("Cannot biomed sample name from %s" % library.name)
+            sample_name_biomed = splitted_lib[-3]
             
             folder_name = first_value("Folder name", node_path)
             if not folder_name:
