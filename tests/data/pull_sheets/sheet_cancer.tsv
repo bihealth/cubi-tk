@@ -9,7 +9,7 @@ libraryKit	ngsLibrary	exome enrichment kit	string	.	.	.	.	.
 
 [Data]
 patientName	sampleName	extractionType	libraryType	folderName	isTumor	libraryKit
-patient1	N	DNA	WES	patient1-N1-DNA1-WES1	N	Agilent SureSelect Human All Exon V8
-patient1	T	DNA	WES	patient1-T1-DNA1-WES1	Y	Agilent SureSelect Human All Exon V8
-patient2	N	DNA	WES	patient2-N1-DNA1-WES1	N	Agilent SureSelect Human All Exon V8
-patient2	T	DNA	WES	patient2-T1-DNA1-WES1	Y	Agilent SureSelect Human All Exon V8
+patient1	N1	DNA	WES	patient1-N1-DNA1-WES1	N	Agilent SureSelect Human All Exon V8
+patient1	T1	DNA	WES	patient1-T1-DNA1-WES1	Y	Agilent SureSelect Human All Exon V8
+patient2	N1	DNA	WES	patient2-N1-DNA1-WES1	N	Agilent SureSelect Human All Exon V8
+patient2	T1	DNA	WES	patient2-T1-DNA1-WES1	Y	Agilent SureSelect Human All Exon V8

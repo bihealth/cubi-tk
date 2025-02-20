@@ -82,6 +82,8 @@ def isa_dict_to_isa_data(isa_dict, assay_txt=None):
             with (tmp_path / assay_txt).open("wt") as out_f:
                     out_f.write(tsv["tsv"])
         else:
+            if len(isa_dict["assays"].keys()) > 1:
+                logger.warning("More than one Assay present, maybe specify the assay you need with --assay-uuid")
             for path, tsv in isa_dict["assays"].items():
                 with (tmp_path / path).open("wt") as out_f:
                     out_f.write(tsv["tsv"])
