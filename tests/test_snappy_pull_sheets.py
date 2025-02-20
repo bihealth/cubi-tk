@@ -16,7 +16,7 @@ def load_isa_dict(dictName):
     with open(path, "r") as file:
         return json.load(file)
 
-      
+
 def return_api_investigation_mock():
     investigation = Investigation(
     sodar_uuid="c339b4de-23a9-4cc3-8801-5f65b4739680",
