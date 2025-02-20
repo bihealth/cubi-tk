@@ -3,14 +3,17 @@
 We only run some smoke tests here.
 """
 
+import datetime
 import os
+import re
 from unittest import mock
-from unittest.mock import ANY
+from unittest.mock import ANY, MagicMock, patch
 
 from pyfakefs import fake_filesystem
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
+from cubi_tk.irods_common import TransferJob
 
 from .conftest import my_exists, my_get_sodar_info
 
@@ -40,9 +43,15 @@ def test_run_snappy_itransfer_variant_calling_nothing(capsys):
     assert res.err
 
 
+@patch('cubi_tk.snappy.itransfer_common.iRODSTransfer')
 def test_run_snappy_itransfer_variant_calling_smoke_test(
-    mocker, minimal_config, germline_trio_sheet_tsv
+    mock_transfer, mocker, minimal_config, germline_trio_sheet_tsv
 ):
+    mock_transfer_obj = MagicMock()
+    mock_transfer_obj.size = 1000
+    mock_transfer_obj.put = MagicMock()
+    mock_transfer.return_value = mock_transfer_obj
+
     fake_base_path = "/base/path"
     dest_path = "/irods/dest"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -90,6 +99,17 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     # Print path to all created files
     print("\n".join(fake_file_paths + [sample_sheet_path, config_path]))
 
+    # Create expected transfer jobs
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    sample_name_pattern = re.compile('[^-./]+-N1-DNA1-WES1')
+    expected_tfj = [
+        TransferJob(
+            path_local=f,
+            path_remote=os.path.join('/irods/dest', re.findall(sample_name_pattern, f)[0], 'variant_calling', today, f.split('-WES1/')[1])
+        ) for f in fake_file_paths
+    ]
+    expected_tfj = tuple(sorted(expected_tfj, key=lambda x: x.path_local))
+
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
 
@@ -105,9 +125,6 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_variant_calling.os", fake_os)
 
-    mock_check_output = mock.mock_open()
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
-
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
@@ -119,14 +136,11 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     res = main(argv)
-
     assert not res
-
-    # We do not care about call order but simply test call count and then assert that all files are there which would
-    # be equivalent of comparing sets of files.
+    mock_transfer.assert_called_with(expected_tfj, ask=not args.yes)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
 
     assert fs.exists(fake_file_paths[3])
-
     assert mock_check_call.call_count == 1
     mock_check_call.assert_called_once_with(
         ["md5sum", "bwa.gatk_hc.index-N1-DNA1-WES1.vcf.gz"],
@@ -134,18 +148,3 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
         stdout=ANY,
     )
 
-    assert mock_check_output.call_count == len(fake_file_paths) * 3
-    for path in fake_file_paths:
-        mapper_index, rel_path = os.path.relpath(
-            path, os.path.join(fake_base_path, "variant_calling/output")
-        ).split("/", 1)
-        _mapper, index = mapper_index.rsplit(".", 1)
-        remote_path = os.path.join(
-            dest_path, index, "variant_calling", args.remote_dir_date, rel_path
-        )
-        expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
-        expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
-        expected_ils_argv = ["ils", os.path.dirname(remote_path)]
-        mock_check_output.assert_any_call(expected_mkdir_argv)
-        mock_check_output.assert_any_call(expected_irsync_argv)
-        mock_check_output.assert_any_call(expected_ils_argv, stderr=-2)

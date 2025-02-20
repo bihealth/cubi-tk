@@ -47,7 +47,6 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
 def test_run_snappy_itransfer_ngs_mapping_smoke_test(
     mock_transfer, mocker, germline_trio_sheet_tsv, minimal_config
 ):
-
     mock_transfer_obj = MagicMock()
     mock_transfer_obj.size = 1000
     mock_transfer_obj.put = MagicMock()
@@ -138,7 +137,6 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
     mock_transfer_obj.put.assert_called_with(recursive = True, sync = args.overwrite_remote)
 
     assert fs.exists(fake_file_paths[3])
-
     assert mock_check_call.call_count == 1
     mock_check_call.assert_called_once_with(
         ["md5sum", "bwa.index-N1-DNA1-WES1.log"],

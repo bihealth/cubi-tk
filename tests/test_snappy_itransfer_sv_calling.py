@@ -3,10 +3,12 @@
 We only run some smoke tests here.
 """
 
+import datetime
 import os
+import re
 import textwrap
 from unittest import mock
-from unittest.mock import ANY
+from unittest.mock import ANY, MagicMock, patch
 
 from pyfakefs import fake_filesystem
 import pytest
@@ -16,6 +18,7 @@ from cubi_tk.snappy.itransfer_sv_calling import (
     SnappyItransferSvCallingCommand,
     SnappyStepNotFoundException,
 )
+from cubi_tk.irods_common import TransferJob
 
 from .conftest import my_exists, my_get_sodar_info
 
@@ -154,7 +157,13 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
         SnappyItransferSvCallingCommand(args)
 
 
-def test_run_snappy_itransfer_sv_calling_smoke_test(mocker, germline_trio_sheet_tsv):
+@patch('cubi_tk.snappy.itransfer_common.iRODSTransfer')
+def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germline_trio_sheet_tsv):
+    mock_transfer_obj = MagicMock()
+    mock_transfer_obj.size = 1000
+    mock_transfer_obj.put = MagicMock()
+    mock_transfer.return_value = mock_transfer_obj
+
     fake_base_path = "/base/path"
     dest_path = "/irods/dest"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -203,6 +212,18 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mocker, germline_trio_sheet_
     print(fake_config())
     print("\n".join(fake_file_paths + [sample_sheet_path, config_path]))
 
+    # Create expected transfer jobs
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    sample_name_pattern = re.compile('[^-./]+-N1-DNA1-WES1')
+    expected_tfj = [
+        TransferJob(
+            path_local=f,
+            path_remote=os.path.join('/irods/dest', re.findall(sample_name_pattern, f)[0], 'sv_calling_targeted', today, f.split('-WES1/')[1])
+        ) for f in fake_file_paths
+    ]
+    expected_manta = tuple(sorted([t for t in expected_tfj if 'manta' in t.path_local], key=lambda x: x.path_local))
+    expected_gcnv = tuple(sorted([t for t in expected_tfj if 'gcnv' in t.path_local], key=lambda x: x.path_local))
+
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
 
@@ -218,9 +239,6 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mocker, germline_trio_sheet_
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_variant_calling.os", fake_os)
 
-    mock_check_output = mock.mock_open()
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
-
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_sv_calling.open", fake_open)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
@@ -233,33 +251,19 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mocker, germline_trio_sheet_
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     res = main(argv)
-
     assert not res
+    assert mock_transfer.call_count == 2
+    # No easy way to check two calls
+    # mock_transfer.assert_called_with(expected_gcnv, ask=not args.yes)
+    mock_transfer.assert_called_with(expected_manta, ask=not args.yes)
+    assert mock_transfer_obj.put.call_count == 2
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
 
-    # We do not care about call order but simply test call count and then assert that all files are there which would
-    # be equivalent of comparing sets of files.
 
     assert fs.exists(fake_file_paths[3])
-
     assert mock_check_call.call_count == 1
     mock_check_call.assert_called_once_with(
         ["md5sum", "bwa_mem2.gcnv.index-N1-DNA1-WES1.vcf.gz"],
         cwd=os.path.dirname(fake_file_paths[3]),
         stdout=ANY,
     )
-
-    assert mock_check_output.call_count == len(fake_file_paths) * 3
-    for path in fake_file_paths:
-        mapper_index, rel_path = os.path.relpath(
-            path, os.path.join(fake_base_path, "sv_calling_targeted/output")
-        ).split("/", 1)
-        _mapper, index = mapper_index.rsplit(".", 1)
-        remote_path = os.path.join(
-            dest_path, index, "sv_calling_targeted", args.remote_dir_date, rel_path
-        )
-        expected_mkdir_argv = ["imkdir", "-p", os.path.dirname(remote_path)]
-        expected_irsync_argv = ["irsync", "-a", "-K", path, "i:%s" % remote_path]
-        expected_ils_argv = ["ils", os.path.dirname(remote_path)]
-        mock_check_output.assert_any_call(expected_mkdir_argv)
-        mock_check_output.assert_any_call(expected_irsync_argv)
-        mock_check_output.assert_any_call(expected_ils_argv, stderr=-2)
