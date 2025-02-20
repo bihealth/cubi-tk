@@ -15,7 +15,7 @@ from cubi_tk.__main__ import main, setup_argparse
 from .conftest import my_exists, my_get_sodar_info
 
 
-def test_run_snappy_itransfer_ngs_mapping_help(capsys):
+def test_run_snappy_itransfer_step_help(capsys):
     parser, subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["snappy", "itransfer-step", "--help"])
@@ -27,7 +27,7 @@ def test_run_snappy_itransfer_ngs_mapping_help(capsys):
     assert not res.err
 
 
-def test_run_snappy_itransfer_ngs_mapping_nostep(capsys):
+def test_run_snappy_itransfer_step_nostep(capsys):
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = ["snappy", "itransfer-step", "--sodar-api-token", "XXXX", sodar_uuid, "--tool", "bwa"]
 
@@ -37,7 +37,7 @@ def test_run_snappy_itransfer_ngs_mapping_nostep(capsys):
     assert res == 1
 
 
-def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
+def test_run_snappy_itransfer_step_nothing(capsys):
     parser, subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
@@ -50,7 +50,7 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
     assert res.err
 
 
-def test_run_snappy_itransfer_ngs_mapping_smoke_test(
+def test_run_snappy_itransfer_step_smoke_test(
     mocker, germline_trio_sheet_tsv, minimal_config
 ):
     fake_base_path = "/base/path"

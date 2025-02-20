@@ -53,8 +53,6 @@ class TransferJob:
     #: Number of bytes to transfer (optional).
     bytes: str = attrs.field()
 
-    command: typing.Optional[str] = None
-
     @bytes.default
     def _get_file_size(self):
         try:

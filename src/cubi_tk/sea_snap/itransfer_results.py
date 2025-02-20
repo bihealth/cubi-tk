@@ -47,13 +47,17 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
         parser.add_argument(
-            "--num-parallel-transfers",
-            type=int,
-            default=DEFAULT_NUM_TRANSFERS,
-            help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
+            "--overwrite-remote",
+            action="store_true",
+            help="Overwrite remote files if they exist, otherwise re-upload will be skipped.",
         )
+        # parser.add_argument(
+        #     "--num-parallel-transfers",
+        #     type=int,
+        #     default=DEFAULT_NUM_TRANSFERS,
+        #     help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
+        # )
         parser.add_argument(
             "transfer_blueprint",
             type=argparse.FileType("rt"),
@@ -66,9 +70,9 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
-        # Check presence of icommands when not testing.
-        if "pytest" not in sys.modules:  # pragma: nocover
-            check_irods_icommands(warn_only=False)
+        # # Check presence of icommands when not testing.
+        # if "pytest" not in sys.modules:  # pragma: nocover
+        #     check_irods_icommands(warn_only=False)
 
         return 0
 
@@ -121,16 +125,16 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                 )
 
             for ext in ("", ".md5"):
-                try:
-                    size = os.path.getsize(source + ext)
-                except OSError:  # pragma: nocover
-                    size = 0
+                # try:
+                #     size = os.path.getsize(source + ext)
+                # except OSError:  # pragma: nocover
+                #     size = 0
                 transfer_jobs.append(
                     TransferJob(
                         path_local=source + ext,
                         path_remote=dest + ext,
-                        bytes=size,
-                        command = cmd_block.replace(source, source + ext).replace(dest, dest + ext),
+                        #bytes=size,
+                        #command = cmd_block.replace(source, source + ext).replace(dest, dest + ext),
                     )
                 )
         return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
@@ -151,25 +155,35 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
 
-        total_bytes = sum([job.bytes for job in transfer_jobs])
-        logger.info(
-            "Transferring %d files with a total size of %s",
-            len(transfer_jobs),
-            sizeof_fmt(total_bytes),
-        )
-        counter = Value(c_ulonglong, 0)
-        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if self.args.num_parallel_transfers == 0:  # pragma: nocover
-                for job in transfer_jobs:
-                    irsync_transfer(job, counter, t)
-            else:
-                pool = ThreadPool(processes=self.args.num_parallel_transfers)
-                for job in transfer_jobs:
-                    pool.apply_async(irsync_transfer, args=(job, counter, t))
-                pool.close()
-                pool.join()
+        # Final go from user & transfer
+        itransfer = iRODSTransfer(transfer_jobs, ask=False)
+        logger.info("Will transfer the following files:")
+        for job in transfer_jobs:
+            output_logger.info(job.path_local)
+        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
-        logger.info("All done")
+        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
+        logger.info("File transfer complete.")
+
+        # total_bytes = sum([job.bytes for job in transfer_jobs])
+        # logger.info(
+        #     "Transferring %d files with a total size of %s",
+        #     len(transfer_jobs),
+        #     sizeof_fmt(total_bytes),
+        # )
+        # counter = Value(c_ulonglong, 0)
+        # with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
+        #     if self.args.num_parallel_transfers == 0:  # pragma: nocover
+        #         for job in transfer_jobs:
+        #             irsync_transfer(job, counter, t)
+        #     else:
+        #         pool = ThreadPool(processes=self.args.num_parallel_transfers)
+        #         for job in transfer_jobs:
+        #             pool.apply_async(irsync_transfer, args=(job, counter, t))
+        #         pool.close()
+        #         pool.join()
+        #
+        # logger.info("All done")
         return None
 
 
@@ -178,26 +192,26 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     return SeasnapItransferMappingResultsCommand.setup_argparse(parser)
 
 
-def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
-    """Perform one piece of work and update the global counter."""
-    if job.command:
-        commands = job.command.split(os.linesep)
-    else:
-        msg = "Command attribute of TransferJob not set."
-        logger.error(msg)
-        raise ValueError(msg)
-
-    for cmd in commands:
-        logger.debug("Running command: %s", cmd)
-        try:
-            check_output(cmd, shell=True)
-        except SubprocessError as e:  # pragma: nocover
-            logger.error("Problem executing irsync: %e", e)
-            raise
-
-    with counter.get_lock():
-        counter.value = job.bytes
-        try:
-            t.update(counter.value)
-        except TypeError:
-            pass  # swallow, pyfakefs and multiprocessing don't lik each other
+# def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
+#     """Perform one piece of work and update the global counter."""
+#     if job.command:
+#         commands = job.command.split(os.linesep)
+#     else:
+#         msg = "Command attribute of TransferJob not set."
+#         logger.error(msg)
+#         raise ValueError(msg)
+#
+#     for cmd in commands:
+#         logger.debug("Running command: %s", cmd)
+#         try:
+#             check_output(cmd, shell=True)
+#         except SubprocessError as e:  # pragma: nocover
+#             logger.error("Problem executing irsync: %e", e)
+#             raise
+#
+#     with counter.get_lock():
+#         counter.value = job.bytes
+#         try:
+#             t.update(counter.value)
+#         except TypeError:
+#             pass  # swallow, pyfakefs and multiprocessing don't lik each other

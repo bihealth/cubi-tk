@@ -597,10 +597,10 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         total_bytes = sum([os.path.getsize(j.path_local[: -len(".md5")]) for j in todo_jobs])
         logger.info(
-            "Computing MD5 sums for %s files of %s", # with up to %d processes",
+            "Computing MD5 sums for %s files of %s with up to %d processes",
             len(todo_jobs),
             sizeof_fmt(total_bytes),
-            # self.args.num_parallel_transfers,
+            parallel_jobs,
         )
         logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_local, todo_jobs)))
         counter = Value(c_ulonglong, 0)
