@@ -54,6 +54,8 @@ class LibraryInfoCollector(IsaNodeVisitor):
         #: Sample by sample name.
         self.samples = {}
 
+        self.prev_process = None
+
     def on_visit_material(self, material, node_path, study=None, assay=None):
         super().on_visit_material(material, node_path, study, assay)
         material_path = [x for x in node_path if hasattr(x, "type")]
@@ -67,7 +69,10 @@ class LibraryInfoCollector(IsaNodeVisitor):
             self.sources[material.name]["batch_no"] = batch.value[0] if batch else None
             family = characteristics.get("Family", comments.get("Family"))
             self.sources[material.name]["family"] = family.value[0] if family else None
-        elif material.type == "Library Name":
+        elif material.type == "Library Name" or(
+            material.type == "Extract Name"
+            and self.prev_process.protocol_ref.startswith("Library construction")
+        ):
             library = material
             sample = material_path[0]
             folder = first_value("Folder name", node_path)
@@ -78,6 +83,9 @@ class LibraryInfoCollector(IsaNodeVisitor):
                 "library_name": library.name,
                 "folder_name": folder,
             }
+    def on_visit_process(self, process, node_path, study=None, assay=None):
+        super().on_visit_process(process, study, assay)
+        self.prev_process = process
 
 
 class PullRawDataCommand:
