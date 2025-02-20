@@ -455,7 +455,9 @@ def test_collect_sample_data(
     for i in [3, 10, 12, 17]:
         arg_list2[i] = arg_list2[i].replace("_", "-")
     arg_list2 += ["--snappy-compatible"]
-    pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list, snappy_compatible=True), expected)
+    pd.testing.assert_frame_equal(
+        run_usc_collect_sampledata(arg_list, snappy_compatible=True), expected
+    )
 
     # - --ped and -s (same samples)
     arg_list += ["-p", "mv_samples.ped"]
@@ -624,7 +626,6 @@ def test_update_isa_table(UCS_class_object, caplog):
 @patch("cubi_tk.sodar.update_samplesheet.SodarAPI.upload_ISA_samplesheet")
 @patch("cubi_tk.sodar.update_samplesheet.SodarAPI._api_call")
 def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
-
     # restrict to 1 sample, match cols to ISA
     sample_df = sample_df.iloc[0:1, :]
     sample_df.columns = [
@@ -640,7 +641,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         "Parameter Value[Barcode name]",
         "Sample Name",
         "Extract Name",
-        "Library Name"
+        "Library Name",
     ]
 
     parser = argparse.ArgumentParser()
@@ -651,70 +652,93 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
 
     # Build expected content of to-be-uploaded files
     expected_i = MV_isa_json["investigation"]["tsv"]
-    study_tsv = MV_isa_json["studies"]["s_modellvorhaben_rare_diseases.txt"]['tsv']
-    assay_tsv = MV_isa_json["assays"]["a_modellvorhaben_rare_diseases_genome_sequencing.txt"]['tsv']
+    study_tsv = MV_isa_json["studies"]["s_modellvorhaben_rare_diseases.txt"]["tsv"]
+    assay_tsv = MV_isa_json["assays"]["a_modellvorhaben_rare_diseases_genome_sequencing.txt"]["tsv"]
     start_s = pd.read_csv(StringIO(study_tsv), sep="\t", dtype=str)
     start_a = pd.read_csv(StringIO(assay_tsv), sep="\t", dtype=str)
 
-    expected_s = pd.concat(
-        [start_s, sample_df.iloc[:, [0, 1, 2, 3, 4, 5, 10]]],
-        ignore_index=True
+    expected_s = pd.concat([start_s, sample_df.iloc[:, [0, 1, 2, 3, 4, 5, 10]]], ignore_index=True)
+    expected_s["Protocol REF"] = "Sample collection"
+    expected_s = expected_s.to_csv(
+        sep="\t", index=False, header=study_tsv.split("\n")[0].split("\t")
     )
-    expected_s['Protocol REF'] = 'Sample collection'
-    expected_s = expected_s.to_csv(sep="\t", index=False, header=study_tsv.split("\n")[0].split("\t"))
 
-    expected_a = pd.concat(
-        [start_a, sample_df.iloc[:, [10, 11, 12]]],
-        ignore_index=True
+    expected_a = pd.concat([start_a, sample_df.iloc[:, [10, 11, 12]]], ignore_index=True)
+    expected_a["Protocol REF"] = "Nucleic acid extraction WGS"
+    expected_a["Protocol REF.1"] = "Library construction WGS"
+    expected_a["Protocol REF.2"] = "Nucleic acid sequencing WGS"
+    expected_a = expected_a.to_csv(
+        sep="\t", index=False, header=assay_tsv.split("\n")[0].split("\t")
     )
-    expected_a['Protocol REF'] = 'Nucleic acid extraction WGS'
-    expected_a['Protocol REF.1'] = 'Library construction WGS'
-    expected_a['Protocol REF.2'] = 'Nucleic acid sequencing WGS'
-    expected_a = expected_a.to_csv(sep="\t", index=False, header=assay_tsv.split("\n")[0].split("\t"))
 
     # Test germlinesheet default
-    args = parser.parse_args([
-        "--sodar-api-token", "1234",
-        "--sodar-url", "https://sodar.bihealth.org/",
-        "-s", "FAM_01", "Ana_01", "0", "0", "male", "affected",
-        "--no-autofill",
-        "123e4567-e89b-12d3-a456-426655440000"
-    ])
+    args = parser.parse_args(
+        [
+            "--sodar-api-token",
+            "1234",
+            "--sodar-url",
+            "https://sodar.bihealth.org/",
+            "-s",
+            "FAM_01",
+            "Ana_01",
+            "0",
+            "0",
+            "male",
+            "affected",
+            "--no-autofill",
+            "123e4567-e89b-12d3-a456-426655440000",
+        ]
+    )
     UpdateSamplesheetCommand(args).execute()
     mock_upload_isa.assert_called_with(
-        ('i_Investigation.txt', expected_i),
+        ("i_Investigation.txt", expected_i),
         ("s_modellvorhaben_rare_diseases.txt", expected_s),
         ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
     )
 
     # Test MV default
     expected_s = pd.concat(
-        [start_s, sample_df.iloc[:, [0, 1, 2, 3, 4, 5, 6, 7, 10]]],
-        ignore_index=True
+        [start_s, sample_df.iloc[:, [0, 1, 2, 3, 4, 5, 6, 7, 10]]], ignore_index=True
     )
-    expected_s['Protocol REF'] = 'Sample collection'
-    expected_s = expected_s.to_csv(sep="\t", index=False, header=study_tsv.split("\n")[0].split("\t"))
-
-    expected_a = pd.concat(
-        [start_a, sample_df.iloc[:, [8, 9, 10, 11, 12]]],
-        ignore_index=True
+    expected_s["Protocol REF"] = "Sample collection"
+    expected_s = expected_s.to_csv(
+        sep="\t", index=False, header=study_tsv.split("\n")[0].split("\t")
     )
-    expected_a['Protocol REF'] = 'Nucleic acid extraction WGS'
-    expected_a['Protocol REF.1'] = 'Library construction WGS'
-    expected_a['Protocol REF.2'] = 'Nucleic acid sequencing WGS'
-    expected_a = expected_a.to_csv(sep="\t", index=False, header=assay_tsv.split("\n")[0].split("\t"))
 
-    args = parser.parse_args([
-        "--sodar-api-token", "1234",
-        "--sodar-url", "https://sodar.bihealth.org/",
-        "-d", "MV",
-        "-s", "FAM_01", "Ana_01", "0", "0", "male", "affected", "Ind_01", "Probe_01", "ATCG", "A1",
-        "--no-autofill",
-        "123e4567-e89b-12d3-a456-426655440000"
-    ])
+    expected_a = pd.concat([start_a, sample_df.iloc[:, [8, 9, 10, 11, 12]]], ignore_index=True)
+    expected_a["Protocol REF"] = "Nucleic acid extraction WGS"
+    expected_a["Protocol REF.1"] = "Library construction WGS"
+    expected_a["Protocol REF.2"] = "Nucleic acid sequencing WGS"
+    expected_a = expected_a.to_csv(
+        sep="\t", index=False, header=assay_tsv.split("\n")[0].split("\t")
+    )
+
+    args = parser.parse_args(
+        [
+            "--sodar-api-token",
+            "1234",
+            "--sodar-url",
+            "https://sodar.bihealth.org/",
+            "-d",
+            "MV",
+            "-s",
+            "FAM_01",
+            "Ana_01",
+            "0",
+            "0",
+            "male",
+            "affected",
+            "Ind_01",
+            "Probe_01",
+            "ATCG",
+            "A1",
+            "--no-autofill",
+            "123e4567-e89b-12d3-a456-426655440000",
+        ]
+    )
     UpdateSamplesheetCommand(args).execute()
     mock_upload_isa.assert_called_with(
-        ('i_Investigation.txt', expected_i),
+        ("i_Investigation.txt", expected_i),
         ("s_modellvorhaben_rare_diseases.txt", expected_s),
         ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
     )

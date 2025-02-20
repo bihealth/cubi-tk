@@ -1,13 +1,15 @@
 """``cubi-tk sea-snap itransfer-ngs-mapping``: transfer ngs_mapping results into iRODS landing zone."""
 
 import argparse
+import attr
 from ctypes import c_ulonglong
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 import os
 import pathlib
 import re
-from subprocess import SubprocessError, check_output
+from subprocess import STDOUT, SubprocessError, check_call, check_output
+from retrying import retry
 import sys
 import typing
 
@@ -16,10 +18,61 @@ import tqdm
 
 from ..common import check_irods_icommands, sizeof_fmt
 from ..snappy.itransfer_common import SnappyItransferCommandBase
-from ..irods_common import TransferJob, iRODSTransfer
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
+
+@attr.s(frozen=True, auto_attribs=True)
+class TransferJob:
+    """Encodes a transfer job from the local file system to the remote iRODS collection."""
+
+    #: Source path.
+    path_src: str
+
+    #: Destination path.
+    path_dest: str
+
+    #: Number of bytes to transfer.
+    bytes: int
+
+    command: typing.Optional[str] = None
+
+    def to_oneline(self):
+        return "%s -> %s (%s) [%s]" % (self.path_src, self.path_dest, self.bytes, self.command)
+
+
+@retry(wait_fixed=1000, stop_max_attempt_number=5)
+def _wait_until_ils_succeeds(path):
+    check_output(["ils", path], stderr=STDOUT)
+
+
+@retry(wait_fixed=1000, stop_max_attempt_number=5)
+def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
+    """Perform one piece of work and update the global counter."""
+    mkdir_argv = ["imkdir", "-p", os.path.dirname(job.path_dest)]
+    logger.debug("Creating directory when necessary: %s", " ".join(mkdir_argv))
+    try:
+        check_output(mkdir_argv)
+    except SubprocessError as e:  # pragma: nocover
+        logger.error("Problem executing imkdir: %s (probably retrying)", e)
+        raise
+
+    _wait_until_ils_succeeds(os.path.dirname(job.path_dest))
+
+    irsync_argv = ["irsync", "-a", "-K", job.path_src, "i:%s" % job.path_dest]
+    logger.debug("Transferring file: %s", " ".join(irsync_argv))
+    try:
+        check_output(irsync_argv)
+    except SubprocessError as e:  # pragma: nocover
+        logger.error("Problem executing irsync: %s (probably retrying)", e)
+        raise
+
+    with counter.get_lock():
+        counter.value = job.bytes
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other
 
 
 class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
@@ -47,17 +100,13 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
+
         parser.add_argument(
-            "--overwrite-remote",
-            action="store_true",
-            help="Overwrite remote files if they exist, otherwise re-upload will be skipped.",
+            "--num-parallel-transfers",
+            type=int,
+            default=DEFAULT_NUM_TRANSFERS,
+            help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
         )
-        # parser.add_argument(
-        #     "--num-parallel-transfers",
-        #     type=int,
-        #     default=DEFAULT_NUM_TRANSFERS,
-        #     help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
-        # )
         parser.add_argument(
             "transfer_blueprint",
             type=argparse.FileType("rt"),
@@ -70,16 +119,16 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
-        # # Check presence of icommands when not testing.
-        # if "pytest" not in sys.modules:  # pragma: nocover
-        #     check_irods_icommands(warn_only=False)
+        # Check presence of icommands when not testing.
+        if "pytest" not in sys.modules:  # pragma: nocover
+            check_irods_icommands(warn_only=False)
 
         return 0
 
     def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
         pass
 
-    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[str, tuple[TransferJob, ...]]:
+    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
         bp_mod_time = pathlib.Path(blueprint).stat().st_mtime
@@ -125,19 +174,19 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                 )
 
             for ext in ("", ".md5"):
-                # try:
-                #     size = os.path.getsize(source + ext)
-                # except OSError:  # pragma: nocover
-                #     size = 0
+                try:
+                    size = os.path.getsize(source + ext)
+                except OSError:  # pragma: nocover
+                    size = 0
                 transfer_jobs.append(
                     TransferJob(
-                        path_local=source + ext,
-                        path_remote=dest + ext,
-                        #bytes=size,
-                        #command = cmd_block.replace(source, source + ext).replace(dest, dest + ext),
+                        path_src=source + ext,
+                        path_dest=dest + ext,
+                        command=cmd_block.replace(source, source + ext).replace(dest, dest + ext),
+                        bytes=size,
                     )
                 )
-        return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
+        return tuple(sorted(transfer_jobs))
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
@@ -150,41 +199,75 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         command_blocks = self.args.transfer_blueprint.read().split(os.linesep + os.linesep)
         transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name)
-        #logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
 
-        # Final go from user & transfer
-        itransfer = iRODSTransfer(transfer_jobs, ask=False)
-        logger.info("Will transfer the following files:")
-        for job in transfer_jobs:
-            output_logger.info(job.path_local)
-        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
+        total_bytes = sum([job.bytes for job in transfer_jobs])
+        logger.info(
+            "Transferring %d files with a total size of %s",
+            len(transfer_jobs),
+            sizeof_fmt(total_bytes),
+        )
+        counter = Value(c_ulonglong, 0)
+        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
+            if self.args.num_parallel_transfers == 0:  # pragma: nocover
+                for job in transfer_jobs:
+                    irsync_transfer(job, counter, t)
+            else:
+                pool = ThreadPool(processes=self.args.num_parallel_transfers)
+                for job in transfer_jobs:
+                    pool.apply_async(irsync_transfer, args=(job, counter, t))
+                pool.close()
+                pool.join()
 
-        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
-        logger.info("File transfer complete.")
-
-        # total_bytes = sum([job.bytes for job in transfer_jobs])
-        # logger.info(
-        #     "Transferring %d files with a total size of %s",
-        #     len(transfer_jobs),
-        #     sizeof_fmt(total_bytes),
-        # )
-        # counter = Value(c_ulonglong, 0)
-        # with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-        #     if self.args.num_parallel_transfers == 0:  # pragma: nocover
-        #         for job in transfer_jobs:
-        #             irsync_transfer(job, counter, t)
-        #     else:
-        #         pool = ThreadPool(processes=self.args.num_parallel_transfers)
-        #         for job in transfer_jobs:
-        #             pool.apply_async(irsync_transfer, args=(job, counter, t))
-        #         pool.close()
-        #         pool.join()
-        #
-        # logger.info("All done")
+        logger.info("All done")
         return None
+
+    def _execute_md5_files_fix(
+            self, transfer_jobs: typing.Tuple[TransferJob, ...]
+    ) -> typing.Tuple[TransferJob, ...]:
+        """Create missing MD5 files."""
+        ok_jobs = []
+        todo_jobs = []
+        for job in transfer_jobs:
+            if not os.path.exists(job.path_src):
+                todo_jobs.append(job)
+            else:
+                ok_jobs.append(job)
+
+        total_bytes = sum([os.path.getsize(j.path_src[: -len(".md5")]) for j in todo_jobs])
+        logger.info(
+            "Computing MD5 sums for %s files of %s with up to %d processes",
+            len(todo_jobs),
+            sizeof_fmt(total_bytes),
+            self.args.num_parallel_transfers,
+        )
+        logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_src, todo_jobs)))
+        counter = Value(c_ulonglong, 0)
+        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
+            if self.args.num_parallel_transfers == 0:  # pragma: nocover
+                for job in todo_jobs:
+                    compute_md5sum(job, counter, t)
+            else:
+                pool = ThreadPool(processes=self.args.num_parallel_transfers)
+                for job in todo_jobs:
+                    pool.apply_async(compute_md5sum, args=(job, counter, t))
+                pool.close()
+                pool.join()
+
+        # Finally, determine file sizes after done.
+        done_jobs = [
+            TransferJob(
+                path_src=j.path_src,
+                path_dest=j.path_dest,
+                bytes=os.path.getsize(j.path_src),
+                command=j.command,
+            )
+            for j in todo_jobs
+        ]
+        return tuple(sorted(done_jobs + ok_jobs))
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
@@ -192,26 +275,29 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     return SeasnapItransferMappingResultsCommand.setup_argparse(parser)
 
 
-# def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
-#     """Perform one piece of work and update the global counter."""
-#     if job.command:
-#         commands = job.command.split(os.linesep)
-#     else:
-#         msg = "Command attribute of TransferJob not set."
-#         logger.error(msg)
-#         raise ValueError(msg)
-#
-#     for cmd in commands:
-#         logger.debug("Running command: %s", cmd)
-#         try:
-#             check_output(cmd, shell=True)
-#         except SubprocessError as e:  # pragma: nocover
-#             logger.error("Problem executing irsync: %e", e)
-#             raise
-#
-#     with counter.get_lock():
-#         counter.value = job.bytes
-#         try:
-#             t.update(counter.value)
-#         except TypeError:
-#             pass  # swallow, pyfakefs and multiprocessing don't lik each other
+def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
+    """Compute MD5 sum with ``md5sum`` command."""
+    dirname = os.path.dirname(job.path_src)
+    filename = os.path.basename(job.path_src)[: -len(".md5")]
+    path_md5 = job.path_src
+
+    md5sum_argv = ["md5sum", filename]
+    logger.debug("Computing MD5sum %s > %s", " ".join(md5sum_argv), filename + ".md5")
+    try:
+        with open(path_md5, "wt") as md5f:
+            check_call(md5sum_argv, cwd=dirname, stdout=md5f)
+    except SubprocessError as e:  # pragma: nocover
+        logger.error("Problem executing md5sum: %s", e)
+        logger.info("Removing file after error: %s", path_md5)
+        try:
+            os.remove(path_md5)
+        except OSError as e_rm:  # pragma: nocover
+            logger.error("Could not remove file: %s", e_rm)
+        raise e
+
+    with counter.get_lock():
+        counter.value = os.path.getsize(job.path_src[: -len(".md5")])
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other

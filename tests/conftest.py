@@ -65,6 +65,7 @@ def germline_trio_sheet_object(germline_trio_sheet_tsv):
         sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     )
 
+
 @pytest.fixture
 def mock_toml_config():
     return textwrap.dedent(
@@ -74,7 +75,6 @@ def mock_toml_config():
         sodar_api_token = "token123"
         """
     ).lstrip()
-
 
 
 def my_exists(self):

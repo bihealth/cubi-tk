@@ -33,59 +33,6 @@ output_logger = logzero.setup_logger(formatter=formatter)
 DEFAULT_NUM_TRANSFERS = 8
 
 
-# @attr.s(frozen=True, auto_attribs=True)
-# class TransferJob:
-#     """Encodes a transfer job from the local file system to the remote iRODS collection."""
-#
-#     #: Source path.
-#     path_src: str
-#
-#     #: Destination path.
-#     path_dest: str
-#
-#     #: Number of bytes to transfer.
-#     bytes: int
-#
-#     command: typing.Optional[str] = None
-#
-#     def to_oneline(self):
-#         return "%s -> %s (%s) [%s]" % (self.path_src, self.path_dest, self.bytes, self.command)
-
-
-# @retry(wait_fixed=1000, stop_max_attempt_number=5)
-# def _wait_until_ils_succeeds(path):
-#     check_output(["ils", path], stderr=STDOUT)
-#
-#
-# @retry(wait_fixed=1000, stop_max_attempt_number=5)
-# def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
-#     """Perform one piece of work and update the global counter."""
-#     mkdir_argv = ["imkdir", "-p", os.path.dirname(job.path_dest)]
-#     logger.debug("Creating directory when necessary: %s", " ".join(mkdir_argv))
-#     try:
-#         check_output(mkdir_argv)
-#     except SubprocessError as e:  # pragma: nocover
-#         logger.error("Problem executing imkdir: %s (probably retrying)", e)
-#         raise
-#
-#     _wait_until_ils_succeeds(os.path.dirname(job.path_dest))
-#
-#     irsync_argv = ["irsync", "-a", "-K", job.path_src, "i:%s" % job.path_dest]
-#     logger.debug("Transferring file: %s", " ".join(irsync_argv))
-#     try:
-#         check_output(irsync_argv)
-#     except SubprocessError as e:  # pragma: nocover
-#         logger.error("Problem executing irsync: %s (probably retrying)", e)
-#         raise
-#
-#     with counter.get_lock():
-#         counter.value = job.bytes
-#         try:
-#             t.update(counter.value)
-#         except TypeError:
-#             pass  # swallow, pyfakefs and multiprocessing don't lik each other
-
-
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     _ = args
@@ -270,15 +217,10 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 ):  # pragma: nocover
                     raise MissingFileException("Missing file %s" % (real_result + ".md5"))
                 for ext in ("", ".md5"):
-                    # try:
-                    #     size = os.path.getsize(real_result + ext)
-                    # except OSError:  # pragma: nocover
-                    #     size = 0
                     transfer_jobs.append(
                         TransferJob(
                             path_local=real_result + ext,
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
-                            # bytes=size,
                         )
                     )
         return lz_uuid, tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
@@ -620,8 +562,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             TransferJob(
                 path_local=j.path_local,
                 path_remote=j.path_remote,
-                # bytes=os.path.getsize(j.path_src),
-                # command=j.command,
             )
             for j in todo_jobs
         ]
@@ -669,33 +609,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             output_logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
-        ## This check didn't exist before
-        # if not self.args.yes:
-        #     if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-        #         logger.info("Aborting at your request.")
-        #         sys.exit(0)
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
         itransfer.put(recursive=True, sync=self.args.overwrite_remote)
         logger.info("File transfer complete.")
-
-
-        # total_bytes = sum([job.bytes for job in transfer_jobs])
-        # logger.info(
-        #     "Transferring %d files with a total size of %s",
-        #     len(transfer_jobs),
-        #     sizeof_fmt(total_bytes),
-        # )
-        # counter = Value(c_ulonglong, 0)
-        # with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-        #     if self.args.num_parallel_transfers == 0:  # pragma: nocover
-        #         for job in transfer_jobs:
-        #             irsync_transfer(job, counter, t)
-        #     else:
-        #         pool = ThreadPool(processes=self.args.num_parallel_transfers)
-        #         for job in transfer_jobs:
-        #             pool.apply_async(irsync_transfer, args=(job, counter, t))
-        #         pool.close()
-        #         pool.join()
 
         # Validate and move transferred files
         # Behaviour: If flag is True and lz uuid is not None*,
@@ -768,16 +684,6 @@ class IndexLibrariesOnlyMixin:
                     continue
             logger.debug("Processing NGS library for donor %s", donor.name)
             yield donor.dna_ngs_library.name
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class FileWithSize:
-    """Pair of path with size."""
-
-    #: Path to file.
-    path: str
-    #: File size.
-    bytes: int
 
 
 def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:

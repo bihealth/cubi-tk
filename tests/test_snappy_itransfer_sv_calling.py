@@ -157,7 +157,7 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
         SnappyItransferSvCallingCommand(args)
 
 
-@patch('cubi_tk.snappy.itransfer_common.iRODSTransfer')
+@patch("cubi_tk.snappy.itransfer_common.iRODSTransfer")
 def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germline_trio_sheet_tsv):
     mock_transfer_obj = MagicMock()
     mock_transfer_obj.size = 1000
@@ -165,7 +165,6 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     mock_transfer.return_value = mock_transfer_obj
 
     fake_base_path = "/base/path"
-    dest_path = "/irods/dest"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "--verbose",
@@ -214,15 +213,26 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
 
     # Create expected transfer jobs
     today = datetime.date.today().strftime("%Y-%m-%d")
-    sample_name_pattern = re.compile('[^-./]+-N1-DNA1-WES1')
+    sample_name_pattern = re.compile("[^-./]+-N1-DNA1-WES1")
     expected_tfj = [
         TransferJob(
             path_local=f,
-            path_remote=os.path.join('/irods/dest', re.findall(sample_name_pattern, f)[0], 'sv_calling_targeted', today, f.split('-WES1/')[1])
-        ) for f in fake_file_paths
+            path_remote=os.path.join(
+                "/irods/dest",
+                re.findall(sample_name_pattern, f)[0],
+                "sv_calling_targeted",
+                today,
+                f.split("-WES1/")[1],
+            ),
+        )
+        for f in fake_file_paths
     ]
-    expected_manta = tuple(sorted([t for t in expected_tfj if 'manta' in t.path_local], key=lambda x: x.path_local))
-    expected_gcnv = tuple(sorted([t for t in expected_tfj if 'gcnv' in t.path_local], key=lambda x: x.path_local))
+    expected_manta = tuple(
+        sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
+    )
+    # expected_gcnv = tuple(
+    #     sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
+    # )
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -258,7 +268,6 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     mock_transfer.assert_called_with(expected_manta, ask=not args.yes)
     assert mock_transfer_obj.put.call_count == 2
     mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
-
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1

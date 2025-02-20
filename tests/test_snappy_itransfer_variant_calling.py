@@ -43,7 +43,7 @@ def test_run_snappy_itransfer_variant_calling_nothing(capsys):
     assert res.err
 
 
-@patch('cubi_tk.snappy.itransfer_common.iRODSTransfer')
+@patch("cubi_tk.snappy.itransfer_common.iRODSTransfer")
 def test_run_snappy_itransfer_variant_calling_smoke_test(
     mock_transfer, mocker, minimal_config, germline_trio_sheet_tsv
 ):
@@ -53,7 +53,6 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     mock_transfer.return_value = mock_transfer_obj
 
     fake_base_path = "/base/path"
-    dest_path = "/irods/dest"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
         "--verbose",
@@ -101,12 +100,19 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
 
     # Create expected transfer jobs
     today = datetime.date.today().strftime("%Y-%m-%d")
-    sample_name_pattern = re.compile('[^-./]+-N1-DNA1-WES1')
+    sample_name_pattern = re.compile("[^-./]+-N1-DNA1-WES1")
     expected_tfj = [
         TransferJob(
             path_local=f,
-            path_remote=os.path.join('/irods/dest', re.findall(sample_name_pattern, f)[0], 'variant_calling', today, f.split('-WES1/')[1])
-        ) for f in fake_file_paths
+            path_remote=os.path.join(
+                "/irods/dest",
+                re.findall(sample_name_pattern, f)[0],
+                "variant_calling",
+                today,
+                f.split("-WES1/")[1],
+            ),
+        )
+        for f in fake_file_paths
     ]
     expected_tfj = tuple(sorted(expected_tfj, key=lambda x: x.path_local))
 
@@ -147,4 +153,3 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
         cwd=os.path.dirname(fake_file_paths[3]),
         stdout=ANY,
     )
-
