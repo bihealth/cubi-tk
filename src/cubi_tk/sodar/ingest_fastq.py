@@ -63,7 +63,7 @@ SRC_REGEX_PRESETS = {
 DEST_PATTERN_PRESETS = {
     "default": r"{collection_name}/raw_data/{date}/{filename}",
     "digestiflow": r"{collection_name}/raw_data/{flowcell}/{filename}",
-    "ONT": r"{collection_name}/raw_data/{RunID}/{subfolder}{filename}",
+    "ONT": r"{collection_name}/raw_data/{RunID}/{subfolder}/{filename}",
 }
 
 #: Default number of parallel transfers.
