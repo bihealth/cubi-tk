@@ -227,9 +227,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
         )
         for f in fake_file_paths
     ]
-    expected_manta = list(
-        sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
-    )
+    expected_manta = sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
     # expected_gcnv = list(
     #     sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
     # )

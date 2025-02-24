@@ -25,7 +25,7 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = list(sorted(expected, key=lambda x: x.path_local))
+    expected = sorted(expected, key=lambda x: x.path_local)
 
     parser = argparse.ArgumentParser()
     SnappyItransferCommandBase.setup_argparse(parser)
@@ -63,7 +63,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_va
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = list(sorted(expected, key=lambda x: x.path_local))
+    expected = sorted(expected, key=lambda x: x.path_local)
 
     SIC._execute_md5_files_fix(expected, parallel_jobs=0)
     assert mock_check_call.call_count == 2
