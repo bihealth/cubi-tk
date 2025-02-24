@@ -143,7 +143,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args) -> typing.Optional[int]:
+    def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
         # Check presence of icommands when not testing.
         if "pytest" not in sys.modules:  # pragma: nocover
@@ -184,7 +184,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names) -> tuple[str, tuple[TransferJob, ...]]:
+    def build_jobs(self, library_names) -> tuple[str, list[TransferJob, ...]]:
         """Build file transfer jobs."""
 
         # Get path to iRODS directory
@@ -223,7 +223,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-        return lz_uuid, tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
+        return lz_uuid, list(sorted(transfer_jobs, key=lambda x: x.path_local))
 
     def get_sodar_info(self) -> tuple[str, str]:
         """Method evaluates user input to extract or create iRODS path. Use cases:
@@ -525,9 +525,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         return lz_uuid, lz_irods_path
 
     def _execute_md5_files_fix(
-        self, transfer_jobs: tuple[TransferJob, ...],
+        self, transfer_jobs: list[TransferJob],
         parallel_jobs: int = 8
-    ) -> tuple[TransferJob, ...]:
+    ) -> list[TransferJob]:
         """Create missing MD5 files."""
         ok_jobs = []
         todo_jobs = []
@@ -565,9 +565,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             )
             for j in todo_jobs
         ]
-        return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
+        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
 
-    def execute(self) -> typing.Optional[int]:
+    def execute(self) -> int | None:
         """Execute the transfer."""
         # Validate arguments
         res = self.check_args(self.args)

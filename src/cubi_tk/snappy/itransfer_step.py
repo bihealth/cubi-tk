@@ -41,7 +41,7 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
             nargs="*",
         )
 
-    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         prefix = ".".join(self.args.tool)
         logger.debug("Using prefix {}".format(prefix))
         return (
@@ -51,7 +51,7 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
             "**",
         )
 
-    def check_args(self, args):
+    def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
         res = super().check_args(args)
 

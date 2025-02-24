@@ -35,7 +35,7 @@ class TransferJob:
     #: Number of bytes to transfer.
     bytes: int
 
-    command: typing.Optional[str] = None
+    command: str | None = None
 
     def to_oneline(self):
         return "%s -> %s (%s) [%s]" % (self.path_src, self.path_dest, self.bytes, self.command)
@@ -125,10 +125,10 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         return 0
 
-    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         pass
 
-    def build_transfer_jobs(self, command_blocks, blueprint) -> typing.Tuple[TransferJob, ...]:
+    def build_transfer_jobs(self, command_blocks, blueprint) -> list[TransferJob]:
         """Build file transfer jobs."""
         transfer_jobs = []
         bp_mod_time = pathlib.Path(blueprint).stat().st_mtime
@@ -186,9 +186,9 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                         bytes=size,
                     )
                 )
-        return tuple(sorted(transfer_jobs))
+        return list(sorted(transfer_jobs, key=lambda x: x.to_oneline()))
 
-    def execute(self) -> typing.Optional[int]:
+    def execute(self) -> int | None:
         """Execute the transfer."""
         res = self.check_args(self.args)
         if res:  # pragma: nocover
@@ -225,9 +225,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.info("All done")
         return None
 
-    def _execute_md5_files_fix(
-            self, transfer_jobs: typing.Tuple[TransferJob, ...]
-    ) -> typing.Tuple[TransferJob, ...]:
+    def _execute_md5_files_fix(self, transfer_jobs: list[TransferJob]) -> list[TransferJob]:
         """Create missing MD5 files."""
         ok_jobs = []
         todo_jobs = []
@@ -267,7 +265,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             )
             for j in todo_jobs
         ]
-        return tuple(sorted(done_jobs + ok_jobs))
+        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline()))
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

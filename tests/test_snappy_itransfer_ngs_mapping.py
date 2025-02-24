@@ -112,7 +112,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
         )
         for f in fake_file_paths
     ]
-    expected_tfj = tuple(sorted(expected_tfj, key=lambda x: x.path_local))
+    expected_tfj = list(sorted(expected_tfj, key=lambda x: x.path_local))
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])

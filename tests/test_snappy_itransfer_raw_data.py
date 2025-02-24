@@ -99,7 +99,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
         )
         for f in fake_file_paths
     ]
-    expected_tfj = tuple(sorted(expected_tfj, key=lambda x: x.path_local))
+    expected_tfj = list(sorted(expected_tfj, key=lambda x: x.path_local))
 
     # Set Mocker
     mocker.patch("pathlib.Path.exists", my_exists)

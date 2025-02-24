@@ -30,7 +30,7 @@ class SnappyItransferVariantCallingCommand(IndexLibrariesOnlyMixin, SnappyItrans
             default="gatk_hc",
         )
 
-    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         return (
             os.path.join(
                 self.args.base_path,

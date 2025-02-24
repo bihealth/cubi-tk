@@ -16,7 +16,7 @@ class SeasnapItransferRawDataCommand(SnappyItransferCommandBase):
     command_name = "itransfer-raw-data"
     step_name = "raw_data"
 
-    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         return (
             os.path.join(self.args.base_path, TPL_INPUT_LINK_DIR % {"library_name": library_name}),
             "**",

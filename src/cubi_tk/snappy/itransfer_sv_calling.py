@@ -72,11 +72,11 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-    ) -> typing.Optional[int]:
+    ) -> int | None:
         """Entry point into the command."""
         return cls(args).execute_multi()
 
-    def execute_multi(self) -> typing.Optional[int]:
+    def execute_multi(self) -> int | None:
         """Execute the transfer."""
         ret = 0
         if self.args.caller == "all-defined":
