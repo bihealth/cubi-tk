@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/bihealth/cubi-tk/compare/v0.5.2...v0.6.0) (2025-02-24)
+
+
+### Features
+
+* Update sodar_cli & python-irods client for base functionality ([#263](https://github.com/bihealth/cubi-tk/issues/263)) ([3a6f946](https://github.com/bihealth/cubi-tk/commit/3a6f946dd7d03851f7faa9442988cefa41096124))
+
+
+### Bug Fixes
+
+* [[#256](https://github.com/bihealth/cubi-tk/issues/256)] adapt check_local for cancer and pull_sheets fix ([#264](https://github.com/bihealth/cubi-tk/issues/264)) ([6e83503](https://github.com/bihealth/cubi-tk/commit/6e83503d5c33d319edc25ecac4b6ac5ce373f0ea))
+* [[#256](https://github.com/bihealth/cubi-tk/issues/256)] cancer and multiassay support pull_sheets.py ([#258](https://github.com/bihealth/cubi-tk/issues/258)) ([de33b6a](https://github.com/bihealth/cubi-tk/commit/de33b6aba132ae2d50baa0c5af9c39b1323512fc))
+* [[#256](https://github.com/bihealth/cubi-tk/issues/256)] support for multiple studies and multiple assays in sodar_common.py ([#259](https://github.com/bihealth/cubi-tk/issues/259)) ([d9def70](https://github.com/bihealth/cubi-tk/commit/d9def70fff67756424a9b7b345184002a0e87eab))
+* [256] adapt sodar pull-raw-data for cancer ([#265](https://github.com/bihealth/cubi-tk/issues/265)) ([7253ad8](https://github.com/bihealth/cubi-tk/commit/7253ad85792482269f21fa7df0068ee59d8d4866))
+* destination pattern for ONT prefix ([#266](https://github.com/bihealth/cubi-tk/issues/266)) ([d5a8de5](https://github.com/bihealth/cubi-tk/commit/d5a8de55299490182a4bee1113e60d02cc983fae))
+
 ## [0.5.2](https://github.com/bihealth/cubi-tk/compare/v0.5.1...v0.5.2) (2025-02-03)
 
 
