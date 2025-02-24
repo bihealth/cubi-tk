@@ -24,7 +24,7 @@ class SnappyItransferNgsMappingCommand(SnappyItransferCommandBase):
             "--mapper", help="Name of the mapper to transfer for, defaults to bwa.", default="bwa"
         )
 
-    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         return (
             os.path.join(
                 self.args.base_path,

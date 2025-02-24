@@ -15,9 +15,11 @@ def sodar_api_args():
         "project_uuid": "123e4567-e89b-12d3-a456-426655440000",
     }
 
+
 @pytest.fixture
 def sodar_api_instance(sodar_api_args):
     return sodar_api.SodarAPI(**sodar_api_args)
+
 
 def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
     # Check args is automatically called in __init__, so we only need to create instances for testing
@@ -41,13 +43,14 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
 
     # With toml config available, only project_uuid is required
     fs.create_file(os.path.expanduser(GLOBAL_CONFIG_PATHS[0]), contents=mock_toml_config)
-    sodar_api.SodarAPI(sodar_url='', sodar_api_token='', project_uuid='123e4567-e89b-12d3-a456-426655440000')
+    sodar_api.SodarAPI(
+        sodar_url="", sodar_api_token="", project_uuid="123e4567-e89b-12d3-a456-426655440000"
+    )
 
 
 @patch("cubi_tk.sodar_api.requests.get")
 @patch("cubi_tk.sodar_api.requests.post")
 def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
-
     mock_get.return_value.status_code = 200
     mock_get.return_value.json = MagicMock(return_value={"test": "test"})
 
@@ -60,8 +63,8 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
     assert out == {"test": "test"}
 
     # Test request with params
-    #FIXME: also test proper URL encoding of params?
-    out = sodar_api_instance._api_call("samplesheet", "test", params={'test': 'test'})
+    # FIXME: also test proper URL encoding of params?
+    out = sodar_api_instance._api_call("samplesheet", "test", params={"test": "test"})
     mock_get.assert_called_with(
         "https://sodar.bihealth.org/samplesheet/api/test/123e4567-e89b-12d3-a456-426655440000?test=test",
         headers={"Authorization": "token token123"},
@@ -75,23 +78,23 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
     # Test post request with extra data
     mock_post.return_value.status_code = 200
     out = sodar_api_instance._api_call(
-        "landingzones", "fake/upload", method="post", data={'test': 'test2'}
+        "landingzones", "fake/upload", method="post", data={"test": "test2"}
     )
     mock_post.assert_called_once_with(
         "https://sodar.bihealth.org/landingzones/api/fake/upload/123e4567-e89b-12d3-a456-426655440000",
         headers={"Authorization": "token token123"},
-        files=None, data={'test': 'test2'}
+        files=None,
+        data={"test": "test2"},
     )
 
 
 @patch("cubi_tk.sodar_api.SodarAPI._api_call")
 def test_sodar_api_get_ISA_samplesheet(mock_api_call, sodar_api_instance):
-
     mock_api_call.return_value = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}},
-        'date_modified': '2021-09-01T12:00:00Z',
+        "date_modified": "2021-09-01T12:00:00Z",
     }
     expected = {
         "investigation": {"filename": "i_Investigation.txt", "content": ""},
@@ -100,15 +103,11 @@ def test_sodar_api_get_ISA_samplesheet(mock_api_call, sodar_api_instance):
     }
     assert expected == sodar_api_instance.get_ISA_samplesheet()
 
-
     mock_api_call.return_value = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}, "s_Study_1.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}, "a_name_1": {"tsv": ""}},
-        'date_modified': '2021-09-01T12:00:00Z',
+        "date_modified": "2021-09-01T12:00:00Z",
     }
     with pytest.raises(NotImplementedError):
         sodar_api_instance.get_ISA_samplesheet()
-
-
-

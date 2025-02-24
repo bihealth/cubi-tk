@@ -4,6 +4,7 @@ import os.path
 from pathlib import Path
 import re
 from typing import Iterable, Union
+import typing
 
 import attrs
 from irods.collection import iRODSCollection

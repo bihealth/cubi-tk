@@ -18,7 +18,7 @@ dependencies = [
     "icdiff>=2.0.7",
     "logzero>=1.7.0",
     "pandas>=2.2.3",
-    "python-irodsclient==1.1.8",
+    "python-irodsclient==3.0.0",
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
     "retrying>=1.3.4",
@@ -32,7 +32,7 @@ dependencies = [
     "vcfpy >=0.13.8",
     "altamisa @ git+https://github.com/bihealth/altamisa.git@817dc491ff819e4c80686082bf3e5f602f1ac14c",
     "biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8",
-    "sodar-cli @ git+https://github.com/bihealth/sodar-cli@a62505ff9b1365f150bce54c9b2b5e638f245f86",
+    "sodar-cli @ git+https://github.com/bihealth/sodar-cli@b2c599fe99160eba25ee82d18b8a3ef744e1116a",
 ]
 
 [project.license]

@@ -269,7 +269,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         return res
 
-    def get_project_uuid(self, lz_uuid: str):
+    def get_project_uuid(self, lz_uuid: str) -> str:
         """Get project UUID from landing zone UUID.
         :param lz_uuid: Landing zone UUID.
         :type lz_uuid: str
@@ -285,14 +285,14 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
         return lz.project
 
-    def build_base_dir_glob_pattern(self, library_name: str) -> typing.Tuple[str, str]:
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         raise NotImplementedError(
             "build_base_dir_glob_pattern() not implemented in SodarIngestFastq!"
         )
 
     def get_match_to_collection_mapping(
         self, project_uuid: str, in_column: str, out_column: typing.Optional[str] = None
-    ) -> typing.Dict[str, str]:
+    ) -> dict[str, str]:
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
 
@@ -441,7 +441,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         return folders
 
-    def build_jobs(self, library_names=None):
+    def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:
         """Build file transfer jobs."""
         if library_names:
             logger.warning(

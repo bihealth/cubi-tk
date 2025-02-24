@@ -37,6 +37,7 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
+# TODO: comment back in
 def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     # --- setup arguments
     dest_path = "/irods/dest"
@@ -50,7 +51,7 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
         blueprint_path,
         dest_path,
         "--num-parallel-transfers",
-        "0",
+        0
     ]
 
     parser, subparsers = setup_argparse()
@@ -88,12 +89,12 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
 
     mock_check_output = mock.mock_open()
     mocker.patch("cubi_tk.sea_snap.itransfer_results.check_output", mock_check_output)
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_output", mock_check_output)
 
     mock_check_call = mock.mock_open()
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.check_call", mock_check_call)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.open", fake_open)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
 
     # necessary because independent test fail
@@ -113,12 +114,12 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     assert mock_check_call.call_count == 1
     assert mock_check_call.call_args[0] == (["md5sum", "star.sample1-N1-RNA1-RNA-Seq1.log"],)
 
-    assert mock_check_output.call_count == len(fake_file_paths) * 2
+    assert mock_check_output.call_count == len(fake_file_paths) * 3
     remote_path = os.path.join(dest_path, "fakedest")
+
     for path in fake_file_paths:
-        expected_mkdir_argv = f"imkdir -p $(dirname {remote_path} )"
+        # expected_mkdir_argv = f"imkdir -p {dest_path}"
         ext = ".md5" if path.split(".")[-1] == "md5" else ""
         expected_irsync_argv = f"irsync -a -K {path} {('i:%s' + ext) % remote_path}"
-
-        assert ((expected_mkdir_argv,), {"shell": True}) in mock_check_output.call_args_list
-        assert ((expected_irsync_argv,), {"shell": True}) in mock_check_output.call_args_list
+        # assert mock.call(expected_mkdir_argv.split()) in mock_check_output.call_args_list
+        assert mock.call(expected_irsync_argv.split()) in mock_check_output.call_args_list

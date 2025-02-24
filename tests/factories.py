@@ -78,7 +78,7 @@ class LandingZoneFactory(factory.Factory):
     status = "ACTIVE"
     title = factory.Sequence(lambda n: "Landing Zone %d" % n)
     description = factory.Sequence(lambda n: "This is no. %d" % n)
-    user = factory.SubFactory(UserFactory)
+    user = factory.LazyAttribute(lambda o: str(uuid.uuid4()))
     date_modified = factory.LazyAttribute(lambda o: datetime.now().isoformat())
     project = factory.LazyAttribute(
         lambda o: o._investigation_obj.project  # pylint: disable=protected-access

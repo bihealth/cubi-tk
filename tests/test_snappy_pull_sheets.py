@@ -12,11 +12,10 @@ from cubi_tk.sodar.models import Assay, Investigation, OntologyTermRef, Study
 
 def load_isa_dict(dictName):
     """Loads mock results from ``sodar_cli.api.samplesheet.export`` call for germline ISA tab."""
-    path = (
-        pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / dictName
-    )
+    path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / dictName
     with open(path, "r") as file:
         return json.load(file)
+
 
 def return_api_investigation_mock():
     investigation = Investigation(
@@ -64,6 +63,7 @@ def return_api_investigation_mock():
     )
     return investigation
 
+
 @pytest.fixture
 def pull_sheet_config():
     """Returns empty PullSheetsConfig object"""
@@ -91,7 +91,9 @@ def test_build_sheet_germline(mocker, pull_sheet_config):
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
-    mocker.patch("sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_germline.txt"))
+    mocker.patch(
+        "sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_germline.txt")
+    )
     actual = build_sheet(config=pull_sheet_config, project_uuid="")
     assert actual == expected
 
@@ -101,7 +103,9 @@ def test_build_sheet_cancer(mocker, pull_sheet_config):
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_cancer.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
-    mocker.patch("sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_cancer.txt"))
+    mocker.patch(
+        "sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_cancer.txt")
+    )
     actual = build_sheet(config=pull_sheet_config, tsv_shortcut="cancer", project_uuid="")
     assert actual == expected
 

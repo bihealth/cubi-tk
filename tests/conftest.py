@@ -88,6 +88,7 @@ def germline_trio_sheet_object(germline_trio_sheet_tsv):
         sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     )
 
+
 @pytest.fixture
 def cancer_sheet_object(cancer_sheet_tsv):
     """Returns CancerCaseSheet object with trio cohort."""
@@ -107,7 +108,6 @@ def mock_toml_config():
         sodar_api_token = "token123"
         """
     ).lstrip()
-
 
 
 def my_exists(self):

@@ -31,6 +31,8 @@ def createIrodsDataObject(
         Collection.inheritance: None,
         Collection.owner_name: None,
         Collection.owner_zone: None,
+        Collection.create_time: None,
+        Collection.modify_time: None,
     }
     collection = iRODSCollection(None, result=collection_data)
 
@@ -48,6 +50,8 @@ def createIrodsDataObject(
                 DataObject.checksum: rep_md5sum,
                 DataObject.size: 0,
                 DataObject.comments: "",
+                DataObject.create_time: None,
+                DataObject.modify_time: None,
             }
         )
     obj = iRODSDataObjectEq(None, parent=collection, results=data_object_datas)

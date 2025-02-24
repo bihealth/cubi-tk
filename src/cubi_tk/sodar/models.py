@@ -87,7 +87,7 @@ class LandingZone:
     #: Description of the landing zone.
     description: str
     #: Owning user.
-    user: User
+    user: str
 
     #: UUID of the related assay.
     assay: str
