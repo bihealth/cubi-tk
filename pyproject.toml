@@ -32,7 +32,7 @@ dependencies = [
     "vcfpy >=0.13.8",
     "altamisa @ git+https://github.com/bihealth/altamisa.git@817dc491ff819e4c80686082bf3e5f602f1ac14c",
     "biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8",
-    "sodar-cli @ git+https://github.com/bihealth/sodar-cli@93a2a590df6c03abcd3f433a37ceb792aba5e7af",
+    "sodar-cli @ git+https://github.com/bihealth/sodar-cli@b2c599fe99160eba25ee82d18b8a3ef744e1116a",
 ]
 
 [project.license]
