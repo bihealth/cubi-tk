@@ -14,7 +14,7 @@ from pathlib import Path
 import typing
 from uuid import UUID
 
-from logzero import logger
+from loguru import logger
 import requests
 
 URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
@@ -69,13 +69,13 @@ def check_args(args) -> int:
     if hasattr(args.output_folder, "name") and Path(args.output_folder).exists():  # pragma: nocover
         if not args.allow_overwrite:
             logger.error(
-                "The output folder %s already exists but --allow-overwrite not given.",
+                "The output folder {} already exists but --allow-overwrite not given.",
                 args.output_folder,
             )
             any_error = True
         else:
             logger.warning(
-                "Output folder %s exists but --allow-overwrite given.", args.output_folder
+                "Output folder {} exists but --allow-overwrite given.", args.output_folder
             )
 
     # Check UUID syntax.
@@ -85,7 +85,7 @@ def check_args(args) -> int:
         val = None
     finally:
         if args.project_uuid != val:  # pragma: nocover
-            logger.error("Project UUID %s is not a valid UUID", args.project_uuid)
+            logger.error("Project UUID {} is not a valid UUID", args.project_uuid)
             any_error = True
 
     return int(any_error)
@@ -100,7 +100,7 @@ def pull_isa(args) -> typing.Optional[int]:
         "project_uuid": args.project_uuid,
         "api_key": args.sodar_api_token,
     }
-    logger.info("Fetching %s", url)
+    logger.info("Fetching {}", url)
     r = requests.get(url)
     r.raise_for_status()
     all_data = r.json()
@@ -109,7 +109,7 @@ def pull_isa(args) -> typing.Optional[int]:
 
     path = isa_dir / all_data["investigation"]["path"]
     path.parent.mkdir(parents=True, exist_ok=True)
-    logger.info("Writing ISA files to %s", str(path.parent))
+    logger.info("Writing ISA files to {}", str(path.parent))
 
     with open(str(path), "w") as f:
         print(all_data["investigation"]["tsv"], file=f)
@@ -134,7 +134,7 @@ def run(
         return res
 
     logger.info("Starting to pull files...")
-    logger.info("  Args: %s", args)
+    logger.info("  Args: {}", args)
 
     pull_isa(args)
 

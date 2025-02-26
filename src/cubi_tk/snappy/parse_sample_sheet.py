@@ -1,6 +1,6 @@
 """Common code to parse BioMedSheets"""
 import typing
-from logzero import logger
+from loguru import logger
 
 from ..isa_support import (
     IsaNodeVisitor,

@@ -5,7 +5,7 @@ import os
 from typing import Literal
 import urllib.parse as urlparse
 
-from logzero import logger
+from loguru import logger
 import requests
 
 from .common import is_uuid, load_toml_config

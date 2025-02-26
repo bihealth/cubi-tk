@@ -16,7 +16,7 @@ dependencies = [
     "cubi-isa-templates==0.1.1",
     "hpo-similarity>=0.5.3",
     "icdiff>=2.0.7",
-    "logzero>=1.7.0",
+    "loguru>=0.7.3",
     "pandas>=2.2.3",
     "python-irodsclient==3.0.0",
     "pyyaml>=6.0.2",

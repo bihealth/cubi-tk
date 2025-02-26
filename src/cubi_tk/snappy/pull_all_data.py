@@ -11,7 +11,7 @@ import os
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 
 from ..sodar import pull_raw_data as sodar_pull_raw_data
 
@@ -119,7 +119,7 @@ class PullAllDataCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
-        logger.info("=> will download to %s", self.config.output_directory)
+        logger.info("=> will download to {}", self.config.output_directory)
         logger.info("Using cubi-tk sodar pull-raw-data to actually download data")
         res = sodar_pull_raw_data.PullRawDataCommand(
             sodar_pull_raw_data.Config(

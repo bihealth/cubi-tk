@@ -9,7 +9,7 @@ import warnings
 
 from biomedsheets import shortcuts
 from cubi_tk.exceptions import ParameterException
-from logzero import logger
+from loguru import logger
 import vcfpy
 
 from .. import parse_ped
@@ -165,9 +165,9 @@ class CancerSheetChecker:
                 elif sample.startswith("T"):
                     has_tumor = True
             if(not has_normal):
-                logger.warning("Patient %s is missing normal sample", donor.bio_entity.name)
+                logger.warning("Patient {} is missing normal sample", donor.bio_entity.name)
             if(not has_tumor):
-                logger.warning("Patient %s is missing tumor sample", donor.bio_entity.name)
+                logger.warning("Patient {} is missing tumor sample", donor.bio_entity.name)
             ok = ok and has_normal and has_tumor
         return ok
 
@@ -225,7 +225,7 @@ class PedFileCheck(FileCheckBase):
         with open(ped_path, "rt") as pedf:
             donors = list(parse_ped.parse_ped(pedf))
             if not donors:
-                logger.error("Empty pedigree file %s", ped_path)
+                logger.error("Empty pedigree file {}", ped_path)
                 results.append(False)
                 return False
             else:
@@ -235,8 +235,8 @@ class PedFileCheck(FileCheckBase):
                     logger.error(
                         (
                             "Found pedigree in PED file but not in sample sheet. \n\n"
-                            "index:    %s\n"
-                            "PED file: %s\n"
+                            "index:    {}\n"
+                            "PED file: {}\n"
                         ),
                         donors[0].name,
                         os.path.relpath(ped_path, self.base_dir),
@@ -250,10 +250,10 @@ class PedFileCheck(FileCheckBase):
                     logger.error(
                         (
                             "Members in PED file differ from members in sample sheet.\n\n"
-                            "shared:     %s\n"
-                            "sheet only: %s\n"
-                            "PED only:   %s\n"
-                            "PED file:   %s\n"
+                            "shared:     {}\n"
+                            "sheet only: {}\n"
+                            "PED only:   {}\n"
+                            "PED file:   {}\n"
                         ),
                         ",".join(sorted(pedigree_names & ped_names)) or "(none)",
                         ",".join(sorted(pedigree_names - ped_names)) or "(none)",
@@ -284,7 +284,7 @@ class PedFileCheck(FileCheckBase):
         sheet_pedigree = self.donor_ngs_library_to_pedigree.get(ped_donor.name)
         if not sheet_pedigree:
             logger.error(
-                "Found no pedigree in sample sheet for PED donor.\n\nPED donor: %s\nPED file:  %s\n",
+                "Found no pedigree in sample sheet for PED donor.\n\nPED donor: {}\nPED file:  {}\n",
                 ped_donor.name,
                 os.path.relpath(ped_path, self.base_dir),
             )
@@ -293,7 +293,7 @@ class PedFileCheck(FileCheckBase):
             if tmp.dna_ngs_library and tmp.dna_ngs_library.name == ped_donor.name:
                 return tmp
         logger.error(
-            "Member in PED not found in sample sheet.\n\nPED donor: %s\nPED file:  %s\n",
+            "Member in PED not found in sample sheet.\n\nPED donor: {}\nPED file:  {}\n",
             ped_donor.name,
             os.path.relpath(ped_path, self.base_dir),
         )
@@ -302,7 +302,7 @@ class PedFileCheck(FileCheckBase):
     def _check_parent(self, ped_donor, sheet_donor, key, ped_path):
         if (getattr(sheet_donor, key) is None) != (getattr(ped_donor, "%s_name" % key) == "0"):
             logger.error(
-                "Inconsistent %s between PED and sample sheet.\n\ndonor:    %s\nPED file: %s\n",
+                "Inconsistent {} between PED and sample sheet.\n\ndonor:    {}\nPED file: {}\n",
                 key,
                 ped_donor.name,
                 os.path.relpath(ped_path, self.base_dir),
@@ -311,7 +311,7 @@ class PedFileCheck(FileCheckBase):
         elif getattr(sheet_donor, key):
             if not getattr(sheet_donor, key).dna_ngs_library:
                 logger.error(
-                    "Sheet donor's %s does not have library.\n\ndonor:    %s\nPED file: %s\n",
+                    "Sheet donor's {} does not have library.\n\ndonor:    {}\nPED file: {}\n",
                     key,
                     sheet_donor.name,
                     os.path.relpath(ped_path, self.base_dir),
@@ -322,11 +322,11 @@ class PedFileCheck(FileCheckBase):
             ):
                 logger.error(
                     (
-                        "Inconsistent %s name between PED and sample sheet.\n\n"
-                        "donor:    %s\n"
-                        "in sheet: %s\n"
-                        "in PED:   %s\n"
-                        "PED file: %s\n"
+                        "Inconsistent {} name between PED and sample sheet.\n\n"
+                        "donor:    {}\n"
+                        "in sheet: {}\n"
+                        "in PED:   {}\n"
+                        "PED file: {}\n"
                     ),
                     key,
                     ped_donor.name,
@@ -344,11 +344,11 @@ class PedFileCheck(FileCheckBase):
         if getattr(ped_donor, key) != sheet_donor.extra_infos.get(key2, "unknown"):
             logger.error(
                 (
-                    "Inconsistent %s between PED and sample sheet.\n\n"
-                    "donor:    %s\n"
-                    "in sheet: %s\n"
-                    "in PED:   %s\n"
-                    "PED file: %s\n"
+                    "Inconsistent {} between PED and sample sheet.\n\n"
+                    "donor:    {}\n"
+                    "in sheet: {}\n"
+                    "in PED:   {}\n"
+                    "PED file: {}\n"
                 ),
                 key,
                 ped_donor.name,
@@ -498,7 +498,7 @@ class SnappyCheckLocalCommand:
             args.base_path = os.getcwd()
 
         if not os.path.exists(args.base_path):  # pragma: nocover
-            logger.error("Base path %s does not exist", args.base_path)
+            logger.error("Base path {} does not exist", args.base_path)
             res = 1
 
         return res
@@ -510,7 +510,7 @@ class SnappyCheckLocalCommand:
             return res
 
         logger.info("Starting cubi-tk snappy check-local")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
         if self.args.tsv_shortcut == "germline":
             results = [
             GermlineSheetChecker(self.shortcut_sheets).run_checks(),

@@ -17,7 +17,7 @@ from pathlib import Path
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 
 from ..common import compute_md5_checksum, load_toml_config
 from ..exceptions import FileMd5MismatchException
@@ -373,7 +373,7 @@ class SodarCheckRemoteCommand:
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
-            logger.error("Base path %s does not exist", args.base_path)
+            logger.error("Base path {} does not exist", args.base_path)
             res = 1
 
         return res
@@ -385,7 +385,7 @@ class SodarCheckRemoteCommand:
             return res
 
         logger.info("Starting cubi-tk sodar check-remote")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(

@@ -21,13 +21,12 @@ from irods.models import Collection as CollectionModel
 from irods.models import DataObject as DataObjectModel
 from irods.password_obfuscation import encode
 from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
-import logzero
-from logzero import logger
+from loguru import logger
 from tqdm import tqdm
 
 # no-frills logger
-formatter = logzero.LogFormatter(fmt="%(message)s")
-output_logger = logzero.setup_logger(formatter=formatter)
+#formatter = logzero.LogFormatter(fmt="%(message)s")
+#output_logger = logzero.setup_logger(formatter=formatter)
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
 HASH_SCHEMES = {
@@ -223,9 +222,12 @@ class iRODSTransfer(iRODSCommon):
         checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith(".md5"))
         logger.info(f"Triggering remote checksum computation for {len(checkjobs)} files.")
         for n, job in enumerate(checkjobs):
-            output_logger.info(
-                f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
+            logger.info(
+               f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
             )
+            #output_logger.info(
+            #    f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
+            #)
             try:
                 with self.session as session:
                     data_object = session.data_objects.get(job.path_remote)
@@ -323,7 +325,7 @@ class iRODSRetrieveCollection(iRODSCommon):
                     return irods_obj_dict
 
             except Exception as e:  # pragma: no cover
-                logger.error("Failed to retrieve iRODS path: %s", self.get_irods_error(e))
+                logger.error("Failed to retrieve iRODS path: {}", self.get_irods_error(e))
                 raise
 
         return {}

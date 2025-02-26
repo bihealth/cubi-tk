@@ -7,8 +7,7 @@ import sys
 import typing
 
 import attrs
-import logzero
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
@@ -19,8 +18,8 @@ from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
 logger.propagate = True
 
 # no-frills logger
-formatter = logzero.LogFormatter(fmt="%(message)s")
-output_logger = logzero.setup_logger(formatter=formatter)
+#formatter = logzero.LogFormatter(fmt="%(message)s")
+#output_logger = logzero.setup_logger(formatter=formatter)
 
 
 @attrs.frozen(auto_attribs=True)
@@ -209,10 +208,10 @@ class SodarIngest:
         itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
         logger.info("Planning to transfer the following files:")
         for job in jobs:
-            output_logger.info(job.path_local)
+            logger.info(job.path_local)#output_logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
         logger.info("Into this iRODS collection:")
-        output_logger.info(f"{self.target_coll}/")
+        logger.info(f"{self.target_coll}/")#output_logger.info(f"{self.target_coll}/")
 
         if not self.args.yes:
             if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover

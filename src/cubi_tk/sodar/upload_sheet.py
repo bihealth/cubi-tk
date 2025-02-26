@@ -7,7 +7,7 @@ from pathlib import Path
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from .. import isa_support
@@ -80,11 +80,11 @@ class UploadSheetCommand:
             )
 
         logger.info("Starting cubi-tk sodar upload-sheet")
-        logger.info("  config: %s", self.config)
+        logger.info("  config: {}", self.config)
 
         i_path = Path(self.config.input_investigation_file)
         if not i_path.exists():
-            logger.error("Path does not exist: %s", i_path)
+            logger.error("Path does not exist: {}", i_path)
             return 1
 
         isa_data = isa_support.load_investigation(self.config.input_investigation_file)
@@ -93,7 +93,7 @@ class UploadSheetCommand:
         for name in itertools.chain(isa_data.studies, isa_data.assays):
             file_paths.append(i_path.parent / name)
 
-        logger.info("Uploading files: \n%s", "\n".join(map(str, file_paths)))
+        logger.info("Uploading files: \n{}", "\n".join(map(str, file_paths)))
 
         api.samplesheet.upload(
             sodar_url=self.config.sodar_url,
@@ -112,7 +112,7 @@ class UploadSheetCommand:
                 "Refusing to overwrite without --overwrite: %s" % out_path
             )
         logger.info(
-            "%s %s", "Not writing (dry-run)" if self.config.dry_run else "Writing", out_path
+            "{} {}", "Not writing (dry-run)" if self.config.dry_run else "Writing", out_path
         )
         overwrite_helper(
             out_path,

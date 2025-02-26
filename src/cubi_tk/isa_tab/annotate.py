@@ -23,7 +23,7 @@ from altamisa.isatab import (
 )
 from altamisa.isatab.helpers import is_ontology_term_ref
 import attr
-from logzero import logger
+from loguru import logger
 
 from .. import isa_support
 from ..common import overwrite_helper
@@ -314,7 +314,7 @@ class AddAnnotationIsaTabCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the annotation."""
         logger.info("Starting cubi-tk isa-tab annotate")
-        logger.info("  config: %s", self.config)
+        logger.info("  config: {}", self.config)
 
         # Read isa-tab file
         isa_data = isa_support.load_investigation(self.config.input_investigation_file)
@@ -343,7 +343,7 @@ class AddAnnotationIsaTabCommand:
             # Check if target study is in list (i.e. in investigation)
             elif self.config.target_study not in study_file_names:
                 logger.error(
-                    "Invalid target study '%s'.\nStudies available:\n%s",
+                    "Invalid target study '{}'.\nStudies available:\n{}",
                     self.config.target_study,
                     study_file_names,
                 )
@@ -362,7 +362,7 @@ class AddAnnotationIsaTabCommand:
             # Check if target assay is in list (i.e. in investigation)
             if self.config.target_assay not in assay_file_names:
                 logger.error(
-                    "Invalid target assay '%s'.\nAssays available:\n%s",
+                    "Invalid target assay '{}'.\nAssays available:\n{}",
                     self.config.target_assay,
                     assay_file_names,
                 )

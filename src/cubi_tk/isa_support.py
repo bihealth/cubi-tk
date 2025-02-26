@@ -14,7 +14,7 @@ from altamisa.isatab import (
     StudyReader,
 )
 import attr
-from logzero import logger
+from loguru import logger
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -171,12 +171,12 @@ class IsaGraph:
         seen = set()
         path = []
         if start is not None:
-            logger.debug("starting from one node %s", start)
+            logger.debug("starting from one node {}", start)
             yield from self._dfs(start, seen, order, path)
         else:
             logger.debug("starting from all nodes")
             for s in self.starts:
-                logger.debug("starting from current node %s", s)
+                logger.debug("starting from current node {}", s)
                 yield from self._dfs(s, seen, order, path)
 
     def _dfs(self, curr, seen, order, path):
@@ -202,26 +202,26 @@ class IsaNodeVisitor:
     """
 
     def on_begin_investigation(self, investigation):
-        logger.debug("begin investigation %s", investigation.info.path)
+        logger.debug("begin investigation {}", investigation.info.path)
 
     def on_end_investigation(self, investigation):
-        logger.debug("end investigation %s", investigation.info.path)
+        logger.debug("end investigation {}", investigation.info.path)
 
     def on_begin_study(self, investigation, study):
         _ = investigation
-        logger.debug("begin study %s", study.file)
+        logger.debug("begin study {}", study.file)
 
     def on_end_study(self, investigation, study):
         _ = investigation
-        logger.debug("end study %s", study.file)
+        logger.debug("end study {}", study.file)
 
     def on_begin_assay(self, investigation, study, assay):
         _, _ = investigation, study
-        logger.debug("begin assay %s", assay.file)
+        logger.debug("begin assay {}", assay.file)
 
     def on_end_assay(self, investigation, study, assay):
         _, _ = investigation, study
-        logger.debug("end assay %s", assay.file)
+        logger.debug("end assay {}", assay.file)
 
     def on_traverse_arc(self, arc, node_path, study=None, assay=None):
         (
@@ -229,7 +229,7 @@ class IsaNodeVisitor:
             _,
             _,
         ) = (node_path, study, assay)
-        logger.debug("traversing arc %s", arc)
+        logger.debug("traversing arc {}", arc)
 
     def on_visit_node(self, node, node_path, study=None, assay=None):
         (
@@ -237,7 +237,7 @@ class IsaNodeVisitor:
             _,
             _,
         ) = (node_path, study, assay)
-        logger.debug("visiting node %s", node)
+        logger.debug("visiting node {}", node)
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
         (
@@ -245,7 +245,7 @@ class IsaNodeVisitor:
             _,
             _,
         ) = (node_path, study, assay)
-        logger.debug("visiting material %s", material)
+        logger.debug("visiting material {}", material)
 
     def on_visit_process(self, process, node_path, study=None, assay=None):
         (
@@ -253,7 +253,7 @@ class IsaNodeVisitor:
             _,
             _,
         ) = (node_path, study, assay)
-        logger.debug("visiting process %s", process)
+        logger.debug("visiting process {}", process)
 
 
 class InvestigationTraversal:
@@ -277,11 +277,11 @@ class InvestigationTraversal:
         logger.debug("start investigation traversal")
         visitor.on_begin_investigation(self.investigation)
         for file_name, study in self.studies.items():
-            logger.debug("create study traversal %s", file_name)
+            logger.debug("create study traversal {}", file_name)
             st = StudyTraversal(self, study, self.assays)
             self._study_traversals[file_name] = st
             yield from st.gen(visitor)
-            logger.debug("finalize study traversal %s", file_name)
+            logger.debug("finalize study traversal {}", file_name)
         visitor.on_end_investigation(self.investigation)
         logger.debug("end investigation traversal")
 
@@ -315,7 +315,7 @@ class StudyTraversal:
         self._processes = {}
 
     def gen(self, visitor: IsaNodeVisitor, start_name=None):
-        logger.debug("start study traversal %s", self.study.file)
+        logger.debug("start study traversal {}", self.study.file)
         func_mapping: typing.Dict[str, typing.Tuple[typing.Callable, ...]] = {
             TYPE_ARC: (visitor.on_traverse_arc,),
             TYPE_MATERIAL: (visitor.on_visit_node, visitor.on_visit_material),
@@ -344,13 +344,13 @@ class StudyTraversal:
                 for assay_traversal in self.assay_traversals.values():
                     if obj.name in assay_traversal.isa_graph.mat_node_by_name:
                         logger.debug(
-                            "jumping into assay %s, starting from %s",
+                            "jumping into assay {}, starting from {}",
                             assay_traversal.assay.file,
                             obj.name,
                         )
                         yield from assay_traversal.gen(visitor, start_name=obj.name)
         visitor.on_end_study(self.investigation, self.study)
-        logger.debug("end study traversal %s", self.study.file)
+        logger.debug("end study traversal {}", self.study.file)
 
     def run(self, visitor: IsaNodeVisitor, start_name=None):
         return tuple(self.gen(visitor, start_name))
@@ -376,7 +376,7 @@ class AssayTraversal:
         self._processes = {}
 
     def gen(self, visitor: IsaNodeVisitor, start_name=None):
-        logger.debug("start assay traversal %s", self.assay.file)
+        logger.debug("start assay traversal {}", self.assay.file)
         func_mapping: typing.Dict[str, typing.Tuple[typing.Callable, ...]] = {
             TYPE_ARC: (visitor.on_traverse_arc,),
             TYPE_MATERIAL: (visitor.on_visit_node, visitor.on_visit_material),
@@ -400,7 +400,7 @@ class AssayTraversal:
                 self._processes[obj.unique_name] = new_obj
             yield "assay", self.assay, obj_type, obj
         visitor.on_end_assay(self.investigation, self.study, self.assay)
-        logger.debug("end assay traversal %s", self.assay.file)
+        logger.debug("end assay traversal {}", self.assay.file)
 
     def run(self, visitor: IsaNodeVisitor, start_name=None):
         return tuple(self.gen(visitor, start_name))

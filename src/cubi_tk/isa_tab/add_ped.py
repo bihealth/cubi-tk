@@ -40,7 +40,7 @@ from altamisa.isatab import (
     StudyWriter,
 )
 import attr
-from logzero import logger
+from loguru import logger
 
 from .. import isa_support, parse_ped
 from ..common import overwrite_helper
@@ -679,7 +679,7 @@ class AddPedIsaTabCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
         logger.info("Starting cubi-tk isa-tab add-ped")
-        logger.info("  config: %s", self.config)
+        logger.info("config: {}", self.config)
 
         isa_data = isa_support.load_investigation(self.config.input_investigation_file)
         if len(isa_data.studies) > 1 or len(isa_data.assays) > 1:  # pragma: no cover

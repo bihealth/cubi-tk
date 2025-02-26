@@ -5,7 +5,7 @@ import re
 import typing
 
 from attrs import define
-from logzero import logger
+from loguru import logger
 import yaml
 
 

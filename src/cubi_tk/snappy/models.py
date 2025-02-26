@@ -5,7 +5,7 @@ import typing
 
 import attr
 import cattr
-from logzero import logger
+from loguru import logger
 import yaml
 
 
@@ -46,7 +46,7 @@ def load_config_yaml(path: pathlib.Path) -> typing.Any:
         try:
             return yaml.safe_load(f)
         except yaml.YAMLError as e:
-            logger.error("error: %s", e)
+            logger.error("error: {}", e)
 
 
 def trans_load(ds):
@@ -60,14 +60,14 @@ def trans_load(ds):
 
 def load_datasets(path: pathlib.Path) -> typing.Dict[str, DataSet]:
     """Load data sets and filter to those with SODAR UUID."""
-    logger.info("Loading data sets from %s", path)
+    logger.info("Loading data sets from {}", path)
     raw_ds = load_config_yaml(path)["data_sets"]
     transmogrified = {key: trans_load(value) for key, value in raw_ds.items()}
     data_sets = cattr.structure(transmogrified, typing.Dict[str, DataSet])
     filtered = {key: ds for key, ds in data_sets.items() if ds.sodar_uuid}
-    logger.info("Loaded %d data sets, %d with SODAR UUID", len(data_sets), len(filtered))
+    logger.info("Loaded {} data sets, {} with SODAR UUID", len(data_sets), len(filtered))
 
     for _key, ds in sorted(filtered.items()):
-        logger.debug("  - %s%s", ds.sodar_uuid, ": %s" % ds.sodar_title if ds.sodar_title else "")
+        logger.debug("  - {}{}", ds.sodar_uuid, ": {}" , ds.sodar_title if ds.sodar_title else "")
 
     return filtered
