@@ -613,9 +613,9 @@ def run(
 
                 for line in lines:
                     if not is_diff:
-                        show_line("{}\n".format(heading))
+                        show_line(f"{heading}\n")
                     is_diff = True
-                    show_line("{}\n".format(line))
+                    show_line(f"{line}\n")
 
             sys.stdout.flush()
             if not is_diff:

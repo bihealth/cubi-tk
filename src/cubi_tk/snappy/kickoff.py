@@ -82,11 +82,11 @@ def run(
         dep_jids = [jids[dep] for dep in step_dependencies[step] if dep in jids]
         cmd = ["sbatch"]
         if dep_jids:
-            cmd += ["--dependency", "afterok:{}".format(":".join(map(str, dep_jids)))]
+            cmd += ["--dependency", "afterok:" + ":".join(map(str, dep_jids))]
         cmd += ["pipeline_job.sh"]
         logger.info("Submitting step {} (./{}): {}", step, step_path.name, " ".join(cmd))
         if args.dry_run:
-            jid = "<{}>".format(step)
+            jid = f"<{step}>"
         else:
             stdout_raw = subprocess.check_output(cmd, cwd=str(step_path), timeout=args.timeout)
             stdout = stdout_raw.decode("utf-8")

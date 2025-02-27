@@ -25,9 +25,6 @@ from ..snappy.itransfer_common import SnappyItransferCommandBase
 # for testing
 logger.propagate = True
 
-# no-frills logger
-#formatter = logzero.LogFormatter(fmt="%(message)s")
-#output_logger = logzero.setup_logger(formatter=formatter)
 
 SRC_REGEX_PRESETS = {
     "default": (
@@ -558,7 +555,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes)
         logger.info("Planning to transfer the following files:")
         for job in transfer_jobs:
-            logger.info(job.path_local)#output_logger.info(job.path_local)
+            logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         if not self.args.yes:

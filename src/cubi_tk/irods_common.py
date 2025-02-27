@@ -24,9 +24,6 @@ from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
 from loguru import logger
 from tqdm import tqdm
 
-# no-frills logger
-#formatter = logzero.LogFormatter(fmt="%(message)s")
-#output_logger = logzero.setup_logger(formatter=formatter)
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
 HASH_SCHEMES = {
@@ -225,9 +222,7 @@ class iRODSTransfer(iRODSCommon):
             logger.info(
                f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
             )
-            #output_logger.info(
-            #    f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
-            #)
+
             try:
                 with self.session as session:
                     data_object = session.data_objects.get(job.path_remote)

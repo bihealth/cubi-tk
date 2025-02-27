@@ -24,10 +24,6 @@ from ..exceptions import MissingFileException, ParameterException, UserCanceledE
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 
-# output logger for file list
-#formatter = logzero.LogFormatter(fmt="%(message)s")
-#output_logger = logzero.setup_logger(formatter=formatter)
-
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
 
@@ -604,7 +600,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes)
         logger.info("Planning to transfer the following files:")
         for job in transfer_jobs:
-            logger.info(job.path_local)#output_logger.info(job.path_local)
+            logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
