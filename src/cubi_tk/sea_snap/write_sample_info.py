@@ -23,7 +23,7 @@ from uuid import UUID
 
 from altamisa.isatab import AssayReader
 import icdiff
-from logzero import logger
+from loguru import logger
 import pandas as pd
 import requests
 from termcolor import colored
@@ -155,13 +155,13 @@ def check_args(args) -> int:
         ):  # pragma: nocover
             if not args.overwrite_isa:
                 logger.error(
-                    "The output folder %s already exists but --allow-overwrite not given.",
+                    "The output folder {} already exists but --allow-overwrite not given.",
                     args.output_folder,
                 )
                 any_error = True
             else:
                 logger.warning(
-                    "Output folder %s exists but --allow-overwrite given.", args.output_folder
+                    "Output folder {} exists but --allow-overwrite given.", args.output_folder
                 )
 
         # Check UUID syntax.
@@ -171,7 +171,7 @@ def check_args(args) -> int:
             val = None
         finally:
             if args.project_uuid != val:  # pragma: nocover
-                logger.error("Project UUID %s is not a valid UUID", args.project_uuid)
+                logger.error("Project UUID {} is not a valid UUID", args.project_uuid)
                 any_error = True
 
     # Check options --isa-assay vs. --from_file
@@ -189,12 +189,12 @@ def check_args(args) -> int:
     ):  # pragma: nocover
         if not args.allow_overwrite:
             logger.error(
-                "The output path %s already exists but --allow-overwrite not given.",
+                "The output path {} already exists but --allow-overwrite not given.",
                 args.output_file.name,
             )
             any_error = True
         else:
-            logger.warning("Output path %s exists but --allow-overwrite given.", args.output_file)
+            logger.warning("Output path {} exists but --allow-overwrite given.", args.output_file)
 
     return int(any_error)
 
@@ -253,8 +253,8 @@ class SampleInfoTool:
             match_pattern = re.sub(r"\\\*\\\*", "[^{}]*", match_pattern)
             match_pattern = re.sub(r"(?<!\[\^{}\]\*)\\\*", "[^{}./]*", match_pattern)
 
-        logger.info("\ninput files:\n%s", "\n".join(input_files))
-        logger.info("\nmatch pattern:\n%s", match_pattern)
+        logger.info("\ninput files:\n{}", "\n".join(input_files))
+        logger.info("\nmatch pattern:\n{}", match_pattern)
 
         wildcard_values = {w: [] for w in wildcards}
         wildcard_values["read_extension"] = []
@@ -328,7 +328,7 @@ class SampleInfoTool:
             if comb.read_extension in self.allowed_read_extensions
         ]
         logger.info(
-            "\nextracted combinations:\n%s",
+            "\nextracted combinations:\n{}",
             "\n".join("\t".join(i) for i in [wildcard_combs[0]._fields] + wildcard_combs),
         )
 
@@ -399,7 +399,7 @@ class SampleInfoTool:
         parse sample info from ISA-tab table
         """
         logger.info("Parsing ISA-tab...")
-        logger.info("Read assay file: %s", self.args.isa_assay.name)
+        logger.info("Read assay file: {}", self.args.isa_assay.name)
 
         # read assay
         assay = AssayReader.from_stream("S1", "A1", self.args.isa_assay).read()
@@ -431,7 +431,7 @@ class SampleInfoTool:
                     ):
                         self._parse_isatab_sequencing(assay, key, sample_info, sample_name)
 
-        logger.info("Samples in ISA assay:\n%s", ", ".join(sample_info))
+        logger.info("Samples in ISA assay:\n{}", ", ".join(sample_info))
         logger.debug(sample_info)
 
         self.sample_info = sample_info
@@ -474,7 +474,7 @@ def pull_isa(args) -> typing.Optional[int]:
         "project_uuid": args.project_uuid,
         "api_key": args.sodar_auth_token,
     }
-    logger.info("Fetching %s", url)
+    logger.info("Fetching {}", url)
     r = requests.get(url)
     r.raise_for_status()
     all_data = r.json()
@@ -483,7 +483,7 @@ def pull_isa(args) -> typing.Optional[int]:
 
     path = isa_dir / all_data["investigation"]["path"]
     path.parent.mkdir(parents=True, exist_ok=True)
-    logger.info("Writing ISA files to %s", str(path.parent))
+    logger.info("Writing ISA files to {}", str(path.parent))
 
     with open(str(path), "w") as f:
         print(all_data["investigation"]["tsv"], file=f)
@@ -518,12 +518,12 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
                 return 1
             elif len(assay_files) > 1:
                 logger.info(
-                    "Several assay files were pulled, choose one.\n%s",
+                    "Several assay files were pulled, choose one.\n{}",
                     "\n".join(f"[{i}] {assay_files[i]}" for i in range(len(assay_files))),
                 )
                 args.isa_assay = open(assay_files[int(input("choice: "))], "rt")
             else:
-                logger.info("Using pulled assay file %s.", assay_files[0])
+                logger.info("Using pulled assay file {}.", assay_files[0])
                 args.isa_assay = open(assay_files[0], "rt")
         if args.isa_assay:
             sit.parse_isatab()
@@ -549,12 +549,12 @@ def run(
 
     if args.project_uuid:
         logger.info("Starting to pull ISA files...")
-        logger.info("  Args: %s", args)
+        logger.info("Args: {}", args)
 
         pull_isa(args)
 
     logger.info("Starting to write sample info...")
-    logger.info("  Args: %s", args)
+    logger.info("Args: {}", args)
 
     with tempfile.NamedTemporaryFile(mode="w+t") as sample_info_file:
         # Write sample info to temporary file.
@@ -613,23 +613,23 @@ def run(
 
                 for line in lines:
                     if not is_diff:
-                        show_line("%s\n" % heading)
+                        show_line(f"{heading}\n")
                     is_diff = True
-                    show_line("%s\n" % line)
+                    show_line(f"{line}\n")
 
             sys.stdout.flush()
             if not is_diff:
-                logger.info("File %s not changed, no diff...", args.output_file.name)
+                logger.info("File {} not changed, no diff...", args.output_file.name)
 
         # Write to output file if not --dry-run is given
         if hasattr(args.output_file, "name") and args.dry_run:
-            logger.warning("Not changing %s as we are in --dry-run mode", args.output_file.name)
+            logger.warning("Not changing {} as we are in --dry-run mode", args.output_file.name)
         else:
             if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
                 action = (
                     "Overwriting" if Path(args.output_file.name).stat().st_size != 0 else "Creating"
                 )
-                logger.info("%s %s", action, args.output_file.name)
+                logger.info("{} {}", action, args.output_file.name)
             if args.output_file != "<stdout>":
                 sample_info_file.seek(0)
             if hasattr(args.output_file, "name") and args.output_file.name != "<stdout>":
@@ -638,7 +638,7 @@ def run(
             shutil.copyfileobj(sample_info_file, args.output_file)
 
         logger.warning(
-            "in_path_pattern: %s --> Use the same in your mapping_config.yaml!",
+            "in_path_pattern: {} --> Use the same in your mapping_config.yaml!",
             args.in_path_pattern,
         )
 

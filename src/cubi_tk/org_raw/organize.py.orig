@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 import attr
-from logzero import logger
+from loguru import logger
 import tqdm
 
 from .check import CheckCommand, run_check
@@ -196,7 +196,7 @@ class OrganizeCommand:
         """Run main loop."""
         total_bytes = sum([Path(p).stat().st_size for p in self.args.input_paths])
         logger.info(
-            "Organizing %d files with a total size of %s",
+            "Organizing {} files with a total size of {}",
             len(self.args.input_paths),
             sizeof_fmt(total_bytes),
         )

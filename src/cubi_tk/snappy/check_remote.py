@@ -11,7 +11,7 @@ from pathlib import Path
 import typing
 
 from biomedsheets import shortcuts
-from logzero import logger
+from loguru import logger
 
 from ..common import load_toml_config
 from ..sodar_common import RetrieveSodarCollection
@@ -660,7 +660,7 @@ class SnappyCheckRemoteCommand:
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
-            logger.error("Base path %s does not exist", args.base_path)
+            logger.error("Base path {} does not exist", args.base_path)
             res = 1
 
         return res
@@ -672,7 +672,7 @@ class SnappyCheckRemoteCommand:
             return res
 
         logger.info("Starting cubi-tk snappy check-remote")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
 
         # Split execution between Cancer and Germline
         if self.args.tsv_shortcut == "cancer":

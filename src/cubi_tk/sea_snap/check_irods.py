@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import re
 
-from logzero import logger
+from loguru import logger
 import yaml
 
 from ..irods.check import IrodsCheckCommand
@@ -71,19 +71,19 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting sea-snap check-irods %s", self.command_name)
-        logger.info("  args: %s", self.args)
+        logger.info("Starting sea-snap check-irods {}", self.command_name)
+        logger.info("  args: {}", self.args)
 
         # --- get lists
         # files on SODAR
         files = self.get_data_objs()
         files_rel = [f.replace(self.args.irods_path + "/", "") for f in files["files"]]
-        logger.info("Files on SODAR (first 20): %s", ", ".join(files_rel[:19]))
+        logger.info("Files on SODAR (first 20): {}", ", ".join(files_rel[:19]))
 
         # samples in project
         with open(os.path.join(self.args.results_folder, "sample_info.yaml"), "r") as stream:
             samples = list(yaml.safe_load(stream)["sample_info"])
-        logger.info("Samples in sample_info.yaml: %s", ", ".join(samples))
+        logger.info("Samples in sample_info.yaml: {}", ", ".join(samples))
 
         # destinations from blueprint file
         blueprint = Path(self.args.results_folder) / self.args.transfer_blueprint
@@ -108,7 +108,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
         non_covered_samples = [s for s in samples if not any(s in f for f in files_rel)]
         if non_covered_samples:
             logger.warning(
-                "These samples are in the sample sheet, but have no corresponding files on SODAR: %s",
+                "These samples are in the sample sheet, but have no corresponding files on SODAR: {}",
                 ", ".join(non_covered_samples),
             )
             if not self.args.yes and not input("Continue? [yN] ").lower().startswith("y"):

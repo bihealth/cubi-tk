@@ -4,7 +4,7 @@ import typing
 
 from biomedsheets import io_tsv
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
-from logzero import logger
+from loguru import logger
 import yaml
 
 
@@ -50,11 +50,11 @@ def find_snappy_root_dir(
     markers = [".snappy_pipeline"] + list(more_markers)
     start_path = pathlib.Path(start_path)
     for path in [start_path] + list(start_path.parents):
-        logger.debug("Trying %s", path)
+        logger.debug("Trying {}", path)
         if any((path / name).exists() for name in markers):
-            logger.info("Will start at %s", path)
+            logger.info("Will start at {}", path)
             return path
-    logger.error("Could not find SNAPPY pipeline directories below %s", start_path)
+    logger.error("Could not find SNAPPY pipeline directories below {}", start_path)
     raise CouldNotFindPipelineRoot()
 
 

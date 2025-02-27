@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
@@ -96,7 +96,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
                     return assay.irods_path
                 
         if assay_uuid:
-            logger.error("Provided Assay UUID is not present in the Ivestifation.")
+            logger.error("Provided Assay UUID is not present in the Investigation.")
             raise Exception("Cannot find assay with UUID %s" % assay_uuid)
         return None
 

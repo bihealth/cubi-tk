@@ -7,7 +7,7 @@ import os
 import typing
 
 import cattr
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from ..common import load_toml_config
@@ -102,7 +102,7 @@ class ListLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-list")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
 
         existing_lzs = sorted(
             api.landingzone.list_(

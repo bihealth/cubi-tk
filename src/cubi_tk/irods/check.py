@@ -8,7 +8,7 @@ import re
 import typing
 
 from irods.data_object import iRODSDataObject
-from logzero import logger
+from loguru import logger
 import tqdm
 
 from ..irods_common import DEFAULT_HASH_SCHEME, HASH_SCHEMES, iRODSRetrieveCollection
@@ -89,7 +89,7 @@ class IrodsCheckCommand(iRODSRetrieveCollection):
             raise ValueError
         # Check environment file
         if not os.path.isfile(self.irods_env_path):
-            logger.error("iRODS environment not found in %s", self.irods_env_path)
+            logger.error("iRODS environment not found in {}", self.irods_env_path)
             raise FileNotFoundError
         return None
 
@@ -105,13 +105,13 @@ class IrodsCheckCommand(iRODSRetrieveCollection):
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
-        logger.info("Starting cubi-tk irods %s", self.command_name)
-        logger.info("Args: %s", self.args)
+        logger.info("Starting cubi-tk irods {}", self.command_name)
+        logger.info("Args: {}", self.args)
 
         # Load iRODS environment
         with open(self.irods_env_path, "r", encoding="utf-8") as f:
             irods_env = json.load(f)
-        logger.info("iRODS environment: %s", irods_env)
+        logger.info("iRODS environment: {}", irods_env)
 
         # Connect to iRODS
         with self.session as irods_session:
@@ -131,7 +131,7 @@ class IrodsCheckCommand(iRODSRetrieveCollection):
             dsp_files = dsp_files[: self.args.num_display_files]
         lst_files = "\n".join([f.path for f in dsp_files])
         logger.info(
-            "Checking %s file%s%s:\n%s",
+            "Checking {} file{}{}:\n{}",
             num_files,
             "s" if num_files != 1 else "",
             " (first {} shown)".format(self.args.num_display_files)
@@ -193,8 +193,8 @@ def check_file(data_obj: iRODSDataObject, checksums: dict, req_num_reps: int, ha
             if replica.checksum != file_sum:
                 logger.error(
                     "iRODS metadata checksum not consistent with checksum file...\n"
-                    "File: %s\n%s file checksum: %s\n"
-                    "Metadata checksum: %s\nResource: %s",
+                    "File: {}\n{} file checksum: {}\n"
+                    "Metadata checksum: {}\nResource: {}",
                     data_obj.path,
                     hash_scheme,
                     file_sum,

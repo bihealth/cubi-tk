@@ -13,7 +13,7 @@ import pathlib
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 import yaml
 
 from ..common import load_toml_config

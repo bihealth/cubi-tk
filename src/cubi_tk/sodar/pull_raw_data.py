@@ -8,7 +8,7 @@ from subprocess import SubprocessError, check_call
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from ..common import load_toml_config
@@ -170,7 +170,7 @@ class PullRawDataCommand:
             )
 
         logger.info("Starting cubi-tk sodar pull-raw-data")
-        logger.info("  config: %s", self.config)
+        logger.info("  config: {}", self.config)
 
         out_path = Path(self.config.output_dir)
         if not out_path.exists():
@@ -188,14 +188,14 @@ class PullRawDataCommand:
                     assay = study.assays[assay_uuid]
                 if (self.config.assay is not None) and (self.config.assay == assay_uuid):
                     assay = study.assays[assay_uuid]
-                    logger.info("Using irods path of assay %s: %s", assay_uuid, assay.irods_path)
+                    logger.info("Using irods path of assay {}: {}", assay_uuid, assay.irods_path)
                     break
 
         library_to_folder = self._get_library_to_folder(assay)
 
         commands = self._build_commands(assay, library_to_folder)
         if not commands:
-            logger.info("No samples to transfer with --min-batch=%d", self.config.min_batch)
+            logger.info("No samples to transfer with --min-batch={}", self.config.min_batch)
             return 0
 
         return self._executed_commands(commands)
@@ -216,7 +216,7 @@ class PullRawDataCommand:
         cmds_txt = "\n".join(
             ["- %s" % " ".join(map(shlex.quote, cmd)) for (src, target, cmd) in commands]
         )
-        logger.info("Pull data using the following commands?\n\n%s\n", cmds_txt)
+        logger.info("Pull data using the following commands?\n\n{}\n", cmds_txt)
         if self.config.yes:
             answer = True
         else:
@@ -232,7 +232,7 @@ class PullRawDataCommand:
             for src, target, cmd in commands:
                 try:
                     cmd_str = " ".join(map(shlex.quote, cmd))
-                    logger.info("Executing %s", cmd_str)
+                    logger.info("Executing {}", cmd_str)
                     print(cmd)
                     print(cmd_str)
                     check_call(cmd)
@@ -240,9 +240,9 @@ class PullRawDataCommand:
                     failed_libs.append((src, target, cmd_str))
             for src, target, cmd_str in failed_libs:
                 if not self.config.allow_missing or not self._missing_data_directory(src):
-                    logger.error("Problem executing irsync command: %s", cmd_str)
+                    logger.error("Problem executing irsync command: {}", cmd_str)
                     return 1
-                logger.warning("No data for %s", os.path.basename(target))
+                logger.warning("No data for {}", os.path.basename(target))
         return 0
 
     def _missing_data_directory(self, path):
@@ -264,7 +264,7 @@ class PullRawDataCommand:
         assays = {}
         if assay:
             if self.config.assay is None:
-                logger.info("Using irods path of first assay: %s", assay.irods_path)
+                logger.info("Using irods path of first assay: {}", assay.irods_path)
             assays = {k: v for (k, v) in isa.assays.items() if k == assay.file_name}
         else:  # no assay found
             logger.info("Found no assay")

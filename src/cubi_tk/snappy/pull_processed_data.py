@@ -9,7 +9,7 @@ import argparse
 import os
 import typing
 
-from logzero import logger
+from loguru import logger
 
 from ..common import load_toml_config
 from ..sodar_common import RetrieveSodarCollection
@@ -171,7 +171,7 @@ class PullProcessedDataCommand(PullDataCommon):
             return res
 
         logger.info("Starting cubi-tk snappy pull-processed-data")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
 
         # Find biomedsheet file
         biomedsheet_tsv = get_biomedsheet_path(

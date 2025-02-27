@@ -13,8 +13,7 @@ import typing
 
 import attr
 from biomedsheets import shortcuts
-import logzero
-from logzero import logger
+from loguru import logger
 import requests
 from retrying import retry
 import tqdm
@@ -24,10 +23,6 @@ from ..irods_common import TransferJob, iRODSTransfer
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
-
-# output logger for file list
-formatter = logzero.LogFormatter(fmt="%(message)s")
-output_logger = logzero.setup_logger(formatter=formatter)
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
@@ -173,7 +168,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 res = 1
 
         if not os.path.exists(args.base_path):  # pragma: nocover
-            logger.error("Base path %s does not exist", args.base_path)
+            logger.error("Base path {} does not exist", args.base_path)
             res = 1
 
         return res
@@ -194,7 +189,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         for library_name in library_names:
             base_dir, glob_pattern = self.build_base_dir_glob_pattern(library_name)
             glob_pattern = os.path.join(base_dir, glob_pattern)
-            logger.debug("Glob pattern for library %s is %s", library_name, glob_pattern)
+            logger.debug("Glob pattern for library {} is {}", library_name, glob_pattern)
             for glob_result in glob.glob(glob_pattern, recursive=True):
                 rel_result = os.path.relpath(glob_result, base_dir)
                 real_result = os.path.realpath(glob_result)
@@ -255,8 +250,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     )
                     if not lz_irods_path:
                         logger.info(
-                            "No active Landing Zone available for project %s, "
-                            "a new one will be created..." % lz_uuid
+                            "No active Landing Zone available for project {}, a new one will be created...", lz_uuid
                         )
                         lz_uuid, lz_irods_path = self.create_landing_zone(
                             project_uuid=in_destination, assay_uuid=assay_uuid
@@ -264,8 +258,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(
-                        "Unable to create Landing Zone using UUID %s. HTTP error %s "
-                        % (in_destination, exception_str)
+                        "Unable to create Landing Zone using UUID {}. HTTP error {} ",
+                        in_destination, exception_str
                     )
                     raise
 
@@ -280,8 +274,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     not_project_uuid = True
                     exception_str = str(e)
                     logger.debug(
-                        "Provided UUID may not be associated with a Project. HTTP error %s"
-                        % exception_str
+                        "Provided UUID may not be associated with a Project. HTTP error {}",
+                        exception_str
                     )
 
                 # Assume that provided UUID is associated with a LZ
@@ -293,8 +287,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     except requests.exceptions.HTTPError as e:
                         exception_str = str(e)
                         logger.debug(
-                            "Provided UUID may not be associated with a Landing Zone. HTTP error %s"
-                            % exception_str
+                            "Provided UUID may not be associated with a Landing Zone. HTTP error {}",
+                            exception_str
                         )
 
                 # Request input from user.
@@ -303,15 +297,15 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     # Active lz available
                     # Ask user if should use latest available or create new one.
                     if lz_irods_path:
-                        logger.info("Found active Landing Zone: %s" % lz_irods_path)
+                        logger.info("Found active Landing Zone: {}", lz_irods_path)
                         if (
                             not input("Can the process use this path? [yN] ")
                             .lower()
                             .startswith("y")
                         ):
                             logger.info(
-                                "...an alternative is to create another Landing Zone using the UUID %s"
-                                % in_destination
+                                "...an alternative is to create another Landing Zone using the UUID {}",
+                                in_destination
                             )
                             if (
                                 input("Can the process create a new landing zone? [yN] ")
@@ -329,7 +323,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     # No active lz available
                     # As user if should create new new.
                     else:
-                        logger.info("No active Landing Zone available for UUID %s" % in_destination)
+                        logger.info("No active Landing Zone available for UUID {}", in_destination)
                         if (
                             input("Can the process create a new landing zone? [yN] ")
                             .lower()
@@ -359,8 +353,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 except requests.exceptions.HTTPError as e:
                     exception_str = str(e)
                     logger.error(
-                        "Unable to identify UUID of given LZ %s. HTTP error %s "
-                        % (in_destination, exception_str)
+                        "Unable to identify UUID of given LZ {}. HTTP error {} ",
+                        in_destination, exception_str
                     )
                     raise
 
@@ -374,7 +368,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             raise ParameterException(msg)
 
         # Log
-        logger.info("Target iRODS path: %s" % lz_irods_path)
+        logger.info("Target iRODS path: {}", lz_irods_path)
 
         # Return
         return lz_uuid, lz_irods_path
@@ -389,8 +383,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         from sodar_cli.api import landingzone
 
         logger.info(
-            "Transferred files move to Landing Zone %s will be validated and moved in SODAR..."
-            % lz_uuid
+            "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
+            lz_uuid
         )
         _ = landingzone.submit_move(
             sodar_url=self.args.sodar_url,
@@ -539,12 +533,12 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         total_bytes = sum([os.path.getsize(j.path_local[: -len(".md5")]) for j in todo_jobs])
         logger.info(
-            "Computing MD5 sums for %s files of %s with up to %d processes",
+            "Computing MD5 sums for {} files of {} with up to {} processes",
             len(todo_jobs),
             sizeof_fmt(total_bytes),
             parallel_jobs,
         )
-        logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_local, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_local, todo_jobs)))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if parallel_jobs == 0:  # pragma: nocover
@@ -575,8 +569,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             return res
 
         # Logger
-        logger.info("Starting cubi-tk snappy %s", self.command_name)
-        logger.info("  args: %s", self.args)
+        logger.info("Starting cubi-tk snappy {}", self.command_name)
+        logger.info("args: {}", self.args)
 
         # Fix for ngs_mapping & variant_calling vs step
         if self.step_name is None:
@@ -594,10 +588,10 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 sheet=sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
             )
         )
-        logger.info("Libraries in sheet:\n%s", "\n".join(sorted(library_names)))
+        logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
 
         lz_uuid, transfer_jobs = self.build_jobs(library_names)
-        # logger.debug("Transfer jobs:\n%s", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        # logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
@@ -606,7 +600,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes)
         logger.info("Planning to transfer the following files:")
         for job in transfer_jobs:
-            output_logger.info(job.path_local)
+            logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
@@ -665,7 +659,7 @@ class IndexLibrariesOnlyMixin:
                 batch = self._batch_of(donor, family_max_batch, batch_key, family_key)
                 if batch < min_batch:
                     logger.debug(
-                        "Skipping donor %s because %s = %d < min_batch = %d",
+                        "Skipping donor {} because {} = {} < min_batch = {}",
                         donor.name,
                         batch_key,
                         donor.extra_infos[batch_key],
@@ -675,14 +669,14 @@ class IndexLibrariesOnlyMixin:
             if max_batch is not None:
                 if batch > max_batch:
                     logger.debug(
-                        "Skipping donor %s because %s = %d > max_batch = %d",
+                        "Skipping donor {} because {} = {} > max_batch = {}",
                         donor.name,
                         batch_key,
                         donor.extra_infos[batch_key],
                         max_batch,
                     )
                     continue
-            logger.debug("Processing NGS library for donor %s", donor.name)
+            logger.debug("Processing NGS library for donor {}", donor.name)
             yield donor.dna_ngs_library.name
 
 
@@ -693,17 +687,17 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
     path_md5 = job.path_local
 
     md5sum_argv = ["md5sum", filename]
-    logger.debug("Computing MD5sum %s > %s", " ".join(md5sum_argv), filename + ".md5")
+    logger.debug("Computing MD5sum {} > {}", " ".join(md5sum_argv), filename + ".md5")
     try:
         with open(path_md5, "wt") as md5f:
             check_call(md5sum_argv, cwd=dirname, stdout=md5f)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: %s", e)
-        logger.info("Removing file after error: %s", path_md5)
+        logger.error("Problem executing md5sum: {}", e)
+        logger.info("Removing file after error: {}", path_md5)
         try:
             os.remove(path_md5)
         except OSError as e_rm:  # pragma: nocover
-            logger.error("Could not remove file: %s", e_rm)
+            logger.error("Could not remove file: {}", e_rm)
         raise e
 
     with counter.get_lock():

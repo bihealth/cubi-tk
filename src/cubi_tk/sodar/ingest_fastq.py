@@ -13,8 +13,7 @@ from subprocess import SubprocessError, check_call, check_output
 import sys
 import typing
 
-import logzero
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 import tqdm
 
@@ -26,9 +25,6 @@ from ..snappy.itransfer_common import SnappyItransferCommandBase
 # for testing
 logger.propagate = True
 
-# no-frills logger
-formatter = logzero.LogFormatter(fmt="%(message)s")
-output_logger = logzero.setup_logger(formatter=formatter)
 
 SRC_REGEX_PRESETS = {
     "default": (
@@ -77,17 +73,17 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
     path_md5 = job.path_local
 
     md5sum_argv = ["md5sum", filename]
-    logger.debug("Computing MD5sum %s > %s", " ".join(md5sum_argv), filename + ".md5")
+    logger.debug("Computing MD5sum {} > {}", " ".join(md5sum_argv), filename + ".md5")
     try:
         with open(path_md5, "wt") as md5f:
             check_call(md5sum_argv, cwd=dirname, stdout=md5f)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: %s", e)
-        logger.info("Removing file after error: %s", path_md5)
+        logger.error("Problem executing md5sum: {}", e)
+        logger.info("Removing file after error: {}", path_md5)
         try:
             os.remove(path_md5)
         except OSError as e_rm:  # pragma: nocover
-            logger.error("Could not remove file: %s", e_rm)
+            logger.error("Could not remove file: {}", e_rm)
         raise e
 
     with counter.get_lock():
@@ -421,7 +417,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         if download_jobs:
             logger.info("Planning to download folders...")
             for job in download_jobs:
-                logger.info("  %s => %s", job.path_remote, job.path_local)
+                logger.info("{} => {}", job.path_remote, job.path_local)
             if not self.args.yes and not input("Is this OK? [yN] ").lower().startswith("y"):
                 logger.error("OK, breaking at your request")
                 return []
@@ -445,7 +441,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         """Build file transfer jobs."""
         if library_names:
             logger.warning(
-                "will ignore parameter 'library_names' = %s in ingest_fastq.build_jobs()",
+                "will ignore parameter 'library_names' = {} in ingest_fastq.build_jobs()",
                 str(library_names),
             )
 
@@ -485,7 +481,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 # logger.debug(f"Checking file: {path}")
                 m = re.match(use_regex, path)
                 if m:
-                    logger.debug("Matched %s with regex %s: %s", path, use_regex, m.groupdict())
+                    logger.debug("Matched {} with regex {}: {}", path, use_regex, m.groupdict())
                     match_wildcards = dict(
                         item
                         for item in m.groupdict(default="").items()
@@ -537,8 +533,8 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk sodar %s", self.command_name)
-        logger.info("  args: %s", self.args)
+        logger.info("Starting cubi-tk sodar {}", self.command_name)
+        logger.info("args: {}", self.args)
 
         lz_uuid, transfer_jobs = self.build_jobs()
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
@@ -549,7 +545,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             else:
                 used_regex = SRC_REGEX_PRESETS[self.args.preset]
 
-            logger.warning("No matching files were found!\nUsed regex: %s", used_regex)
+            logger.warning("No matching files were found!\nUsed regex: {}", used_regex)
             return None
 
         if self.fix_md5_files:
@@ -559,7 +555,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes)
         logger.info("Planning to transfer the following files:")
         for job in transfer_jobs:
-            output_logger.info(job.path_local)
+            logger.info(job.path_local)
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         if not self.args.yes:
@@ -596,12 +592,12 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         total_bytes = sum([os.path.getsize(j.path_local[: -len(".md5")]) for j in todo_jobs])
         logger.info(
-            "Computing MD5 sums for %s files of %s with up to %d processes",
+            "Computing MD5 sums for {} files of {} with up to {} processes",
             len(todo_jobs),
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n%s", "\n".join(map(lambda j: j.path_local, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_local, todo_jobs)))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if self.args.num_parallel_transfers == 0:  # pragma: nocover
@@ -629,11 +625,11 @@ def download_folder(job: TransferJob, counter: Value, t: tqdm.tqdm):
     """Perform one piece of work and update the global counter."""
 
     irsync_argv = ["irsync", "-r", "-a", "-K", "i:%s" % job.path_remote, job.path_local]
-    logger.debug("Transferring file: %s", " ".join(irsync_argv))
+    logger.debug("Transferring file: {}", " ".join(irsync_argv))
     try:
         check_output(irsync_argv)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing irsync: %s", e)
+        logger.error("Problem executing irsync: {}", e)
         raise
 
     with counter.get_lock():

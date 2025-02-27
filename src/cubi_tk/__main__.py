@@ -2,13 +2,11 @@
 # PYTHON_ARGCOMPLETE_OK
 
 import argparse
-import logging
 import os
 import sys
 
 import argcomplete
-import logzero
-from logzero import logger
+from loguru import logger
 
 from cubi_tk import __version__
 
@@ -95,15 +93,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     # Setup logging verbosity.
+    logger.remove()
     if args.verbose:  # pragma: no cover
-        level = logging.DEBUG
+        #will use default formatter "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+        logger.add(sys.stdout, level="DEBUG")
     else:
-        formatter = logzero.LogFormatter(
-            fmt="%(color)s[%(levelname)1.1s %(asctime)s]%(end_color)s %(message)s"
-        )
-        logzero.formatter(formatter)
-        level = logging.INFO
-    logzero.loglevel(level=level)
+        logger.add(sys.stdout, format="<level>{level:1.1}</level> - <green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{message}</level> ", level="INFO")
+    
 
     # Handle the actual command line.
     cmds = {
@@ -119,7 +115,7 @@ def main(argv=None):
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)
     if not res:
-        logger.info("All done. Have a nice day!")
+        logger.success("All done. Have a nice day!")
     else:  # pragma: nocover
         logger.error("Something did not work out correctly.")
     return res

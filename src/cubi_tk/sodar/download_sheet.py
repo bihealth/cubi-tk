@@ -6,7 +6,7 @@ from pathlib import Path
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from ..common import load_toml_config, overwrite_helper
@@ -119,7 +119,7 @@ class DownloadSheetCommand:
             )
 
         logger.info("Starting cubi-tk sodar download-sheet")
-        logger.info("  config: %s", self.config)
+        logger.info("  config: {}", self.config)
 
         out_path = Path(self.config.output_dir)
         if not out_path.exists() and self.config.makedirs:
@@ -140,8 +140,8 @@ class DownloadSheetCommand:
                 self._write_file(out_path, path, tsv["tsv"])
         except OverwriteRefusedException as e:
             if self.config.verbose:
-                logger.exception("%e", e)
-            logger.error("%s", e)
+                logger.exception("{}", e)
+            logger.error("{}", e)
             return 1
         return 0
 
@@ -167,7 +167,7 @@ class DownloadSheetCommand:
                 "Refusing to overwrite without --overwrite: %s" % out_path
             )
         logger.info(
-            "%s %s", "Not writing (dry-run)" if self.config.dry_run else "Writing", out_path
+            "{} {}", "Not writing (dry-run)" if self.config.dry_run else "Writing", out_path
         )
         overwrite_helper(
             out_path,

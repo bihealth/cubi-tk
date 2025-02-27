@@ -7,18 +7,11 @@ import os
 import typing
 
 import cattr
-import logzero
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from ..common import load_toml_config
 
-# no-frills logger
-formatter = logzero.LogFormatter(fmt="%(message)s")
-output_logger = logzero.setup_logger(formatter=formatter)
-
-# for testing
-output_logger.propagate = True
 
 
 class ValidateLandingZoneCommand:
@@ -82,7 +75,7 @@ class ValidateLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-validate.")
-        logger.debug("args: %s", self.args)
+        logger.debug("args: {}", self.args)
 
         landing_zone = api.landingzone.submit_validate(
             sodar_url=self.args.sodar_url,
@@ -92,11 +85,10 @@ class ValidateLandingZoneCommand:
         values = cattr.unstructure(landing_zone)
         if self.args.format_string:
             logger.info("Formatted server response:")
-            output_logger.info(self.args.format_string.replace(r"\t", "\t") % values)
+            logger.info(self.args.format_string.replace(r"\t", "\t") % values)
         else:
             logger.info("Server response:")
-            output_logger.info(json.dumps(values))
-
+            logger.info(json.dumps(values))
         return 0
 
 

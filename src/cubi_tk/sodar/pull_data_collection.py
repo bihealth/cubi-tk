@@ -7,7 +7,7 @@ from pathlib import PurePosixPath
 import re
 
 from irods.data_object import iRODSDataObject
-from logzero import logger
+from loguru import logger
 import pandas as pd
 
 from ..common import load_toml_config
@@ -195,7 +195,7 @@ class PullDataCollection(PullDataCommon):
             return res
 
         logger.info("Starting cubi-tk sodar pull-data-collection")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
 
         # Get list of sample ids
         if self.args.sample_list:

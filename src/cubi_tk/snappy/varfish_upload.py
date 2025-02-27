@@ -8,7 +8,7 @@ from subprocess import check_call
 import typing
 
 from biomedsheets import shortcuts
-from logzero import logger
+from loguru import logger
 
 from ..common import find_base_path
 from .common import load_sheet_tsv
@@ -177,11 +177,11 @@ class SnappyVarFishUploadCommand:
                 elif x.startswith("-"):
                     steps.discard(x[1:])
                 else:
-                    logger.warning("Does not start with +/-: %s", x)
+                    logger.warning("Does not start with +/-: {}", x)
         args.steps = tuple(sorted(steps))
 
         if not os.path.exists(args.base_path):  # pragma: nocover
-            logger.error("Base path %s does not exist", args.base_path)
+            logger.error("Base path {} does not exist", args.base_path)
             res = 1
 
         return res
@@ -193,13 +193,13 @@ class SnappyVarFishUploadCommand:
             return res
 
         logger.info("Starting cubi-tk varfish-upload")
-        logger.info("  args: %s", self.args)
+        logger.info("  args: {}", self.args)
 
         datasets = load_datasets(self.args.base_path / ".snappy_pipeline/config.yaml")
-        logger.debug("projects = %s", self.args.project)
+        logger.debug("projects = {}", self.args.project)
         considered_uuid_list = []
         for dataset in datasets.values():
-            logger.debug("Considering %s", dataset.sodar_uuid)
+            logger.debug("Considering {}", dataset.sodar_uuid)
             considered_uuid_list.append(str(dataset.sodar_uuid))
             if dataset.sodar_uuid in self.args.project:
                 self._process_dataset(dataset)
@@ -223,8 +223,8 @@ class SnappyVarFishUploadCommand:
         sodar_uuid: str = ds.sodar_uuid
         pedigree_field: str = ds.pedigree_field
         name = "%s (%s)" % (ds.sodar_title, sodar_uuid) if ds.sodar_title else sodar_uuid
-        logger.info("Processing Dataset %s", name)
-        logger.info("  loading from %s", self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
+        logger.info("Processing Dataset {}", name)
+        logger.info("  loading from {}", self.args.base_path / ".snappy_pipeline" / ds.sheet_file)
         sheet_path = self.args.base_path / ".snappy_pipeline" / ds.sheet_file
         sheet = load_sheet_tsv(path_tsv=sheet_path)
         ngs_library_names_list = yield_ngs_library_names(
@@ -232,7 +232,7 @@ class SnappyVarFishUploadCommand:
         )
         for library in ngs_library_names_list:
             if self.args.samples and not library.split("-")[0] in self.args.samples.split(","):
-                logger.info("Skipping library %s as it is not included in --samples", library)
+                logger.info("Skipping library {} as it is not included in --samples", library)
                 continue
 
             # Search for files of interest.
@@ -265,12 +265,12 @@ class SnappyVarFishUploadCommand:
                             )
                         ):  # must treat .ped as special case
                             found[file_name] = file_path
-            logger.info("  found %d files for %s", len(found), library)
+            logger.info("found {} files for {}", len(found), library)
             if self.args.verbose:
                 found_s = "\n".join("%s (%s)" % (k, v) for k, v in sorted(found.items()))
             else:
                 found_s = "\n".join(sorted(found))
-            logger.info("    files:\n%s", found_s)
+            logger.info("    files:\n{}", found_s)
             # Perform call to varfish import.
             args = [
                 "varfish-cli",
@@ -291,9 +291,9 @@ class SnappyVarFishUploadCommand:
                         break
                 answer = answer_str == "y"
             if answer:
-                logger.info("Executing '%s'", " ".join(args))
+                logger.info("Executing '{}'", " ".join(args))
                 check_call(args)
-        logger.info("  -> all done with %s", name)
+        logger.info("  -> all done with {}", name)
 
 
 def run(

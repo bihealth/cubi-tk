@@ -18,7 +18,7 @@ from uuid import UUID
 import attr
 from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
 from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from ..common import CommonConfig, load_toml_config, overwrite_helper
@@ -188,7 +188,7 @@ def build_sheet(
                     assay_filename = assay.file_name
                     break
         if(assay_filename == None):
-            logger.error("No assay with UUID %s found", assay_uuid)
+            logger.error("No assay with UUID {} found", assay_uuid)
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
     if tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline() 
@@ -212,7 +212,7 @@ def run(
         return res
 
     logger.info("Starting to pull sheet...")
-    logger.info("  Args: %s", args)
+    logger.info("Args: {}", args)
 
     logger.debug("Load config...")
     toml_config = load_toml_config(args)
@@ -222,7 +222,7 @@ def run(
 
     config_path = config.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
-    logger.info("Pulling for %d datasets", len(datasets))
+    logger.info("Pulling for {} datasets", len(datasets))
     if(len(datasets) >1 and args.assay_uuid != None):
         logger.warning("Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID")
     for dataset in datasets.values():

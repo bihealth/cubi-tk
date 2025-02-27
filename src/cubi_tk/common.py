@@ -19,7 +19,7 @@ import warnings
 
 import attr
 import icdiff
-from logzero import logger
+from loguru import logger
 from termcolor import colored
 import toml
 
@@ -247,7 +247,7 @@ def overwrite_helper(
 
         # Actually copy the file contents.
         if (not show_diff or lines) and do_write:
-            logger.info("About to write file contents to %s", out_path)
+            logger.info("About to write file contents to {}", out_path)
             sheet_file.seek(0)
             if out_path == "-":
                 shutil.copyfileobj(sheet_file, sys.stdout)
@@ -302,7 +302,7 @@ def _overwrite_helper_show_diff(
                 out_file.write(line)
     out_file.flush()
     if not lines:
-        logger.info("File %s not changed, no diff...", out_path)
+        logger.info("File {} not changed, no diff...", out_path )
     return lines
 
 
@@ -374,5 +374,5 @@ def load_toml_config(config):
         if os.path.exists(config_path):
             with open(config_path, "rt") as tomlf:
                 return toml.load(tomlf)
-    logger.info("Could not find any of the global configuration files %s.", config_paths)
+    logger.info("Could not find any of the global configuration files {}.", config_paths)
     return None

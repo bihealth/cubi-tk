@@ -6,7 +6,7 @@ import subprocess
 import time
 import typing
 
-from logzero import logger
+from loguru import logger
 from toposort import toposort
 
 from cubi_tk.exceptions import ParseOutputException
@@ -44,7 +44,7 @@ def run(
         return 1
 
     logger.info("Looking for pipeline directories (needs to contain snappy config.yaml)...")
-    logger.debug("Looking in %s", path)
+    logger.debug("Looking in {}", path)
 
     manager = SnappyWorkflowManager.from_snappy()
 
@@ -65,7 +65,7 @@ def run(
     steps: typing.List[str] = []
     for names in toposort({k: set(v) for k, v in step_dependencies.items()}):
         steps += names
-    logger.info("Will run the steps: %s", ", ".join(steps))
+    logger.info("Will run the steps: {}", ", ".join(steps))
 
     logger.info("Submitting with sbatch...")
     jids: typing.Dict[str, str] = {}
@@ -77,23 +77,23 @@ def run(
             age_cache = time.time() - path_cache.stat().st_mtime
             max_age = 24 * 60 * 60  # 1d
             if age_cache > max_age:
-                logger.info("Cache older than %d - purging", max_age)
+                logger.info("Cache older than {} - purging", max_age)
                 path_cache.unlink()
         dep_jids = [jids[dep] for dep in step_dependencies[step] if dep in jids]
         cmd = ["sbatch"]
         if dep_jids:
-            cmd += ["--dependency", "afterok:%s" % ":".join(map(str, dep_jids))]
+            cmd += ["--dependency", "afterok:" + ":".join(map(str, dep_jids))]
         cmd += ["pipeline_job.sh"]
-        logger.info("Submitting step %s (./%s): %s", step, step_path.name, " ".join(cmd))
+        logger.info("Submitting step {} (./{}): {}", step, step_path.name, " ".join(cmd))
         if args.dry_run:
-            jid = "<%s>" % step
+            jid = f"<{step}>"
         else:
             stdout_raw = subprocess.check_output(cmd, cwd=str(step_path), timeout=args.timeout)
             stdout = stdout_raw.decode("utf-8")
             if not stdout.startswith("Submitted batch job "):
-                raise ParseOutputException("Did not understand sbatch output: %s" % stdout)
+                raise ParseOutputException("Did not understand sbatch output: {}".format(stdout))
             jid = stdout.split()[-1]
-        logger.info(" => JID: %s", jid)
+        logger.info(" => JID: {}", jid)
         jids[step] = jid
 
     return None

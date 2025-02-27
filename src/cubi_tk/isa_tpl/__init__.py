@@ -43,7 +43,7 @@ import warnings
 import altamisa
 from cookiecutter.main import cookiecutter
 from cubi_isa_templates import TEMPLATES
-from logzero import logger
+from loguru import logger
 from toolz import curry
 
 from ..common import run_nocmd, yield_files_recursively
@@ -54,8 +54,8 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     """Run cookiecutter, ``tpl`` will be bound with ``toolz.curry``."""
     extra_context = {}
     for name in tpl.configuration:  # pragma: nocover
-        if getattr(args, "var_%s" % name, None) is not None:
-            extra_context[name] = getattr(args, "var_%s" % name)
+        if getattr(args, "var_{}".format(name), None) is not None:
+            extra_context[name] = getattr(args, "var_{}".format(name))
 
     if args.verbose:
         logger.info(tpl.configuration)
@@ -66,15 +66,15 @@ def run_cookiecutter(tpl, args, _parser=None, _subparser=None, no_input=False):
     extra_context["__output_dir"] = Path(output_dir).name
 
     logger.info("Start running cookiecutter")
-    logger.info("  template path: %s", tpl.path)
-    logger.info("  vars from CLI: %s", extra_context)
+    logger.info("  template path: {}", tpl.path)
+    logger.info("  vars from CLI: {}", extra_context)
     cookiecutter(
         template=tpl.path, extra_context=extra_context, output_dir=output_base, no_input=no_input
     )
     listing = [args.output_dir] + [
         "- %s" % path for path in yield_files_recursively(args.output_dir)
     ]
-    logger.info("Resulting structure is:\n%s", "\n".join(listing))
+    logger.info("Resulting structure is:\n{}", "\n".join(listing))
     return 0
 
 

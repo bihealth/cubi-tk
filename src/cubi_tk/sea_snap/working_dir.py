@@ -7,7 +7,7 @@ import shutil
 import time
 import typing
 
-from logzero import logger
+from loguru import logger
 
 #: config files
 CONFIGS = dict(DE="DE_config.yaml", mapping="mapping_config.yaml")
@@ -23,21 +23,21 @@ def run(
     start_path = Path(args.sea_snap_path)
     path = None
     for path in [start_path] + list(start_path.parents):
-        logger.debug("Trying %s", path)
+        logger.debug("Trying {}", path)
         if (path / "mapping_pipeline.snake").exists():
-            logger.info("Will start at %s", path)
+            logger.info("Will start at {}", path)
             break
     else:
-        logger.error("Could not find RNA-SeA-SnaP pipeline directories below %s", start_path)
+        logger.error("Could not find RNA-SeA-SnaP pipeline directories below {}", start_path)
         return 1
 
     # create working directory
     working_dir = Path(time.strftime(args.dirname))
     try:
         working_dir.mkdir(parents=True)
-        logger.info("Working directory %s created...", str(working_dir))
+        logger.info("Working directory {} created...", str(working_dir))
     except FileExistsError:
-        logger.error("Error: directory %s already exists!", str(working_dir))
+        logger.error("Error: directory {} already exists!", str(working_dir))
         return 1
 
     logger.info("Copy config files...")
@@ -47,15 +47,15 @@ def run(
     # copy config files
     for configf in config_files:
         shutil.copy(str(configf), str(working_dir / configf.name))
-        logger.debug("%s copied.", str(configf))
+        logger.debug("{} copied.", str(configf))
 
     cl_config = path / CLUSTER_CONFIG
     shutil.copy(str(cl_config), str(working_dir / cl_config.name))
-    logger.debug("%s copied.", str(cl_config))
+    logger.debug("{} copied.", str(cl_config))
 
     # symlink to wrapper
     (working_dir / "sea-snap").symlink_to(path / "sea-snap.py")
-    logger.debug("Symlink to %s created.", str(path / "sea-snap.py"))
+    logger.debug("Symlink to {} created.", str(path / "sea-snap.py"))
 
     return None
 

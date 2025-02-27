@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
-from logzero import logger
+from loguru import logger
 from sodar_cli import api
 
 from ..irods_common import TransferJob, iRODSTransfer

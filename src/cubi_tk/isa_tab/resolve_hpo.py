@@ -8,7 +8,7 @@ import tempfile
 import typing
 
 import hpo_similarity.ontology
-from logzero import logger
+from loguru import logger
 import requests
 import termcolor
 import tqdm
@@ -110,7 +110,7 @@ class ResolveHpoCommand:
             return res
 
         logger.info("Starting cubi-tk isa-tab resolve-hpo")
-        logger.info("  args: %s", self.args)
+        logger.info("args: {}", self.args)
 
         ok = True
 
@@ -119,10 +119,10 @@ class ResolveHpoCommand:
             try:
                 download_with_progress(self.args.hpo_obo_url, path_obo)
             except ResourceDownloadError as e:
-                logger.error("Problem downloading file: %s", e)
+                logger.error("Problem downloading file: {}", e)
                 return 1
 
-            logger.info("Loading HPO from %s", path_obo)
+            logger.info("Loading HPO from {}", path_obo)
             graph, _alt_ids, _obsolete = hpo_similarity.ontology.open_ontology(path_obo)
 
             logger.info("Resolving HPO terms...")

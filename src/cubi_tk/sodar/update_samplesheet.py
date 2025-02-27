@@ -6,7 +6,7 @@ from io import StringIO
 import re
 from typing import Iterable, Optional
 
-from logzero import logger
+from loguru import logger
 import pandas as pd
 from ruamel.yaml import YAML
 

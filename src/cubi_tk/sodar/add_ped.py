@@ -7,7 +7,7 @@ import tempfile
 import typing
 
 import attr
-from logzero import logger
+from loguru import logger
 
 from ..isa_tab.add_ped import AddPedIsaTabCommand
 from ..isa_tab.add_ped import Config as AddPedIsaTabCommandConfig
@@ -171,7 +171,7 @@ class AddPedCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
         logger.info("Starting cubi-tk sodar add-ped")
-        logger.info("  config: %s", self.config)
+        logger.info("  config: {}", self.config)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = pathlib.Path(str(tmpdir))

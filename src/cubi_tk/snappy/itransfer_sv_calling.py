@@ -4,7 +4,7 @@ import argparse
 import os
 import typing
 
-from logzero import logger
+from loguru import logger
 import yaml
 
 from . import common

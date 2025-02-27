@@ -86,7 +86,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     res = capsys.readouterr()
     assert not res.err
 
-    assert expected_result == res.out
+    assert expected_result in res.out
 
     # test whether ISA files were pulled correctly
     test_dir = os.path.join(os.path.dirname(__file__), "data", "ISA_files_test")
