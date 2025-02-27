@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/bihealth/cubi-tk/compare/v0.6.0...v0.6.1) (2025-02-27)
+
+
+### Bug Fixes
+
+* replaced deprecated logger with loguru ([#273](https://github.com/bihealth/cubi-tk/issues/273)) ([d065ae9](https://github.com/bihealth/cubi-tk/commit/d065ae9be57b6fc3fe308f5b493aed1e11a1cb8a))
+
 ## [0.6.0](https://github.com/bihealth/cubi-tk/compare/v0.5.2...v0.6.0) (2025-02-24)
 
 
