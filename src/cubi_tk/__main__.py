@@ -95,9 +95,10 @@ def main(argv=None):
     # Setup logging verbosity.
     logger.remove()
     if args.verbose:  # pragma: no cover
+        #will use default formatter "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
         logger.add(sys.stdout, level="DEBUG")
     else:
-        logger.add(sys.stdout, colorize = True,format="<green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{level:1.1}</level> - <level>{message}</level> ", level="INFO")
+        logger.add(sys.stdout, format="<level>{level:1.1}</level> - <green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{message}</level> ", level="INFO")
     
 
     # Handle the actual command line.
