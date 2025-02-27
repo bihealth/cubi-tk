@@ -97,7 +97,7 @@ def main(argv=None):
     if args.verbose:  # pragma: no cover
         logger.add(sys.stdout, level="DEBUG")
     else:
-        logger.add(sys.stdout, colorize = True,format="<green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{level}</level> - <level>{message}</level> ", level="INFO")
+        logger.add(sys.stdout, colorize = True,format="<green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{level:1.1}</level> - <level>{message}</level> ", level="INFO")
     
 
     # Handle the actual command line.
