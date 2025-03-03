@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from unittest.mock import patch
 
+from cubi_tk.parsers import get_sodar_parser
 from cubi_tk.sodar.lz_validate import ValidateLandingZoneCommand
 
 
@@ -11,21 +12,22 @@ from cubi_tk.sodar.lz_validate import ValidateLandingZoneCommand
 def test_validate(mocktoml, mockapi, caplog):
     mockapi.return_value = {"a": 1, "b": 2}
     argv = [
-        "--sodar-url",
-        "sodar_url",
+        "--sodar-server-url",
+        "sodar_server_url",
         "--sodar-api-token",
         "token",
         "u-u-i-d",
     ]
 
-    parser = ArgumentParser()
+    sodar_parser = get_sodar_parser()
+    parser = ArgumentParser(parents=[sodar_parser])
     ValidateLandingZoneCommand.setup_argparse(parser)
 
     # No format string
     args = parser.parse_args(argv)
     ValidateLandingZoneCommand(args).execute()
     mockapi.assert_called_with(
-        sodar_url="sodar_url", sodar_api_token="token", landingzone_uuid="u-u-i-d"
+        sodar_url="sodar_server_url", sodar_api_token="token", landingzone_uuid="u-u-i-d"
     )
     assert '{"a": 1, "b": 2}' in caplog.messages
 

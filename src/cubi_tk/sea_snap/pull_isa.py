@@ -17,24 +17,12 @@ from uuid import UUID
 from loguru import logger
 import requests
 
-URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
+URL_TPL = "%(sodar_server_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk sea-snap pull-isa``."""
     parser.add_argument("--hidden-cmd", dest="sea_snap_cmd", default=run, help=argparse.SUPPRESS)
-
-    group_sodar = parser.add_argument_group("SODAR-related")
-    group_sodar.add_argument(
-        "--sodar-url",
-        default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-        help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-    )
-    group_sodar.add_argument(
-        "--sodar-api-token",
-        default=os.environ.get("SODAR_API_TOKEN", None),
-        help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-    )
 
     parser.add_argument(
         "--allow-overwrite",
@@ -61,8 +49,8 @@ def check_args(args) -> int:
             "SODAR_API_TOKEN environment variable"
         )
         any_error = True
-    if not args.sodar_url:  # pragma: nocover
-        logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
+    if not args.sodar_server_url:  # pragma: nocover
+        logger.error("SODAR URL is empty. Either specify --sodar-server-url, or set SODAR_URL.")
         any_error = True
 
     # Check output file presence vs. overwrite allowed.
@@ -96,7 +84,7 @@ def pull_isa(args) -> typing.Optional[int]:
 
     # Query investigation JSON from API.
     url = URL_TPL % {
-        "sodar_url": args.sodar_url,
+        "sodar_server_url": args.sodar_server_url,
         "project_uuid": args.project_uuid,
         "api_key": args.sodar_api_token,
     }

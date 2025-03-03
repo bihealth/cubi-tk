@@ -254,7 +254,7 @@ class UpdateSamplesheetCommand:
 
         # Get samplehseet from SODAR API
         sodar_api = SodarAPI(
-            sodar_url=self.args.sodar_url,
+            sodar_server_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=self.args.project_uuid,
         )

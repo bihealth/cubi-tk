@@ -46,6 +46,8 @@ from cubi_isa_templates import TEMPLATES
 from loguru import logger
 from toolz import curry
 
+from cubi_tk.parsers import get_basic_parser
+
 from ..common import run_nocmd, yield_files_recursively
 
 
@@ -101,12 +103,14 @@ def validate_output_directory(parser, output_directory_path):
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
+    basic_parser = get_basic_parser()
     subparsers = parser.add_subparsers(dest="tpl")
 
     # Create a sub parser for each template.
     for tpl in TEMPLATES.values():
         parser = subparsers.add_parser(
             tpl.name,
+            parents=[basic_parser,], 
             help="Create ISA-tab directory using %s" % tpl.description,
             description=(
                 "When specifying the --var-* argument, you can use JSON syntax.  Failing to parse JSON "

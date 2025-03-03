@@ -11,7 +11,7 @@ from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
 class RetrieveSodarCollection(iRODSRetrieveCollection):
     def __init__(
         self,
-        sodar_url,
+        sodar_server_url,
         sodar_api_token,
         assay_uuid,
         project_uuid,
@@ -21,8 +21,8 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
     ):
         """Constructor.
 
-        :param sodar_url: SODAR url.
-        :type sodar_url: str
+        :param sodar_server_url: SODAR url.
+        :type sodar_server_url: str
 
         :param sodar_api_token: SODAR API token.
         :type sodar_api_token: str
@@ -43,7 +43,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         :type irods_env_path: pathlib.Path, optional
         """
         super().__init__(hash_scheme, ask, irods_env_path)
-        self.sodar_url = sodar_url
+        self.sodar_server_url = sodar_server_url
         self.sodar_api_token = sodar_api_token
         self.assay_uuid = assay_uuid
         self.project_uuid = project_uuid
@@ -72,7 +72,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         :return: Returns Assay iRODS path - extracted via SODAR API.
         """
         investigation = api.samplesheet.retrieve(
-            sodar_url=self.sodar_url,
+            sodar_url=self.sodar_server_url,
             sodar_api_token=self.sodar_api_token,
             project_uuid=self.project_uuid,
         )

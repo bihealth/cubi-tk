@@ -77,16 +77,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--hidden-cmd", dest="snappy_cmd", default=run, help=argparse.SUPPRESS)
 
     parser.add_argument(
-        "--base-path",
-        default=os.getcwd(),
-        required=False,
-        help=(
-            "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-            "work directory and falls back to current working directory by default."
-        ),
-    )
-
-    parser.add_argument(
         "--yes", default=False, action="store_true", help="Assume all answers are yes."
     )
 
@@ -113,7 +103,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--library-types", help="Library type(s) to use, comma-separated, default is to use all."
+        "--library-types", choices=("WES", "WGS", "Panel_seq"), help="Library type(s) to use, comma-separated, default is to use all."
     )
 
     parser.add_argument(

@@ -57,7 +57,9 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        super().setup_argparse(parser)
+        parser.add_argument(
+            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
         parser.add_argument(
             "--mapper",
             help="Name of the mapper to transfer for, defaults to bwa_mem2.",

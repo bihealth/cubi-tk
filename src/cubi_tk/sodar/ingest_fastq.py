@@ -110,18 +110,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR. Defaults to SODAR_API_TOKEN environment variable.",
-        )
-
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -235,14 +223,16 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         res = 0
 
         toml_config = load_toml_config(args)
-        if not args.sodar_url:
-            if not toml_config:
-                logger.error("SODAR URL not found in config files. Please specify on command line.")
-                res = 1
-            args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
-            if not args.sodar_url:
-                logger.error("SODAR URL not found in config files. Please specify on command line.")
-                res = 1
+        if not args.sodar_server_url:
+            self.args.sodar_server_url = os.environ.get("SODAR_URL", "https://sodar.bihealth.org/")
+            if not args.sodar_server_url:
+                if not toml_config:
+                    logger.error("SODAR URL not found in config files. Please specify on command line.")
+                    res = 1
+                args.sodar_server_url = toml_config.get("global", {}).get("sodar_server_url")
+                if not args.sodar_server_url:
+                    logger.error("SODAR URL not found in config files. Please specify on command line.")
+                    res = 1
         if not args.sodar_api_token:
             if not toml_config:
                 logger.error(
@@ -275,7 +265,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         from sodar_cli.api import landingzone
 
         lz = landingzone.retrieve(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
@@ -293,7 +283,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         to a corresponding `out_column` (default if not defined: last Material column)."""
 
         isa_dict = api.samplesheet.export(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
         )
@@ -304,7 +294,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 raise ParameterException(msg)
 
             investigation = api.samplesheet.retrieve(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=project_uuid,
             )

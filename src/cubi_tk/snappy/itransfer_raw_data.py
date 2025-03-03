@@ -21,6 +21,11 @@ class SnappyItransferRawDataCommand(SnappyItransferCommandBase):
             os.path.join(self.args.base_path, TPL_INPUT_LINK_DIR % {"library_name": library_name}),
             "**",
         )
+    @classmethod
+    def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

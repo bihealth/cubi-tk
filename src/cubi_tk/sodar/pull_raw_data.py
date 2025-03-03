@@ -27,7 +27,6 @@ class Config:
     config: str
     verbose: bool
     sodar_server_url: str
-    sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     overwrite: bool
     min_batch: int
@@ -102,18 +101,6 @@ class PullRawDataCommand:
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
 
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-
         parser.add_argument(
             "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
         )
@@ -160,9 +147,9 @@ class PullRawDataCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         toml_config = load_toml_config(self.config)
-        if not self.config.sodar_url:
+        if not self.config.sodar_server_url:
             self.config = attr.evolve(
-                self.config, sodar_url=toml_config.get("global", {}).get("sodar_server_url")
+                self.config, sodar_server_url=toml_config.get("global", {}).get("sodar_server_url")
             )
         if not self.config.sodar_api_token:
             self.config = attr.evolve(
@@ -177,7 +164,7 @@ class PullRawDataCommand:
             out_path.mkdir(parents=True)
 
         investigation = api.samplesheet.retrieve(
-            sodar_url=self.config.sodar_url,
+            sodar_url=self.config.sodar_server_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,
         )
@@ -255,7 +242,7 @@ class PullRawDataCommand:
 
     def _get_library_to_folder(self, assay):
         isa_dict = api.samplesheet.export(
-            sodar_url=self.config.sodar_url,
+            sodar_url=self.config.sodar_server_url,
             sodar_api_token=self.config.sodar_api_token,
             project_uuid=self.config.project_uuid,
         )

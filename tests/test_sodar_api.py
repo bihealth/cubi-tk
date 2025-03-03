@@ -10,7 +10,7 @@ from cubi_tk.exceptions import ParameterException, SodarAPIException
 @pytest.fixture
 def sodar_api_args():
     return {
-        "sodar_url": "https://sodar.bihealth.org/",
+        "sodar_server_url": "https://sodar.bihealth.org/",
         "sodar_api_token": "token123",
         "project_uuid": "123e4567-e89b-12d3-a456-426655440000",
     }
@@ -29,10 +29,10 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
     sodar_api.SodarAPI(**sodar_api_args)
 
     # No toml config available, fail if any value is not given, or malformed
-    args["sodar_url"] = ""
+    args["sodar_server_url"] = ""
     with pytest.raises(ParameterException):
         sodar_api.SodarAPI(**args)
-    args["sodar_url"] = "https://sodar.bihealth.org/"
+    args["sodar_server_url"] = "https://sodar.bihealth.org/"
     args["sodar_api_token"] = ""
     with pytest.raises(ParameterException):
         sodar_api.SodarAPI(**args)
@@ -44,7 +44,7 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
     # With toml config available, only project_uuid is required
     fs.create_file(os.path.expanduser(GLOBAL_CONFIG_PATHS[0]), contents=mock_toml_config)
     sodar_api.SodarAPI(
-        sodar_url="", sodar_api_token="", project_uuid="123e4567-e89b-12d3-a456-426655440000"
+        sodar_server_url="", sodar_api_token="", project_uuid="123e4567-e89b-12d3-a456-426655440000"
     )
 
 

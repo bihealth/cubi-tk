@@ -9,6 +9,7 @@ import argcomplete
 from loguru import logger
 
 from cubi_tk import __version__
+from cubi_tk.parsers import get_basic_parser
 
 from .common import run_nocmd
 from .irods import run as run_irods
@@ -38,26 +39,9 @@ def setup_argparse_only():  # pragma: nocover
 def setup_argparse():
     """Create argument parser."""
     # Construct argument parser and set global options.
-    parser = argparse.ArgumentParser(prog="cubi-tk")
-    parser.add_argument("--verbose", action="store_true", default=False, help="Increase verbosity.")
+    basic_parser =get_basic_parser()
+    parser = argparse.ArgumentParser(prog="cubi-tk", parents=[basic_parser])
     parser.add_argument("--version", action="version", version="%%(prog)s %s" % __version__)
-
-    group = parser.add_argument_group("Basic Configuration")
-    group.add_argument(
-        "--config",
-        default=os.environ.get("SODAR_CONFIG_PATH", None),
-        help="Path to configuration file.",
-    )
-    group.add_argument(
-        "--sodar-server-url",
-        default=os.environ.get("SODAR_SERVER_URL", None),
-        help="SODAR server URL key to use, defaults to env SODAR_SERVER_URL.",
-    )
-    group.add_argument(
-        "--sodar-api-token",
-        default=os.environ.get("SODAR_API_TOKEN", None),
-        help="SODAR API token to use, defaults to env SODAR_API_TOKEN.",
-    )
 
     # Add sub parsers for each argument.
     subparsers = parser.add_subparsers(dest="cmd")
@@ -71,7 +55,7 @@ def setup_argparse():
         subparsers.add_parser("isa-tab", help="ISA-tab tools besides templating.")
     )
     setup_argparse_snappy(
-        subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline.")
+        subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline."),
     )
     setup_argparse_sodar(subparsers.add_parser("sodar", help="SODAR command line interface."))
     setup_argparse_irods(subparsers.add_parser("irods", help="iRods command line interface."))

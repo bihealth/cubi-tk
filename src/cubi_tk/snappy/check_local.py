@@ -459,15 +459,6 @@ class SnappyCheckLocalCommand:
             help="The shortcut TSV schema to use.",
         )
         parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
-                "back to current working directory by default."
-            ),
-        )
-        parser.add_argument(
             "project_uuids",
             type=str,
             nargs="*",

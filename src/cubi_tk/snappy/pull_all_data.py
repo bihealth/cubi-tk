@@ -23,7 +23,6 @@ class Config:
     config: str
     verbose: bool
     sodar_server_url: str
-    sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     overwrite: bool
     first_batch: int
@@ -47,40 +46,10 @@ class PullAllDataCommand:
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
+        #TODO: implement functionality for tsv-shortcut and last-batch
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-                "work directory and falls back to current working directory by default."
-            ),
-        )
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
-            "--output-directory",
-            default=None,
-            required=True,
-            help="Output directory, where downloaded files will be stored.",
-        )
-        parser.add_argument(
-            "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
-        )
-        parser.add_argument("--first-batch", default=0, type=int, help="First batch number to pull")
-        parser.add_argument("--samples", help="Optional list of samples to pull")
         parser.add_argument(
             "--allow-missing",
             default=False,
@@ -98,14 +67,7 @@ class PullAllDataCommand:
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
         )
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
-        parser.add_argument(
-            "--assay",
-            dest="assay_uuid",
-            default=None,
-            help="UUID of assay to create landing zone for.",
-        )
-        parser.add_argument("project_uuid", help="UUID of project to download data for.")
-
+        
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -126,7 +88,6 @@ class PullAllDataCommand:
                 config=self.config.config,
                 verbose=self.config.verbose,
                 sodar_server_url=self.config.sodar_server_url,
-                sodar_url=self.config.sodar_url,
                 sodar_api_token=self.config.sodar_api_token,
                 overwrite=self.config.overwrite,
                 min_batch=self.config.first_batch,

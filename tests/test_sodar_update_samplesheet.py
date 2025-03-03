@@ -6,6 +6,7 @@ import re
 from unittest.mock import patch
 
 import pandas as pd
+from cubi_tk.parsers import get_sodar_parser
 import pytest
 
 from cubi_tk.exceptions import ParameterException
@@ -644,7 +645,8 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         "Library Name",
     ]
 
-    parser = argparse.ArgumentParser()
+    sodar_parser = get_sodar_parser()
+    parser = argparse.ArgumentParser(parents=[sodar_parser])
     UpdateSamplesheetCommand.setup_argparse(parser)
 
     mock_api_call.return_value = MV_isa_json
@@ -676,7 +678,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         [
             "--sodar-api-token",
             "1234",
-            "--sodar-url",
+            "--sodar-server-url",
             "https://sodar.bihealth.org/",
             "-s",
             "FAM_01",
@@ -717,7 +719,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         [
             "--sodar-api-token",
             "1234",
-            "--sodar-url",
+            "--sodar-server-url",
             "https://sodar.bihealth.org/",
             "-d",
             "MV",

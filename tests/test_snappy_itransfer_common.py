@@ -2,6 +2,7 @@ import argparse
 import datetime
 from unittest.mock import patch
 
+from cubi_tk.parsers import get_snappy_itransfer_parser
 from cubi_tk.snappy.itransfer_common import SnappyItransferCommandBase
 from cubi_tk.irods_common import TransferJob
 
@@ -27,8 +28,7 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
             )
     expected = sorted(expected, key=lambda x: x.path_local)
 
-    parser = argparse.ArgumentParser()
-    SnappyItransferCommandBase.setup_argparse(parser)
+    parser = get_snappy_itransfer_parser()
     args = parser.parse_args(["466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)
@@ -43,8 +43,7 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
 def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_value, fs):
     mock_check_call.return_value = "dummy-md5-sum dummy/file/name"
 
-    parser = argparse.ArgumentParser()
-    SnappyItransferCommandBase.setup_argparse(parser)
+    parser = get_snappy_itransfer_parser()
     args = parser.parse_args(["466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)

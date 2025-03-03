@@ -53,7 +53,7 @@ def test_run_seasnap_pull_isa_smoke_test(requests_mock, capsys, fs):
         json_text = inputf.read()
 
     # --- mock modules
-    url = URL_TPL % {"sodar_url": args.sodar_url, "project_uuid": project_uuid, "api_key": "XXX"}
+    url = URL_TPL % {"sodar_server_url": args.sodar_server_url, "project_uuid": project_uuid, "api_key": "XXX"}
     requests_mock.get(url, text=json_text)
 
     # --- run tests

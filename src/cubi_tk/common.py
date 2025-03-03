@@ -365,7 +365,7 @@ class UnionFind:
 
 def load_toml_config(config):
     # Load configuration from TOML cubitkrc file, if any.
-    if config.config:
+    if config.config:#hasattr(config, "config"):
         config_paths = (config.config,)
     else:
         config_paths = GLOBAL_CONFIG_PATHS

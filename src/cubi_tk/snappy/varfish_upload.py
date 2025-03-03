@@ -99,15 +99,6 @@ class SnappyVarFishUploadCommand:
             help="SODAR API token to use, defaults to env VARFISH_API_TOKEN.",
         )
         parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-                "work directory and falls back to current working directory by default."
-            ),
-        )
-        parser.add_argument(
             "--steps",
             default=[],
             action="append",

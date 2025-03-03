@@ -24,7 +24,6 @@ class Config:
     config: str
     verbose: bool
     sodar_server_url: str
-    sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     dry_run: bool
     show_diff: bool
@@ -55,18 +54,6 @@ class AddPedCommand:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -182,7 +169,6 @@ class AddPedCommand:
                     config=self.config.config,
                     verbose=self.config.verbose,
                     sodar_server_url=self.config.sodar_server_url,
-                    sodar_url=self.config.sodar_url,
                     sodar_api_token=self.config.sodar_api_token,
                     makedirs=False,
                     overwrite=False,
@@ -236,7 +222,6 @@ class AddPedCommand:
                     config=self.config.config,
                     verbose=self.config.verbose,
                     sodar_server_url=self.config.sodar_server_url,
-                    sodar_url=self.config.sodar_url,
                     sodar_api_token=self.config.sodar_api_token,
                     project_uuid=self.config.project_uuid,
                     input_investigation_file=str(tmp_path / next(tmp_path.glob("i_*"))),

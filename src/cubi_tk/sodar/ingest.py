@@ -44,8 +44,8 @@ class SodarIngest:
         toml_config = load_toml_config(Config())
         if toml_config:  # pragma: no cover
             config_url = toml_config.get("global", {}).get("sodar_server_url")
-            if self.args.sodar_url == "https://sodar.bihealth.org/" and config_url:
-                self.args.sodar_url = config_url
+            if self.args.sodar_server_url == "https://sodar.bihealth.org/" and config_url:
+                self.args.sodar_server_url = config_url
             if not self.args.sodar_api_token:
                 self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
         if not self.args.sodar_api_token:
@@ -56,17 +56,6 @@ class SodarIngest:
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="SODAR API token. Defaults to SODAR_API_TOKEN environment variable.",
         )
         parser.add_argument(
             "-r",
@@ -127,7 +116,7 @@ class SodarIngest:
         if is_uuid(self.args.destination):
             try:
                 lz_info = api.landingzone.retrieve(
-                    sodar_url=self.args.sodar_url,
+                    sodar_url=self.args.sodar_server_url,
                     sodar_api_token=self.args.sodar_api_token,
                     landingzone_uuid=self.args.destination,
                 )

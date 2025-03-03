@@ -22,7 +22,6 @@ def pull_raw_data():
         "sodar_server_url": "https://sodar.bihealth.org/",
         "sodar_api_token": "__secret__",
         "base_path": ".",
-        "sodar_url": "https://sodar.bihealth.org/",
         "dry_run": False,
         "overwrite": False,
         "use_library_name": False,

@@ -84,19 +84,6 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup arguments"""
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -139,7 +126,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             from sodar_cli.api import landingzone
 
             lz_irods_path = landingzone.retrieve(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 landingzone_uuid=self.args.destination,
             ).irods_path

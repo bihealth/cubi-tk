@@ -100,7 +100,7 @@ def run(
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk snappy pull-sheet``."""
+    """Setup argument parser for ``cubi-tk snappy kickoff``."""
     parser.add_argument("--hidden-cmd", dest="snappy_cmd", default=run, help=argparse.SUPPRESS)
 
     parser.add_argument(

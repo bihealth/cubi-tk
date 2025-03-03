@@ -30,7 +30,6 @@ class Config:
     base_path: str
     verbose: bool
     sodar_server_url: str
-    sodar_url: str
     sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
     tsv_shortcut: str
     use_library_name: bool
@@ -61,48 +60,12 @@ class PullRawDataCommand(PullDataCommon):
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
         parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-                "work directory and falls back to current working directory by default."
-            ),
-        )
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
             "--dry-run",
             "-n",
             default=False,
             action="store_true",
             help="Perform a dry run, i.e., just displays the files that would be downloaded.",
         )
-        parser.add_argument(
-            "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
-        )
-        parser.add_argument(
-            "--tsv-shortcut",
-            default="germline",
-            choices=("cancer", "generic", "germline"),
-            help="The shortcut TSV schema to use.",
-        )
-        parser.add_argument(
-            "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
-        )
-        parser.add_argument(
-            "--last-batch", type=int, required=False, help="Last batch to be transferred."
-        )
-        parser.add_argument("--samples", help="Optional list of samples to pull")
         parser.add_argument(
             "--use-library-name",
             default=False,
@@ -112,13 +75,6 @@ class PullRawDataCommand(PullDataCommon):
                 "(e.g. 'P001-N1-DNA1-WGS1') instead of sample identifier (e.g.'P001') in the file name."
             ),
         )
-        parser.add_argument(
-            "--assay-uuid",
-            dest="assay_uuid",
-            default=None,
-            help="UUID of assay to create landing zone for.",
-        )
-        parser.add_argument("project_uuid", help="UUID of project to download data for.")
 
     @classmethod
     def run(
@@ -127,7 +83,7 @@ class PullRawDataCommand(PullDataCommon):
         """Entry point into the command."""
         # If SODAR info not provided, fetch from user's toml file
         toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
+        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
         args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
             "sodar_api_token"
         )
@@ -138,14 +94,20 @@ class PullRawDataCommand(PullDataCommon):
         args.pop("config", None)
         args.pop("cmd", None)
         args.pop("snappy_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(Config(**args)).execute(args)
 
-    def execute(self) -> typing.Optional[int]:
+    def execute(self, args) -> typing.Optional[int]:
         """Execute the download."""
         logger.info("Loading configuration file and look for dataset")
 
         # Find download path
-        download_path = self._get_download_path()
+        if(args.output_directory):
+            if not (os.path.exists(args.output_directory) and os.access(args.output_directory, os.W_OK)):
+                logger.error(f"Output directory path either does not exist or it is not writable: {args.base_path}")
+                return 1
+            download_path = args.output_directory
+        else:
+            download_path = self._get_download_path()
         if not download_path:
             return 1
         logger.info(f"=> will download to {download_path}")
@@ -182,14 +144,14 @@ class PullRawDataCommand(PullDataCommon):
         assay_uuid = None
         if not self.config.assay_uuid:
             assay_uuid = self.get_assay_uuid(
-                sodar_url=self.config.sodar_url,
+                sodar_url=self.config.sodar_server_url,
                 sodar_api_token=self.config.sodar_api_token,
                 project_uuid=self.config.project_uuid,
             )
 
         # Find all remote files (iRODS)
         remote_files_dict = RetrieveSodarCollection(
-            self.config.sodar_url,
+            self.config.sodar_server_url,
             self.config.sodar_api_token,
             self.config.assay_uuid,
             self.config.project_uuid,

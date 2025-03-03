@@ -57,16 +57,6 @@ class PullDataCollection(PullDataCommon):
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-        parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
 
         parser.add_argument(
             "--overwrite",
@@ -165,7 +155,7 @@ class PullDataCollection(PullDataCommon):
 
         # If SODAR info not provided, fetch from user's toml file
         toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
+        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
         args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
             "sodar_api_token"
         )
@@ -211,7 +201,7 @@ class PullDataCollection(PullDataCommon):
 
         # Find all remote files (iRODS)
         filesearcher = RetrieveSodarCollection(
-            self.args.sodar_url,
+            self.args.sodar_server_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,

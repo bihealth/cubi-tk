@@ -601,29 +601,10 @@ class SnappyCheckRemoteCommand:
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
         parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
             "--tsv-shortcut",
             default="germline",
             choices=("cancer", "generic", "germline"),
             help="The shortcut TSV schema to use.",
-        )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
-                "back to current working directory by default."
-            ),
         )
         parser.add_argument(
             "--md5",
@@ -653,7 +634,7 @@ class SnappyCheckRemoteCommand:
 
         # If SODAR info not provided, fetch from user's toml file
         toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
+        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
         args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
             "sodar_api_token"
         )
@@ -684,7 +665,7 @@ class SnappyCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         library_remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_url,
+            self.args.sodar_server_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,

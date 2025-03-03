@@ -32,7 +32,7 @@ import yaml
 #: The URL template to use.
 from ..common import get_terminal_columns
 
-URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
+URL_TPL = "%(sodar_server_url)ssamplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 
 def strip(x):
@@ -104,18 +104,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="Allow to overwrite output file, default is not to allow overwriting output file.",
     )
 
-    group_sodar = parser.add_argument_group("SODAR-related")
-    group_sodar.add_argument(
-        "--sodar-url",
-        default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-        help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-    )
-    group_sodar.add_argument(
-        "--sodar-auth-token",
-        default=os.environ.get("SODAR_AUTH_TOKEN", None),
-        help="Authentication token when talking to SODAR.  Defaults to SODAR_AUTH_TOKEN environment variable.",
-    )
-
     parser.add_argument(
         "in_path_pattern",
         help="Path pattern to use for extracting input file information. See "
@@ -139,15 +127,17 @@ def check_args(args) -> int:
     # if set for pulling ISA files
     if args.project_uuid:
         # Check presence of SODAR URL and auth token.
-        if not args.sodar_auth_token:  # pragma: nocover
+        if not args.sodar_api_token:  # pragma: nocover
             logger.error(
-                "SODAR authentication token is empty.  Either specify --sodar-auth-token, or set "
-                "SODAR_AUTH_TOKEN environment variable"
+                "SODAR authentication token is empty.  Either specify --sodar-api-token, or set "
+                "SODAR_API_TOKEN environment variable"
             )
             any_error = True
-        if not args.sodar_url:  # pragma: nocover
-            logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
-            any_error = True
+        if not args.sodar_server_url:  # pragma: nocover
+            args.sodar_server_url = os.environ.get("SODAR_URL", "https://sodar.bihealth.org/")
+            if not args.sodar_server_url:
+                logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
+                any_error = True
 
         # Check output file presence vs. overwrite allowed.
         if (
@@ -470,15 +460,15 @@ def pull_isa(args) -> typing.Optional[int]:
 
     # Query investigation JSON from API.
     url = URL_TPL % {
-        "sodar_url": args.sodar_url,
+        "sodar_server_url": args.sodar_server_url,
         "project_uuid": args.project_uuid,
-        "api_key": args.sodar_auth_token,
+        "api_key": args.sodar_api_token,
     }
     logger.info("Fetching {}", url)
     r = requests.get(url)
     r.raise_for_status()
     all_data = r.json()
-
+    logger.info("all_data {}", all_data)
     isa_dir = Path(args.output_folder)
 
     path = isa_dir / all_data["investigation"]["path"]
