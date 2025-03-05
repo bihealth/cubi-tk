@@ -44,7 +44,7 @@ class CreateLandingZoneCommand:
         )
 
         parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
+            "--assay-uuid", default=None, help="UUID of assay to create landing zone for."
         )
 
         parser.add_argument(
@@ -100,7 +100,7 @@ class CreateLandingZoneCommand:
                 sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,
-                assay_uuid=self.args.assay,
+                assay_uuid=self.args.assay_uuid,
             )
 
         values = cattr.unstructure(lz)

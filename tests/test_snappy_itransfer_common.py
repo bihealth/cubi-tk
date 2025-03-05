@@ -1,4 +1,3 @@
-import argparse
 import datetime
 from unittest.mock import patch
 

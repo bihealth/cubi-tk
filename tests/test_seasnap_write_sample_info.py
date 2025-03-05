@@ -57,7 +57,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     ]
 
     parser, subparsers = setup_argparse()
-    args = parser.parse_args(argv)
+    parser.parse_args(argv)
 
     # --- add test content and files
     path_json = os.path.join(os.path.dirname(__file__), "data", "isa_test.json")

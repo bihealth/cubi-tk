@@ -141,7 +141,7 @@ class PullProcessedDataCommand(PullDataCommon):
         assay_uuid = None
         if not self.args.assay_uuid:
             assay_uuid = self.get_assay_uuid(
-                sodar_url=self.args.sodar_server_url,
+                sodar_server_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,
             )

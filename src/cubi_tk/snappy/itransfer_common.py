@@ -308,7 +308,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             lz_uuid
         )
         _ = landingzone.submit_move(
-            sodar_server_url=self.args.sodar_server_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
@@ -324,7 +324,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         from sodar_cli.api import landingzone
 
         lz = landingzone.retrieve(
-            sodar_server_url=self.args.sodar_server_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
@@ -348,7 +348,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # List existing lzs
         existing_lzs = sorted(
             landingzone.list_(
-                sodar_server_url=self.args.sodar_server_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=project_uuid,
             ),
@@ -388,7 +388,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         from sodar_cli.api import landingzone
 
         lz = landingzone.create(
-            sodar_server_url=self.args.sodar_server_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
             assay_uuid=assay_uuid,
@@ -416,7 +416,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # List existing lzs
         existing_lzs = sorted(
             landingzone.list_(
-                sodar_server_url=self.args.sodar_server_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=project_uuid,
             ),

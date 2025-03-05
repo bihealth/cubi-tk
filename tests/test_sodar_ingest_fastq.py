@@ -184,7 +184,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
     mock_api_export.return_value = my_sodar_api_export(2)
     mock_api_retrieve.return_value = InvestigationFactory()
     assay_uuid = list(mock_api_retrieve.return_value.studies["s_Study_0"].assays.keys())[0]
-    ingestfastq.args.assay = assay_uuid
+    ingestfastq.args.assay_uuid = assay_uuid
 
     assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")
 
@@ -287,12 +287,12 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "title": "",
         "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
     }
-    
+
     url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", args.destination)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
     # --- run tests
     res = main(argv)
-    
+
 
     assert not res
 

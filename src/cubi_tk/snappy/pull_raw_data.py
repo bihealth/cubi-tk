@@ -144,7 +144,7 @@ class PullRawDataCommand(PullDataCommon):
         assay_uuid = None
         if not self.config.assay_uuid:
             assay_uuid = self.get_assay_uuid(
-                sodar_url=self.config.sodar_server_url,
+                sodar_server_url=self.config.sodar_server_url,
                 sodar_api_token=self.config.sodar_api_token,
                 project_uuid=self.config.project_uuid,
             )

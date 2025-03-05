@@ -83,7 +83,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
     setup_argparse_add_ped(
-        subparsers.add_parser("add-ped", parents=[basic_parser,], help="Augment sample sheet from PED file")
+        subparsers.add_parser("add-ped", parents=[basic_parser,sodar_parser], help="Augment sample sheet from PED file")
     )
     setup_argparse_update_samplesheet(
         subparsers.add_parser("update-samplesheet", parents=[basic_parser, sodar_parser], help="Update sample sheet")
@@ -93,7 +93,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser("upload-sheet", parents=[basic_parser, sodar_parser], help="Upload and replace ISA-tab")
     )
     setup_argparse_pull_data_collection(
-        subparsers.add_parser("pull-data-collection", parents=[basic_parser,], help="Download data collections from iRODS")
+        subparsers.add_parser("pull-data-collection", parents=[basic_parser,sodar_parser], help="Download data collections from iRODS")
     )
     setup_argparse_pull_raw_data(
         subparsers.add_parser("pull-raw-data", parents=[basic_parser, sodar_parser], help="Download raw data from iRODS")

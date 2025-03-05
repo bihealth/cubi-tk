@@ -206,7 +206,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             help="Folder to save files from WebDAV temporarily, if set as source.",
         )
 
-        parser.add_argument("--assay", dest="assay", default=None, help="UUID of assay to use.")
+        parser.add_argument("--assay-uuid", default=None, help="UUID of assay to use.")
 
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
 
@@ -288,8 +288,8 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             project_uuid=project_uuid,
         )
         if len(isa_dict["assays"]) > 1:
-            if not self.args.assay:
-                msg = "Multiple assays found in investigation, please specify which one to use with --assay."
+            if not self.args.assay_uuid:
+                msg = "Multiple assays found in investigation, please specify which one to use with --assay-uid."
                 logger.error(msg)
                 raise ParameterException(msg)
 
@@ -300,7 +300,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             )
             for study in investigation.studies.values():
                 for assay_uuid in study.assays.keys():
-                    if self.args.assay == assay_uuid:
+                    if self.args.assay_uuid == assay_uuid:
                         assay_file_name = study.assays[assay_uuid].file_name
                         break
                 # First break can only break out of inner loop
@@ -308,7 +308,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     continue
                 break
             else:
-                msg = f"Assay with UUID {self.args.assay} not found in investigation."
+                msg = f"Assay with UUID {self.args.assay_uuid} not found in investigation."
                 logger.error(msg)
                 raise ParameterException(msg)
         else:
