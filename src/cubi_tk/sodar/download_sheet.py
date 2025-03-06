@@ -1,7 +1,6 @@
 """``cubi-tk sodar download-sheet``: download ISA-tab from SODAR."""
 
 import argparse
-import os
 from pathlib import Path
 import typing
 

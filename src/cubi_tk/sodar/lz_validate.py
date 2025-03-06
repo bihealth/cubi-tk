@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import os
 import typing
 
 import cattr

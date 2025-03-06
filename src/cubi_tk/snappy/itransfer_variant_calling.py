@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import typing
 
 from .itransfer_common import IndexLibrariesOnlyMixin, SnappyItransferCommandBase
 

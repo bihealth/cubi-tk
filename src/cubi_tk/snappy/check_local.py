@@ -123,7 +123,7 @@ class GermlineSheetChecker:
             ok = False
 
         return ok
-    
+
 class CancerSheetChecker:
     """Helper class that implements the consistency checks within cancer sheets."""
 
@@ -442,7 +442,7 @@ class SnappyCheckLocalCommand:
             self.shortcut_sheets = [shortcuts.CancerCaseSheet(sheet, options= options) for sheet in self.sheets]
         else:
             raise ParameterException("tsv shortcut not supported, valid values are 'cancer' and 'germline'")
-         
+
 
 
     @classmethod

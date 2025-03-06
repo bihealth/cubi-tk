@@ -82,7 +82,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_check_remote(
         subparsers.add_parser(
-            "check-remote", 
+            "check-remote",
             parents=[basic_parser, sodar_parser, snappy_parser],
             help="Check consistency within remote sample sheet and files"
         )
@@ -97,7 +97,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_itransfer_ngs_mapping(
         subparsers.add_parser(
-            "itransfer-ngs-mapping", 
+            "itransfer-ngs-mapping",
             parents=[basic_parser, sodar_parser, snappy_parser, snappy_itransfer_parser],
             help="Transfer ngs_mapping results into iRODS landing zone"
         )
@@ -121,7 +121,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_itransfer_step(
         subparsers.add_parser(
-            "itransfer-step", 
+            "itransfer-step",
             parents=[basic_parser, sodar_parser, snappy_parser, snappy_itransfer_parser],
             help="Transfer snappy step results into iRODS landing zone"
         )
@@ -136,7 +136,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_pull_all_data(
         subparsers.add_parser(
-            "pull-all-data", 
+            "pull-all-data",
             parents=[basic_parser, sodar_parser, snappy_parser, snappy_pull_data_parser],
             help="Pull all data from SODAR to specified output directory"
         )
@@ -152,7 +152,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_pull_raw_data(
         subparsers.add_parser(
-            "pull-raw-data", 
+            "pull-raw-data",
             parents=[basic_parser, sodar_parser, snappy_parser, snappy_pull_data_parser],
             help="Pull raw data from SODAR to SNAPPY dataset raw data directory"
         )
@@ -160,14 +160,14 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_varfish_upload(
         subparsers.add_parser(
-            "varfish-upload", 
+            "varfish-upload",
             parents=[basic_parser, snappy_parser],
             help="Upload variant analysis results into VarFish")
     )
 
     setup_argparse_kickoff(
         subparsers.add_parser(
-            "kickoff", 
+            "kickoff",
             parents=[basic_parser, snappy_parser],
             help="Kick-off SNAPPY pipeline steps.")
     )

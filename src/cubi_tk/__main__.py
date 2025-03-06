@@ -2,7 +2,6 @@
 # PYTHON_ARGCOMPLETE_OK
 
 import argparse
-import os
 import sys
 
 import argcomplete
@@ -83,7 +82,7 @@ def main(argv=None):
         logger.add(sys.stdout, level="DEBUG")
     else:
         logger.add(sys.stdout, format="<level>{level:1.1}</level> - <green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{message}</level> ", level="INFO")
-    
+
 
     # Handle the actual command line.
     cmds = {

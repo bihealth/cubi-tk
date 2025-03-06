@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import typing
 
 from loguru import logger
 

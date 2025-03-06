@@ -427,7 +427,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         return folders
 
-    def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:
+    def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
         """Build file transfer jobs."""
         if library_names:
             logger.warning(

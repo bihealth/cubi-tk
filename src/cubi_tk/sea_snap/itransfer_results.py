@@ -11,7 +11,6 @@ import re
 from subprocess import STDOUT, SubprocessError, check_call, check_output
 from retrying import retry
 import sys
-import typing
 
 from loguru import logger
 import tqdm
@@ -173,7 +172,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                         bytes=size,
                     )
                 )
-        return list(sorted(transfer_jobs, key=lambda x: x.to_oneline()))
+        return sorted(transfer_jobs, key=lambda x: x.to_oneline())
 
     def execute(self) -> int | None:
         """Execute the transfer."""
@@ -252,7 +251,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             )
             for j in todo_jobs
         ]
-        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline()))
+        return sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline())
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

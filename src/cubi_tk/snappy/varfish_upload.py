@@ -222,7 +222,7 @@ class SnappyVarFishUploadCommand:
             sheet=sheet, min_batch=self.args.min_batch, pedigree_field=pedigree_field
         )
         for library in ngs_library_names_list:
-            if self.args.samples and not library.split("-")[0] in self.args.samples.split(","):
+            if self.args.samples and library.split("-")[0] not in self.args.samples.split(","):
                 logger.info("Skipping library {} as it is not included in --samples", library)
                 continue
 

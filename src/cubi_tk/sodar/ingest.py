@@ -1,7 +1,6 @@
 """``cubi-tk sodar ingest``: upload arbitrary files and folders into a specific SODAR landing zone collection"""
 
 import argparse
-import os
 from pathlib import Path
 import sys
 import typing

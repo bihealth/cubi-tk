@@ -44,7 +44,7 @@ class PullProcessedDataCommand(PullDataCommon):
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-        
+
         parser.add_argument(
             "--sample-id",
             default=False,

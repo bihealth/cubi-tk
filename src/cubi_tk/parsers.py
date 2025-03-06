@@ -42,7 +42,7 @@ sodar_group_spec.add_argument(
 )
 sodar_group_spec.add_argument(
     "--assay-uuid",
-    default=None, 
+    default=None,
     help="UUID of assay to download data for."
 )
 sodar_group_spec.add_argument(

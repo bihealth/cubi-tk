@@ -29,7 +29,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for org-raw command."""
 
     basic_parser = get_basic_parser()
-    
+
     subparsers = parser.add_subparsers(dest="org_raw_cmd")
 
     setup_argparse_check(subparsers.add_parser("check", parents=[basic_parser,], help="Check consistency of raw data"))

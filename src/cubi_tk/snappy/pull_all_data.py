@@ -7,7 +7,6 @@ More Information
 """
 
 import argparse
-import os
 import typing
 
 import attr
@@ -67,7 +66,7 @@ class PullAllDataCommand:
             help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
         )
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
-        
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser

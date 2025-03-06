@@ -29,7 +29,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_check(
         subparsers.add_parser(
             "check",
-            parents=[basic_parser,], 
+            parents=[basic_parser,],
             help="Check target iRODS collection (all MD5 files? metadata MD5 consistent? enough replicas?).",
         )
     )

@@ -94,7 +94,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
                 for _assay_uuid in assays_:
                     assay = study.assays[_assay_uuid]
                     return assay.irods_path
-                
+
         if assay_uuid:
             logger.error("Provided Assay UUID is not present in the Investigation.")
             raise Exception("Cannot find assay with UUID %s" % assay_uuid)

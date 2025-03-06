@@ -1,7 +1,6 @@
 import argparse
 from collections import namedtuple
 from functools import reduce
-import os
 from typing import Literal
 import urllib.parse as urlparse
 

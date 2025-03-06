@@ -9,7 +9,6 @@ More Information
 """
 
 import argparse
-import os
 from pathlib import Path
 import typing
 from uuid import UUID

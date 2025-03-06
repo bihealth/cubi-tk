@@ -191,7 +191,7 @@ def check_args(args) -> int:
 
 class Bunch:
     def __init__(self, **kw):
-        setattr(self, "__dict__", kw)
+        self.__dict__ = kw
 
 
 class SampleInfoTool:

@@ -110,7 +110,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     for tpl in TEMPLATES.values():
         parser = subparsers.add_parser(
             tpl.name,
-            parents=[basic_parser,], 
+            parents=[basic_parser,],
             help="Create ISA-tab directory using %s" % tpl.description,
             description=(
                 "When specifying the --var-* argument, you can use JSON syntax.  Failing to parse JSON "

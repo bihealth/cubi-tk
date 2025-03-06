@@ -2,20 +2,17 @@
 
 import argparse
 from ctypes import c_ulonglong
-import datetime
 import glob
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 import os
-from subprocess import STDOUT, SubprocessError, check_call, check_output
+from subprocess import SubprocessError, check_call
 import sys
 import typing
 
-import attr
 from biomedsheets import shortcuts
 from loguru import logger
 import requests
-from retrying import retry
 import tqdm
 
 from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
@@ -49,7 +46,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         #: Command line arguments.
         self.args = args
         self.step_name = self.__class__.step_name
-        
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -139,7 +136,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-        return lz_uuid, list(sorted(transfer_jobs, key=lambda x: x.path_local))
+        return lz_uuid, sorted(transfer_jobs, key=lambda x: x.path_local)
 
     def get_sodar_info(self) -> tuple[str, str]:
         """Method evaluates user input to extract or create iRODS path. Use cases:
@@ -480,7 +477,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             )
             for j in todo_jobs
         ]
-        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
+        return sorted(done_jobs + ok_jobs, key=lambda x: x.path_local)
 
     def execute(self) -> int | None:
         """Execute the transfer."""

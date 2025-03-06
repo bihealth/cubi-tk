@@ -9,7 +9,6 @@ More Information
 """
 
 import argparse
-import os
 import pathlib
 import typing
 from uuid import UUID
@@ -181,7 +180,7 @@ def build_sheet(
             logger.error("No assay with UUID {} found", assay_uuid)
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
     if tsv_shortcut == "germline":
-        builder = SampleSheetBuilderGermline() 
+        builder = SampleSheetBuilderGermline()
         builder.set_germline_specific_values(config, project_uuid, first_batch, last_batch)
     else:
         builder = SampleSheetBuilderCancer()
