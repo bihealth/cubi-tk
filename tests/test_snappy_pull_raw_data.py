@@ -1,9 +1,10 @@
 """Tests for ``cubi_tk.snappy.pull_raw_data``."""
 
+from argparse import Namespace
 import pytest
 
 from cubi_tk.__main__ import setup_argparse
-from cubi_tk.snappy.pull_raw_data import Config, PullRawDataCommand
+from cubi_tk.snappy.pull_raw_data import PullRawDataCommand
 
 from .helpers import createIrodsDataObject as IrodsDataObject
 
@@ -32,7 +33,7 @@ def pull_raw_data():
         "assay_uuid": None,
         "project_uuid": "99999999-aaaa-bbbb-cccc-99999999",
     }
-    return PullRawDataCommand(Config(**args_dict))
+    return PullRawDataCommand(Namespace(**args_dict))
 
 
 @pytest.fixture

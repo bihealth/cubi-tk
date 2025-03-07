@@ -9,7 +9,6 @@ import typing
 from loguru import logger
 
 from ..isa_tab.add_ped import AddPedIsaTabCommand
-from ..isa_tab.add_ped import Config as AddPedIsaTabCommandConfig
 from .download_sheet import DownloadSheetCommand
 from .upload_sheet import UploadSheetCommand
 
@@ -89,7 +88,7 @@ class AddPedCommand:
         parser.add_argument(
             "input_ped_file",
             metavar="pedigree.ped",
-            type=lambda x: cls.validate_pedigree_file(parser, x),
+            type=lambda x, parser=parser: cls.validate_pedigree_file(parser, x),
             help="Path to PLINK PED file with records to add.",
         )
 
@@ -146,28 +145,10 @@ class AddPedCommand:
                 logger.info("-- downloading sheet succeeded --")
 
             logger.info("-- updating sample sheet --")
+            self.args["input_investigation_file"] = str(tmp_path / next(tmp_path.glob("i_*")))
+            logger.info("args: {}", self.args)
             add_res = AddPedIsaTabCommand(
-                AddPedIsaTabCommandConfig(
-                    config=self.args.config,
-                    verbose=self.args.verbose,
-                    sodar_server_url=self.args.sodar_server_url,
-                    sodar_api_token=self.args.sodar_api_token,
-                    no_warnings=self.args.no_warnings,
-                    sample_name_normalization=self.args.sample_name_normalization,
-                    yes=self.args.yes,
-                    dry_run=self.args.dry_run,
-                    library_type=self.args.library_type,
-                    library_layout=self.args.library_layout,
-                    library_kit=self.args.library_kit,
-                    library_kit_catalogue_id=self.args.library_kit_catalogue_id,
-                    platform=self.args.platform,
-                    instrument_model=self.args.instrument_model,
-                    batch_no=self.args.batch_no,
-                    show_diff=self.args.show_diff,
-                    show_diff_side_by_side=self.args.show_diff_side_by_side,
-                    input_investigation_file=str(tmp_path / next(tmp_path.glob("i_*"))),
-                    input_ped_file=self.args.input_ped_file,
-                )
+                self.args
             ).execute()
             if add_res != 0:
                 logger.error("-- updating sheet failed --")
@@ -176,7 +157,6 @@ class AddPedCommand:
                 logger.info("-- updating sheet succeeded --")
 
             logger.info("-- uploading sample sheet --")
-            self.args.input_investigation_file = str(tmp_path / next(tmp_path.glob("i_*")))
             ul_res = UploadSheetCommand(
                 self.args
             ).execute()

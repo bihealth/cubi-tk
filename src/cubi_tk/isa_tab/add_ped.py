@@ -46,29 +46,6 @@ from .. import isa_support, parse_ped
 from ..common import overwrite_helper
 
 
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    verbose: bool
-    config: str
-    sodar_server_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    no_warnings: bool
-    sample_name_normalization: str
-    yes: bool
-    dry_run: bool
-    show_diff: bool
-    show_diff_side_by_side: bool
-    batch_no: str
-    library_layout: str
-    library_type: str
-    library_kit: str
-    library_kit_catalogue_id: str
-    platform: str
-    instrument_model: str
-    input_investigation_file: str
-    input_ped_file: str
-
-
 def normalize_snappy(s):
     """Normalization function that performs SNAPPY normalization (hyphen to underscore)."""
     return s.replace("-", "_")
@@ -120,11 +97,11 @@ COLUMN_TO_ATTR_NAME = {
 class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
     """IsaNodeVisitor that updates the ISA sample sheet as we walk along it."""
 
-    def __init__(self, donor_map, config: Config):
+    def __init__(self, donor_map, args):
         #: Mapping from normalized donor name to Donor instance.
         self.donor_map = donor_map
         #: Configuration of the AddPedCommand
-        self.config = config
+        self.args = args
         #: The source names seen so far when traversing studies.
         self.seen_source_names = set()
         #: The sample names seen so far when traversing assays.
@@ -162,7 +139,7 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                     "family": (donor, "family_id"),
                     "sex": (donor, "sex"),
                     "disease status": (donor, "disease"),
-                    "batch": (self.config, "batch_no"),
+                    "batch": (self.args, "batch_no"),
                 }
                 characteristics = []
                 for c in material.characteristics:
@@ -207,8 +184,8 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                     xs = []
                     for x in getattr(process, key):
                         for k, v in config_pairs.items():
-                            if x.name.lower() == k and getattr(self.config, v):
-                                x = attr.evolve(x, value=[getattr(self.config, v)])
+                            if x.name.lower() == k and getattr(self.args, v):
+                                x = attr.evolve(x, value=[getattr(self.args, v)])
                         xs.append(x)
                     kwargs[key] = xs
                 return attr.evolve(process, **kwargs)
@@ -538,7 +515,7 @@ def isa_germline_append_donors(
     assays: typing.Dict[str, Assay],
     ped_donors: typing.Tuple[parse_ped.Donor, ...],
     seen_sample_names: typing.Tuple[str, ...],
-    config: Config,
+    args,
 ) -> typing.Tuple[typing.Dict[str, Study], typing.Dict[str, Assay]]:
     assert len(studies) == 1, "Only one study supported at the moment"
     assert len(assays) == 1, "Only one assay supported at the moment"
@@ -550,7 +527,7 @@ def isa_germline_append_donors(
     sps: typing.List[typing.Dict[str, typing.Any]] = []
     sas: typing.List[Arc] = []
     for donor in ped_donors:
-        _append_study_line(study, donor, sms, sps, sas, config)
+        _append_study_line(study, donor, sms, sps, sas, args)
     study = attr.evolve(
         study,
         materials={**study.materials, **{x["unique_name"]: Material(**x) for x in sms}},
@@ -564,7 +541,7 @@ def isa_germline_append_donors(
     aps: typing.List[typing.Dict[str, typing.Any]] = []
     aas: typing.List[Arc] = []
     for sample_mat in filter(_is_source, study.materials.values()):
-        _append_assay_line(assay, sample_mat.name, ams, aps, aas, seen_sample_names, config)
+        _append_assay_line(assay, sample_mat.name, ams, aps, aas, seen_sample_names, args)
     assay = attr.evolve(
         assay,
         materials={**assay.materials, **{x["unique_name"]: Material(**x) for x in ams}},
@@ -579,9 +556,9 @@ def isa_germline_append_donors(
 class AddPedIsaTabCommand:
     """Implementation of the ``add-ped`` command."""
 
-    def __init__(self, config: Config):
+    def __init__(self, args):
         #: Command line arguments.
-        self.config = config
+        self.args = argparse.Namespace(**args)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -667,18 +644,18 @@ class AddPedIsaTabCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("isa_tab_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
         logger.info("Starting cubi-tk isa-tab add-ped")
-        logger.info("config: {}", self.config)
+        logger.info("config: {}", self.args)
 
-        isa_data = isa_support.load_investigation(self.config.input_investigation_file)
+        isa_data = isa_support.load_investigation(self.args.input_investigation_file)
         if len(isa_data.studies) > 1 or len(isa_data.assays) > 1:  # pragma: no cover
             logger.error("Only one study and assay per ISA-tab supported at the moment.")
             return 1
-        with open(self.config.input_ped_file, "rt") as inputf:
+        with open(self.args.input_ped_file, "rt") as inputf:
             ped_donors = list(parse_ped.parse_ped(inputf))
         if not ped_donors:  # pragma: no cover
             logger.error("No donor in pedigree")
@@ -690,7 +667,7 @@ class AddPedIsaTabCommand:
     def _perform_update(self, isa, ped_donors):
         # Traverse investigation, studies, assays, potentially updating the nodes.
         donor_map = self._build_donor_map(ped_donors)
-        visitor = SheetUpdateVisitor(donor_map, self.config)
+        visitor = SheetUpdateVisitor(donor_map, self.args)
         iwalker = isa_support.InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
         iwalker.run(visitor)
         investigation, studies, assays = iwalker.build_evolved()
@@ -700,7 +677,7 @@ class AddPedIsaTabCommand:
             donor for donor in donor_map.values() if donor.name not in visitor.seen_source_names
         ]
         studies, assays = isa_germline_append_donors(
-            studies, assays, tuple(todo_ped_donors), tuple(visitor.seen_sample_names), self.config
+            studies, assays, tuple(todo_ped_donors), tuple(visitor.seen_sample_names), self.args
         )
         new_isa = attr.evolve(isa, investigation=investigation, studies=studies, assays=assays)
 
@@ -717,32 +694,32 @@ class AddPedIsaTabCommand:
             AssayWriter.from_stream(assay, ios_assays[name]).write()
 
         # Write out updated ISA-tab files using the diff helper.
-        i_path = pathlib.Path(self.config.input_investigation_file)
+        i_path = pathlib.Path(self.args.input_investigation_file)
         overwrite_helper(
             i_path,
             io_investigation.getvalue(),
-            do_write=not self.config.dry_run,
+            do_write=not self.args.dry_run,
             show_diff=True,
-            show_diff_side_by_side=self.config.show_diff_side_by_side,
-            answer_yes=self.config.yes,
+            show_diff_side_by_side=self.args.show_diff_side_by_side,
+            answer_yes=self.args.yes,
         )
         for filename, ios_study in ios_studies.items():
             overwrite_helper(
                 i_path.parent / filename,
                 ios_study.getvalue(),
-                do_write=not self.config.dry_run,
+                do_write=not self.args.dry_run,
                 show_diff=True,
-                show_diff_side_by_side=self.config.show_diff_side_by_side,
-                answer_yes=self.config.yes,
+                show_diff_side_by_side=self.args.show_diff_side_by_side,
+                answer_yes=self.args.yes,
             )
         for filename, ios_assay in ios_assays.items():
             overwrite_helper(
                 i_path.parent / filename,
                 ios_assay.getvalue(),
-                do_write=not self.config.dry_run,
+                do_write=not self.args.dry_run,
                 show_diff=True,
-                show_diff_side_by_side=self.config.show_diff_side_by_side,
-                answer_yes=self.config.yes,
+                show_diff_side_by_side=self.args.show_diff_side_by_side,
+                answer_yes=self.args.yes,
             )
 
     def _build_donor_map(self, ped_donors):
@@ -762,7 +739,7 @@ class AddPedIsaTabCommand:
                 indexes[ped_donor.family_id] = ped_donor
 
         # Build donor from normalized name do Donor.
-        normalize = NORMALIZE[self.config.sample_name_normalization]
+        normalize = NORMALIZE[self.args.sample_name_normalization]
         return {
             normalize(donor.name): parse_ped.Donor(
                 family_id="FAM_%s" % normalize(indexes[donor.family_id].name),

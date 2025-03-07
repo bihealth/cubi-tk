@@ -12,7 +12,6 @@ import os
 import pathlib
 import typing
 
-import attr
 from loguru import logger
 import yaml
 
@@ -24,35 +23,16 @@ from .parse_sample_sheet import ParseSampleSheet
 from .pull_data_common import PullDataCommon
 
 
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    """Configuration for the pull-raw-data."""
-
-    base_path: str
-    verbose: bool
-    sodar_server_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    tsv_shortcut: str
-    use_library_name: bool
-    overwrite: bool
-    dry_run: bool
-    first_batch: int
-    last_batch: int
-    samples: typing.List[str]
-    assay_uuid: str
-    project_uuid: str
-
-
 class PullRawDataCommand(PullDataCommon):
     """Implementation of the ``snappy pull-raw-data`` command."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
     file_type_to_extensions_dict = {"fastq": ("fastq.gz",)}
 
-    def __init__(self, config: Config):
+    def __init__(self, args: argparse.Namespace):
         PullDataCommon.__init__(self)
         #: Command line arguments.
-        self.config = config
+        self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -90,7 +70,7 @@ class PullRawDataCommand(PullDataCommon):
         args.pop("config", None)
         args.pop("cmd", None)
         args.pop("snappy_cmd", None)
-        return cls(Config(**args)).execute(args)
+        return cls(args).execute(args)
 
     def execute(self, args) -> typing.Optional[int]:
         """Execute the download."""
@@ -110,51 +90,51 @@ class PullRawDataCommand(PullDataCommon):
 
         # Get sample sheet
         biomedsheet_tsv = get_biomedsheet_path(
-            start_path=self.config.base_path, uuid=self.config.project_uuid
+            start_path=self.args.base_path, uuid=self.args.project_uuid
         )
-        sheet = load_sheet_tsv(biomedsheet_tsv, self.config.tsv_shortcut)
+        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
         # Filter requested samples and folder directories
         parser = ParseSampleSheet()
-        if self.config.use_library_name:
+        if self.args.use_library_name:
             selected_identifiers_tuples = list(
                 parser.yield_ngs_library_and_folder_names(
                     sheet=sheet,
-                    min_batch=self.config.first_batch,
-                    max_batch=self.config.last_batch,
-                    selected_ids=self.config.samples,
+                    min_batch=self.args.first_batch,
+                    max_batch=self.args.last_batch,
+                    selected_ids=self.args.samples,
                 )
             )
         else:
             selected_identifiers_tuples = list(
                 parser.yield_sample_and_folder_names(
                     sheet=sheet,
-                    min_batch=self.config.first_batch,
-                    max_batch=self.config.last_batch,
-                    selected_ids=self.config.samples,
+                    min_batch=self.args.first_batch,
+                    max_batch=self.args.last_batch,
+                    selected_ids=self.args.samples,
                 )
             )
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
 
         # Get assay UUID if not provided
         assay_uuid = None
-        if not self.config.assay_uuid:
+        if not self.args.assay_uuid:
             assay_uuid = self.get_assay_uuid(
-                sodar_server_url=self.config.sodar_server_url,
-                sodar_api_token=self.config.sodar_api_token,
-                project_uuid=self.config.project_uuid,
+                sodar_server_url=self.args.sodar_server_url,
+                sodar_api_token=self.args.sodar_api_token,
+                project_uuid=self.args.project_uuid,
             )
 
         # Find all remote files (iRODS)
         remote_files_dict = RetrieveSodarCollection(
-            self.config.sodar_server_url,
-            self.config.sodar_api_token,
-            self.config.assay_uuid,
-            self.config.project_uuid,
+            self.args.sodar_server_url,
+            self.args.sodar_api_token,
+            self.args.assay_uuid,
+            self.args.project_uuid,
         ).perform()
 
         # Filter based on identifiers and file type
-        if self.config.use_library_name:
+        if self.args.use_library_name:
             filtered_remote_files_dict = self.filter_irods_collection_by_library_name_in_path(
                 identifiers=selected_identifiers,
                 remote_files_dict=remote_files_dict,
@@ -182,13 +162,13 @@ class PullRawDataCommand(PullDataCommon):
             library_to_irods_dict=library_to_irods_dict,
             identifiers_tuples=selected_identifiers_tuples,
             output_dir=download_path,
-            assay_uuid=self.config.assay_uuid or assay_uuid,
+            assay_uuid=self.args.assay_uuid or assay_uuid,
         )
 
         # Retrieve files from iRODS or print
-        if not self.config.dry_run:
+        if not self.args.dry_run:
             self.get_irods_files(
-                irods_local_path_pairs=path_pair_list, force_overwrite=self.config.overwrite
+                irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite
             )
         else:
             self._report_files(
@@ -363,7 +343,7 @@ class PullRawDataCommand(PullDataCommon):
         :return: Return path to download as defined in snappy configuration, i.e., raw data path.
         """
         # Find config file
-        with (pathlib.Path(self.config.base_path) / ".snappy_pipeline" / "config.yaml").open(
+        with (pathlib.Path(self.args.base_path) / ".snappy_pipeline" / "config.yaml").open(
             "rt"
         ) as inputf:
             config = yaml.safe_load(inputf)
@@ -375,13 +355,13 @@ class PullRawDataCommand(PullDataCommon):
             return
         for key, data_set in config["data_sets"].items():
             if (
-                key == self.config.project_uuid
-                or data_set.get("sodar_uuid") == self.config.project_uuid
+                key == self.args.project_uuid
+                or data_set.get("sodar_uuid") == self.args.project_uuid
             ):
                 break
         else:  # no "break" out of for-loop
             logger.error(
-                f"Could not find dataset with key/sodar_uuid entry of {self.config.project_uuid}"
+                f"Could not find dataset with key/sodar_uuid entry of {self.args.project_uuid}"
             )
             return
         if not data_set.get("search_paths"):

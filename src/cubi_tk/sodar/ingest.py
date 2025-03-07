@@ -18,15 +18,6 @@ from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 logger.propagate = True
 
 
-@attrs.frozen(auto_attribs=True)
-class Config:
-    """Configuration for the ingest command."""
-
-    config: str = attrs.field(default=None)
-    sodar_server_url: str = attrs.field(default=None)
-    sodar_api_token: str = attrs.field(default=None, repr=lambda value: "***")  # type: ignore
-
-
 class SodarIngest:
     """Implementation of sodar ingest command."""
 
