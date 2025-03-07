@@ -28,7 +28,7 @@ import pandas as pd
 import requests
 import yaml
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 #: The URL template to use.
 from ..common import get_terminal_columns, print_line
@@ -578,12 +578,12 @@ def run(
 
     if args.project_uuid:
         logger.info("Starting to pull ISA files...")
-        logger.info("Args: {}", args)
+        print_args(args)
 
         pull_isa(args)
 
     logger.info("Starting to write sample info...")
-    logger.info("Args: {}", args)
+    print_args(args)
 
     with tempfile.NamedTemporaryFile(mode="w+t") as sample_info_file:
         # Write sample info to temporary file.

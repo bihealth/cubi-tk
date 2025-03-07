@@ -8,6 +8,8 @@ import typing
 
 from loguru import logger
 
+from cubi_tk.parsers import print_args
+
 from ..isa_tab.add_ped import AddPedIsaTabCommand
 from .download_sheet import DownloadSheetCommand
 from .upload_sheet import UploadSheetCommand
@@ -129,7 +131,7 @@ class AddPedCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
         logger.info("Starting cubi-tk sodar add-ped")
-        logger.info("  config: {}", self.args)
+        print_args(self.args)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = pathlib.Path(str(tmpdir))
@@ -146,7 +148,8 @@ class AddPedCommand:
 
             logger.info("-- updating sample sheet --")
             self.args["input_investigation_file"] = str(tmp_path / next(tmp_path.glob("i_*")))
-            logger.info("args: {}", self.args)
+            print_args(self.args)
+
             add_res = AddPedIsaTabCommand(
                 self.args
             ).execute()

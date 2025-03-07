@@ -9,7 +9,7 @@ import cattr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 
 
@@ -57,7 +57,7 @@ class ValidateLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-validate.")
-        logger.debug("args: {}", self.args)
+        print_args(self.args)
 
         landing_zone = api.landingzone.submit_validate(
             sodar_url=self.args.sodar_server_url,

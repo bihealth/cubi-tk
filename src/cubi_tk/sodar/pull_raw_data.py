@@ -11,7 +11,7 @@ import attr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from ..isa_support import (
     InvestigationTraversal,
@@ -127,10 +127,10 @@ class PullRawDataCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
-        res, args = check_args_sodar_config_parser(self.args)
+        _, self.args = check_args_sodar_config_parser(self.args)
 
         logger.info("Starting cubi-tk sodar pull-raw-data")
-        logger.info("  config: {}", self.args)
+        print_args(self.args)
 
         out_path = Path(self.args.output_dir)
         if not out_path.exists():

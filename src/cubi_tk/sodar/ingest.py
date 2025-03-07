@@ -31,7 +31,7 @@ class SodarIngest:
             sys.exit(1)
 
         # Get SODAR API info
-        _res, args = check_args_sodar_config_parser(args)
+        _res, args = check_args_sodar_config_parser(args, True)
         if not self.args.sodar_api_token:
             logger.error("SODAR API token missing.")
             sys.exit(1)

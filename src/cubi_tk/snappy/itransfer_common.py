@@ -15,7 +15,7 @@ from loguru import logger
 import requests
 import tqdm
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from ..common import check_irods_icommands, is_uuid, sizeof_fmt
 from ..irods_common import TransferJob, iRODSTransfer
@@ -62,7 +62,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
         res = 0
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_sodar_config_parser(args, True)
 
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
@@ -472,7 +472,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         # Logger
         logger.info("Starting cubi-tk snappy {}", self.command_name)
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         # Fix for ngs_mapping & variant_calling vs step
         if self.step_name is None:

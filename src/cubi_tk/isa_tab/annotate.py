@@ -24,6 +24,8 @@ from altamisa.isatab.helpers import is_ontology_term_ref
 import attr
 from loguru import logger
 
+from cubi_tk.parsers import print_args
+
 from .. import isa_support
 from ..common import overwrite_helper
 
@@ -295,7 +297,7 @@ class AddAnnotationIsaTabCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the annotation."""
         logger.info("Starting cubi-tk isa-tab annotate")
-        logger.info("  config: {}", self.args)
+        print_args(self.args)
 
         # Read isa-tab file
         isa_data = isa_support.load_investigation(self.args.input_investigation_file)

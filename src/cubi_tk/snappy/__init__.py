@@ -129,7 +129,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_pull_sheets(
         subparsers.add_parser(
             "pull-sheets",
-            parents=[basic_parser, snappy_parser],
+            parents=[basic_parser, sodar_parser, snappy_parser],
             help="Pull SODAR sample sheets into biomedsheet")
     )
 

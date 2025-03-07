@@ -10,6 +10,8 @@ import typing
 from biomedsheets import shortcuts
 from loguru import logger
 
+from cubi_tk.parsers import print_args
+
 from ..common import find_base_path
 from .common import load_sheet_tsv
 from .models import DataSet, load_datasets
@@ -184,7 +186,7 @@ class SnappyVarFishUploadCommand:
             return res
 
         logger.info("Starting cubi-tk varfish-upload")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         datasets = load_datasets(self.args.base_path / ".snappy_pipeline/config.yaml")
         logger.debug("projects = {}", self.args.project)

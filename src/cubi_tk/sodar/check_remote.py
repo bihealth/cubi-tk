@@ -19,7 +19,7 @@ import typing
 import attr
 from loguru import logger
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from ..common import compute_md5_checksum
 from ..exceptions import FileMd5MismatchException
@@ -373,7 +373,7 @@ class SodarCheckRemoteCommand:
             return res
 
         logger.info("Starting cubi-tk sodar check-remote")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(

@@ -12,6 +12,8 @@ from cubi_tk.exceptions import ParameterException
 from loguru import logger
 import vcfpy
 
+from cubi_tk.parsers import print_args
+
 from .. import parse_ped
 from .common import get_all_biomedsheet_paths, get_biomedsheet_path, load_sheet_tsv
 
@@ -501,7 +503,8 @@ class SnappyCheckLocalCommand:
             return res
 
         logger.info("Starting cubi-tk snappy check-local")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
+
         if self.args.tsv_shortcut == "germline":
             results = [
             GermlineSheetChecker(self.shortcut_sheets).run_checks(),

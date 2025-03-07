@@ -9,7 +9,7 @@ import cattr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 
 class CreateLandingZoneCommand:
@@ -77,7 +77,7 @@ class CreateLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-create")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         existing_lzs = sorted(
             api.landingzone.list_(

@@ -7,6 +7,14 @@ from loguru import logger
 
 from cubi_tk.common import GLOBAL_CONFIG_PATH, load_toml_config
 
+
+def print_args(args: argparse.Namespace):
+    token = args.sodar_api_token
+    args.sodar_api_token = "****"
+    logger.info("Args: {}", args)
+    args.sodar_api_token = token
+
+
 basic_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
 basic_group = basic_config_parser.add_argument_group("Logging Configuration")
 basic_group.add_argument("--verbose", action="store_true", default=False, help="Increase verbosity.")

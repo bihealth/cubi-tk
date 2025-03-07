@@ -14,7 +14,7 @@ from uuid import UUID
 
 
 from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
 from loguru import logger
 from sodar_cli import api
@@ -149,7 +149,7 @@ def run(
         return res
 
     logger.info("Starting to pull sheet...")
-    logger.info("Args: {}", args)
+    print_args(args)
 
     logger.debug("Load config...")
     args.base_path = find_snappy_root_dir(args.base_path)

@@ -8,7 +8,7 @@ import typing
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from .. import isa_support
 from ..common import overwrite_helper
@@ -46,10 +46,10 @@ class UploadSheetCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        res, args = check_args_sodar_config_parser(self.args)
+        _, self.args = check_args_sodar_config_parser(self.args)
 
         logger.info("Starting cubi-tk sodar upload-sheet")
-        logger.info("  config: {}", self.args)
+        print_args(self.args)
 
         i_path = Path(self.args.input_investigation_file)
         if not i_path.exists():

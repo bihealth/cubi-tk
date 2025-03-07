@@ -9,7 +9,7 @@ import cattr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 class MoveLandingZoneCommand:
     """Implementation of the ``landing-zone-move`` command."""
@@ -64,7 +64,7 @@ class MoveLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-move")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         landing_zone = api.landingzone.submit_move(
             sodar_url=self.args.sodar_server_url,

@@ -15,6 +15,8 @@ import sys
 from loguru import logger
 import tqdm
 
+from cubi_tk.parsers import print_args
+
 from ..common import check_irods_icommands, sizeof_fmt
 from ..snappy.itransfer_common import SnappyItransferCommandBase
 
@@ -181,7 +183,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             return res
 
         logger.info("Starting cubi-tk sea-snap {}", self.command_name)
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         command_blocks = self.args.transfer_blueprint.read().split(os.linesep + os.linesep)
         transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name)

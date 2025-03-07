@@ -13,7 +13,7 @@ import typing
 from biomedsheets import shortcuts
 from loguru import logger
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -647,7 +647,7 @@ class SnappyCheckRemoteCommand:
             return res
 
         logger.info("Starting cubi-tk snappy check-remote")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Split execution between Cancer and Germline
         if self.args.tsv_shortcut == "cancer":

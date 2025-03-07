@@ -17,7 +17,7 @@ from loguru import logger
 from sodar_cli import api
 import tqdm
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from ..common import get_assay_from_uuid, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
@@ -490,7 +490,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             return res
 
         logger.info("Starting cubi-tk sodar {}", self.command_name)
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         lz_uuid, transfer_jobs = self.build_jobs()
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)

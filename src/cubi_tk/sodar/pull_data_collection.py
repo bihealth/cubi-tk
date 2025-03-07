@@ -10,7 +10,7 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import pandas as pd
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.pull_data_common import PullDataCommon
@@ -182,7 +182,7 @@ class PullDataCollection(PullDataCommon):
             return res
 
         logger.info("Starting cubi-tk sodar pull-data-collection")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Get list of sample ids
         if self.args.sample_list:

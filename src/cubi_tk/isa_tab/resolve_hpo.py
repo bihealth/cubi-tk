@@ -13,6 +13,8 @@ import requests
 import termcolor
 import tqdm
 
+from cubi_tk.parsers import print_args
+
 from ..exceptions import ResourceDownloadError
 
 #: Template for creating HPO term from number.
@@ -110,7 +112,7 @@ class ResolveHpoCommand:
             return res
 
         logger.info("Starting cubi-tk isa-tab resolve-hpo")
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         ok = True
 
