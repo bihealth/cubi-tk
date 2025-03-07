@@ -28,6 +28,8 @@ import pandas as pd
 import requests
 import yaml
 
+from cubi_tk.parsers import check_args_sodar_config_parser
+
 #: The URL template to use.
 from ..common import get_terminal_columns, print_line
 
@@ -125,18 +127,7 @@ def check_args(args) -> int:
 
     # if set for pulling ISA files
     if args.project_uuid:
-        # Check presence of SODAR URL and auth token.
-        if not args.sodar_api_token:  # pragma: nocover
-            logger.error(
-                "SODAR authentication token is empty.  Either specify --sodar-api-token, or set "
-                "SODAR_API_TOKEN environment variable"
-            )
-            any_error = True
-        if not args.sodar_server_url:  # pragma: nocover
-            args.sodar_server_url = os.environ.get("SODAR_URL", "https://sodar.bihealth.org/")
-            if not args.sodar_server_url:
-                logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
-                any_error = True
+        any_error, args = check_args_sodar_config_parser(args, True)
 
         # Check output file presence vs. overwrite allowed.
         if (

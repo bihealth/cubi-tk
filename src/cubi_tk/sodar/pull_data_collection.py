@@ -10,7 +10,8 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import pandas as pd
 
-from ..common import load_toml_config
+from cubi_tk.parsers import check_args_sodar_config_parser
+
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.pull_data_common import PullDataCommon
 from ..sodar_common import RetrieveSodarCollection
@@ -154,11 +155,7 @@ class PullDataCollection(PullDataCommon):
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_sodar_config_parser(args)
 
         # Validate output directory path
         if not os.path.exists(args.output_dir):

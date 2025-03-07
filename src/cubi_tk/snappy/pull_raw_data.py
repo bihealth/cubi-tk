@@ -16,7 +16,8 @@ import attr
 from loguru import logger
 import yaml
 
-from ..common import load_toml_config
+from cubi_tk.parsers import check_args_sodar_config_parser
+
 from ..sodar_common import RetrieveSodarCollection
 from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
@@ -81,12 +82,7 @@ class PullRawDataCommand(PullDataCommon):
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_sodar_config_parser(args)
         args = vars(args)
         # Adjust `base_path` to snappy root
         args["base_path"] = find_snappy_root_dir(args["base_path"])

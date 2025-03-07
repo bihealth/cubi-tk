@@ -16,6 +16,8 @@ from uuid import UUID
 from loguru import logger
 import requests
 
+from cubi_tk.parsers import check_args_sodar_config_parser
+
 URL_TPL = "%(sodar_server_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 
@@ -39,18 +41,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
 def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
-    any_error = False
-
-    # Check presence of SODAR URL and auth token.
-    if not args.sodar_api_token:  # pragma: nocover
-        logger.error(
-            "SODAR authentication token is empty.  Either specify --sodar-api-token, or set "
-            "SODAR_API_TOKEN environment variable"
-        )
-        any_error = True
-    if not args.sodar_server_url:  # pragma: nocover
-        logger.error("SODAR URL is empty. Either specify --sodar-server-url, or set SODAR_URL.")
-        any_error = True
+    any_error, args = check_args_sodar_config_parser(args)
 
     # Check output file presence vs. overwrite allowed.
     if hasattr(args.output_folder, "name") and Path(args.output_folder).exists():  # pragma: nocover

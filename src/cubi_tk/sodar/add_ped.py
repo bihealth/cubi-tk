@@ -6,48 +6,20 @@ import pathlib
 import tempfile
 import typing
 
-import attr
 from loguru import logger
 
 from ..isa_tab.add_ped import AddPedIsaTabCommand
 from ..isa_tab.add_ped import Config as AddPedIsaTabCommandConfig
-from .download_sheet import Config as DownloadSheetConfig
 from .download_sheet import DownloadSheetCommand
-from .upload_sheet import Config as UploadSheetConfig
 from .upload_sheet import UploadSheetCommand
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    """Configuration for the download sheet command."""
-
-    config: str
-    verbose: bool
-    sodar_server_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    dry_run: bool
-    show_diff: bool
-    show_diff_side_by_side: bool
-    sample_name_normalization: str
-    batch_no: str
-    yes: bool
-    library_type: str
-    library_layout: str
-    library_kit: str
-    library_kit_catalogue_id: str
-    instrument_model: str
-    no_warnings: bool
-    platform: str
-    project_uuid: str
-    input_ped_file: str
 
 
 class AddPedCommand:
     """Implementation of the ``add-ped`` command."""
 
-    def __init__(self, config):
+    def __init__(self, args):
         #: Command line arguments.
-        self.config = config
+        self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -153,32 +125,19 @@ class AddPedCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
         logger.info("Starting cubi-tk sodar add-ped")
-        logger.info("  config: {}", self.config)
+        logger.info("  config: {}", self.args)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = pathlib.Path(str(tmpdir))
 
             logger.info("-- downloading sample sheet --")
             dl_res = DownloadSheetCommand(
-                DownloadSheetConfig(
-                    config=self.config.config,
-                    verbose=self.config.verbose,
-                    sodar_server_url=self.config.sodar_server_url,
-                    sodar_api_token=self.config.sodar_api_token,
-                    makedirs=False,
-                    overwrite=False,
-                    dry_run=self.config.dry_run,
-                    show_diff=self.config.show_diff,
-                    show_diff_side_by_side=self.config.show_diff_side_by_side,
-                    project_uuid=self.config.project_uuid,
-                    output_dir=str(tmp_path),
-                    yes=True,
-                )
+                self.args
             ).execute()
             if dl_res != 0:
                 logger.error("-- downloading sheet failed --")
@@ -189,25 +148,25 @@ class AddPedCommand:
             logger.info("-- updating sample sheet --")
             add_res = AddPedIsaTabCommand(
                 AddPedIsaTabCommandConfig(
-                    config=self.config.config,
-                    verbose=self.config.verbose,
-                    sodar_server_url=self.config.sodar_server_url,
-                    sodar_api_token=self.config.sodar_api_token,
-                    no_warnings=self.config.no_warnings,
-                    sample_name_normalization=self.config.sample_name_normalization,
-                    yes=self.config.yes,
-                    dry_run=self.config.dry_run,
-                    library_type=self.config.library_type,
-                    library_layout=self.config.library_layout,
-                    library_kit=self.config.library_kit,
-                    library_kit_catalogue_id=self.config.library_kit_catalogue_id,
-                    platform=self.config.platform,
-                    instrument_model=self.config.instrument_model,
-                    batch_no=self.config.batch_no,
-                    show_diff=self.config.show_diff,
-                    show_diff_side_by_side=self.config.show_diff_side_by_side,
+                    config=self.args.config,
+                    verbose=self.args.verbose,
+                    sodar_server_url=self.args.sodar_server_url,
+                    sodar_api_token=self.args.sodar_api_token,
+                    no_warnings=self.args.no_warnings,
+                    sample_name_normalization=self.args.sample_name_normalization,
+                    yes=self.args.yes,
+                    dry_run=self.args.dry_run,
+                    library_type=self.args.library_type,
+                    library_layout=self.args.library_layout,
+                    library_kit=self.args.library_kit,
+                    library_kit_catalogue_id=self.args.library_kit_catalogue_id,
+                    platform=self.args.platform,
+                    instrument_model=self.args.instrument_model,
+                    batch_no=self.args.batch_no,
+                    show_diff=self.args.show_diff,
+                    show_diff_side_by_side=self.args.show_diff_side_by_side,
                     input_investigation_file=str(tmp_path / next(tmp_path.glob("i_*"))),
-                    input_ped_file=self.config.input_ped_file,
+                    input_ped_file=self.args.input_ped_file,
                 )
             ).execute()
             if add_res != 0:
@@ -217,15 +176,9 @@ class AddPedCommand:
                 logger.info("-- updating sheet succeeded --")
 
             logger.info("-- uploading sample sheet --")
+            self.args.input_investigation_file = str(tmp_path / next(tmp_path.glob("i_*")))
             ul_res = UploadSheetCommand(
-                UploadSheetConfig(
-                    config=self.config.config,
-                    verbose=self.config.verbose,
-                    sodar_server_url=self.config.sodar_server_url,
-                    sodar_api_token=self.config.sodar_api_token,
-                    project_uuid=self.config.project_uuid,
-                    input_investigation_file=str(tmp_path / next(tmp_path.glob("i_*"))),
-                )
+                self.args
             ).execute()
             if ul_res != 0:
                 logger.error("-- uploading sheet failed --")

@@ -11,33 +11,14 @@ import attr
 from loguru import logger
 from sodar_cli import api
 
-from ..common import load_toml_config
+from cubi_tk.parsers import check_args_sodar_config_parser
+
 from ..isa_support import (
     InvestigationTraversal,
     IsaNodeVisitor,
     first_value,
     isa_dict_to_isa_data,
 )
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    """Configuration for the download sheet command."""
-
-    config: str
-    verbose: bool
-    sodar_server_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    overwrite: bool
-    min_batch: int
-    allow_missing: bool
-    dry_run: bool
-    irsync_threads: int
-    yes: bool
-    project_uuid: str
-    assay: str
-    output_dir: str
-
 
 @attr.s(frozen=True, auto_attribs=True)
 class LibraryInfo:
@@ -90,9 +71,9 @@ class LibraryInfoCollector(IsaNodeVisitor):
 class PullRawDataCommand:
     """Implementation of the ``pull-raw-data`` command."""
 
-    def __init__(self, config: Config):
+    def __init__(self, args):
         #: Command line arguments.
-        self.config = config
+        self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -142,38 +123,30 @@ class PullRawDataCommand:
         args.pop("sodar_cmd", None)
         while args["output_dir"].endswith("/"):
             args["output_dir"] = args["output_dir"][:-1]
-        return cls(Config(**args)).execute()
+        return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
-        toml_config = load_toml_config(self.config)
-        if not self.config.sodar_server_url:
-            self.config = attr.evolve(
-                self.config, sodar_server_url=toml_config.get("global", {}).get("sodar_server_url")
-            )
-        if not self.config.sodar_api_token:
-            self.config = attr.evolve(
-                self.config, sodar_api_token=toml_config.get("global", {}).get("sodar_api_token")
-            )
+        res, args = check_args_sodar_config_parser(self.args)
 
         logger.info("Starting cubi-tk sodar pull-raw-data")
-        logger.info("  config: {}", self.config)
+        logger.info("  config: {}", self.args)
 
-        out_path = Path(self.config.output_dir)
+        out_path = Path(self.args.output_dir)
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
         investigation = api.samplesheet.retrieve(
-            sodar_url=self.config.sodar_server_url,
-            sodar_api_token=self.config.sodar_api_token,
-            project_uuid=self.config.project_uuid,
+            sodar_url=self.args.sodar_server_url,
+            sodar_api_token=self.args.sodar_api_token,
+            project_uuid=self.args.project_uuid,
         )
         assay = None
         for study in investigation.studies.values():
             for assay_uuid in study.assays.keys():
-                if (self.config.assay_uuid is None) and (assay is None):
+                if (self.args.assay_uuid is None) and (assay is None):
                     assay = study.assays[assay_uuid]
-                if (self.config.assay_uuid is not None) and (self.config.assay_uuid == assay_uuid):
+                if (self.args.assay_uuid is not None) and (self.args.assay_uuid == assay_uuid):
                     assay = study.assays[assay_uuid]
                     logger.info("Using irods path of assay {}: {}", assay_uuid, assay.irods_path)
                     break
@@ -182,7 +155,7 @@ class PullRawDataCommand:
 
         commands = self._build_commands(assay, library_to_folder)
         if not commands:
-            logger.info("No samples to transfer with --min-batch={}", self.config.min_batch)
+            logger.info("No samples to transfer with --min-batch={}", self.args.min_batch)
             return 0
 
         return self._executed_commands(commands)
@@ -191,10 +164,10 @@ class PullRawDataCommand:
         commands = []
         for k, v in library_to_folder.items():
             cmd = ["irsync", "-r"]
-            if self.config.irsync_threads:
-                cmd += ["-N", str(self.config.irsync_threads)]
+            if self.args.irsync_threads:
+                cmd += ["-N", str(self.args.irsync_threads)]
             src = "%s/%s" % (assay.irods_path, k)
-            target = "%s/%s" % (self.config.output_dir, v)
+            target = "%s/%s" % (self.args.output_dir, v)
             cmd += ["i:" + src, target]
             commands.append((src, target, cmd))
         return commands
@@ -204,7 +177,7 @@ class PullRawDataCommand:
             ["- %s" % " ".join(map(shlex.quote, cmd)) for (src, target, cmd) in commands]
         )
         logger.info("Pull data using the following commands?\n\n{}\n", cmds_txt)
-        if self.config.yes:
+        if self.args.yes:
             answer = True
         else:
             while True:
@@ -226,7 +199,7 @@ class PullRawDataCommand:
                 except SubprocessError:  # pragma: nocover
                     failed_libs.append((src, target, cmd_str))
             for src, target, cmd_str in failed_libs:
-                if not self.config.allow_missing or not self._missing_data_directory(src):
+                if not self.args.allow_missing or not self._missing_data_directory(src):
                     logger.error("Problem executing irsync command: {}", cmd_str)
                     return 1
                 logger.warning("No data for {}", os.path.basename(target))
@@ -242,15 +215,15 @@ class PullRawDataCommand:
 
     def _get_library_to_folder(self, assay):
         isa_dict = api.samplesheet.export(
-            sodar_url=self.config.sodar_server_url,
-            sodar_api_token=self.config.sodar_api_token,
-            project_uuid=self.config.project_uuid,
+            sodar_url=self.args.sodar_server_url,
+            sodar_api_token=self.args.sodar_api_token,
+            project_uuid=self.args.project_uuid,
         )
         isa = isa_dict_to_isa_data(isa_dict)
 
         assays = {}
         if assay:
-            if self.config.assay_uuid is None:
+            if self.args.assay_uuid is None:
                 logger.info("Using irods path of first assay: {}", assay.irods_path)
             assays = {k: v for (k, v) in isa.assays.items() if k == assay.file_name}
         else:  # no assay found
@@ -265,7 +238,7 @@ class PullRawDataCommand:
             for sample in collector.samples.values()
             if (
                 not sample["source"].get("batch_no")
-                or int(sample["source"]["batch_no"]) >= self.config.min_batch
+                or int(sample["source"]["batch_no"]) >= self.args.min_batch
             )
             and (not sample["source"]["family"] or not sample["source"]["family"].startswith("#"))
         }

@@ -8,8 +8,7 @@ from cubi_tk.sodar.lz_validate import ValidateLandingZoneCommand
 
 
 @patch("cubi_tk.sodar.lz_validate.api.landingzone.submit_validate")
-@patch("cubi_tk.sodar.lz_validate.load_toml_config")
-def test_validate(mocktoml, mockapi, caplog):
+def test_validate(mockapi, caplog):
     mockapi.return_value = {"a": 1, "b": 2}
     argv = [
         "--sodar-server-url",

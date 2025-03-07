@@ -10,8 +10,9 @@ from loguru import logger
 from sodar_cli import api
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
+from cubi_tk.parsers import check_args_sodar_config_parser
 
-from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
+from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 
 # for testing
 logger.propagate = True
@@ -40,13 +41,7 @@ class SodarIngest:
             sys.exit(1)
 
         # Get SODAR API info
-        toml_config = load_toml_config(Config())
-        if toml_config:  # pragma: no cover
-            config_url = toml_config.get("global", {}).get("sodar_server_url")
-            if self.args.sodar_server_url == "https://sodar.bihealth.org/" and config_url:
-                self.args.sodar_server_url = config_url
-            if not self.args.sodar_api_token:
-                self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+        _res, args = check_args_sodar_config_parser(args)
         if not self.args.sodar_api_token:
             logger.error("SODAR API token missing.")
             sys.exit(1)

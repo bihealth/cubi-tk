@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from cubi_tk import sodar_api
-from cubi_tk.common import GLOBAL_CONFIG_PATHS
+from cubi_tk.common import GLOBAL_CONFIG_PATH
 from cubi_tk.exceptions import ParameterException, SodarAPIException
 
 
@@ -42,7 +42,7 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
         sodar_api.SodarAPI(**args)
 
     # With toml config available, only project_uuid is required
-    fs.create_file(os.path.expanduser(GLOBAL_CONFIG_PATHS[0]), contents=mock_toml_config)
+    fs.create_file(os.path.expanduser(GLOBAL_CONFIG_PATH), contents=mock_toml_config)
     sodar_api.SodarAPI(
         sodar_server_url="", sodar_api_token="", project_uuid="123e4567-e89b-12d3-a456-426655440000"
     )

@@ -5,33 +5,24 @@ import itertools
 from pathlib import Path
 import typing
 
-import attr
 from loguru import logger
 from sodar_cli import api
 
+from cubi_tk.parsers import check_args_sodar_config_parser
+
 from .. import isa_support
-from ..common import load_toml_config, overwrite_helper
+from ..common import overwrite_helper
 from ..exceptions import OverwriteRefusedException
 
 
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    """Configuration for the upload sheet command."""
-
-    config: str
-    verbose: bool
-    sodar_server_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    project_uuid: str
-    input_investigation_file: str
 
 
 class UploadSheetCommand:
     """Implementation of the ``upload-sheet`` command."""
 
-    def __init__(self, config: Config):
+    def __init__(self, args):
         #: Command line arguments.
-        self.config = config
+        self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -51,30 +42,22 @@ class UploadSheetCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        toml_config = load_toml_config(self.config)
-        if not self.config.sodar_server_url:
-            self.config = attr.evolve(
-                self.config, sodar_server_url=toml_config.get("global", {}).get("sodar_server_url")
-            )
-        if not self.config.sodar_api_token:
-            self.config = attr.evolve(
-                self.config, sodar_api_token=toml_config.get("global", {}).get("sodar_api_token")
-            )
+        res, args = check_args_sodar_config_parser(self.args)
 
         logger.info("Starting cubi-tk sodar upload-sheet")
-        logger.info("  config: {}", self.config)
+        logger.info("  config: {}", self.args)
 
-        i_path = Path(self.config.input_investigation_file)
+        i_path = Path(self.args.input_investigation_file)
         if not i_path.exists():
             logger.error("Path does not exist: {}", i_path)
             return 1
 
-        isa_data = isa_support.load_investigation(self.config.input_investigation_file)
-        i_path = Path(self.config.input_investigation_file)
+        isa_data = isa_support.load_investigation(self.args.input_investigation_file)
+        i_path = Path(self.args.input_investigation_file)
         file_paths = [i_path]
         for name in itertools.chain(isa_data.studies, isa_data.assays):
             file_paths.append(i_path.parent / name)
@@ -82,9 +65,9 @@ class UploadSheetCommand:
         logger.info("Uploading files: \n{}", "\n".join(map(str, file_paths)))
 
         api.samplesheet.upload(
-            sodar_url=self.config.sodar_server_url,
-            sodar_api_token=self.config.sodar_api_token,
-            project_uuid=self.config.project_uuid,
+            sodar_url=self.args.sodar_server_url,
+            sodar_api_token=self.args.sodar_api_token,
+            project_uuid=self.args.project_uuid,
             file_paths=file_paths,
         )
 
@@ -93,19 +76,19 @@ class UploadSheetCommand:
 
     def _write_file(self, out_path, file_name, text):
         out_path = out_path / file_name
-        if out_path.exists() and not self.config.overwrite and not self.config.dry_run:
+        if out_path.exists() and not self.args.overwrite and not self.args.dry_run:
             raise OverwriteRefusedException(
                 "Refusing to overwrite without --overwrite: %s" % out_path
             )
         logger.info(
-            "{} {}", "Not writing (dry-run)" if self.config.dry_run else "Writing", out_path
+            "{} {}", "Not writing (dry-run)" if self.args.dry_run else "Writing", out_path
         )
         overwrite_helper(
             out_path,
             text,
-            do_write=not self.config.dry_run,
-            show_diff=self.config.show_diff,
-            show_diff_side_by_side=self.config.show_diff_side_by_side,
+            do_write=not self.args.dry_run,
+            show_diff=self.args.show_diff,
+            show_diff_side_by_side=self.args.show_diff_side_by_side,
         )
 
 

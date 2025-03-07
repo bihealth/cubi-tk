@@ -19,7 +19,9 @@ import typing
 import attr
 from loguru import logger
 
-from ..common import compute_md5_checksum, load_toml_config
+from cubi_tk.parsers import check_args_sodar_config_parser
+
+from ..common import compute_md5_checksum
 from ..exceptions import FileMd5MismatchException
 from ..snappy.check_remote import Checker as SnappyChecker
 from ..sodar_common import RetrieveSodarCollection
@@ -355,11 +357,7 @@ class SodarCheckRemoteCommand:
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_sodar_config_parser(args)
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover

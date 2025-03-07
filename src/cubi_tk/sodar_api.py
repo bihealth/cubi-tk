@@ -1,5 +1,4 @@
 import argparse
-from collections import namedtuple
 from functools import reduce
 from typing import Literal
 import urllib.parse as urlparse
@@ -7,40 +6,27 @@ import urllib.parse as urlparse
 from loguru import logger
 import requests
 
-from .common import is_uuid, load_toml_config
+from cubi_tk.parsers import check_args_sodar_config_parser
+
+from .common import is_uuid
 from .exceptions import ParameterException, SodarAPIException
 
 
 class SodarAPI:
-    def __init__(self, sodar_server_url: str, sodar_api_token: str, project_uuid: str):
+    def __init__(self, sodar_server_url: str, sodar_api_token: str, project_uuid: str, config = None):
         self.sodar_server_url = sodar_server_url
         self.sodar_api_token = sodar_api_token
         self.project_uuid = project_uuid
-        self.check_args()
+        self.check_args(config)
 
-    def check_args(self):
+    def check_args(self, config):
         # toml_config needs an object with attribute named config
-        args = namedtuple("args", ["config"])
-        toml_config = load_toml_config(args(config=None))
-        if not self.sodar_server_url:
-            if not toml_config:
-                raise ParameterException(
-                    "SODAR URL not given on command line and not found in toml config files."
-                )
-            self.sodar_server_url = toml_config.get("global", {}).get("sodar_server_url")
-            if not self.sodar_server_url:
-                raise ParameterException(
-                    "SODAR URL not found in config files. Please specify on command line."
-                )
-        if not self.sodar_api_token:
-            if not toml_config:
-                raise ParameterException(
-                    "SODAR API token not given on command line and not found in toml config files."
-                )
-            self.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            if not self.sodar_api_token:
-                raise ParameterException(
-                    "SODAR API token not found in config files. Please specify on command line."
+        any_error, args= check_args_sodar_config_parser(argparse.Namespace(config=config, sodar_server_url=self.sodar_server_url, sodar_api_token= self.sodar_api_token))
+        self.sodar_server_url = args.sodar_server_url
+        self.sodar_api_token = args.sodar_api_token
+        if any_error:
+            raise ParameterException(
+                    "SODAR variables not found in config files. Please specify on command line."
                 )
         if not is_uuid(self.project_uuid):
             raise ParameterException("Sodar Project UUID is not a valid UUID.")

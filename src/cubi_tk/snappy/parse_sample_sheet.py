@@ -354,13 +354,13 @@ class SampleGermline:
 class SampleSheetBuilderGermline(SampleSheetBuilder):
     def __init__(self):
         super().__init__()
-        self.config = None
+        self.library_type = None
         self.project_uuid = ""
         self.first_batch = 0
         self.last_batch = 0
 
-    def set_germline_specific_values(self, config, project_uuid, first_batch, last_batch):
-        self.config = config
+    def set_germline_specific_values(self, library_type, project_uuid, first_batch, last_batch):
+        self.library_type = library_type
         self.project_uuid = project_uuid
         self.first_batch = first_batch
         self.last_batch = last_batch
@@ -426,7 +426,7 @@ class SampleSheetBuilderGermline(SampleSheetBuilder):
         result = []
         for sample_name, source in self.sources.items():
             sample = self.samples.get(sample_name, None)
-            if not self.config.library_types or not sample or sample.library_type in self.config.library_types:
+            if not self.library_type or not sample or sample.library_type in self.library_type:
                 row = [
                     source.family or "FAM",
                     source.source_name or ".",

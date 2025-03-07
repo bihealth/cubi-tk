@@ -15,7 +15,9 @@ from loguru import logger
 import requests
 import tqdm
 
-from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
+from cubi_tk.parsers import check_args_sodar_config_parser
+
+from ..common import check_irods_icommands, is_uuid, sizeof_fmt
 from ..irods_common import TransferJob, iRODSTransfer
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -60,30 +62,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
         res = 0
-
-        toml_config = load_toml_config(args)
-        if not args.sodar_server_url:
-            args.sodar_server_url = os.environ.get("SODAR_URL", "https://sodar.bihealth.org/")
-            if not args.sodar_server_url:
-                if not toml_config:
-                    logger.error("SODAR URL not found in config files. Please specify on command line.")
-                    res = 1
-                args.sodar_server_url = toml_config.get("global", {}).get("sodar_server_url")
-                if not args.sodar_server_url:
-                    logger.error("SODAR URL not found in config files. Please specify on command line.")
-                    res = 1
-        if not args.sodar_api_token:
-            if not toml_config:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
-            args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            if not args.sodar_api_token:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
+        res, args = check_args_sodar_config_parser(args)
 
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)

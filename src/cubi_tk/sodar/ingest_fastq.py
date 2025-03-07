@@ -17,7 +17,9 @@ from loguru import logger
 from sodar_cli import api
 import tqdm
 
-from ..common import get_assay_from_uuid, load_toml_config, sizeof_fmt
+from cubi_tk.parsers import check_args_sodar_config_parser
+
+from ..common import get_assay_from_uuid, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.itransfer_common import SnappyItransferCommandBase
@@ -222,29 +224,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         #     check_irods_icommands(warn_only=False)
         res = 0
 
-        toml_config = load_toml_config(args)
-        if not args.sodar_server_url:
-            self.args.sodar_server_url = os.environ.get("SODAR_URL", "https://sodar.bihealth.org/")
-            if not args.sodar_server_url:
-                if not toml_config:
-                    logger.error("SODAR URL not found in config files. Please specify on command line.")
-                    res = 1
-                args.sodar_server_url = toml_config.get("global", {}).get("sodar_server_url")
-                if not args.sodar_server_url:
-                    logger.error("SODAR URL not found in config files. Please specify on command line.")
-                    res = 1
-        if not args.sodar_api_token:
-            if not toml_config:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
-            args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            if not args.sodar_api_token:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
+        res, args = check_args_sodar_config_parser(args, True)
 
         if args.src_regex and args.remote_dir_pattern and args.preset != "default":
             logger.error(

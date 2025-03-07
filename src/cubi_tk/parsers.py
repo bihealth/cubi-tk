@@ -3,6 +3,10 @@ import argparse
 import datetime
 import os
 
+from loguru import logger
+
+from cubi_tk.common import GLOBAL_CONFIG_PATH, load_toml_config
+
 basic_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
 basic_group = basic_config_parser.add_argument_group("Logging Configuration")
 basic_group.add_argument("--verbose", action="store_true", default=False, help="Increase verbosity.")
@@ -16,21 +20,45 @@ sodar_config_parser = argparse.ArgumentParser(description="The basic config pars
 sodar_group = sodar_config_parser.add_argument_group("Basic Sodar Configuration")
 sodar_group.add_argument(
     "--config",
-    default=os.environ.get("SODAR_CONFIG_PATH", None),
+    default=GLOBAL_CONFIG_PATH,
     help="Path to configuration file.",
 )
 sodar_group.add_argument(
     "--sodar-server-url",
-    default=os.environ.get("SODAR_SERVER_URL", None),
     help="SODAR server URL key to use, defaults to env SODAR_SERVER_URL.",
 )
 sodar_group.add_argument(
     "--sodar-api-token",
-    default=os.environ.get("SODAR_API_TOKEN", None),
     help="SODAR API token to use, defaults to env SODAR_API_TOKEN.",
 )
 def get_sodar_parser():
     return sodar_config_parser
+
+def check_args_sodar_config_parser(args, set_default = False):
+    any_error = False
+
+    # If SODAR info not provided, fetch from user's toml file
+    toml_config = load_toml_config(args.config)
+    if toml_config:
+        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
+        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get("sodar_api_token")
+
+    # Check presence of SODAR URL and auth token.
+    if not args.sodar_api_token:  # pragma: nocover
+        logger.error(
+            "SODAR API token not given on command line and not found in toml config files. Please specify using --sodar-api-token or set in config."
+        )
+        if(set_default):
+            args.sodar_api_token="XXXX"
+        else:
+            any_error = True
+    if not args.sodar_server_url:  # pragma: nocover
+        logger.error("SODAR URL not given on command line and not found in toml config files.Please specify using --sodar-server-url, or set in config.")
+        if(set_default):
+            args.sodar_server_url="https://sodar.bihealth.org/"
+        else:
+            any_error = True
+    return any_error, args
 
 sodar_specific_parser = argparse.ArgumentParser(description="The specifig config parser", add_help=False)
 sodar_group_spec = sodar_specific_parser.add_argument_group("Specific Sodar Configuration")

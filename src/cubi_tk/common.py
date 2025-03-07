@@ -16,7 +16,6 @@ import termios
 import typing
 from uuid import UUID
 
-import attr
 import icdiff
 from loguru import logger
 from termcolor import colored
@@ -29,38 +28,11 @@ from .exceptions import (
 )
 
 #: Paths to search the global configuration in.
-GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
+GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"
 
 
 def mask_password(value: str) -> str:
     return repr(value[:4] + (len(value) - 4) * "*")
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class CommonConfig:
-    """Common configuration for all commands."""
-
-    #: Verbose mode activated
-    verbose: bool
-
-    #: API token to use for SODAR.
-    sodar_api_token: str = attr.ib(repr=mask_password)  # type: ignore
-
-    #: Base URL to SODAR server.
-    sodar_server_url: typing.Optional[str]
-
-    @staticmethod
-    def create(args, toml_config=None):
-        toml_config = toml_config or {}
-        return CommonConfig(
-            verbose=args.verbose,
-            sodar_api_token=(
-                args.sodar_api_token or toml_config.get("global", {})["sodar_api_token"]
-            ),
-            sodar_server_url=(
-                args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
-            ),
-        )
 
 
 def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
@@ -369,16 +341,16 @@ class UnionFind:
 
 def load_toml_config(config):
     # Load configuration from TOML cubitkrc file, if any.
-    if config.config:#hasattr(config, "config"):
-        config_paths = (config.config,)
+    if config:
+        config_paths = [config,]
     else:
-        config_paths = GLOBAL_CONFIG_PATHS
+        config_paths = [GLOBAL_CONFIG_PATH, ]
     for config_path in config_paths:
         config_path = os.path.expanduser(os.path.expandvars(config_path))
         if os.path.exists(config_path):
             with open(config_path, "rt") as tomlf:
                 return toml.load(tomlf)
-    logger.info("Could not find any of the global configuration files {}.", config_paths)
+    logger.warning("Could not find any of the global configuration files {}.", config_paths)
     return None
 
 def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid):

@@ -9,8 +9,7 @@ import cattr
 from loguru import logger
 from sodar_cli import api
 
-from ..common import load_toml_config
-
+from cubi_tk.parsers import check_args_sodar_config_parser
 
 class MoveLandingZoneCommand:
     """Implementation of the ``landing-zone-move`` command."""
@@ -54,11 +53,7 @@ class MoveLandingZoneCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        toml_config = load_toml_config(args)
-        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_sodar_config_parser(args)
 
         return res
 

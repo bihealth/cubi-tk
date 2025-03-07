@@ -9,59 +9,20 @@ More Information
 """
 
 import argparse
-import pathlib
 import typing
 from uuid import UUID
 
 
-import attr
 from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
+from cubi_tk.parsers import check_args_sodar_config_parser
 from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
 from loguru import logger
 from sodar_cli import api
 
-from ..common import CommonConfig, get_assay_from_uuid, load_toml_config, overwrite_helper
+from ..common import get_assay_from_uuid, overwrite_helper
 
 from .common import find_snappy_root_dir
 from .models import load_datasets
-
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class PullSheetsConfig:
-    """Configuration for the ``cubi-tk snappy pull-sheets`` command."""
-
-    #: Global configuration.
-    global_config: CommonConfig
-
-    base_path: typing.Optional[pathlib.Path]
-    yes: bool
-    dry_run: bool
-    show_diff: bool
-    show_diff_side_by_side: bool
-    library_types: typing.Tuple[str]
-    first_batch: int
-    last_batch: typing.Union[int, type(None)]
-    tsv_shortcut: str
-    assay_uuid:str
-
-    @staticmethod
-    def create(args, global_config, toml_config=None):
-        _ = toml_config or {}
-        return PullSheetsConfig(
-            global_config=global_config,
-            base_path=pathlib.Path(args.base_path),
-            yes=args.yes,
-            dry_run=args.dry_run,
-            show_diff=args.show_diff,
-            show_diff_side_by_side=args.show_diff_side_by_side,
-            library_types=tuple(args.library_types),
-            first_batch=args.first_batch,
-            last_batch=args.last_batch,
-            tsv_shortcut=args.tsv_shortcut,
-            assay_uuid=args.assay_uuid
-        )
-
 
 
 def strip(x):
@@ -137,7 +98,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     any_error = False
-
+    any_error, args =  check_args_sodar_config_parser(args)
     # Postprocess arguments.
     if args.library_types:
         args.library_types = args.library_types.split(",")  # pragma: nocover
@@ -147,32 +108,28 @@ def check_args(args) -> int:
     return int(any_error)
 
 def build_sheet(
-    config: PullSheetsConfig,
+    args,
     project_uuid: typing.Union[str, UUID],
-    first_batch: typing.Optional[int] = None,
-    last_batch: typing.Optional[int] = None,
-    tsv_shortcut: str = "germline",
-    assay_uuid=None
 ) -> str:
     """Build sheet TSV file."""
 
     # Obtain ISA-tab from SODAR REST API.
     isa_dict = api.samplesheet.export(
-        sodar_url=config.global_config.sodar_server_url,
-        sodar_api_token=config.global_config.sodar_api_token,
+        sodar_url=args.sodar_server_url,
+        sodar_api_token=args.sodar_api_token,
         project_uuid=project_uuid,
     )
     assay_filename = None
-    if(assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
-        assay = get_assay_from_uuid(config.global_config.sodar_server_url,
-                                    config.global_config.sodar_api_token,
+    if(args.assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
+        assay = get_assay_from_uuid(args.sodar_server_url,
+                                    args.sodar_api_token,
                                     project_uuid,
-                                    assay_uuid)
+                                    args.assay_uuid)
         assay_filename = assay.file_name
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
-    if tsv_shortcut == "germline":
+    if args.tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline()
-        builder.set_germline_specific_values(config, project_uuid, first_batch, last_batch)
+        builder.set_germline_specific_values(args.library_types, project_uuid, args.first_batch, args.last_batch)
     else:
         builder = SampleSheetBuilderCancer()
     iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
@@ -195,12 +152,9 @@ def run(
     logger.info("Args: {}", args)
 
     logger.debug("Load config...")
-    toml_config = load_toml_config(args)
-    global_config = CommonConfig.create(args, toml_config)
     args.base_path = find_snappy_root_dir(args.base_path)
-    config = PullSheetsConfig.create(args, global_config, toml_config)
 
-    config_path = config.base_path / ".snappy_pipeline"
+    config_path = args.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
     logger.info("Pulling for {} datasets", len(datasets))
     if(len(datasets) >1 and args.assay_uuid is not None):
@@ -210,7 +164,7 @@ def run(
             overwrite_helper(
                 config_path / dataset.sheet_file,
                 build_sheet(
-                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut, args.assay_uuid
+                    args, dataset.sodar_uuid,
                 ),
                 do_write=not args.dry_run,
                 show_diff=True,
