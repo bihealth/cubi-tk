@@ -5,7 +5,6 @@ from pathlib import Path
 import sys
 import typing
 
-import attrs
 from loguru import logger
 from sodar_cli import api
 
