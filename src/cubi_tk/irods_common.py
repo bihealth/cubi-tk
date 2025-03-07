@@ -86,7 +86,6 @@ class iRODSCommon:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
                 session.connection_timeout = 600
-                session.server_version
                 return session
             except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
                 logger.info(self.get_irods_error(e))
@@ -126,7 +125,7 @@ class iRODSCommon:
                     raise e
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                raise RuntimeError
+                raise RuntimeError from e
 
         if self.ask and input(
             "Save iRODS session for passwordless operation? [y/N] "
@@ -337,7 +336,7 @@ class iRODSRetrieveCollection(iRODSCommon):
             Like(CollectionModel.name, f"{root_coll.path}%")
         )
 
-        data_objs = dict(files=[], checksums={})
+        data_objs = {"files":[], "checksums":{}}
         for res in query:
             # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
             # likely because a name/path/... attribute is overwritten somewhere

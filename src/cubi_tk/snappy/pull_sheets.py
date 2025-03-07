@@ -20,7 +20,7 @@ from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSh
 from loguru import logger
 from sodar_cli import api
 
-from ..common import CommonConfig, load_toml_config, overwrite_helper
+from ..common import CommonConfig, get_assay_from_uuid, load_toml_config, overwrite_helper
 
 from .common import find_snappy_root_dir
 from .models import load_datasets
@@ -164,20 +164,11 @@ def build_sheet(
     )
     assay_filename = None
     if(assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
-        investigation = api.samplesheet.retrieve(
-            sodar_url=config.global_config.sodar_server_url,
-            sodar_api_token=config.global_config.sodar_api_token,
-            project_uuid=project_uuid,
-        )
-        assay = None
-        for study in investigation.studies.values():
-            for remote_assay_uuid in study.assays.keys():
-                if assay_uuid== remote_assay_uuid:
-                    assay = study.assays[remote_assay_uuid]
-                    assay_filename = assay.file_name
-                    break
-        if(assay_filename == None):
-            logger.error("No assay with UUID {} found", assay_uuid)
+        assay = get_assay_from_uuid(config.global_config.sodar_server_url,
+                                    config.global_config.sodar_api_token,
+                                    project_uuid,
+                                    assay_uuid)
+        assay_filename = assay.file_name
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
     if tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline()
@@ -212,7 +203,7 @@ def run(
     config_path = config.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
     logger.info("Pulling for {} datasets", len(datasets))
-    if(len(datasets) >1 and args.assay_uuid != None):
+    if(len(datasets) >1 and args.assay_uuid is not None):
         logger.warning("Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID")
     for dataset in datasets.values():
         if dataset.sodar_uuid:

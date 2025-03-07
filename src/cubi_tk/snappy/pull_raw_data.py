@@ -250,7 +250,7 @@ class PullRawDataCommand(PullDataCommon):
             if not in_common_links:
                 all_directories = sum([path_.split("/") for path_ in _irods_path_list], [])
                 for id_ in identifiers:
-                    if any([id_ == dir_ for dir_ in all_directories]):
+                    if any(id_ == dir_ for dir_ in all_directories):
                         output_dict[id_].extend(value)
                         break
 

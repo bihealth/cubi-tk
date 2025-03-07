@@ -250,27 +250,26 @@ def _append_study_line(study, donor, materials, processes, arcs, config):
 def _append_study_line_annotating_column(attr_name, col, config, curr, donor, prev_label):
     value = ""
     if hasattr(col, "label"):
-        if col.label.lower() == "external links" and curr["type"] == SOURCE_NAME:
+        study_line_mapping = {
+            "batch": str(config.batch_no),
+            "family": donor.family_id,
+            "organism": OntologyTermRef(
+                    name="Homo sapiens",
+                    accession="http://purl.bioontology.org/ontology/NCBITAXON/9606",
+                    ontology_name="NCBITAXON",
+                ),
+            "father": donor.father_name,
+            "mother": donor.mother_name,
+            "sex": donor.sex,
+            "disease status": donor.disease
+        }
+        key = col.label.lower()
+        if key== "external links" and curr["type"] == SOURCE_NAME:
             # TODO: hacky, would need original donor ID here
             value = "x-charite-medgen-blood-book-id:%s" % donor.name.replace("_", "-")
-        elif col.label.lower() == "batch":
-            value = str(config.batch_no)
-        elif col.label.lower() == "family":
-            value = donor.family_id
-        elif col.label.lower() == "organism":
-            value = OntologyTermRef(
-                name="Homo sapiens",
-                accession="http://purl.bioontology.org/ontology/NCBITAXON/9606",
-                ontology_name="NCBITAXON",
-            )
-        elif col.label.lower() == "father":
-            value = donor.father_name
-        elif col.label.lower() == "mother":
-            value = donor.mother_name
-        elif col.label.lower() == "sex":
-            value = donor.sex
-        elif col.label.lower() == "disease status":
-            value = donor.disease
+        elif key in study_line_mapping.keys():
+            value = study_line_mapping[key]
+
     if col.column_type in (DATE, LABEL, MATERIAL_TYPE, PERFORMER):
         pass  # do nothing
     else:
@@ -423,31 +422,25 @@ def _append_assay_line_annotating_column(
 
 
 def _append_assay_line_annotating_column_label(col, config, donor_name, value):
-    if col.label.lower() == "library source":
-        value = "GENOMIC"
-    elif col.label.lower() == "library strategy":
-        value = {"WES": "WXS"}.get(config.library_type, config.library_type)
-    elif col.label.lower() == "library selection":
-        value = {"WES": "Hybrid Selection", "WGS": "RANDOM", "Panel_seq": "Hybrid Selection"}.get(
+    label_value_mapping = {
+        "library source":"GENOMIC",
+        "library strategy": {"WES": "WXS"}.get(config.library_type, config.library_type),
+        "library selection": {"WES": "Hybrid Selection", "WGS": "RANDOM", "Panel_seq": "Hybrid Selection"}.get(
             config.library_type
-        )
+        ),
+        "library layout": "PAIRED",
+        "library kit": config.library_kit,
+        "library kit catalogue id": config.library_kit_catalogue_id,
+        "folder name": donor_name.replace("_", "-"), # TODO: hacky, actually need real donor ID
+        "platform": config.platform,
+        "instrument model": config.instrument_model,
+        "base quality encoding":"Phred+33",
+    }
+    key = col.label.lower()
+    if key in label_value_mapping.keys():
+        value = label_value_mapping[key]
         if not value:  # pragma: no cover
             raise Exception("Invalid library selection")
-    elif col.label.lower() == "library layout":
-        value = "PAIRED"
-    elif col.label.lower() == "library kit":
-        value = config.library_kit
-    elif col.label.lower() == "library kit catalogue id":
-        value = config.library_kit_catalogue_id
-    elif col.label.lower() == "folder name":
-        # TODO: hacky, actually need real donor ID
-        value = donor_name.replace("_", "-")
-    elif col.label.lower() == "platform":
-        value = config.platform
-    elif col.label.lower() == "instrument model":
-        value = config.instrument_model
-    elif col.label.lower() == "base quality encoding":
-        value = "Phred+33"
     return value
 
 

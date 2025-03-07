@@ -138,7 +138,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     )
         return lz_uuid, sorted(transfer_jobs, key=lambda x: x.path_local)
 
-    def get_sodar_info(self) -> tuple[str, str]:
+    def get_sodar_info(self) -> tuple[str, str]:  #noqa: C901
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
         1. User provides Landing Zone UUID: fetch path and use it.
@@ -214,46 +214,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
-                    if lz_irods_path:
-                        logger.info("Found active Landing Zone: {}", lz_irods_path)
-                        if (
-                            not input("Can the process use this path? [yN] ")
-                            .lower()
-                            .startswith("y")
-                        ):
-                            logger.info(
-                                "...an alternative is to create another Landing Zone using the UUID {}",
-                                in_destination
-                            )
-                            if (
-                                input("Can the process create a new landing zone? [yN] ")
-                                .lower()
-                                .startswith("y")
-                            ):
-                                lz_uuid, lz_irods_path = self.create_landing_zone(
-                                    project_uuid=in_destination, assay_uuid=assay_uuid
-                                )
-                            else:
-                                msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                                logger.info(msg)
-                                raise UserCanceledException(msg)
+                    lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path, in_destination, assay_uuid)
 
-                    # No active lz available
-                    # As user if should create new new.
-                    else:
-                        logger.info("No active Landing Zone available for UUID {}", in_destination)
-                        if (
-                            input("Can the process create a new landing zone? [yN] ")
-                            .lower()
-                            .startswith("y")
-                        ):
-                            lz_uuid, lz_irods_path = self.create_landing_zone(
-                                project_uuid=in_destination, assay_uuid=assay_uuid
-                            )
-                        else:
-                            msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                            logger.info(msg)
-                            raise UserCanceledException(msg)
         # Check if `in_destination` is a Landing zone path.
         elif in_destination.startswith("/"):
             # We expect to find one UUID in the LZ path, this will be the project UUID
@@ -289,6 +251,49 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         logger.info("Target iRODS path: {}", lz_irods_path)
 
         # Return
+        return lz_uuid, lz_irods_path
+
+    def _get_user_input(self, lz_irods_path, in_destination, assay_uuid):
+        if lz_irods_path:
+            logger.info("Found active Landing Zone: {}", lz_irods_path)
+            if (
+                not input("Can the process use this path? [yN] ")
+                .lower()
+                .startswith("y")
+            ):
+                logger.info(
+                    "...an alternative is to create another Landing Zone using the UUID {}",
+                    in_destination
+                )
+                if (
+                    input("Can the process create a new landing zone? [yN] ")
+                    .lower()
+                    .startswith("y")
+                ):
+                    lz_uuid, lz_irods_path = self.create_landing_zone(
+                        project_uuid=in_destination, assay_uuid=assay_uuid
+                    )
+                else:
+                    msg = "Not possible to continue the process without a landing zone path. Breaking..."
+                    logger.info(msg)
+                    raise UserCanceledException(msg)
+
+        # No active lz available
+        # As user if should create new new.
+        else:
+            logger.info("No active Landing Zone available for UUID {}", in_destination)
+            if (
+                input("Can the process create a new landing zone? [yN] ")
+                .lower()
+                .startswith("y")
+            ):
+                lz_uuid, lz_irods_path = self.create_landing_zone(
+                    project_uuid=in_destination, assay_uuid=assay_uuid
+                )
+            else:
+                msg = "Not possible to continue the process without a landing zone path. Breaking..."
+                logger.info(msg)
+                raise UserCanceledException(msg)
         return lz_uuid, lz_irods_path
 
     def move_landing_zone(self, lz_uuid):
@@ -456,7 +461,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             sizeof_fmt(total_bytes),
             parallel_jobs,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_local, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join(j.path_local for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if parallel_jobs == 0:  # pragma: nocover

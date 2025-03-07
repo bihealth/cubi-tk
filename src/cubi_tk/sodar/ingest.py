@@ -111,6 +111,7 @@ class SodarIngest:
 
     def execute(self):
         """Execute ingest."""
+        self.lz_irods_path = self.args.destination
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
             try:
@@ -131,8 +132,6 @@ class SodarIngest:
             else:
                 logger.error("Target landing zone is not ACTIVE.")
                 sys.exit(1)
-        else:
-            self.lz_irods_path = self.args.destination  # pragma: no cover
 
         # Build file list
         source_paths = self.build_file_list()
@@ -140,9 +139,39 @@ class SodarIngest:
             logger.info("Nothing to do. Quitting.")
             sys.exit(0)
 
+        # Query user for target sub-collection
+        self.build_target_coll()
+
+        # Build transfer jobs and add missing md5 files
+        jobs = self.build_jobs(source_paths)
+        jobs = sorted(jobs, key=lambda x: x.path_local)
+
+        # Final go from user & transfer
+        itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
+        logger.info("Planning to transfer the following files:")
+
+        for job in jobs:
+            logger.info(job.path_local)
+        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
+        logger.info("Into this iRODS collection:")
+        logger.info(f"{self.target_coll}/")
+
+        if not self.args.yes:
+            if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                logger.info("Aborting at your request.")
+                sys.exit(0)
+
+        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
+        logger.info("File transfer complete.")
+
+        # Compute server-side checksums
+        if self.args.remote_checksums:  # pragma: no cover
+            logger.info("Computing server-side checksums.")
+            itransfer.chksum()
+
+    def build_target_coll(self):
         # Initiate iRODS session
         irods_session = iRODSCommon().session
-
         # Query target collection
         logger.info("Querying landing zone collections…")
         collections = []
@@ -157,7 +186,6 @@ class SodarIngest:
             )
             sys.exit(1)
 
-        # Query user for target sub-collection
         if not collections:
             self.target_coll = self.lz_irods_path
             logger.info("No subcollections found. Moving on.")
@@ -184,32 +212,6 @@ class SodarIngest:
             logger.error("Selected target collection does not exist in landing zone.")
             sys.exit(1)
 
-        # Build transfer jobs and add missing md5 files
-        jobs = self.build_jobs(source_paths)
-        jobs = sorted(jobs, key=lambda x: x.path_local)
-
-        # Final go from user & transfer
-        itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
-        logger.info("Planning to transfer the following files:")
-        for job in jobs:
-            logger.info(job.path_local)
-        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
-        logger.info("Into this iRODS collection:")
-        logger.info(f"{self.target_coll}/")
-
-        if not self.args.yes:
-            if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-                logger.info("Aborting at your request.")
-                sys.exit(0)
-
-        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
-        logger.info("File transfer complete.")
-
-        # Compute server-side checksums
-        if self.args.remote_checksums:  # pragma: no cover
-            logger.info("Computing server-side checksums.")
-            itransfer.chksum()
-
     def build_file_list(self) -> typing.List[typing.Dict[Path, Path]]:
         """
         Build list of source files to transfer.
@@ -217,7 +219,7 @@ class SodarIngest:
         """
 
         source_paths = [Path(src) for src in self.args.sources]
-        output_paths = list()
+        output_paths = []
 
         for src in source_paths:
             try:
@@ -233,12 +235,12 @@ class SodarIngest:
             if src.is_dir():
                 paths = abspath.glob("**/*" if self.args.recursive else "*")
                 for p in paths:
-                    if excludes and any([p.match(e) for e in excludes]):
+                    if excludes and any(p.match(e) for e in excludes):
                         continue
                     if p.is_file() and not p.suffix.lower() == ".md5":
                         output_paths.append({"spath": p, "ipath": p.relative_to(abspath)})
             else:
-                if not any([src.match(e) for e in excludes if e]):
+                if not any(src.match(e) for e in excludes if e):
                     output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 

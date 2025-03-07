@@ -29,7 +29,7 @@ class FindFilesCommon:
         """
         self.sheet = sheet
 
-    def parse_sample_sheet(self):
+    def parse_sample_sheet(self):  #noqa: C901
         """Parse sample sheet.
 
         :return: Returns list of library names - used to define directory names though out the pipeline.
@@ -261,9 +261,7 @@ class Checker:
                 subset_remote_files_dict[key] = self.remote_files_dict.get(key)
 
         # Parse local files - remove library reference
-        parsed_local_files_dict = dict(
-            (key, val) for k in self.local_files_dict.values() for key, val in k.items()
-        )
+        parsed_local_files_dict = {(key, val) for k in self.local_files_dict.values() for key, val in k.items()}
 
         # Compare dictionaries
         i_both, i_remote, i_local = self.compare_local_and_remote_files(

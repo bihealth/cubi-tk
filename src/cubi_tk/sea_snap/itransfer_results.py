@@ -185,7 +185,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
         command_blocks = self.args.transfer_blueprint.read().split(os.linesep + os.linesep)
         transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name)
-        logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        logger.debug("Transfer jobs:\n{}", "\n".join(x.to_oneline() for x in transfer_jobs))
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
@@ -228,7 +228,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_src, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join(j.path_src for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if self.args.num_parallel_transfers == 0:  # pragma: nocover

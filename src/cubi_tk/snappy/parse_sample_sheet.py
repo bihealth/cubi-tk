@@ -574,7 +574,7 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
             result.append("\t".join([c.strip() for c in row]))
         result = (
             list(HEADER_TPL_CANCER)
-            + [line for line in result]
+            + list(result)
             + [""]
         )
         return result

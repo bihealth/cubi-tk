@@ -17,7 +17,7 @@ from loguru import logger
 from sodar_cli import api
 import tqdm
 
-from ..common import load_toml_config, sizeof_fmt
+from ..common import get_assay_from_uuid, load_toml_config, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.itransfer_common import SnappyItransferCommandBase
@@ -287,37 +287,23 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
         )
+        assay_file_name = list(isa_dict["assays"].keys())[0]
         if len(isa_dict["assays"]) > 1:
             if not self.args.assay_uuid:
                 msg = "Multiple assays found in investigation, please specify which one to use with --assay-uid."
                 logger.error(msg)
                 raise ParameterException(msg)
-
-            investigation = api.samplesheet.retrieve(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=project_uuid,
-            )
-            for study in investigation.studies.values():
-                for assay_uuid in study.assays.keys():
-                    if self.args.assay_uuid == assay_uuid:
-                        assay_file_name = study.assays[assay_uuid].file_name
-                        break
-                # First break can only break out of inner loop
-                else:
-                    continue
-                break
-            else:
-                msg = f"Assay with UUID {self.args.assay_uuid} not found in investigation."
-                logger.error(msg)
-                raise ParameterException(msg)
-        else:
-            assay_file_name = list(isa_dict["assays"].keys())[0]
-
+            assay = get_assay_from_uuid(
+                self.args.sodar_server_url,
+                self.args.sodar_api_token,
+                project_uuid,
+                self.args.assay_uuid
+                )
+            assay_file_name = assay.file_name
         assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]
         assay_header, *assay_lines = assay_tsv.rstrip("\n").split("\n")
         assay_header = assay_header.split("\t")
-        assay_lines = map(lambda x: x.split("\t"), assay_lines)
+        assay_lines =  [x.split("\t") for x in assay_lines]
 
         def check_col_index(column_index):
             if not column_index:
@@ -499,7 +485,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                             f"--match-column {self.args.match_column}. Please review the assay table, src-regex and sample-collection-mapping args."
                         )
                         logger.error(msg)
-                        raise ParameterException(msg)
+                        raise ParameterException(msg) from KeyError
 
                     # This was the original code, but there is no need to change the remote file names once they are
                     # mapped to the correct collections:
@@ -587,7 +573,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_local, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join( j.path_local for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if self.args.num_parallel_transfers == 0:  # pragma: nocover

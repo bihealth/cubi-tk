@@ -34,7 +34,7 @@ class SnappyMissingDependencyException(Exception):
         return f"{self.step_name} requires {self.step_dependencies}, but only {self.existing_steps} exist in workflow directory."
 
 
-def run(
+def run(  # noqa: C901
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
     logger.info("Try to find SNAPPY pipeline directory...")

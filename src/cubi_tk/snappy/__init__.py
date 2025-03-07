@@ -38,7 +38,6 @@ More Information
 """
 
 import argparse
-from collections.abc import Sequence
 
 from cubi_tk.parsers import get_basic_parser, get_snappy_cmd_basic_parser, get_snappy_itransfer_parser, get_snappy_pull_data_parser, get_sodar_parser
 

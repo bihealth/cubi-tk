@@ -26,11 +26,10 @@ import icdiff
 from loguru import logger
 import pandas as pd
 import requests
-from termcolor import colored
 import yaml
 
 #: The URL template to use.
-from ..common import get_terminal_columns
+from ..common import get_terminal_columns, print_line
 
 URL_TPL = "%(sodar_server_url)ssamplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
@@ -278,7 +277,7 @@ class SampleInfoTool:
         combinations = []
         WildcardComb = namedtuple("WildcardComb", wildcard_values)
         wildcard_comb_num = len(wildcard_values["sample"])
-        assert all([len(val) == wildcard_comb_num for val in wildcard_values.values()])
+        assert all(len(val) == wildcard_comb_num for val in wildcard_values.values())
         for index in range(wildcard_comb_num):
             combinations.append(
                 WildcardComb(**{key: wildcard_values[key][index] for key in wildcard_values})
@@ -529,6 +528,55 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
     return None
 
 
+
+def show_line(line):
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout.buffer.write(line.encode("utf-8"))
+    else:
+        sys.stdout.write(line)
+
+def show_diff(args, sample_info_file):
+    old_lines = []
+    if os.path.exists(args.output_file.name):
+        with open(args.output_file.name, "rt") as inputf:
+            old_lines = inputf.read().splitlines(keepends=False)
+    sample_info_file.seek(0)
+    new_lines = sample_info_file.read().splitlines(keepends=False)
+
+    is_diff = False
+    if not args.show_diff_side_by_side:
+        lines = difflib.unified_diff(
+            old_lines,
+            new_lines,
+            fromfile=args.output_file.name,
+            tofile=args.output_file.name,
+        )
+        for line in lines:
+            is_diff = True
+            print_line(line)
+    else:
+        cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
+        lines = cd.make_table(
+            old_lines,
+            new_lines,
+            fromdesc=args.output_file.name,
+            todesc=args.output_file.name,
+            context=True,
+            numlines=3,
+        )
+        heading = next(lines)
+
+        for line in lines:
+            if not is_diff:
+                show_line(f"{heading}\n")
+            is_diff = True
+            show_line(f"{line}\n")
+
+    sys.stdout.flush()
+    if not is_diff:
+        logger.info("File {} not changed, no diff...", args.output_file.name)
+
+
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
@@ -554,62 +602,7 @@ def run(
 
             # Compare sample info with output if exists and --show-diff given.
         if args.show_diff:
-            if os.path.exists(args.output_file.name):
-                with open(args.output_file.name, "rt") as inputf:
-                    old_lines = inputf.read().splitlines(keepends=False)
-            else:
-                old_lines = []
-            sample_info_file.seek(0)
-            new_lines = sample_info_file.read().splitlines(keepends=False)
-
-            is_diff = False
-            if not args.show_diff_side_by_side:
-                lines = difflib.unified_diff(
-                    old_lines,
-                    new_lines,
-                    fromfile=args.output_file.name,
-                    tofile=args.output_file.name,
-                )
-                for line in lines:
-                    is_diff = True
-                    line = line[:-1]
-                    if line.startswith(("+++", "---")):
-                        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("+"):
-                        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("-"):
-                        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
-                    else:
-                        print(line, file=sys.stdout)
-            else:
-                cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
-                lines = cd.make_table(
-                    old_lines,
-                    new_lines,
-                    fromdesc=args.output_file.name,
-                    todesc=args.output_file.name,
-                    context=True,
-                    numlines=3,
-                )
-                heading = next(lines)
-
-                def show_line(line):
-                    if hasattr(sys.stdout, "buffer"):
-                        sys.stdout.buffer.write(line.encode("utf-8"))
-                    else:
-                        sys.stdout.write(line)
-
-                for line in lines:
-                    if not is_diff:
-                        show_line(f"{heading}\n")
-                    is_diff = True
-                    show_line(f"{line}\n")
-
-            sys.stdout.flush()
-            if not is_diff:
-                logger.info("File {} not changed, no diff...", args.output_file.name)
+            show_diff(args, sample_info_file)
 
         # Write to output file if not --dry-run is given
         if hasattr(args.output_file, "name") and args.dry_run:

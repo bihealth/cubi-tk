@@ -125,7 +125,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         )
         parser.add_argument(
             "output_dir",
-            type=lambda x: validate_output_directory(parser, x),
+            type=lambda x, parser = parser: validate_output_directory(parser, x),
             help="Path to output directory",
         )
 

@@ -360,7 +360,6 @@ def test_collect_sample_data(
 
     # test merging of --ped & -s info (same samples)
     pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
-
     # incomplete info for sample only given via ped
     arg_list[36] = "mv_extra_sample.ped"
     with pytest.raises(ParameterException):

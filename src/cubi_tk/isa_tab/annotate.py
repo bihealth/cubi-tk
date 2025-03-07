@@ -5,7 +5,6 @@ import csv
 import io
 import pathlib
 import typing
-from warnings import warn
 
 from altamisa.constants.table_headers import (
     DATA_FILE_HEADERS,
@@ -129,7 +128,7 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                         c = attr.evolve(c, value=[annotation.pop(c.name)])
                         # TODO: consider ontologies as values
                     else:
-                        warn(
+                        logger.warning(
                             (
                                 "Value for material {} and characteristic {}"
                                 "already exist and --force-update not set. Skipping..."
@@ -164,7 +163,7 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                     if self.overwrite:
                         c = attr.evolve(c, value=[annotation.pop(c.name)])
                     else:
-                        warn(
+                        logger.warning(
                             (
                                 "Value for material {} and comment {}"
                                 "already exist and --force-update not set. Skipping..."
@@ -417,6 +416,11 @@ class AddAnnotationIsaTabCommand:
                 long_df["annotation_value"].extend([row[i] for row in annotation])
                 long_df["col_name"].extend([col] * len(annotation))
 
+        annotation_map, header_map = self.iterate_maps(long_df)
+
+        return annotation_map, header_map
+
+    def iterate_maps(self, long_df):
         annotation_map = {}  # {node_type: {node_id: {col_name: anno_value}}}
         header_map = {}  # {node_type: {col_name: isa_col_name}}
 

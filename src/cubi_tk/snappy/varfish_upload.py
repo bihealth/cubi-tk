@@ -237,25 +237,7 @@ class SnappyVarFishUploadCommand:
                 f"and extensions\n    {EXTENSIONS}\n"
                 f"{prefix_text}"
             )
-            found: typing.Dict[str, str] = {}
-            for step in self.args.steps:
-                for ext in EXTENSIONS:
-                    work_path = self.args.base_path / step / "work"
-                    pattern = f"{work_path}/*.{library}/**/*.{ext}"
-                    logger.debug(f"pattern: {pattern}")
-                    for file_path in glob.glob(pattern, recursive=True):
-                        file_name = os.path.basename(file_path)
-                        # If data externally generated, cannot filter by common `snappy` tool combinations
-                        if self.args.external_data:
-                            key = f"{step}: {file_name}"
-                            found[key] = file_path
-                        elif file_name not in found and any(
-                            (
-                                file_name.endswith(".ped") or file_name.startswith(p)
-                                for p in PREFIXES
-                            )
-                        ):  # must treat .ped as special case
-                            found[file_name] = file_path
+            found: typing.Dict[str, str] = self._process_step(library)
             logger.info("found {} files for {}", len(found), library)
             if self.args.verbose:
                 found_s = "\n".join("%s (%s)" % (k, v) for k, v in sorted(found.items()))
@@ -285,6 +267,27 @@ class SnappyVarFishUploadCommand:
                 logger.info("Executing '{}'", " ".join(args))
                 check_call(args)
         logger.info("  -> all done with {}", name)
+
+    def _process_step(self, library):
+        found: typing.Dict[str, str] = {}
+        for step in self.args.steps:
+            for ext in EXTENSIONS:
+                work_path = self.args.base_path / step / "work"
+                pattern = f"{work_path}/*.{library}/**/*.{ext}"
+                logger.debug(f"pattern: {pattern}")
+                for file_path in glob.glob(pattern, recursive=True):
+                    file_name = os.path.basename(file_path)
+                    # If data externally generated, cannot filter by common `snappy` tool combinations
+                    if self.args.external_data:
+                        key = f"{step}: {file_name}"
+                        found[key] = file_path
+                    elif file_name not in found and any(
+                        (
+                            file_name.endswith(".ped") or file_name.startswith(p)
+                            for p in PREFIXES
+                        )
+                    ):  # must treat .ped as special case
+                        found[file_name] = file_path
 
 
 def run(

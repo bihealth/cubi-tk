@@ -15,17 +15,17 @@ import tempfile
 import termios
 import typing
 from uuid import UUID
-import warnings
 
 import attr
 import icdiff
 from loguru import logger
 from termcolor import colored
 import toml
+from sodar_cli import api
 
 from .exceptions import (
     IrodsIcommandsUnavailableException,
-    IrodsIcommandsUnavailableWarning,
+    ParameterException,
 )
 
 #: Paths to search the global configuration in.
@@ -124,7 +124,7 @@ def execute_shell_commands(cmds, verbose=True, check=True):
 
     # Check return code of all processes in the pipe (if required)
     # Tested only when all processes in the pipe are complete
-    if check and any([x.poll() != 0 for x in process_list]):
+    if check and any(x.poll() != 0 for x in process_list):
         raise subprocess.CalledProcessError(
             returncode=current.returncode,
             cmd=" | ".join([" ".join(cmd) for cmd in cmds]),
@@ -188,7 +188,7 @@ def check_irods_icommands(warn_only=True):  # disabled when testing  # pragma: n
     if missing:
         msg = "Could not find irods-icommands executables: %s", ", ".join(missing)
         if warn_only:
-            warnings.warn(msg, IrodsIcommandsUnavailableWarning)
+            logger.warning(msg)#warnings.warn(msg, IrodsIcommandsUnavailableWarning)
         else:
             raise IrodsIcommandsUnavailableException(msg)
 
@@ -258,30 +258,34 @@ def overwrite_helper(
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
 
+def print_line(line):
+    line = line[:-1]
+    if line.startswith(("+++", "---")):
+        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("@@"):
+        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("+"):
+        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("-"):
+        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
+    else:
+        print(line, file=sys.stdout)
+
 
 def _overwrite_helper_show_diff(
     lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
 ):
+    old_lines = []
     if out_path != "-" and out_path_obj.exists():
         with out_path_obj.open("rt") as inputf:
             old_lines = inputf.read().splitlines(keepends=False)
-    else:
-        old_lines = []
+
     if not show_diff_side_by_side:
         lines = list(
             difflib.unified_diff(old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path))
         )
         for line in lines:
-            if line.startswith(("+++", "---")):
-                print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
-            elif line.startswith("@@"):
-                print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
-            elif line.startswith("+"):
-                print(colored(line, color="green", attrs=("bold",)), file=out_file)
-            elif line.startswith("-"):
-                print(colored(line, color="red", attrs=("bold",)), file=out_file)
-            else:
-                print(line, file=out_file)
+            print_line(line)
     else:
         cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
         lines = list(
@@ -376,3 +380,22 @@ def load_toml_config(config):
                 return toml.load(tomlf)
     logger.info("Could not find any of the global configuration files {}.", config_paths)
     return None
+
+def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid):
+    investigation = api.samplesheet.retrieve(
+            sodar_url=sodar_server_url,
+            sodar_api_token=sodar_api_token,
+            project_uuid=project_uuid,
+        )
+    assay = None
+    for study in investigation.studies.values():
+        for remote_assay_uuid in study.assays.keys():
+            if assay_uuid== remote_assay_uuid:
+                assay = study.assays[remote_assay_uuid]
+                break
+    if assay is None:
+        msg = f"Assay with UUID {assay_uuid} not found in investigation."
+        logger.error(msg)
+        raise ParameterException(msg)
+    return assay
+

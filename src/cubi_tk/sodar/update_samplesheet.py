@@ -328,7 +328,7 @@ class UpdateSamplesheetCommand:
             sample_field_mapping.update(
                 {
                     k: (v or k)
-                    for (k, _, v) in map(lambda s: s.partition("="), self.args.sample_fields)
+                    for (k, _, v) in (s.partition("=") for s in self.args.sample_fields)
                 }
             )
             n_fields = len(self.args.sample_fields)
@@ -365,9 +365,7 @@ class UpdateSamplesheetCommand:
         study_cols = study.columns.tolist()
         assay_cols = assay.columns.tolist()
 
-        isa_short_names = list(
-            map(lambda x: orig_col_name(isa_regex.sub(r"\2", x)), study_cols + assay_cols)
-        )
+        isa_short_names = [orig_col_name(isa_regex.sub(r"\2", x)) for x in (study_cols + assay_cols)]
         isa_long_names = list(map(orig_col_name, study_cols + assay_cols))
         isa_names_unique = study_cols + assay_cols
         isa_table = ["study"] * len(study_cols) + ["assay"] * len(assay_cols)
@@ -391,7 +389,7 @@ class UpdateSamplesheetCommand:
         existing_names: Iterable[str],
         isa_names: Iterable[str],
     ) -> dict[str, str]:
-        dynamic_cols = dict()
+        dynamic_cols = {}
         re_format_names = re.compile(r"\{(.*?)}")
         if self.args.dynamic_column:
             for col, format_str in self.args.dynamic_column:
@@ -427,6 +425,31 @@ class UpdateSamplesheetCommand:
         sample_field_mapping: dict[str, str],
         snappy_compatible: bool = False,
     ) -> pd.DataFrame:
+
+        ped_mapping = self.get_ped_mapping(isa_names, sample_field_mapping)
+        ped_data = self.get_ped_data(ped_mapping)
+        sample_data = self.get_sample_data()
+        samples = self.get_samples(ped_data, ped_mapping, sample_data)
+
+        # Convert to snappy compatible names:
+        # replace '-' with '_' in all ID columns
+        if snappy_compatible:
+            for col in samples.columns:
+                if col.endswith("ID"):
+                    samples[col] = samples[col].str.replace("-", "_")
+
+        dynamic_cols = self.get_dynamic_columns(samples.columns, isa_names)
+        for col_name, format_str in dynamic_cols.items():
+            if col_name in samples.columns:
+                logger.warning(f'Ignoring dynamic column defintion for "{col_name}", as it is already defined.')
+                continue
+            # MAYBE: allow dynamic columns to change based on fill order?
+            # i.e. first Extract name = -DNA1, then -DNA1-WXS1
+            samples[col_name] = samples.apply(lambda row, format_str= format_str: format_str.format(**row), axis=1)
+
+        return samples
+
+    def get_ped_mapping(self, isa_names, sample_field_mapping):
         ped_mapping = sheet_default_config[self.args.defaults]["ped_to_sampledata"]
         if self.args.ped_field_mapping:
             allowed_sample_col_values = sample_field_mapping.keys() | isa_names.keys()
@@ -440,19 +463,23 @@ class UpdateSamplesheetCommand:
                     )
 
                 ped_mapping[ped_col] = sample_col
+        return ped_mapping
 
+    def get_ped_data(self, ped_mapping):
         if self.args.ped:
             with open(self.args.ped, "rt") as inputf:
-                ped_dicts = map(
-                    lambda donor: {
-                        field: getattr(donor, attr_name) for attr_name, field in ped_mapping.items()
-                    },
-                    parse_ped(inputf),
-                )
+                ped_dicts = []
+                for donor in parse_ped(inputf):
+                    donor_dict = {}
+                    for attr_name, field in ped_mapping.items():
+                        donor_dict[field] =  getattr(donor, attr_name)
+                    ped_dicts.append( donor_dict)
                 ped_data = pd.DataFrame(ped_dicts)
         else:
             ped_data = pd.DataFrame()
+        return ped_data
 
+    def get_sample_data(self):
         if self.args.sample_data:
             if self.args.sample_fields:
                 fields = self.args.sample_fields
@@ -463,7 +490,9 @@ class UpdateSamplesheetCommand:
             # ped outputs: male/female, unaffected/affected, 0
         else:
             sample_data = pd.DataFrame()
+        return sample_data
 
+    def get_samples(self, ped_data, ped_mapping, sample_data):
         if self.args.ped and self.args.sample_data:
             # Check for matching fields between ped and sample data, but keep original order
             matching_fields = [col for col in ped_data.columns if col in sample_data.columns]
@@ -490,23 +519,6 @@ class UpdateSamplesheetCommand:
                 )
         else:
             samples = ped_data if self.args.ped else sample_data
-
-        # Convert to snappy compatible names:
-        # replace '-' with '_' in all ID columns
-        if snappy_compatible:
-            for col in samples.columns:
-                if col.endswith("ID"):
-                    samples[col] = samples[col].str.replace("-", "_")
-
-        dynamic_cols = self.get_dynamic_columns(samples.columns, isa_names)
-        for col_name, format_str in dynamic_cols.items():
-            if col_name in samples.columns:
-                logger.warning(f'Ignoring dynamic column defintion for "{col_name}", as it is already defined.')
-                continue
-            # MAYBE: allow dynamic columns to change based on fill order?
-            # i.e. first Extract name = -DNA1, then -DNA1-WXS1
-            samples[col_name] = samples.apply(lambda row: format_str.format(**row), axis=1)
-
         return samples
 
     def match_sample_data_to_isa(
