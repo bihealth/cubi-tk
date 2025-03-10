@@ -10,3 +10,4 @@ Credits
 - Eric Blanc
 - Nicolai von Kügelgen
 - Till Hartmann
+- Sarah Laemmle
