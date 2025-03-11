@@ -19,7 +19,9 @@ from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSh
 from loguru import logger
 from sodar_cli import api
 
-from ..common import get_assay_from_uuid, overwrite_helper
+from cubi_tk.sodar_api import get_assay_from_uuid
+
+from ..common import overwrite_helper
 
 from .common import find_snappy_root_dir
 from .models import load_datasets
@@ -63,7 +65,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--library-types", choices=("WES", "WGS", "Panel_seq"), help="Library type(s) to use, comma-separated, default is to use all."
+        "--library-types", 
+        nargs= "*",  # same as default = []
+        help="Library type(s) to use( e.g. WES, WGS, or Panel_seq) paassed like '--library-types WES Panel_seq', default is to use all."
     )
 
     parser.add_argument(
@@ -99,11 +103,6 @@ def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     any_error = False
     any_error, args =  check_args_sodar_config_parser(args)
-    # Postprocess arguments.
-    if args.library_types:
-        args.library_types = args.library_types.split(",")  # pragma: nocover
-    else:
-        args.library_types = []
 
     return int(any_error)
 
@@ -121,10 +120,12 @@ def build_sheet(
     )
     assay_filename = None
     if(args.assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
-        assay = get_assay_from_uuid(args.sodar_server_url,
-                                    args.sodar_api_token,
-                                    project_uuid,
-                                    args.assay_uuid)
+        assay = get_assay_from_uuid(
+            args.sodar_server_url,
+            args.sodar_api_token,
+            project_uuid,
+            args.assay_uuid
+        )
         assay_filename = assay.file_name
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
     if args.tsv_shortcut == "germline":

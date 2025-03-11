@@ -11,8 +11,30 @@ from cubi_tk.parsers import check_args_sodar_config_parser
 from .common import is_uuid
 from .exceptions import ParameterException, SodarAPIException
 
+from sodar_cli import api
+
+#TODO: integrate into new SodarApi class
+def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid):
+    investigation = api.samplesheet.retrieve(
+            sodar_url=sodar_server_url,
+            sodar_api_token=sodar_api_token,
+            project_uuid=project_uuid,
+        )
+    assay = None
+    for study in investigation.studies.values():
+        for remote_assay_uuid in study.assays.keys():
+            if assay_uuid== remote_assay_uuid:
+                assay = study.assays[remote_assay_uuid]
+                break
+    if assay is None:
+        msg = f"Assay with UUID {assay_uuid} not found in investigation."
+        logger.error(msg)
+        raise ParameterException(msg)
+    return assay
+
 
 class SodarAPI:
+    #TODO: refactor: just args instead of server_url etc.
     def __init__(self, sodar_server_url: str, sodar_api_token: str, project_uuid: str, config = None):
         self.sodar_server_url = sodar_server_url
         self.sodar_api_token = sodar_api_token

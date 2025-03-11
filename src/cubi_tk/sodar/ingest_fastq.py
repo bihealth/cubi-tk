@@ -18,8 +18,9 @@ from sodar_cli import api
 import tqdm
 
 from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.sodar_api import get_assay_from_uuid
 
-from ..common import get_assay_from_uuid, sizeof_fmt
+from ..common import sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.itransfer_common import SnappyItransferCommandBase

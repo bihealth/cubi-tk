@@ -33,6 +33,8 @@ from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 #: The URL template to use.
 from ..common import get_terminal_columns, print_line
 
+
+#TODO: remove and use sodar api
 URL_TPL = "%(sodar_server_url)ssamplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 

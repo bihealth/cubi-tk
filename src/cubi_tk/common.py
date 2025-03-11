@@ -20,7 +20,6 @@ import icdiff
 from loguru import logger
 from termcolor import colored
 import toml
-from sodar_cli import api
 
 from .exceptions import (
     IrodsIcommandsUnavailableException,
@@ -352,22 +351,4 @@ def load_toml_config(config):
                 return toml.load(tomlf)
     logger.warning("Could not find any of the global configuration files {}.", config_paths)
     return None
-
-def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid):
-    investigation = api.samplesheet.retrieve(
-            sodar_url=sodar_server_url,
-            sodar_api_token=sodar_api_token,
-            project_uuid=project_uuid,
-        )
-    assay = None
-    for study in investigation.studies.values():
-        for remote_assay_uuid in study.assays.keys():
-            if assay_uuid== remote_assay_uuid:
-                assay = study.assays[remote_assay_uuid]
-                break
-    if assay is None:
-        msg = f"Assay with UUID {assay_uuid} not found in investigation."
-        logger.error(msg)
-        raise ParameterException(msg)
-    return assay
 

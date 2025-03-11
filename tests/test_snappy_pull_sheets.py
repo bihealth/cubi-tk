@@ -3,6 +3,7 @@
 from argparse import Namespace
 import json
 import pathlib
+from unittest.mock import patch
 
 
 from cubi_tk.snappy.pull_sheets import build_sheet
@@ -63,7 +64,7 @@ def return_api_investigation_mock():
     return investigation
 
 
-
+@patch("sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_germline.txt"))
 def test_build_sheet_germline(mocker):
     """Tests ``build_sheet()`` - for germline ISA tab"""
     args = Namespace( verbose = False,
@@ -83,9 +84,6 @@ def test_build_sheet_germline(mocker):
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
-    mocker.patch(
-        "sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_germline.txt")
-    )
     actual = build_sheet(args=args, project_uuid="")
     assert actual == expected
 

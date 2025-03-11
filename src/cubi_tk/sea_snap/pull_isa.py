@@ -18,6 +18,7 @@ import requests
 
 from cubi_tk.parsers import check_args_sodar_config_parser, print_args
 
+#TODO: remove/deprecate and use sodar download sheet
 URL_TPL = "%(sodar_server_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 

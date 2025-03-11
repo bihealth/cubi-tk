@@ -27,6 +27,9 @@ from .parse_sample_sheet import ParseSampleSheet
 DEFAULT_NUM_TRANSFERS = 8
 
 
+#TODO: remove/replace check_irods_icommands
+
+
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     _ = args
@@ -58,7 +61,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
-        # Check presence of icommands when not testing.
+        # Check presence of icommands when not testing.#TODO: remove check_irods_icommands
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
         res = 0
@@ -231,7 +234,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         # Return
         return lz_uuid, lz_irods_path
-
+    
+    #possibly integrate in Sodar/transfer specific class/function
     def _get_user_input(self, lz_irods_path, in_destination, assay_uuid):
         if lz_irods_path:
             logger.info("Found active Landing Zone: {}", lz_irods_path)

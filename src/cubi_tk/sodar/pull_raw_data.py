@@ -12,7 +12,7 @@ from loguru import logger
 from sodar_cli import api
 
 from cubi_tk.parsers import check_args_sodar_config_parser, print_args
-
+#TODO: check if InvestigationTraversal is needed and why
 from ..isa_support import (
     InvestigationTraversal,
     IsaNodeVisitor,
