@@ -33,11 +33,11 @@ sodar_group.add_argument(
 )
 sodar_group.add_argument(
     "--sodar-server-url",
-    help="SODAR server URL key to use, defaults to env SODAR_SERVER_URL.",
+    help="SODAR server URL key to use.",
 )
 sodar_group.add_argument(
     "--sodar-api-token",
-    help="SODAR API token to use, defaults to env SODAR_API_TOKEN.",
+    help="SODAR API token to use.",
 )
 def get_sodar_parser():
     return sodar_config_parser
