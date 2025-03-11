@@ -65,7 +65,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--library-types", 
+        "--library-types",
         nargs= "*",  # same as default = []
         help="Library type(s) to use( e.g. WES, WGS, or Panel_seq) paassed like '--library-types WES Panel_seq', default is to use all."
     )

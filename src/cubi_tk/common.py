@@ -23,7 +23,6 @@ import toml
 
 from .exceptions import (
     IrodsIcommandsUnavailableException,
-    ParameterException,
 )
 
 #: Paths to search the global configuration in.

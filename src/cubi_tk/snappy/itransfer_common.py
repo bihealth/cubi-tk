@@ -234,7 +234,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         # Return
         return lz_uuid, lz_irods_path
-    
+
     #possibly integrate in Sodar/transfer specific class/function
     def _get_user_input(self, lz_irods_path, in_destination, assay_uuid):
         if lz_irods_path:
