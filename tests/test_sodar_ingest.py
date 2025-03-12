@@ -177,7 +177,7 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         "--recursive",
         lz_uuid,
         "source",
-        
+
     ]
 
     # to make it sortable

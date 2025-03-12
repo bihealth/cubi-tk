@@ -79,7 +79,6 @@ from .upload_sheet import setup_argparse as setup_argparse_upload_sheet
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for sodar command."""
     basic_parser = get_basic_parser()
-    sodar_parser = get_sodar_parser()
     sodar_parser_project_uuid = get_sodar_parser(with_dest= True)
     sodar_parser_destination = get_sodar_parser(with_dest= True, dest_string="destination", help_string="UUID from Landing Zone or Project - where files will be moved to.")
     sodar_parser_lz_uuid= get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", help_string="UUID of Landing Zone to move.")

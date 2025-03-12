@@ -147,7 +147,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
         "XXXX",
         "--yes",
         landing_zone_uuid,
-        fake_base_path,        
+        fake_base_path,
     ]
 
     parser, _subparsers = setup_argparse()
@@ -205,7 +205,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "--yes",
         landing_zone_uuid,
         fake_base_path,
-        
+
     ]
 
     parser, _subparsers = setup_argparse()
