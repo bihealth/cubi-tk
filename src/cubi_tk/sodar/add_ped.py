@@ -86,7 +86,6 @@ class AddPedCommand:
         )
 
         parser.set_defaults(no_warnings=False)
-        parser.add_argument("project_uuid", help="UUID of project to download the ISA-tab for.")
         parser.add_argument(
             "input_ped_file",
             metavar="pedigree.ped",

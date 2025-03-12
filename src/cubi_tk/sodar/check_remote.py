@@ -19,7 +19,7 @@ import typing
 import attr
 from loguru import logger
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from ..common import compute_md5_checksum
 from ..exceptions import FileMd5MismatchException
@@ -342,7 +342,6 @@ class SodarCheckRemoteCommand:
             type=str,
             help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
-        parser.add_argument("project_uuid", type=str, help="UUID from Project to check.")
 
     @classmethod
     def run(
@@ -357,7 +356,7 @@ class SodarCheckRemoteCommand:
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_global_parser(args, with_dest=True)
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover

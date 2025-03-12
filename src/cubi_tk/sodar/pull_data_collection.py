@@ -10,7 +10,7 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import pandas as pd
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.pull_data_common import PullDataCommon
@@ -138,11 +138,6 @@ class PullDataCollection(PullDataCommon):
             "Can be given multiple times, Default: None",
         )
 
-        parser.add_argument(
-            "project_uuid",
-            help="SODAR project UUID",
-        )
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -155,7 +150,7 @@ class PullDataCollection(PullDataCommon):
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_global_parser(args, with_dest=True)
 
         # Validate output directory path
         if not os.path.exists(args.output_dir):

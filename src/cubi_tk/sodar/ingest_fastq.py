@@ -17,7 +17,7 @@ from loguru import logger
 from sodar_cli import api
 import tqdm
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 from cubi_tk.sodar_api import get_assay_from_uuid
 
 from ..common import sizeof_fmt
@@ -213,10 +213,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
 
-        parser.add_argument(
-            "destination", help="UUID from Landing Zone or Project - where files will be moved to."
-        )
-
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
         # DEPRECATING
@@ -225,7 +221,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         #     check_irods_icommands(warn_only=False)
         res = 0
 
-        res, args = check_args_sodar_config_parser(args, True)
+        res, args = check_args_global_parser(args, set_default=True)
 
         if args.src_regex and args.remote_dir_pattern and args.preset != "default":
             logger.error(

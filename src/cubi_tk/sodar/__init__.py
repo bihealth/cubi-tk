@@ -80,43 +80,48 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for sodar command."""
     basic_parser = get_basic_parser()
     sodar_parser = get_sodar_parser()
+    sodar_parser_project_uuid = get_sodar_parser(with_dest= True)
+    sodar_parser_destination = get_sodar_parser(with_dest= True, dest_string="destination", help_string="UUID from Landing Zone or Project - where files will be moved to.")
+    sodar_parser_lz_uuid= get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", help_string="UUID of Landing Zone to move.")
+
+
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
     setup_argparse_add_ped(
-        subparsers.add_parser("add-ped", parents=[basic_parser,sodar_parser], help="Augment sample sheet from PED file")
+        subparsers.add_parser("add-ped", parents=[basic_parser,sodar_parser_project_uuid], help="Augment sample sheet from PED file")
     )
     setup_argparse_update_samplesheet(
-        subparsers.add_parser("update-samplesheet", parents=[basic_parser, sodar_parser], help="Update sample sheet")
+        subparsers.add_parser("update-samplesheet", parents=[basic_parser, get_sodar_parser(with_dest=True)], help="Update sample sheet")
     )
-    setup_argparse_download_sheet(subparsers.add_parser("download-sheet", parents=[basic_parser, sodar_parser], help="Download ISA-tab"))
+    setup_argparse_download_sheet(subparsers.add_parser("download-sheet", parents=[basic_parser, sodar_parser_project_uuid], help="Download ISA-tab"))
     setup_argparse_upload_sheet(
-        subparsers.add_parser("upload-sheet", parents=[basic_parser, sodar_parser], help="Upload and replace ISA-tab")
+        subparsers.add_parser("upload-sheet", parents=[basic_parser, sodar_parser_project_uuid], help="Upload and replace ISA-tab")
     )
     setup_argparse_pull_data_collection(
-        subparsers.add_parser("pull-data-collection", parents=[basic_parser,sodar_parser], help="Download data collections from iRODS")
+        subparsers.add_parser("pull-data-collection", parents=[basic_parser,sodar_parser_project_uuid], help="Download data collections from iRODS")
     )
     setup_argparse_pull_raw_data(
-        subparsers.add_parser("pull-raw-data", parents=[basic_parser, sodar_parser], help="Download raw data from iRODS")
+        subparsers.add_parser("pull-raw-data", parents=[basic_parser, sodar_parser_project_uuid], help="Download raw data from iRODS")
     )
     setup_argparse_lz_create(
-        subparsers.add_parser("landing-zone-create", parents=[basic_parser, sodar_parser], help="Creating landing zone")
+        subparsers.add_parser("landing-zone-create", parents=[basic_parser, sodar_parser_project_uuid], help="Creating landing zone")
     )
-    setup_argparse_lz_list(subparsers.add_parser("landing-zone-list", parents=[basic_parser, sodar_parser], help="List landing zones"))
+    setup_argparse_lz_list(subparsers.add_parser("landing-zone-list", parents=[basic_parser, sodar_parser_project_uuid], help="List landing zones"))
     setup_argparse_lz_move(
-        subparsers.add_parser("landing-zone-move", parents=[basic_parser, sodar_parser], help="Submit landing zone for moving")
+        subparsers.add_parser("landing-zone-move", parents=[basic_parser, sodar_parser_lz_uuid], help="Submit landing zone for moving")
     )
     setup_argparse_lz_validate(
-        subparsers.add_parser("landing-zone-validate", parents=[basic_parser, sodar_parser], help="Submit landing zone for validation")
+        subparsers.add_parser("landing-zone-validate", parents=[basic_parser, sodar_parser_lz_uuid], help="Submit landing zone for validation")
     )
     setup_argparse_ingest_fastq(
         subparsers.add_parser(
-            "ingest-fastq", parents=[basic_parser, sodar_parser], help="Upload external files to SODAR (defaults for fastq)"
+            "ingest-fastq", parents=[basic_parser, sodar_parser_destination], help="Upload external files to SODAR (defaults for fastq)"
         )
     )
-    setup_argparse_ingest(subparsers.add_parser("ingest", parents=[basic_parser, sodar_parser], help="Upload arbitrary files to SODAR"))
+    setup_argparse_ingest(subparsers.add_parser("ingest", parents=[basic_parser, sodar_parser_destination], help="Upload arbitrary files to SODAR"))
     setup_argparse_check_remote(
         subparsers.add_parser(
-            "check-remote", parents=[basic_parser,sodar_parser], help="Compare local files with md5 sum against SODAR/iRODS"
+            "check-remote", parents=[basic_parser,sodar_parser_project_uuid], help="Compare local files with md5 sum against SODAR/iRODS"
         )
     )
 

@@ -7,7 +7,7 @@ import typing
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from ..common import overwrite_helper
 from ..exceptions import OverwriteRefusedException
@@ -58,8 +58,6 @@ class DownloadSheetCommand:
             action="store_true",
             help="Show diff side by side instead of unified.",
         )
-
-        parser.add_argument("project_uuid", help="UUID of project to download the ISA-tab for.")
         parser.add_argument("output_dir", help="Path to output directory to write the sheet to.")
 
     @classmethod
@@ -74,7 +72,7 @@ class DownloadSheetCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        _any_error, self.args = check_args_sodar_config_parser(self.args)
+        _any_error, self.args = check_args_global_parser(self.args, with_dest=True)
         logger.info("Starting cubi-tk sodar download-sheet")
         print_args(self.args)
 

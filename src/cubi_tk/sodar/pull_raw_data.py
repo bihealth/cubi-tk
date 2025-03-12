@@ -11,7 +11,7 @@ import attr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 #TODO: check if InvestigationTraversal is needed and why
 from ..isa_support import (
     InvestigationTraversal,
@@ -109,8 +109,6 @@ class PullRawDataCommand:
         parser.add_argument(
             "--assay-uuid", default=None, help="UUID of assay to download data for."
         )
-
-        parser.add_argument("project_uuid", help="UUID of project to download data for.")
         parser.add_argument("output_dir", help="Path to output directory to write the raw data to.")
 
     @classmethod
@@ -127,7 +125,7 @@ class PullRawDataCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
-        _, self.args = check_args_sodar_config_parser(self.args)
+        _, self.args = check_args_global_parser(self.args, with_dest=True)
 
         logger.info("Starting cubi-tk sodar pull-raw-data")
         print_args(self.args)

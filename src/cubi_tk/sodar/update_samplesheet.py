@@ -123,8 +123,6 @@ class UpdateSamplesheetCommand:
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup arguments for ``update-samplesheet`` command."""
 
-        SodarAPI.setup_argparse(parser)
-
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -253,11 +251,7 @@ class UpdateSamplesheetCommand:
             )
 
         # Get samplehseet from SODAR API
-        sodar_api = SodarAPI(
-            sodar_server_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=self.args.project_uuid,
-        )
+        sodar_api = SodarAPI(self.args)
         isa_data = sodar_api.get_ISA_samplesheet()
         investigation = isa_data["investigation"]["content"]
         study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t", dtype=str)

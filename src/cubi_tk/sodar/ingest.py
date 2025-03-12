@@ -9,7 +9,7 @@ from loguru import logger
 from sodar_cli import api
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 
@@ -31,7 +31,7 @@ class SodarIngest:
             sys.exit(1)
 
         # Get SODAR API info
-        _res, args = check_args_sodar_config_parser(args, True)
+        _res, args = check_args_global_parser(args, set_default=True)
         if not self.args.sodar_api_token:
             logger.error("SODAR API token missing.")
             sys.exit(1)
@@ -85,7 +85,6 @@ class SodarIngest:
         parser.add_argument(
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
         )
-        parser.add_argument("destination", help="UUID or iRODS path of SODAR landing zone.")
 
     @classmethod
     def run(
@@ -97,6 +96,8 @@ class SodarIngest:
     def execute(self):
         """Execute ingest."""
         self.lz_irods_path = self.args.destination
+        logger.info("Starting cubi-tk sodar ingest")
+        print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
             try:

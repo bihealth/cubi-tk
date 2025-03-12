@@ -13,7 +13,7 @@ import typing
 from biomedsheets import shortcuts
 from loguru import logger
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -617,8 +617,6 @@ class SnappyCheckRemoteCommand:
             type=str,
             help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
-        parser.add_argument("project_uuid", type=str, help="UUID from Project to check.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -631,7 +629,7 @@ class SnappyCheckRemoteCommand:
         """Called for checking arguments."""
         res = 0
 
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_global_parser(args, with_dest=True)
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover

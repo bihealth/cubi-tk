@@ -15,10 +15,10 @@ def test_validate(mockapi, caplog):
         "sodar_server_url",
         "--sodar-api-token",
         "token",
-        "u-u-i-d",
+        "466ab946-ce6a-4c78-9981-19b79e7bbe86",
     ]
 
-    sodar_parser = get_sodar_parser()
+    sodar_parser = get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", help_string="UUID of Landing Zone to move.")
     parser = ArgumentParser(parents=[sodar_parser])
     ValidateLandingZoneCommand.setup_argparse(parser)
 
@@ -26,7 +26,7 @@ def test_validate(mockapi, caplog):
     args = parser.parse_args(argv)
     ValidateLandingZoneCommand(args).execute()
     mockapi.assert_called_with(
-        sodar_url="sodar_server_url", sodar_api_token="token", landingzone_uuid="u-u-i-d"
+        sodar_url="sodar_server_url", sodar_api_token="token", landingzone_uuid="466ab946-ce6a-4c78-9981-19b79e7bbe86"
     )
     assert '{"a": 1, "b": 2}' in caplog.messages
 

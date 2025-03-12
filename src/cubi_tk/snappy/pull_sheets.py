@@ -14,7 +14,7 @@ from uuid import UUID
 
 
 from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
 from loguru import logger
 from sodar_cli import api
@@ -104,7 +104,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     any_error = False
-    any_error, args =  check_args_sodar_config_parser(args)
+    any_error, args =  check_args_global_parser(args)
 
     return int(any_error)
 

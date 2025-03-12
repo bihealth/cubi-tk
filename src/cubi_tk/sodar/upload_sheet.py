@@ -8,7 +8,7 @@ import typing
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from .. import isa_support
 from ..common import overwrite_helper
@@ -30,8 +30,6 @@ class UploadSheetCommand:
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
-        parser.add_argument("project_uuid", help="UUID of project to upload the ISA-tab for.")
         parser.add_argument("input_investigation_file", help="Path to input investigation file.")
 
     @classmethod
@@ -46,7 +44,7 @@ class UploadSheetCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        _, self.args = check_args_sodar_config_parser(self.args)
+        _, self.args = check_args_global_parser(self.args, with_dest=True)
 
         logger.info("Starting cubi-tk sodar upload-sheet")
         print_args(self.args)

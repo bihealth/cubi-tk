@@ -5,7 +5,7 @@ import os
 
 from loguru import logger
 
-from cubi_tk.common import GLOBAL_CONFIG_PATH, load_toml_config
+from cubi_tk.common import GLOBAL_CONFIG_PATH, is_uuid, load_toml_config
 
 
 def print_args(args: argparse.Namespace):
@@ -24,25 +24,30 @@ def get_basic_parser():
         return basic_config_parser
 
 
-sodar_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
-sodar_group = sodar_config_parser.add_argument_group("Basic Sodar Configuration")
-sodar_group.add_argument(
-    "--config",
-    default=GLOBAL_CONFIG_PATH,
-    help="Path to configuration file.",
-)
-sodar_group.add_argument(
-    "--sodar-server-url",
-    help="SODAR server URL key to use.",
-)
-sodar_group.add_argument(
-    "--sodar-api-token",
-    help="SODAR API token to use.",
-)
-def get_sodar_parser():
+def get_sodar_parser(with_dest = False, dest_string = "project_uuid", help_string ="SODAR project UUID"):
+    sodar_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
+    sodar_group = sodar_config_parser.add_argument_group("Basic Sodar Configuration")
+    sodar_group.add_argument(
+        "--config",
+        default=GLOBAL_CONFIG_PATH,
+        help="Path to configuration file.",
+    )
+    sodar_group.add_argument(
+        "--sodar-server-url",
+        help="SODAR server URL key to use.",
+    )
+    sodar_group.add_argument(
+        "--sodar-api-token",
+        help="SODAR API token to use.",
+    )
+    if with_dest:
+       sodar_group.add_argument(
+            dest_string,
+            help=help_string,
+        )
     return sodar_config_parser
 
-def check_args_sodar_config_parser(args, set_default = False):
+def check_args_global_parser(args, set_default = False, with_dest = False, dest_string = "project_uuid"):
     any_error = False
 
     # If SODAR info not provided, fetch from user's toml file
@@ -66,6 +71,10 @@ def check_args_sodar_config_parser(args, set_default = False):
             args.sodar_server_url="https://sodar.bihealth.org/"
         else:
             any_error = True
+    if with_dest:
+        if not is_uuid(getattr(args, dest_string)):
+           logger.error("{} is not a valid UUID.", dest_string)
+           any_error = True
     return any_error, args
 
 sodar_specific_parser = argparse.ArgumentParser(description="The specifig config parser", add_help=False)
@@ -135,9 +144,6 @@ snappy_itransfer_group.add_argument(
     default=False,
     action="store_true",
     help="After files are transferred to SODAR, it will proceed with validation and move.",
-)
-snappy_itransfer_group.add_argument(
-    "destination", help="Landing zone path or UUID from Landing Zone or Project"
 )
 def get_snappy_itransfer_parser():
     return snappy_itransfer_parser

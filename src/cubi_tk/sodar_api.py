@@ -6,9 +6,8 @@ import urllib.parse as urlparse
 from loguru import logger
 import requests
 
-from cubi_tk.parsers import check_args_sodar_config_parser
+from cubi_tk.parsers import check_args_global_parser
 
-from .common import is_uuid
 from .exceptions import ParameterException, SodarAPIException
 
 from sodar_cli import api
@@ -34,33 +33,15 @@ def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_u
 
 
 class SodarAPI:
-    #TODO: refactor: just args instead of server_url etc.
-    def __init__(self, sodar_server_url: str, sodar_api_token: str, project_uuid: str, config = None):
-        self.sodar_server_url = sodar_server_url
-        self.sodar_api_token = sodar_api_token
-        self.project_uuid = project_uuid
-        self.check_args(config)
+    def __init__(self, args: argparse.Namespace):
+       any_error, args= check_args_global_parser(args, with_dest=True)
+       if any_error:
+            raise ParameterException('Sodar args missing')
+       self.sodar_server_url = args.sodar_server_url
+       self.sodar_api_token = args.sodar_api_token
+       self.project_uuid = args.project_uuid
 
-    def check_args(self, config):
-        # toml_config needs an object with attribute named config
-        any_error, args= check_args_sodar_config_parser(argparse.Namespace(config=config, sodar_server_url=self.sodar_server_url, sodar_api_token= self.sodar_api_token))
-        self.sodar_server_url = args.sodar_server_url
-        self.sodar_api_token = args.sodar_api_token
-        if any_error:
-            raise ParameterException(
-                    "SODAR variables not found in config files. Please specify on command line."
-                )
-        if not is_uuid(self.project_uuid):
-            raise ParameterException("Sodar Project UUID is not a valid UUID.")
 
-    @staticmethod
-    def setup_argparse(parser: argparse.ArgumentParser) -> None:
-        """Setup argument parser."""
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "project_uuid",
-            help="SODAR project UUID",
-        )
 
     def _base_api_header(self) -> dict[str, str]:
         # FIXME: only add versioning header once SODAR API v1.0 is released

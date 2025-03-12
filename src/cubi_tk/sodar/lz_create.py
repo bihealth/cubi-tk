@@ -9,7 +9,7 @@ import cattr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 
 class CreateLandingZoneCommand:
@@ -52,9 +52,6 @@ class CreateLandingZoneCommand:
             default=None,
             help="Format string for printing, e.g. %%(uuid)s",
         )
-
-        parser.add_argument("project_uuid", help="UUID of project to create the landing zone in.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -66,7 +63,7 @@ class CreateLandingZoneCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_global_parser(args, with_dest=True)
 
         return res
 

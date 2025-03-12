@@ -11,7 +11,7 @@ import typing
 
 from loguru import logger
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -85,7 +85,7 @@ class PullProcessedDataCommand(PullDataCommon):
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_global_parser(args)
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover

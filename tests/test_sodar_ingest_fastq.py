@@ -146,8 +146,8 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
         "--sodar-api-token",
         "XXXX",
         "--yes",
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,        
     ]
 
     parser, _subparsers = setup_argparse()
@@ -203,8 +203,9 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "--sodar-api-token",
         "XXXX",
         "--yes",
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
+        
     ]
 
     parser, _subparsers = setup_argparse()
@@ -288,7 +289,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
     }
 
-    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", args.destination)
+    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
     # --- run tests
     res = main(argv)
@@ -318,8 +319,8 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     argv[-2:] = [
         "--remote-dir-pattern",
         remote_pattern,
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
     ]
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
@@ -343,8 +344,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "--yes",
         "--preset",
         "ONT",
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
     ]
 
     parser, _subparsers = setup_argparse()
@@ -437,7 +438,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "title": "",
         "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
     }
-    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", args.destination)
+    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
     # --- run tests

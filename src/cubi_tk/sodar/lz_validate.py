@@ -9,7 +9,7 @@ import cattr
 from loguru import logger
 from sodar_cli import api
 
-from cubi_tk.parsers import check_args_sodar_config_parser, print_args
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 
 
@@ -33,8 +33,6 @@ class ValidateLandingZoneCommand:
             help="Format string for printing, e.g. %%(uuid)s",
         )
 
-        parser.add_argument("landing_zone_uuid", help="UUID of landing zone to validate.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -46,7 +44,7 @@ class ValidateLandingZoneCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        res, args = check_args_sodar_config_parser(args)
+        res, args = check_args_global_parser(args, with_dest=True, dest_string="landing_zone_uuid")
 
         return res
 

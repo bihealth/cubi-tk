@@ -51,7 +51,7 @@ def ingest(fs):
         "target",
     ]
 
-    sodar_parser = get_sodar_parser()
+    sodar_parser =  get_sodar_parser(with_dest= True, dest_string="destination", help_string="UUID from Landing Zone or Project - where files will be moved to.")
     parser = ArgumentParser(parents=[sodar_parser])
     SodarIngest.setup_argparse(parser)
     args = parser.parse_args(argv)
@@ -175,8 +175,9 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         "coll",
         "--yes",
         "--recursive",
-        "source",
         lz_uuid,
+        "source",
+        
     ]
 
     # to make it sortable
@@ -212,7 +213,7 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
     api_return.status = "ACTIVE"
     with pytest.raises(SystemExit):
         argv2 = argv.copy()
-        argv2[-2] = "empty"
+        argv2[-1] = "empty"
         main(argv2)
 
     # Test user input for subcollection
