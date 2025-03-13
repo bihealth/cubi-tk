@@ -65,12 +65,6 @@ class PullDataCollection(PullDataCommon):
             action="store_true",
             help="Allow overwriting of local files.",
         )
-        parser.add_argument(
-            "--assay-uuid",
-            default=None,
-            type=str,
-            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
-        )
 
         group_files = parser.add_mutually_exclusive_group(required=True)
 

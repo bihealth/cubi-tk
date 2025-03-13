@@ -92,14 +92,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="The shortcut TSV schema to use; default: 'germline'.",
     )
 
-    parser.add_argument(
-        "--assay-uuid",
-        default=None,
-        required=False,
-        type=str,
-        help="Assay UUID for assay if multiple assays are present",
-    )
-
 
 def check_args(args) -> int:
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""

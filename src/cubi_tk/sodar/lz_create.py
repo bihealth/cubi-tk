@@ -43,10 +43,6 @@ class CreateLandingZoneCommand:
         )
 
         parser.add_argument(
-            "--assay-uuid", default=None, help="UUID of assay to create landing zone for."
-        )
-
-        parser.add_argument(
             "--format",
             dest="format_string",
             default=None,

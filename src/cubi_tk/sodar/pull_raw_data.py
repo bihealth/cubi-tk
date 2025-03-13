@@ -106,9 +106,6 @@ class PullRawDataCommand:
         )
         parser.add_argument("--irsync-threads", help="Parameter -N to pass to irsync")
 
-        parser.add_argument(
-            "--assay-uuid", default=None, help="UUID of assay to download data for."
-        )
         parser.add_argument("output_dir", help="Path to output directory to write the raw data to.")
 
     @classmethod

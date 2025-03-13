@@ -611,12 +611,7 @@ class SnappyCheckRemoteCommand:
             action="store_true",
             help="Flag to indicate if local and remote MD5 files should be compared.",
         )
-        parser.add_argument(
-            "--assay-uuid",
-            default=None,
-            type=str,
-            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
-        )
+        
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser

@@ -51,7 +51,7 @@ def ingest(fs):
         "target",
     ]
 
-    sodar_parser = get_sodar_parser(with_dest= True, dest_string="destination", help_string="UUID from Landing Zone or Project - where files will be moved to.")
+    sodar_parser = get_sodar_parser(with_dest= True, dest_string="destination", dest_help_string="UUID from Landing Zone or Project - where files will be moved to.")
     parser = ArgumentParser(parents=[sodar_parser])
     SodarIngest.setup_argparse(parser)
     args = parser.parse_args(argv)

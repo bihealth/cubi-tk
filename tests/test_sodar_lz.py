@@ -18,7 +18,7 @@ def test_validate(mockapi, caplog):
         "466ab946-ce6a-4c78-9981-19b79e7bbe86",
     ]
 
-    sodar_parser = get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", help_string="UUID of Landing Zone to move.")
+    sodar_parser = get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", dest_help_string="UUID of Landing Zone to move.")
     parser = ArgumentParser(parents=[sodar_parser])
     ValidateLandingZoneCommand.setup_argparse(parser)
 
