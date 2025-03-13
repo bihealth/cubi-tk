@@ -37,7 +37,6 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
-# TODO: comment back in
 def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     # --- setup arguments
     dest_path = "/irods/dest"
