@@ -41,7 +41,7 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", help_strin
         help="SODAR API token to use.",
     )
     if with_dest:
-       sodar_group.add_argument(
+       sodar_config_parser.add_argument(
             dest_string,
             help=help_string,
         )
