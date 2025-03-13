@@ -13,7 +13,8 @@ import typing
 from biomedsheets import shortcuts
 from loguru import logger
 
-from ..common import load_toml_config
+from cubi_tk.parsers import check_args_global_parser, print_args
+
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
 
@@ -29,7 +30,7 @@ class FindFilesCommon:
         """
         self.sheet = sheet
 
-    def parse_sample_sheet(self):
+    def parse_sample_sheet(self):  #noqa: C901
         """Parse sample sheet.
 
         :return: Returns list of library names - used to define directory names though out the pipeline.
@@ -261,9 +262,7 @@ class Checker:
                 subset_remote_files_dict[key] = self.remote_files_dict.get(key)
 
         # Parse local files - remove library reference
-        parsed_local_files_dict = dict(
-            (key, val) for k in self.local_files_dict.values() for key, val in k.items()
-        )
+        parsed_local_files_dict = {(key, val) for k in self.local_files_dict.values() for key, val in k.items()}
 
         # Compare dictionaries
         i_both, i_remote, i_local = self.compare_local_and_remote_files(
@@ -601,29 +600,10 @@ class SnappyCheckRemoteCommand:
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
         parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
             "--tsv-shortcut",
             default="germline",
             choices=("cancer", "generic", "germline"),
             help="The shortcut TSV schema to use.",
-        )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
-                "back to current working directory by default."
-            ),
         )
         parser.add_argument(
             "--md5",
@@ -637,8 +617,6 @@ class SnappyCheckRemoteCommand:
             type=str,
             help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
-        parser.add_argument("project_uuid", type=str, help="UUID from Project to check.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -651,12 +629,7 @@ class SnappyCheckRemoteCommand:
         """Called for checking arguments."""
         res = 0
 
-        # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_global_parser(args, with_dest=True)
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
@@ -672,7 +645,7 @@ class SnappyCheckRemoteCommand:
             return res
 
         logger.info("Starting cubi-tk snappy check-remote")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Split execution between Cancer and Germline
         if self.args.tsv_shortcut == "cancer":
@@ -684,7 +657,7 @@ class SnappyCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         library_remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_url,
+            self.args.sodar_server_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,

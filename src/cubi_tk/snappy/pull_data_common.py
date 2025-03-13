@@ -80,11 +80,11 @@ class PullDataCommon:
         path_part_set = set(irods_path.split("/"))
         return len(common_links.intersection(path_part_set)) > 0
 
-    def get_assay_uuid(self, sodar_url, sodar_api_token, project_uuid):
+    def get_assay_uuid(self, sodar_server_url, sodar_api_token, project_uuid):
         """Get assay UUID.
 
-        :param sodar_url: SODAR url, e.g.: https://sodar.bihealth.org/
-        :type sodar_url: str
+        :param sodar_server_url: SODAR url, e.g.: https://sodar.bihealth.org/
+        :type sodar_server_url: str
 
         :param sodar_api_token: SODAR authentication token.
         :type sodar_api_token: str
@@ -95,7 +95,7 @@ class PullDataCommon:
         :return: Returns assay UUID.
         """
         investigation = api.samplesheet.retrieve(
-            sodar_url=sodar_url,
+            sodar_url=sodar_server_url,
             sodar_api_token=sodar_api_token,
             project_uuid=project_uuid,
         )

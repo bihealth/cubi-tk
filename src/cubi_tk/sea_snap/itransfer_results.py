@@ -11,10 +11,11 @@ import re
 from subprocess import STDOUT, SubprocessError, check_call, check_output
 from retrying import retry
 import sys
-import typing
 
 from loguru import logger
 import tqdm
+
+from cubi_tk.parsers import print_args
 
 from ..common import check_irods_icommands, sizeof_fmt
 from ..snappy.itransfer_common import SnappyItransferCommandBase
@@ -84,19 +85,6 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup arguments"""
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -139,7 +127,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             from sodar_cli.api import landingzone
 
             lz_irods_path = landingzone.retrieve(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 landingzone_uuid=self.args.destination,
             ).irods_path
@@ -186,7 +174,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                         bytes=size,
                     )
                 )
-        return list(sorted(transfer_jobs, key=lambda x: x.to_oneline()))
+        return sorted(transfer_jobs, key=lambda x: x.to_oneline())
 
     def execute(self) -> int | None:
         """Execute the transfer."""
@@ -195,11 +183,11 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             return res
 
         logger.info("Starting cubi-tk sea-snap {}", self.command_name)
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         command_blocks = self.args.transfer_blueprint.read().split(os.linesep + os.linesep)
         transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name)
-        logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        logger.debug("Transfer jobs:\n{}", "\n".join(x.to_oneline() for x in transfer_jobs))
 
         if self.fix_md5_files:
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
@@ -242,7 +230,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_src, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join(j.path_src for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if self.args.num_parallel_transfers == 0:  # pragma: nocover
@@ -265,7 +253,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             )
             for j in todo_jobs
         ]
-        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline()))
+        return sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline())
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

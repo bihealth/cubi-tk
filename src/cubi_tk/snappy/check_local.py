@@ -12,6 +12,8 @@ from cubi_tk.exceptions import ParameterException
 from loguru import logger
 import vcfpy
 
+from cubi_tk.parsers import print_args
+
 from .. import parse_ped
 from .common import get_all_biomedsheet_paths, get_biomedsheet_path, load_sheet_tsv
 
@@ -123,7 +125,7 @@ class GermlineSheetChecker:
             ok = False
 
         return ok
-    
+
 class CancerSheetChecker:
     """Helper class that implements the consistency checks within cancer sheets."""
 
@@ -442,7 +444,7 @@ class SnappyCheckLocalCommand:
             self.shortcut_sheets = [shortcuts.CancerCaseSheet(sheet, options= options) for sheet in self.sheets]
         else:
             raise ParameterException("tsv shortcut not supported, valid values are 'cancer' and 'germline'")
-         
+
 
 
     @classmethod
@@ -457,15 +459,6 @@ class SnappyCheckLocalCommand:
             default="germline",
             choices=("germline", "cancer"),
             help="The shortcut TSV schema to use.",
-        )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
-                "back to current working directory by default."
-            ),
         )
         parser.add_argument(
             "project_uuids",
@@ -510,7 +503,8 @@ class SnappyCheckLocalCommand:
             return res
 
         logger.info("Starting cubi-tk snappy check-local")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
+
         if self.args.tsv_shortcut == "germline":
             results = [
             GermlineSheetChecker(self.shortcut_sheets).run_checks(),

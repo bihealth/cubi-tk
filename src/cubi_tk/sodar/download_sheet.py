@@ -1,61 +1,27 @@
 """``cubi-tk sodar download-sheet``: download ISA-tab from SODAR."""
 
 import argparse
-import os
 from pathlib import Path
 import typing
 
-import attr
 from loguru import logger
 from sodar_cli import api
 
-from ..common import load_toml_config, overwrite_helper
+from cubi_tk.parsers import check_args_global_parser, print_args
+
+from ..common import overwrite_helper
 from ..exceptions import OverwriteRefusedException
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    """Configuration for the download sheet command."""
-
-    config: str
-    verbose: bool
-    sodar_server_url: str
-    sodar_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    makedirs: bool
-    overwrite: bool
-    dry_run: bool
-    yes: bool
-    show_diff: bool
-    show_diff_side_by_side: bool
-    project_uuid: str
-    output_dir: str
-
 
 class DownloadSheetCommand:
     """Implementation of the ``download-sheet`` command."""
-
-    def __init__(self, config: Config):
+    def __init__(self, args):
         #: Command line arguments.
-        self.config = config
-
+        self.args = args
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -92,8 +58,6 @@ class DownloadSheetCommand:
             action="store_true",
             help="Show diff side by side instead of unified.",
         )
-
-        parser.add_argument("project_uuid", help="UUID of project to download the ISA-tab for.")
         parser.add_argument("output_dir", help="Path to output directory to write the sheet to.")
 
     @classmethod
@@ -104,31 +68,22 @@ class DownloadSheetCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        toml_config = load_toml_config(self.config)
-        if not self.config.sodar_url:
-            self.config = attr.evolve(
-                self.config, sodar_url=toml_config.get("global", {}).get("sodar_server_url")
-            )
-        if not self.config.sodar_api_token:
-            self.config = attr.evolve(
-                self.config, sodar_api_token=toml_config.get("global", {}).get("sodar_api_token")
-            )
-
+        _any_error, self.args = check_args_global_parser(self.args, with_dest=True)
         logger.info("Starting cubi-tk sodar download-sheet")
-        logger.info("  config: {}", self.config)
+        print_args(self.args)
 
-        out_path = Path(self.config.output_dir)
-        if not out_path.exists() and self.config.makedirs:
+        out_path = Path(self.args.output_dir)
+        if not out_path.exists() and self.args.makedirs:
             out_path.mkdir(parents=True)
 
         isa_dict = api.samplesheet.export(
-            sodar_url=self.config.sodar_url,
-            sodar_api_token=self.config.sodar_api_token,
-            project_uuid=self.config.project_uuid,
+            sodar_url=self.args.sodar_server_url,
+            sodar_api_token=self.args.sodar_api_token,
+            project_uuid=self.args.project_uuid,
         )
         try:
             self._write_file(
@@ -139,7 +94,7 @@ class DownloadSheetCommand:
             for path, tsv in isa_dict["assays"].items():
                 self._write_file(out_path, path, tsv["tsv"])
         except OverwriteRefusedException as e:
-            if self.config.verbose:
+            if self.args.verbose:
                 logger.exception("{}", e)
             logger.error("{}", e)
             return 1
@@ -162,20 +117,20 @@ class DownloadSheetCommand:
         # Remove extra info - use basename only
         file_name = file_name.split("/")[-1]
         out_path = out_path / file_name
-        if out_path.exists() and not self.config.overwrite and not self.config.dry_run:
+        if out_path.exists() and not self.args.overwrite and not self.args.dry_run:
             raise OverwriteRefusedException(
                 "Refusing to overwrite without --overwrite: %s" % out_path
             )
         logger.info(
-            "{} {}", "Not writing (dry-run)" if self.config.dry_run else "Writing", out_path
+            "{} {}", "Not writing (dry-run)" if self.args.dry_run else "Writing", out_path
         )
         overwrite_helper(
             out_path,
             text,
-            do_write=not self.config.dry_run,
-            answer_yes=self.config.yes,
-            show_diff=self.config.show_diff,
-            show_diff_side_by_side=self.config.show_diff_side_by_side,
+            do_write=not self.args.dry_run,
+            answer_yes=self.args.yes,
+            show_diff=self.args.show_diff,
+            show_diff_side_by_side=self.args.show_diff_side_by_side,
         )
 
 

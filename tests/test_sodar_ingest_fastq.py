@@ -146,8 +146,8 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
         "--sodar-api-token",
         "XXXX",
         "--yes",
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
     ]
 
     parser, _subparsers = setup_argparse()
@@ -184,7 +184,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
     mock_api_export.return_value = my_sodar_api_export(2)
     mock_api_retrieve.return_value = InvestigationFactory()
     assay_uuid = list(mock_api_retrieve.return_value.studies["s_Study_0"].assays.keys())[0]
-    ingestfastq.args.assay = assay_uuid
+    ingestfastq.args.assay_uuid = assay_uuid
 
     assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")
 
@@ -203,8 +203,9 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "--sodar-api-token",
         "XXXX",
         "--yes",
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
+
     ]
 
     parser, _subparsers = setup_argparse()
@@ -287,11 +288,12 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "title": "",
         "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
     }
-    url = os.path.join(args.sodar_url, "landingzones", "api", "retrieve", args.destination)
-    requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
+    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    requests_mock.register_uri("GET", url, text=json.dumps(return_value))
     # --- run tests
     res = main(argv)
+
 
     assert not res
 
@@ -306,6 +308,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestfastq = SodarIngestFastq(args)
+    ingestfastq.check_args(args)
     assert ingestfastq.remote_dir_pattern == DEST_PATTERN_PRESETS["default"]
     lz, actual = ingestfastq.build_jobs()
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
@@ -316,8 +319,8 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     argv[-2:] = [
         "--remote-dir-pattern",
         remote_pattern,
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
     ]
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
@@ -341,8 +344,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "--yes",
         "--preset",
         "ONT",
-        fake_base_path,
         landing_zone_uuid,
+        fake_base_path,
     ]
 
     parser, _subparsers = setup_argparse()
@@ -435,7 +438,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "title": "",
         "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
     }
-    url = os.path.join(args.sodar_url, "landingzones", "api", "retrieve", args.destination)
+    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
     # --- run tests
@@ -454,6 +457,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestfastq = SodarIngestFastq(args)
+    ingestfastq.check_args(args)
     lz, actual = ingestfastq.build_jobs()
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote

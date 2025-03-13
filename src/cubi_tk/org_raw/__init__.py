@@ -18,6 +18,8 @@ Also see ``cubi-tk org-raw`` CLI documentation and ``cubi-tk org-raw`` for more 
 
 import argparse
 
+from cubi_tk.parsers import get_basic_parser
+
 from ..common import run_nocmd
 from .check import setup_argparse as setup_argparse_check
 from .organize import setup_argparse as setup_argparse_organize
@@ -25,10 +27,13 @@ from .organize import setup_argparse as setup_argparse_organize
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for org-raw command."""
+
+    basic_parser = get_basic_parser()
+
     subparsers = parser.add_subparsers(dest="org_raw_cmd")
 
-    setup_argparse_check(subparsers.add_parser("check", help="Check consistency of raw data"))
-    setup_argparse_organize(subparsers.add_parser("organize", help="Check consistency of raw data"))
+    setup_argparse_check(subparsers.add_parser("check", parents=[basic_parser,], help="Check consistency of raw data"))
+    setup_argparse_organize(subparsers.add_parser("organize", parents=[basic_parser,],help="Check consistency of raw data"))
 
 
 def run(args, parser, subparser):

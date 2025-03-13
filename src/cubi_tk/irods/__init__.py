@@ -15,17 +15,21 @@ information.
 
 import argparse
 
+from cubi_tk.parsers import get_basic_parser
+
 from ..common import run_nocmd
 from .check import setup_argparse as setup_argparse_check
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for irods command."""
+    basic_parser = get_basic_parser()
     subparsers = parser.add_subparsers(dest="irods_cmd")
 
     setup_argparse_check(
         subparsers.add_parser(
             "check",
+            parents=[basic_parser,],
             help="Check target iRODS collection (all MD5 files? metadata MD5 consistent? enough replicas?).",
         )
     )

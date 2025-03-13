@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import typing
 
 from loguru import logger
 
@@ -18,7 +17,9 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        super().setup_argparse(parser)
+        parser.add_argument(
+            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
         parser.add_argument(
             "--step",
             help=(

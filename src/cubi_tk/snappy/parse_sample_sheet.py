@@ -277,13 +277,13 @@ class SampleSheetBuilder(IsaNodeVisitor):
 
     def on_visit_material(self, material, node_path, study=None, assay=None):
         super().on_visit_material(material, node_path, study, assay)
-    
+
     def on_visit_process(self, process, node_path, study=None, assay=None):
         super().on_visit_node(process, study, assay)
 
     def generateSheet(self):
         logger.debug("building sheet")
-    
+
     def get_libtype(self, splitted_lib, library):
         #get libtype
         lib_type_string = splitted_lib[-1]
@@ -354,13 +354,13 @@ class SampleGermline:
 class SampleSheetBuilderGermline(SampleSheetBuilder):
     def __init__(self):
         super().__init__()
-        self.config = None
+        self.library_type = None
         self.project_uuid = ""
         self.first_batch = 0
         self.last_batch = 0
 
-    def set_germline_specific_values(self, config, project_uuid, first_batch, last_batch):
-        self.config = config
+    def set_germline_specific_values(self, library_type, project_uuid, first_batch, last_batch):
+        self.library_type = library_type
         self.project_uuid = project_uuid
         self.first_batch = first_batch
         self.last_batch = last_batch
@@ -395,7 +395,7 @@ class SampleSheetBuilderGermline(SampleSheetBuilder):
         ):
             library = material
             sample = material_path[0]
-            
+
             splitted_lib = library.name.split("-")
             library_type = self.get_libtype(splitted_lib, library)
 
@@ -426,7 +426,7 @@ class SampleSheetBuilderGermline(SampleSheetBuilder):
         result = []
         for sample_name, source in self.sources.items():
             sample = self.samples.get(sample_name, None)
-            if not self.config.library_types or not sample or sample.library_type in self.config.library_types:
+            if not self.library_type or not sample or sample.library_type in self.library_type:
                 row = [
                     source.family or "FAM",
                     source.source_name or ".",
@@ -443,9 +443,9 @@ class SampleSheetBuilderGermline(SampleSheetBuilder):
                     sample.library_kit or "." if sample else ".",
                 ]
                 result.append("\t".join([c.strip() for c in row]))
-        
+
         load_tsv = getattr(io_tsv, "read_%s_tsv_sheet" % "germline")
-    
+
         sheet = load_tsv(list(HEADER_TPL_GERMLINE) + result, naming_scheme=NAMING_ONLY_SECONDARY_ID)
         parser = ParseSampleSheet()
         samples_in_batch = list(parser.yield_sample_names(sheet, self.first_batch, self.last_batch))
@@ -526,10 +526,10 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
                 extraction_type="RNA"
             else:
                 raise Exception("Cannot infer exctraction type from %s" % library.name)
-            
+
             #get sample name for biomedsheet
             sample_name_biomed = splitted_lib[-3]
-            
+
             folder_name = first_value("Folder name", node_path)
             if not folder_name:
                 folder_name = library.name
@@ -561,7 +561,7 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
             #sample = self.samples.get(sample_name, None)
             #if sample:
         for sample_name, sample in self.samples.items():
-            source = self.sources.get(sample_name, None)    
+            source = self.sources.get(sample_name, None)
             row = [
                 source.source_name or ".",
                 sample.sample_name_biomed or ".",
@@ -574,7 +574,7 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
             result.append("\t".join([c.strip() for c in row]))
         result = (
             list(HEADER_TPL_CANCER)
-            + [line for line in result]
+            + list(result)
             + [""]
         )
         return result

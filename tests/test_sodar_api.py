@@ -1,16 +1,18 @@
+from argparse import Namespace
 import os
 import pytest
 from unittest.mock import patch, MagicMock
 
 from cubi_tk import sodar_api
-from cubi_tk.common import GLOBAL_CONFIG_PATHS
+from cubi_tk.common import GLOBAL_CONFIG_PATH
 from cubi_tk.exceptions import ParameterException, SodarAPIException
 
 
 @pytest.fixture
 def sodar_api_args():
     return {
-        "sodar_url": "https://sodar.bihealth.org/",
+        "config": None,
+        "sodar_server_url": "https://sodar.bihealth.org/",
         "sodar_api_token": "token123",
         "project_uuid": "123e4567-e89b-12d3-a456-426655440000",
     }
@@ -18,7 +20,7 @@ def sodar_api_args():
 
 @pytest.fixture
 def sodar_api_instance(sodar_api_args):
-    return sodar_api.SodarAPI(**sodar_api_args)
+    return sodar_api.SodarAPI(Namespace(**sodar_api_args))
 
 
 def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
@@ -26,26 +28,24 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
     args = sodar_api_args.copy()
 
     # Successful baseline creation
-    sodar_api.SodarAPI(**sodar_api_args)
+    sodar_api.SodarAPI(Namespace(**args))
 
     # No toml config available, fail if any value is not given, or malformed
-    args["sodar_url"] = ""
+    args["sodar_server_url"] = ""
     with pytest.raises(ParameterException):
-        sodar_api.SodarAPI(**args)
-    args["sodar_url"] = "https://sodar.bihealth.org/"
+        sodar_api.SodarAPI(Namespace(**args))
+    args["sodar_server_url"] = "https://sodar.bihealth.org/"
     args["sodar_api_token"] = ""
     with pytest.raises(ParameterException):
-        sodar_api.SodarAPI(**args)
+        sodar_api.SodarAPI(Namespace(**args))
     args["sodar_api_token"] = "token"
     args["project_uuid"] = "not a uuid"
     with pytest.raises(ParameterException):
-        sodar_api.SodarAPI(**args)
+        sodar_api.SodarAPI(Namespace(**args))
 
     # With toml config available, only project_uuid is required
-    fs.create_file(os.path.expanduser(GLOBAL_CONFIG_PATHS[0]), contents=mock_toml_config)
-    sodar_api.SodarAPI(
-        sodar_url="", sodar_api_token="", project_uuid="123e4567-e89b-12d3-a456-426655440000"
-    )
+    fs.create_file(os.path.expanduser(GLOBAL_CONFIG_PATH), contents=mock_toml_config)
+    sodar_api.SodarAPI(Namespace(config = None, sodar_server_url="", sodar_api_token="", project_uuid="123e4567-e89b-12d3-a456-426655440000"))
 
 
 @patch("cubi_tk.sodar_api.requests.get")

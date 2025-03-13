@@ -11,6 +11,8 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import tqdm
 
+from cubi_tk.parsers import print_args
+
 from ..irods_common import DEFAULT_HASH_SCHEME, HASH_SCHEMES, iRODSRetrieveCollection
 
 MIN_NUM_REPLICAS = 2
@@ -106,7 +108,7 @@ class IrodsCheckCommand(iRODSRetrieveCollection):
         if res:  # pragma: nocover
             return res
         logger.info("Starting cubi-tk irods {}", self.command_name)
-        logger.info("Args: {}", self.args)
+        print_args(self.args)
 
         # Load iRODS environment
         with open(self.irods_env_path, "r", encoding="utf-8") as f:

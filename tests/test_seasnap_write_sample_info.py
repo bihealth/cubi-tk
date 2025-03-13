@@ -10,7 +10,7 @@ import os
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
-from cubi_tk.sea_snap.pull_isa import URL_TPL
+from cubi_tk.sea_snap.write_sample_info import URL_TPL
 
 
 def test_run_seasnap_write_sample_info_help(capsys):
@@ -48,7 +48,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     argv = [
         "sea-snap",
         "write-sample-info",
-        "--sodar-auth-token",
+        "--sodar-api-token",
         "XXX",
         "--project_uuid",
         project_uuid,
@@ -57,7 +57,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     ]
 
     parser, subparsers = setup_argparse()
-    args = parser.parse_args(argv)
+    parser.parse_args(argv)
 
     # --- add test content and files
     path_json = os.path.join(os.path.dirname(__file__), "data", "isa_test.json")
@@ -72,7 +72,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     fs.add_real_file(target_file)
 
     # --- mock modules
-    url = URL_TPL % {"sodar_url": args.sodar_url, "project_uuid": project_uuid, "api_key": "XXX"}
+    url = URL_TPL % {"sodar_server_url": "https://sodar.bihealth.org/", "project_uuid": project_uuid, "api_key": "XXX"}
     requests_mock.get(url, text=json_text)
 
     # --- run as end-to-end test

@@ -10,7 +10,8 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import pandas as pd
 
-from ..common import load_toml_config
+from cubi_tk.parsers import check_args_global_parser, print_args
+
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.pull_data_common import PullDataCommon
 from ..sodar_common import RetrieveSodarCollection
@@ -56,16 +57,6 @@ class PullDataCollection(PullDataCommon):
         """Setup arguments for ``pull-data-collection`` command."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -147,11 +138,6 @@ class PullDataCollection(PullDataCommon):
             "Can be given multiple times, Default: None",
         )
 
-        parser.add_argument(
-            "project_uuid",
-            help="SODAR project UUID",
-        )
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -164,11 +150,7 @@ class PullDataCollection(PullDataCommon):
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_global_parser(args, with_dest=True)
 
         # Validate output directory path
         if not os.path.exists(args.output_dir):
@@ -195,7 +177,7 @@ class PullDataCollection(PullDataCommon):
             return res
 
         logger.info("Starting cubi-tk sodar pull-data-collection")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Get list of sample ids
         if self.args.sample_list:
@@ -211,7 +193,7 @@ class PullDataCollection(PullDataCommon):
 
         # Find all remote files (iRODS)
         filesearcher = RetrieveSodarCollection(
-            self.args.sodar_url,
+            self.args.sodar_server_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,
@@ -293,7 +275,7 @@ class PullDataCollection(PullDataCommon):
         filtered_dict = defaultdict(list)
 
         # Iterate
-        for filename, irodsobjs in remote_files_dict.items():
+        for _filename, irodsobjs in remote_files_dict.items():
             for irodsobj in irodsobjs:
                 # Path needs to be stripped down to collections (=remove assay part & upwards)
                 path = PurePosixPath(irodsobj.path).relative_to(PurePosixPath(common_assay_path))

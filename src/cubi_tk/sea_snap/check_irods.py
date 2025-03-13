@@ -8,6 +8,8 @@ import re
 from loguru import logger
 import yaml
 
+from cubi_tk.parsers import print_args
+
 from ..irods.check import IrodsCheckCommand
 
 MIN_NUM_REPLICAS = 2
@@ -72,7 +74,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
             return res
 
         logger.info("Starting sea-snap check-irods {}", self.command_name)
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # --- get lists
         # files on SODAR

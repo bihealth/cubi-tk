@@ -3,14 +3,13 @@
 
 import argparse
 import json
-import os
 import typing
 
 import cattr
 from loguru import logger
 from sodar_cli import api
 
-from ..common import load_toml_config
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 
 class CreateLandingZoneCommand:
@@ -25,18 +24,6 @@ class CreateLandingZoneCommand:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -56,7 +43,7 @@ class CreateLandingZoneCommand:
         )
 
         parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to create landing zone for."
+            "--assay-uuid", default=None, help="UUID of assay to create landing zone for."
         )
 
         parser.add_argument(
@@ -65,9 +52,6 @@ class CreateLandingZoneCommand:
             default=None,
             help="Format string for printing, e.g. %%(uuid)s",
         )
-
-        parser.add_argument("project_uuid", help="UUID of project to create the landing zone in.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -79,11 +63,7 @@ class CreateLandingZoneCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_global_parser(args, with_dest=True)
 
         return res
 
@@ -94,11 +74,11 @@ class CreateLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-create")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         existing_lzs = sorted(
             api.landingzone.list_(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,
             ),
@@ -108,11 +88,12 @@ class CreateLandingZoneCommand:
         if existing_lzs and self.args.unless_exists:
             lz = existing_lzs[-1]
         else:
+            #TODO: make sure assay_uuid is not none
             lz = api.landingzone.create(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=self.args.project_uuid,
-                assay_uuid=self.args.assay,
+                assay_uuid=self.args.assay_uuid,
             )
 
         values = cattr.unstructure(lz)

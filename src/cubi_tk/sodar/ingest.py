@@ -1,30 +1,20 @@
 """``cubi-tk sodar ingest``: upload arbitrary files and folders into a specific SODAR landing zone collection"""
 
 import argparse
-import os
 from pathlib import Path
 import sys
 import typing
 
-import attrs
 from loguru import logger
 from sodar_cli import api
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
+from cubi_tk.parsers import check_args_global_parser, print_args
 
-from ..common import compute_md5_checksum, is_uuid, load_toml_config, sizeof_fmt
+from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 
 # for testing
 logger.propagate = True
-
-
-@attrs.frozen(auto_attribs=True)
-class Config:
-    """Configuration for the ingest command."""
-
-    config: str = attrs.field(default=None)
-    sodar_server_url: str = attrs.field(default=None)
-    sodar_api_token: str = attrs.field(default=None, repr=lambda value: "***")  # type: ignore
 
 
 class SodarIngest:
@@ -41,13 +31,7 @@ class SodarIngest:
             sys.exit(1)
 
         # Get SODAR API info
-        toml_config = load_toml_config(Config())
-        if toml_config:  # pragma: no cover
-            config_url = toml_config.get("global", {}).get("sodar_server_url")
-            if self.args.sodar_url == "https://sodar.bihealth.org/" and config_url:
-                self.args.sodar_url = config_url
-            if not self.args.sodar_api_token:
-                self.args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
+        _res, args = check_args_global_parser(args, set_default=True)
         if not self.args.sodar_api_token:
             logger.error("SODAR API token missing.")
             sys.exit(1)
@@ -56,17 +40,6 @@ class SodarIngest:
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="SODAR API token. Defaults to SODAR_API_TOKEN environment variable.",
         )
         parser.add_argument(
             "-r",
@@ -112,7 +85,6 @@ class SodarIngest:
         parser.add_argument(
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
         )
-        parser.add_argument("destination", help="UUID or iRODS path of SODAR landing zone.")
 
     @classmethod
     def run(
@@ -123,11 +95,14 @@ class SodarIngest:
 
     def execute(self):
         """Execute ingest."""
+        self.lz_irods_path = self.args.destination
+        logger.info("Starting cubi-tk sodar ingest")
+        print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
             try:
                 lz_info = api.landingzone.retrieve(
-                    sodar_url=self.args.sodar_url,
+                    sodar_url=self.args.sodar_server_url,
                     sodar_api_token=self.args.sodar_api_token,
                     landingzone_uuid=self.args.destination,
                 )
@@ -143,8 +118,6 @@ class SodarIngest:
             else:
                 logger.error("Target landing zone is not ACTIVE.")
                 sys.exit(1)
-        else:
-            self.lz_irods_path = self.args.destination  # pragma: no cover
 
         # Build file list
         source_paths = self.build_file_list()
@@ -152,9 +125,39 @@ class SodarIngest:
             logger.info("Nothing to do. Quitting.")
             sys.exit(0)
 
+        # Query user for target sub-collection
+        self.build_target_coll()
+
+        # Build transfer jobs and add missing md5 files
+        jobs = self.build_jobs(source_paths)
+        jobs = sorted(jobs, key=lambda x: x.path_local)
+
+        # Final go from user & transfer
+        itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
+        logger.info("Planning to transfer the following files:")
+
+        for job in jobs:
+            logger.info(job.path_local)
+        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
+        logger.info("Into this iRODS collection:")
+        logger.info(f"{self.target_coll}/")
+
+        if not self.args.yes:
+            if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                logger.info("Aborting at your request.")
+                sys.exit(0)
+
+        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
+        logger.info("File transfer complete.")
+
+        # Compute server-side checksums
+        if self.args.remote_checksums:  # pragma: no cover
+            logger.info("Computing server-side checksums.")
+            itransfer.chksum()
+
+    def build_target_coll(self):
         # Initiate iRODS session
         irods_session = iRODSCommon().session
-
         # Query target collection
         logger.info("Querying landing zone collections…")
         collections = []
@@ -169,7 +172,6 @@ class SodarIngest:
             )
             sys.exit(1)
 
-        # Query user for target sub-collection
         if not collections:
             self.target_coll = self.lz_irods_path
             logger.info("No subcollections found. Moving on.")
@@ -196,32 +198,6 @@ class SodarIngest:
             logger.error("Selected target collection does not exist in landing zone.")
             sys.exit(1)
 
-        # Build transfer jobs and add missing md5 files
-        jobs = self.build_jobs(source_paths)
-        jobs = sorted(jobs, key=lambda x: x.path_local)
-
-        # Final go from user & transfer
-        itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
-        logger.info("Planning to transfer the following files:")
-        for job in jobs:
-            logger.info(job.path_local)
-        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
-        logger.info("Into this iRODS collection:")
-        logger.info(f"{self.target_coll}/")
-
-        if not self.args.yes:
-            if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-                logger.info("Aborting at your request.")
-                sys.exit(0)
-
-        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
-        logger.info("File transfer complete.")
-
-        # Compute server-side checksums
-        if self.args.remote_checksums:  # pragma: no cover
-            logger.info("Computing server-side checksums.")
-            itransfer.chksum()
-
     def build_file_list(self) -> typing.List[typing.Dict[Path, Path]]:
         """
         Build list of source files to transfer.
@@ -229,7 +205,7 @@ class SodarIngest:
         """
 
         source_paths = [Path(src) for src in self.args.sources]
-        output_paths = list()
+        output_paths = []
 
         for src in source_paths:
             try:
@@ -245,12 +221,12 @@ class SodarIngest:
             if src.is_dir():
                 paths = abspath.glob("**/*" if self.args.recursive else "*")
                 for p in paths:
-                    if excludes and any([p.match(e) for e in excludes]):
+                    if excludes and any(p.match(e) for e in excludes):
                         continue
                     if p.is_file() and not p.suffix.lower() == ".md5":
                         output_paths.append({"spath": p, "ipath": p.relative_to(abspath)})
             else:
-                if not any([src.match(e) for e in excludes if e]):
+                if not any(src.match(e) for e in excludes if e):
                     output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 

@@ -2,23 +2,22 @@
 
 import argparse
 from ctypes import c_ulonglong
-import datetime
 import glob
 from multiprocessing import Value
 from multiprocessing.pool import ThreadPool
 import os
-from subprocess import STDOUT, SubprocessError, check_call, check_output
+from subprocess import SubprocessError, check_call
 import sys
 import typing
 
-import attr
 from biomedsheets import shortcuts
 from loguru import logger
 import requests
-from retrying import retry
 import tqdm
 
-from ..common import check_irods_icommands, is_uuid, load_toml_config, sizeof_fmt
+from cubi_tk.parsers import check_args_global_parser, print_args
+
+from ..common import check_irods_icommands, is_uuid, sizeof_fmt
 from ..irods_common import TransferJob, iRODSTransfer
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -26,6 +25,9 @@ from .parse_sample_sheet import ParseSampleSheet
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
+
+
+#TODO: remove/replace check_irods_icommands
 
 
 def check_args(args):
@@ -51,87 +53,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         self.step_name = self.__class__.step_name
 
     @classmethod
-    def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup common arguments for itransfer commands."""
-
-        # FIXME: outsource the Sodar related (as well as assay & desitnation) to the irods transfer command & sodar API classes
-        group_sodar = parser.add_argument_group("SODAR-related")
-        # FIXME: the (non-env-var?) defaults here should NOT take precendence over the toml file entries
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
-            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        #FIXME: replace this with num_irods_threads
-        # the irods python client should automatically figure out how many threads to use, so this optional
-        # parser.add_argument(
-        #     "--num-parallel-transfers",
-        #     type=int|None,
-        #     default=None,
-        #     help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
-        # )
-        parser.add_argument(
-            "--overwrite-remote",
-            action="store_true",
-            help="Overwrite remote files if they exist, otherwise re-upload will be skipped.",
-        )
-        parser.add_argument(
-            "--tsv-shortcut",
-            default="germline",
-            choices=("germline", "cancer"),
-            help="The shortcut TSV schema to use.",
-        )
-        parser.add_argument(
-            "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
-        )
-        parser.add_argument(
-            "--last-batch", type=int, required=False, help="Last batch to be transferred."
-        )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help="Base path of project (contains 'ngs_mapping/' etc.), defaults to current path.",
-        )
-        parser.add_argument(
-            "--remote-dir-date",
-            default=datetime.date.today().strftime("%Y-%m-%d"),
-            help="Date to use in remote directory, defaults to YYYY-MM-DD of today.",
-        )
-        parser.add_argument(
-            "--remote-dir-pattern",
-            default="{library_name}/{step}/{date}",
-            help="Pattern to use for constructing remote pattern",
-        )
-        parser.add_argument(
-            "--yes",
-            default=False,
-            action="store_true",
-            help="Assume all answers are yes, e.g., will create or use "
-            "existing available landing zones without asking.",
-        )
-        parser.add_argument(
-            "--validate-and-move",
-            default=False,
-            action="store_true",
-            help="After files are transferred to SODAR, it will proceed with validation and move.",
-        )
-        parser.add_argument(
-            "--assay", dest="assay", default=None, help="UUID of assay to download data for."
-        )
-        parser.add_argument(
-            "destination", help="Landing zone path or UUID from Landing Zone or Project"
-        )
-
-    @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
@@ -140,32 +61,11 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
-        # Check presence of icommands when not testing.
+        # Check presence of icommands when not testing.#TODO: remove check_irods_icommands
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
         res = 0
-
-        toml_config = load_toml_config(args)
-        if not args.sodar_url:
-            if not toml_config:
-                logger.error("SODAR URL not found in config files. Please specify on command line.")
-                res = 1
-            args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
-            if not args.sodar_url:
-                logger.error("SODAR URL not found in config files. Please specify on command line.")
-                res = 1
-        if not args.sodar_api_token:
-            if not toml_config:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
-            args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            if not args.sodar_api_token:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
+        res, args = check_args_global_parser(args, set_default=True)
 
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
@@ -218,9 +118,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-        return lz_uuid, list(sorted(transfer_jobs, key=lambda x: x.path_local))
+        return lz_uuid, sorted(transfer_jobs, key=lambda x: x.path_local)
 
-    def get_sodar_info(self) -> tuple[str, str]:
+    def get_sodar_info(self) -> tuple[str, str]:  #noqa: C901
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
         1. User provides Landing Zone UUID: fetch path and use it.
@@ -296,46 +196,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
-                    if lz_irods_path:
-                        logger.info("Found active Landing Zone: {}", lz_irods_path)
-                        if (
-                            not input("Can the process use this path? [yN] ")
-                            .lower()
-                            .startswith("y")
-                        ):
-                            logger.info(
-                                "...an alternative is to create another Landing Zone using the UUID {}",
-                                in_destination
-                            )
-                            if (
-                                input("Can the process create a new landing zone? [yN] ")
-                                .lower()
-                                .startswith("y")
-                            ):
-                                lz_uuid, lz_irods_path = self.create_landing_zone(
-                                    project_uuid=in_destination, assay_uuid=assay_uuid
-                                )
-                            else:
-                                msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                                logger.info(msg)
-                                raise UserCanceledException(msg)
+                    lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path, in_destination, assay_uuid)
 
-                    # No active lz available
-                    # As user if should create new new.
-                    else:
-                        logger.info("No active Landing Zone available for UUID {}", in_destination)
-                        if (
-                            input("Can the process create a new landing zone? [yN] ")
-                            .lower()
-                            .startswith("y")
-                        ):
-                            lz_uuid, lz_irods_path = self.create_landing_zone(
-                                project_uuid=in_destination, assay_uuid=assay_uuid
-                            )
-                        else:
-                            msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                            logger.info(msg)
-                            raise UserCanceledException(msg)
         # Check if `in_destination` is a Landing zone path.
         elif in_destination.startswith("/"):
             # We expect to find one UUID in the LZ path, this will be the project UUID
@@ -373,6 +235,50 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # Return
         return lz_uuid, lz_irods_path
 
+    #possibly integrate in Sodar/transfer specific class/function
+    def _get_user_input(self, lz_irods_path, in_destination, assay_uuid):
+        if lz_irods_path:
+            logger.info("Found active Landing Zone: {}", lz_irods_path)
+            if (
+                not input("Can the process use this path? [yN] ")
+                .lower()
+                .startswith("y")
+            ):
+                logger.info(
+                    "...an alternative is to create another Landing Zone using the UUID {}",
+                    in_destination
+                )
+                if (
+                    input("Can the process create a new landing zone? [yN] ")
+                    .lower()
+                    .startswith("y")
+                ):
+                    lz_uuid, lz_irods_path = self.create_landing_zone(
+                        project_uuid=in_destination, assay_uuid=assay_uuid
+                    )
+                else:
+                    msg = "Not possible to continue the process without a landing zone path. Breaking..."
+                    logger.info(msg)
+                    raise UserCanceledException(msg)
+
+        # No active lz available
+        # As user if should create new new.
+        else:
+            logger.info("No active Landing Zone available for UUID {}", in_destination)
+            if (
+                input("Can the process create a new landing zone? [yN] ")
+                .lower()
+                .startswith("y")
+            ):
+                lz_uuid, lz_irods_path = self.create_landing_zone(
+                    project_uuid=in_destination, assay_uuid=assay_uuid
+                )
+            else:
+                msg = "Not possible to continue the process without a landing zone path. Breaking..."
+                logger.info(msg)
+                raise UserCanceledException(msg)
+        return lz_uuid, lz_irods_path
+
     def move_landing_zone(self, lz_uuid):
         """
         Method calls SODAR API to validate and move transferred files.
@@ -387,7 +293,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             lz_uuid
         )
         _ = landingzone.submit_move(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
@@ -403,7 +309,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         from sodar_cli.api import landingzone
 
         lz = landingzone.retrieve(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
@@ -427,7 +333,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # List existing lzs
         existing_lzs = sorted(
             landingzone.list_(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=project_uuid,
             ),
@@ -467,7 +373,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         from sodar_cli.api import landingzone
 
         lz = landingzone.create(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
             assay_uuid=assay_uuid,
@@ -495,7 +401,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # List existing lzs
         existing_lzs = sorted(
             landingzone.list_(
-                sodar_url=self.args.sodar_url,
+                sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
                 project_uuid=project_uuid,
             ),
@@ -538,7 +444,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             sizeof_fmt(total_bytes),
             parallel_jobs,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_local, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join(j.path_local for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if parallel_jobs == 0:  # pragma: nocover
@@ -559,7 +465,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             )
             for j in todo_jobs
         ]
-        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
+        return sorted(done_jobs + ok_jobs, key=lambda x: x.path_local)
 
     def execute(self) -> int | None:
         """Execute the transfer."""
@@ -570,7 +476,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         # Logger
         logger.info("Starting cubi-tk snappy {}", self.command_name)
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         # Fix for ngs_mapping & variant_calling vs step
         if self.step_name is None:

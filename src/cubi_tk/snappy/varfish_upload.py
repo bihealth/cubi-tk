@@ -10,6 +10,8 @@ import typing
 from biomedsheets import shortcuts
 from loguru import logger
 
+from cubi_tk.parsers import print_args
+
 from ..common import find_base_path
 from .common import load_sheet_tsv
 from .models import DataSet, load_datasets
@@ -99,15 +101,6 @@ class SnappyVarFishUploadCommand:
             help="SODAR API token to use, defaults to env VARFISH_API_TOKEN.",
         )
         parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-                "work directory and falls back to current working directory by default."
-            ),
-        )
-        parser.add_argument(
             "--steps",
             default=[],
             action="append",
@@ -193,7 +186,7 @@ class SnappyVarFishUploadCommand:
             return res
 
         logger.info("Starting cubi-tk varfish-upload")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         datasets = load_datasets(self.args.base_path / ".snappy_pipeline/config.yaml")
         logger.debug("projects = {}", self.args.project)
@@ -231,7 +224,7 @@ class SnappyVarFishUploadCommand:
             sheet=sheet, min_batch=self.args.min_batch, pedigree_field=pedigree_field
         )
         for library in ngs_library_names_list:
-            if self.args.samples and not library.split("-")[0] in self.args.samples.split(","):
+            if self.args.samples and library.split("-")[0] not in self.args.samples.split(","):
                 logger.info("Skipping library {} as it is not included in --samples", library)
                 continue
 
@@ -246,25 +239,7 @@ class SnappyVarFishUploadCommand:
                 f"and extensions\n    {EXTENSIONS}\n"
                 f"{prefix_text}"
             )
-            found: typing.Dict[str, str] = {}
-            for step in self.args.steps:
-                for ext in EXTENSIONS:
-                    work_path = self.args.base_path / step / "work"
-                    pattern = f"{work_path}/*.{library}/**/*.{ext}"
-                    logger.debug(f"pattern: {pattern}")
-                    for file_path in glob.glob(pattern, recursive=True):
-                        file_name = os.path.basename(file_path)
-                        # If data externally generated, cannot filter by common `snappy` tool combinations
-                        if self.args.external_data:
-                            key = f"{step}: {file_name}"
-                            found[key] = file_path
-                        elif file_name not in found and any(
-                            (
-                                file_name.endswith(".ped") or file_name.startswith(p)
-                                for p in PREFIXES
-                            )
-                        ):  # must treat .ped as special case
-                            found[file_name] = file_path
+            found: typing.Dict[str, str] = self._process_step(library)
             logger.info("found {} files for {}", len(found), library)
             if self.args.verbose:
                 found_s = "\n".join("%s (%s)" % (k, v) for k, v in sorted(found.items()))
@@ -294,6 +269,27 @@ class SnappyVarFishUploadCommand:
                 logger.info("Executing '{}'", " ".join(args))
                 check_call(args)
         logger.info("  -> all done with {}", name)
+
+    def _process_step(self, library):
+        found: typing.Dict[str, str] = {}
+        for step in self.args.steps:
+            for ext in EXTENSIONS:
+                work_path = self.args.base_path / step / "work"
+                pattern = f"{work_path}/*.{library}/**/*.{ext}"
+                logger.debug(f"pattern: {pattern}")
+                for file_path in glob.glob(pattern, recursive=True):
+                    file_name = os.path.basename(file_path)
+                    # If data externally generated, cannot filter by common `snappy` tool combinations
+                    if self.args.external_data:
+                        key = f"{step}: {file_name}"
+                        found[key] = file_path
+                    elif file_name not in found and any(
+                        (
+                            file_name.endswith(".ped") or file_name.startswith(p)
+                            for p in PREFIXES
+                        )
+                    ):  # must treat .ped as special case
+                        found[file_name] = file_path
 
 
 def run(

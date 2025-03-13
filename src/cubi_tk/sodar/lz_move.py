@@ -3,15 +3,13 @@
 
 import argparse
 import json
-import os
 import typing
 
 import cattr
 from loguru import logger
 from sodar_cli import api
 
-from ..common import load_toml_config
-
+from cubi_tk.parsers import check_args_global_parser, print_args
 
 class MoveLandingZoneCommand:
     """Implementation of the ``landing-zone-move`` command."""
@@ -25,18 +23,6 @@ class MoveLandingZoneCommand:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -54,8 +40,6 @@ class MoveLandingZoneCommand:
             help="Format string for printing, e.g. %%(uuid)s",
         )
 
-        parser.add_argument("landing_zone_uuid", help="UUID of landing zone to move.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -67,11 +51,7 @@ class MoveLandingZoneCommand:
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_global_parser(args, with_dest=True, dest_string="landing_zone_uuid")
 
         return res
 
@@ -82,10 +62,10 @@ class MoveLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-move")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         landing_zone = api.landingzone.submit_move(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=self.args.landing_zone_uuid,
         )

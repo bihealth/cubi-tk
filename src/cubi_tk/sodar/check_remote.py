@@ -19,7 +19,9 @@ import typing
 import attr
 from loguru import logger
 
-from ..common import compute_md5_checksum, load_toml_config
+from cubi_tk.parsers import check_args_global_parser, print_args
+
+from ..common import compute_md5_checksum
 from ..exceptions import FileMd5MismatchException
 from ..snappy.check_remote import Checker as SnappyChecker
 from ..sodar_common import RetrieveSodarCollection
@@ -307,16 +309,6 @@ class SodarCheckRemoteCommand:
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
         parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
             "-p",
             "--base-path",
             default=os.getcwd(),
@@ -350,7 +342,6 @@ class SodarCheckRemoteCommand:
             type=str,
             help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
-        parser.add_argument("project_uuid", type=str, help="UUID from Project to check.")
 
     @classmethod
     def run(
@@ -365,11 +356,7 @@ class SodarCheckRemoteCommand:
         res = 0
 
         # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
+        res, args = check_args_global_parser(args, with_dest=True)
 
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
@@ -385,11 +372,11 @@ class SodarCheckRemoteCommand:
             return res
 
         logger.info("Starting cubi-tk sodar check-remote")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(
-            self.args.sodar_url,
+            self.args.sodar_server_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,

@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
+from cubi_tk.parsers import get_sodar_parser
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
@@ -42,15 +43,16 @@ def ingest(fs):
 
     argv = [
         "--recursive",
-        "--sodar-url",
-        "sodar_url",
+        "--sodar-server-url",
+        "sodar_server_url",
         "--sodar-api-token",
         "token",
         "testdir",
         "target",
     ]
 
-    parser = ArgumentParser()
+    sodar_parser = get_sodar_parser(with_dest= True, dest_string="destination", help_string="UUID from Landing Zone or Project - where files will be moved to.")
+    parser = ArgumentParser(parents=[sodar_parser])
     SodarIngest.setup_argparse(parser)
     args = parser.parse_args(argv)
 
@@ -165,16 +167,17 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
     argv = [
         "sodar",
         "ingest",
-        "--sodar-url",
-        "sodar_url",
+        "--sodar-server-url",
+        "sodar_server_url",
         "--sodar-api-token",
         "token",
         "--collection",
         "coll",
         "--yes",
         "--recursive",
-        "source",
         lz_uuid,
+        "source",
+
     ]
 
     # to make it sortable
@@ -203,14 +206,14 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
     with pytest.raises(SystemExit):
         main(argv)
         mockapi.assert_called_with(
-            sodar_url="sodar_url", sodar_api_token="token", landingzone_uuid=lz_uuid
+            sodar_url="sodar_server_url", sodar_api_token="token", landingzone_uuid=lz_uuid
         )
 
     # Test cancel if no files to transfer
     api_return.status = "ACTIVE"
     with pytest.raises(SystemExit):
         argv2 = argv.copy()
-        argv2[-2] = "empty"
+        argv2[-1] = "empty"
         main(argv2)
 
     # Test user input for subcollection

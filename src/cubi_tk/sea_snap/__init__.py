@@ -21,6 +21,8 @@ More Information
 
 import argparse
 
+from cubi_tk.parsers import get_basic_parser, get_sodar_parser
+
 from ..common import run_nocmd
 from .check_irods import setup_argparse as setup_argparse_check_irods
 from .itransfer_raw_data import setup_argparse as setup_argparse_itransfer_raw_data
@@ -35,28 +37,30 @@ from .write_sample_info import setup_argparse as setup_argparse_write_sample_inf
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
+    basic_parser = get_basic_parser()
+    sodar_parser = get_sodar_parser()
     subparsers = parser.add_subparsers(dest="sea_snap_cmd")
 
     setup_argparse_itransfer_raw_data(
-        subparsers.add_parser("itransfer-raw-data", help="Transfer FASTQs into iRODS landing zone")
+        subparsers.add_parser("itransfer-raw-data", parents=[basic_parser, sodar_parser], help="Transfer FASTQs into iRODS landing zone")
     )
 
     setup_argparse_itransfer_mapping_results(
         subparsers.add_parser(
-            "itransfer-results", help="Transfer mapping results into iRODS landing zone"
+            "itransfer-results", parents=[basic_parser, sodar_parser], help="Transfer mapping results into iRODS landing zone"
         )
     )
     setup_argparse_working_dir(
-        subparsers.add_parser("working-dir", help="Create working directory")
+        subparsers.add_parser("working-dir", parents=[basic_parser,], help="Create working directory")
     )
 
     setup_argparse_write_sample_info(
-        subparsers.add_parser("write-sample-info", help="Generate sample info file")
+        subparsers.add_parser("write-sample-info", parents=[basic_parser, sodar_parser], help="Generate sample info file")
     )
 
     setup_argparse_check_irods(
         subparsers.add_parser(
-            "check-irods", help="Check consistency of sample info, blueprint and files on SODAR"
+            "check-irods", parents=[basic_parser,], help="Check consistency of sample info, blueprint and files on SODAR"
         )
     )
 

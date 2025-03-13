@@ -1,12 +1,12 @@
 """Tests for ``cubi_tk.snappy.pull_sheets``."""
 
+from argparse import Namespace
 import json
 import pathlib
+from unittest.mock import patch
 
-import pytest
 
-from cubi_tk.common import CommonConfig
-from cubi_tk.snappy.pull_sheets import PullSheetsConfig, build_sheet
+from cubi_tk.snappy.pull_sheets import build_sheet
 from cubi_tk.sodar.models import Assay, Investigation, OntologyTermRef, Study
 
 
@@ -64,57 +64,75 @@ def return_api_investigation_mock():
     return investigation
 
 
-@pytest.fixture
-def pull_sheet_config():
-    """Returns empty PullSheetsConfig object"""
-    global_config = CommonConfig(
-        **{"verbose": False, "sodar_api_token": "__secret__", "sodar_server_url": "url"}
-    )
-    args = {
-        "global_config": global_config,
-        "base_path": None,
-        "yes": False,
-        "dry_run": False,
-        "show_diff": False,
-        "show_diff_side_by_side": False,
-        "library_types": ("WES", "RNA_seq"),
-        "first_batch": 0,
-        "last_batch": None,
-        "tsv_shortcut": "germline",
-        "assay_uuid": None
-    }
-    return PullSheetsConfig(**args)
-
-
-def test_build_sheet_germline(mocker, pull_sheet_config):
+@patch("sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_germline.txt"))
+def test_build_sheet_germline(mocker):
     """Tests ``build_sheet()`` - for germline ISA tab"""
+    args = Namespace( verbose = False,
+            sodar_api_token= "__secret__",
+            sodar_server_url= "url",
+            base_path= None,
+            yes= False,
+            dry_run= False,
+            show_diff= False,
+            show_diff_side_by_side= False,
+            library_types= ("WES", "RNA_seq"),
+            first_batch= 0,
+            last_batch= None,
+            tsv_shortcut= "germline",
+            assay_uuid= None
+    )
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
-    mocker.patch(
-        "sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_germline.txt")
-    )
-    actual = build_sheet(config=pull_sheet_config, project_uuid="")
+    actual = build_sheet(args=args, project_uuid="")
     assert actual == expected
 
 
-def test_build_sheet_cancer(mocker, pull_sheet_config):
+def test_build_sheet_cancer(mocker):
     """Tests ``build_sheet()`` - for cancer ISA tab"""
+    args = Namespace( verbose = False,
+            sodar_api_token= "__secret__",
+            sodar_server_url= "url",
+            base_path= None,
+            yes= False,
+            dry_run= False,
+            show_diff= False,
+            show_diff_side_by_side= False,
+            library_types= ("WES", "RNA_seq"),
+            first_batch= 0,
+            last_batch= None,
+            tsv_shortcut= "cancer",
+            assay_uuid= None
+    )
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_cancer.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
     mocker.patch(
         "sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_cancer.txt")
     )
-    actual = build_sheet(config=pull_sheet_config, tsv_shortcut="cancer", project_uuid="")
+    actual = build_sheet(args=args, project_uuid="")
     assert actual == expected
 
-def test_build_sheet_cancer_multiassay(mocker, pull_sheet_config):
+def test_build_sheet_cancer_multiassay(mocker):
     """Tests ``build_sheet()`` - for cancer ISA tab"""
+    args = Namespace( verbose = False,
+            sodar_api_token= "__secret__",
+            sodar_server_url= "url",
+            base_path= None,
+            yes= False,
+            dry_run= False,
+            show_diff= False,
+            show_diff_side_by_side= False,
+            library_types= ("WES", "RNA_seq"),
+            first_batch= 0,
+            last_batch= None,
+            tsv_shortcut= "cancer",
+            assay_uuid= "992dc872-0033-4c3b-817b-74b324327e7d"
+    )
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_cancer.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
     mocker.patch("sodar_cli.api.samplesheet.export", return_value=load_isa_dict("isa_dict_cancer_multiassay.txt"))
     mocker.patch("sodar_cli.api.samplesheet.retrieve", return_value=return_api_investigation_mock())
-    actual = build_sheet(config=pull_sheet_config, assay_uuid= "992dc872-0033-4c3b-817b-74b324327e7d", tsv_shortcut="cancer", project_uuid="")
+    actual = build_sheet(args=args, project_uuid="")
     assert actual == expected

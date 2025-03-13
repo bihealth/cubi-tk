@@ -5,7 +5,6 @@ import csv
 import io
 import pathlib
 import typing
-from warnings import warn
 
 from altamisa.constants.table_headers import (
     DATA_FILE_HEADERS,
@@ -25,26 +24,10 @@ from altamisa.isatab.helpers import is_ontology_term_ref
 import attr
 from loguru import logger
 
+from cubi_tk.parsers import print_args
+
 from .. import isa_support
 from ..common import overwrite_helper
-
-
-@attr.s(frozen=False, auto_attribs=True)
-class Config:
-    verbose: bool
-    config: str
-    force_update: bool
-    sodar_server_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    no_warnings: bool
-    yes: bool
-    dry_run: bool
-    show_diff: bool
-    show_diff_side_by_side: bool
-    input_investigation_file: str
-    input_annotation_file: str
-    target_study: str
-    target_assay: str
 
 
 class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
@@ -129,7 +112,7 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                         c = attr.evolve(c, value=[annotation.pop(c.name)])
                         # TODO: consider ontologies as values
                     else:
-                        warn(
+                        logger.warning(
                             (
                                 "Value for material {} and characteristic {}"
                                 "already exist and --force-update not set. Skipping..."
@@ -164,7 +147,7 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
                     if self.overwrite:
                         c = attr.evolve(c, value=[annotation.pop(c.name)])
                     else:
-                        warn(
+                        logger.warning(
                             (
                                 "Value for material {} and comment {}"
                                 "already exist and --force-update not set. Skipping..."
@@ -224,9 +207,9 @@ class SheetUpdateVisitor(isa_support.IsaNodeVisitor):
 class AddAnnotationIsaTabCommand:
     """Implementation of the ``annotate`` command."""
 
-    def __init__(self, config: Config):
+    def __init__(self, args: argparse.Namespace):
         #: Command line arguments.
-        self.config = config
+        self.args = argparse.Namespace(**args)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -309,22 +292,22 @@ class AddAnnotationIsaTabCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("isa_tab_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the annotation."""
         logger.info("Starting cubi-tk isa-tab annotate")
-        logger.info("  config: {}", self.config)
+        print_args(self.args)
 
         # Read isa-tab file
-        isa_data = isa_support.load_investigation(self.config.input_investigation_file)
+        isa_data = isa_support.load_investigation(self.args.input_investigation_file)
 
         # Check target study/assay availability
         if not self._check_studies_and_assays(isa_data):
             return 1
 
         # Read annotation file and build mapping
-        annotation_data = self._read_annotation(self.config.input_annotation_file)
+        annotation_data = self._read_annotation(self.args.input_annotation_file)
         annotation_map, header_map = self._build_annotation_map(annotation_data)
 
         # Add annotation
@@ -338,13 +321,13 @@ class AddAnnotationIsaTabCommand:
         # Check that a least one study exists
         if len(study_file_names) > 0:
             # If no target study declared, use first study
-            if not self.config.target_study:
-                self.config.target_study = study_file_names[0]
+            if not self.args.target_study:
+                self.args.target_study = study_file_names[0]
             # Check if target study is in list (i.e. in investigation)
-            elif self.config.target_study not in study_file_names:
+            elif self.args.target_study not in study_file_names:
                 logger.error(
                     "Invalid target study '{}'.\nStudies available:\n{}",
-                    self.config.target_study,
+                    self.args.target_study,
                     study_file_names,
                 )
                 return False
@@ -357,13 +340,13 @@ class AddAnnotationIsaTabCommand:
         # Check that a least one assay exists
         if len(assay_file_names) > 0:
             # If no target assay declared, use first assay
-            if not self.config.target_assay:
-                self.config.target_assay = assay_file_names[0]
+            if not self.args.target_assay:
+                self.args.target_assay = assay_file_names[0]
             # Check if target assay is in list (i.e. in investigation)
-            if self.config.target_assay not in assay_file_names:
+            if self.args.target_assay not in assay_file_names:
                 logger.error(
                     "Invalid target assay '{}'.\nAssays available:\n{}",
-                    self.config.target_assay,
+                    self.args.target_assay,
                     assay_file_names,
                 )
                 return False
@@ -417,6 +400,11 @@ class AddAnnotationIsaTabCommand:
                 long_df["annotation_value"].extend([row[i] for row in annotation])
                 long_df["col_name"].extend([col] * len(annotation))
 
+        annotation_map, header_map = self.iterate_maps(long_df)
+
+        return annotation_map, header_map
+
+    def iterate_maps(self, long_df):
         annotation_map = {}  # {node_type: {node_id: {col_name: anno_value}}}
         header_map = {}  # {node_type: {col_name: isa_col_name}}
 
@@ -465,9 +453,9 @@ class AddAnnotationIsaTabCommand:
         visitor = SheetUpdateVisitor(
             annotation_map,
             header_map,
-            self.config.force_update,
-            self.config.target_study,
-            self.config.target_assay,
+            self.args.force_update,
+            self.args.target_study,
+            self.args.target_assay,
         )
         iwalker = isa_support.InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
         iwalker.run(visitor)
@@ -488,32 +476,32 @@ class AddAnnotationIsaTabCommand:
             AssayWriter.from_stream(assay, ios_assays[name]).write()
 
         # Write out updated ISA-tab files using the diff helper.
-        i_path = pathlib.Path(self.config.input_investigation_file)
+        i_path = pathlib.Path(self.args.input_investigation_file)
         overwrite_helper(
             i_path,
             io_investigation.getvalue(),
-            do_write=not self.config.dry_run,
+            do_write=not self.args.dry_run,
             show_diff=True,
-            show_diff_side_by_side=self.config.show_diff_side_by_side,
-            answer_yes=self.config.yes,
+            show_diff_side_by_side=self.args.show_diff_side_by_side,
+            answer_yes=self.args.yes,
         )
         for filename, ios_study in ios_studies.items():
             overwrite_helper(
                 i_path.parent / filename,
                 ios_study.getvalue(),
-                do_write=not self.config.dry_run,
+                do_write=not self.args.dry_run,
                 show_diff=True,
-                show_diff_side_by_side=self.config.show_diff_side_by_side,
-                answer_yes=self.config.yes,
+                show_diff_side_by_side=self.args.show_diff_side_by_side,
+                answer_yes=self.args.yes,
             )
         for filename, ios_assay in ios_assays.items():
             overwrite_helper(
                 i_path.parent / filename,
                 ios_assay.getvalue(),
-                do_write=not self.config.dry_run,
+                do_write=not self.args.dry_run,
                 show_diff=True,
-                show_diff_side_by_side=self.config.show_diff_side_by_side,
-                answer_yes=self.config.yes,
+                show_diff_side_by_side=self.args.show_diff_side_by_side,
+                answer_yes=self.args.yes,
             )
 
 

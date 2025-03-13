@@ -15,9 +15,7 @@ import tempfile
 import termios
 import typing
 from uuid import UUID
-import warnings
 
-import attr
 import icdiff
 from loguru import logger
 from termcolor import colored
@@ -25,42 +23,14 @@ import toml
 
 from .exceptions import (
     IrodsIcommandsUnavailableException,
-    IrodsIcommandsUnavailableWarning,
 )
 
 #: Paths to search the global configuration in.
-GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
+GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"
 
 
 def mask_password(value: str) -> str:
     return repr(value[:4] + (len(value) - 4) * "*")
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class CommonConfig:
-    """Common configuration for all commands."""
-
-    #: Verbose mode activated
-    verbose: bool
-
-    #: API token to use for SODAR.
-    sodar_api_token: str = attr.ib(repr=mask_password)  # type: ignore
-
-    #: Base URL to SODAR server.
-    sodar_server_url: typing.Optional[str]
-
-    @staticmethod
-    def create(args, toml_config=None):
-        toml_config = toml_config or {}
-        return CommonConfig(
-            verbose=args.verbose,
-            sodar_api_token=(
-                args.sodar_api_token or toml_config.get("global", {})["sodar_api_token"]
-            ),
-            sodar_server_url=(
-                args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
-            ),
-        )
 
 
 def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
@@ -124,7 +94,7 @@ def execute_shell_commands(cmds, verbose=True, check=True):
 
     # Check return code of all processes in the pipe (if required)
     # Tested only when all processes in the pipe are complete
-    if check and any([x.poll() != 0 for x in process_list]):
+    if check and any(x.poll() != 0 for x in process_list):
         raise subprocess.CalledProcessError(
             returncode=current.returncode,
             cmd=" | ".join([" ".join(cmd) for cmd in cmds]),
@@ -188,7 +158,7 @@ def check_irods_icommands(warn_only=True):  # disabled when testing  # pragma: n
     if missing:
         msg = "Could not find irods-icommands executables: %s", ", ".join(missing)
         if warn_only:
-            warnings.warn(msg, IrodsIcommandsUnavailableWarning)
+            logger.warning(msg)#warnings.warn(msg, IrodsIcommandsUnavailableWarning)
         else:
             raise IrodsIcommandsUnavailableException(msg)
 
@@ -258,30 +228,34 @@ def overwrite_helper(
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
 
+def print_line(line):
+    line = line[:-1]
+    if line.startswith(("+++", "---")):
+        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("@@"):
+        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("+"):
+        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("-"):
+        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
+    else:
+        print(line, file=sys.stdout)
+
 
 def _overwrite_helper_show_diff(
     lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
 ):
+    old_lines = []
     if out_path != "-" and out_path_obj.exists():
         with out_path_obj.open("rt") as inputf:
             old_lines = inputf.read().splitlines(keepends=False)
-    else:
-        old_lines = []
+
     if not show_diff_side_by_side:
         lines = list(
             difflib.unified_diff(old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path))
         )
         for line in lines:
-            if line.startswith(("+++", "---")):
-                print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
-            elif line.startswith("@@"):
-                print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
-            elif line.startswith("+"):
-                print(colored(line, color="green", attrs=("bold",)), file=out_file)
-            elif line.startswith("-"):
-                print(colored(line, color="red", attrs=("bold",)), file=out_file)
-            else:
-                print(line, file=out_file)
+            print_line(line)
     else:
         cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
         lines = list(
@@ -365,14 +339,15 @@ class UnionFind:
 
 def load_toml_config(config):
     # Load configuration from TOML cubitkrc file, if any.
-    if config.config:
-        config_paths = (config.config,)
+    if config:
+        config_paths = [config,]
     else:
-        config_paths = GLOBAL_CONFIG_PATHS
+        config_paths = [GLOBAL_CONFIG_PATH, ]
     for config_path in config_paths:
         config_path = os.path.expanduser(os.path.expandvars(config_path))
         if os.path.exists(config_path):
             with open(config_path, "rt") as tomlf:
                 return toml.load(tomlf)
-    logger.info("Could not find any of the global configuration files {}.", config_paths)
+    logger.warning("Could not find any of the global configuration files {}.", config_paths)
     return None
+

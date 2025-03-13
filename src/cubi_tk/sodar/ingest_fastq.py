@@ -17,7 +17,10 @@ from loguru import logger
 from sodar_cli import api
 import tqdm
 
-from ..common import load_toml_config, sizeof_fmt
+from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.sodar_api import get_assay_from_uuid
+
+from ..common import sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.itransfer_common import SnappyItransferCommandBase
@@ -110,18 +113,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR. Defaults to SODAR_API_TOKEN environment variable.",
-        )
-
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -218,13 +209,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             help="Folder to save files from WebDAV temporarily, if set as source.",
         )
 
-        parser.add_argument("--assay", dest="assay", default=None, help="UUID of assay to use.")
+        parser.add_argument("--assay-uuid", default=None, help="UUID of assay to use.")
 
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
-
-        parser.add_argument(
-            "destination", help="UUID from Landing Zone or Project - where files will be moved to."
-        )
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
@@ -234,27 +221,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         #     check_irods_icommands(warn_only=False)
         res = 0
 
-        toml_config = load_toml_config(args)
-        if not args.sodar_url:
-            if not toml_config:
-                logger.error("SODAR URL not found in config files. Please specify on command line.")
-                res = 1
-            args.sodar_url = toml_config.get("global", {}).get("sodar_server_url")
-            if not args.sodar_url:
-                logger.error("SODAR URL not found in config files. Please specify on command line.")
-                res = 1
-        if not args.sodar_api_token:
-            if not toml_config:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
-            args.sodar_api_token = toml_config.get("global", {}).get("sodar_api_token")
-            if not args.sodar_api_token:
-                logger.error(
-                    "SODAR API token not found in config files. Please specify on command line."
-                )
-                res = 1
+        res, args = check_args_global_parser(args, set_default=True)
 
         if args.src_regex and args.remote_dir_pattern and args.preset != "default":
             logger.error(
@@ -275,7 +242,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         from sodar_cli.api import landingzone
 
         lz = landingzone.retrieve(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             landingzone_uuid=lz_uuid,
         )
@@ -293,41 +260,27 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         to a corresponding `out_column` (default if not defined: last Material column)."""
 
         isa_dict = api.samplesheet.export(
-            sodar_url=self.args.sodar_url,
+            sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,
             project_uuid=project_uuid,
         )
+        assay_file_name = list(isa_dict["assays"].keys())[0]
         if len(isa_dict["assays"]) > 1:
-            if not self.args.assay:
-                msg = "Multiple assays found in investigation, please specify which one to use with --assay."
+            if not self.args.assay_uuid:
+                msg = "Multiple assays found in investigation, please specify which one to use with --assay-uid."
                 logger.error(msg)
                 raise ParameterException(msg)
-
-            investigation = api.samplesheet.retrieve(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=project_uuid,
-            )
-            for study in investigation.studies.values():
-                for assay_uuid in study.assays.keys():
-                    if self.args.assay == assay_uuid:
-                        assay_file_name = study.assays[assay_uuid].file_name
-                        break
-                # First break can only break out of inner loop
-                else:
-                    continue
-                break
-            else:
-                msg = f"Assay with UUID {self.args.assay} not found in investigation."
-                logger.error(msg)
-                raise ParameterException(msg)
-        else:
-            assay_file_name = list(isa_dict["assays"].keys())[0]
-
+            assay = get_assay_from_uuid(
+                self.args.sodar_server_url,
+                self.args.sodar_api_token,
+                project_uuid,
+                self.args.assay_uuid
+                )
+            assay_file_name = assay.file_name
         assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]
         assay_header, *assay_lines = assay_tsv.rstrip("\n").split("\n")
         assay_header = assay_header.split("\t")
-        assay_lines = map(lambda x: x.split("\t"), assay_lines)
+        assay_lines =  [x.split("\t") for x in assay_lines]
 
         def check_col_index(column_index):
             if not column_index:
@@ -437,7 +390,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         return folders
 
-    def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:
+    def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
         """Build file transfer jobs."""
         if library_names:
             logger.warning(
@@ -509,7 +462,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                             f"--match-column {self.args.match_column}. Please review the assay table, src-regex and sample-collection-mapping args."
                         )
                         logger.error(msg)
-                        raise ParameterException(msg)
+                        raise ParameterException(msg) from KeyError
 
                     # This was the original code, but there is no need to change the remote file names once they are
                     # mapped to the correct collections:
@@ -534,7 +487,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             return res
 
         logger.info("Starting cubi-tk sodar {}", self.command_name)
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         lz_uuid, transfer_jobs = self.build_jobs()
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
@@ -597,7 +550,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_local, todo_jobs)))
+        logger.info("Missing MD5 files:\n{}", "\n".join( j.path_local for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if self.args.num_parallel_transfers == 0:  # pragma: nocover

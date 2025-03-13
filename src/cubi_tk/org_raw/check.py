@@ -12,6 +12,7 @@ from loguru import logger
 import tqdm
 
 from cubi_tk.common import sizeof_fmt
+from cubi_tk.parsers import print_args
 
 
 def _recreate_md5_for(path: Path):
@@ -193,7 +194,7 @@ class CheckCommand:
             return res
 
         logger.info("Starting cubi-tk org-raw check")
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         if self._run_loop():
             logger.info("All done.")

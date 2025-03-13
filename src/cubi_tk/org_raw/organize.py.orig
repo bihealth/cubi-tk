@@ -159,8 +159,7 @@ class OrganizeCommand:
             return res
 
         logger.info("Starting cubi-tk org-raw organize")
-        logger.info("  args: %s", self.args)
-
+        print_args(self.args)
         jobs = []
 
         ok = True

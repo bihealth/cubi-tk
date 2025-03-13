@@ -84,6 +84,8 @@ information.
 
 import argparse
 
+from cubi_tk.parsers import get_basic_parser, get_sodar_parser
+
 from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
 from .annotate import setup_argparse as setup_argparse_annotate
@@ -93,18 +95,20 @@ from .validate import setup_argparse as setup_argparse_validate
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
+    basic_parser = get_basic_parser()
+    sodar_parser = get_sodar_parser()
     subparsers = parser.add_subparsers(dest="isa_tab_cmd")
 
     setup_argparse_add_ped(
-        subparsers.add_parser("add-ped", help="Add records from PED file to ISA-tab")
+        subparsers.add_parser("add-ped", parents=[basic_parser, sodar_parser], help="Add records from PED file to ISA-tab")
     )
     setup_argparse_resolve_hpo(
-        subparsers.add_parser("resolve-hpo", help="Resolve HPO term lists to ISA-tab fragments")
+        subparsers.add_parser("resolve-hpo", parents=[basic_parser, sodar_parser], help="Resolve HPO term lists to ISA-tab fragments")
     )
     setup_argparse_annotate(
-        subparsers.add_parser("annotate", help="Add annotation from CSV file to ISA-tab")
+        subparsers.add_parser("annotate", parents=[basic_parser, sodar_parser], help="Add annotation from CSV file to ISA-tab")
     )
-    setup_argparse_validate(subparsers.add_parser("validate", help="Validate ISA-tab"))
+    setup_argparse_validate(subparsers.add_parser("validate", parents=[basic_parser, sodar_parser], help="Validate ISA-tab"))
 
 
 def run(args, parser, subparser):

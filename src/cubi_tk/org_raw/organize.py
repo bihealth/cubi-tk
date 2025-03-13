@@ -13,6 +13,8 @@ import attr
 from loguru import logger
 import tqdm
 
+from cubi_tk.parsers import print_args
+
 #: Default value for --src-regex.
 from ..common import sizeof_fmt
 from .check import CheckCommand, run_check
@@ -158,7 +160,7 @@ class OrganizeCommand:
             return res
 
         logger.info("Starting cubi-tk org-raw organize")
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         jobs = []
 

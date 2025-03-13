@@ -6,6 +6,8 @@ import typing
 from altamisa.apps import isatab_validate
 from loguru import logger
 
+from cubi_tk.parsers import print_args
+
 
 class ValidateIsaTabCommand:
     """Implementation of the ``validate`` command."""
@@ -55,7 +57,7 @@ class ValidateIsaTabCommand:
             return res
 
         logger.info("Starting cubi-tk isa-tab validate")
-        logger.info("args: {}", self.args)
+        print_args(self.args)
 
         return int(isatab_validate.run(self.args) is not None)
 
