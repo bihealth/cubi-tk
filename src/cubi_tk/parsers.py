@@ -54,7 +54,7 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_
         )
     return sodar_config_parser
 
-#TODO: possibly rename to setup_sodar_params, 
+#TODO: possibly rename to setup_sodar_params,
 #TODO: when doing sodar api refactoring, possibly move to sodar api (e.g as init function)
 def check_args_global_parser(args, set_default = False, with_dest = False, dest_string = "project_uuid"):
     any_error = False

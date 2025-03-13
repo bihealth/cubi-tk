@@ -208,7 +208,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             default="temp/",
             help="Folder to save files from WebDAV temporarily, if set as source.",
         )
-        
+
         parser.add_argument("sources", help="paths to fastq folders", nargs="+")
 
     def check_args(self, args):

@@ -66,7 +66,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="snappy_cmd")
 
     basic_parser = get_basic_parser()
-    sodar_parser = get_sodar_parser()
     sodar_parser_itransfer = get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project", with_assay_uuid=True)
     sodar_parser_assay_uuid = get_sodar_parser(with_assay_uuid=True)
     snappy_parser = get_snappy_cmd_basic_parser()

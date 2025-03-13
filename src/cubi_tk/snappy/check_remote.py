@@ -611,7 +611,7 @@ class SnappyCheckRemoteCommand:
             action="store_true",
             help="Flag to indicate if local and remote MD5 files should be compared.",
         )
-        
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
