@@ -87,6 +87,8 @@ class SodarAPI:
        self.sodar_server_url = args.sodar_server_url
        self.sodar_api_token = args.sodar_api_token
        self.project_uuid = args.project_uuid
+       self.assay_uuid = getattr(args, "assay_uuid", None)
+       self.yes = getattr(args, "yes", False)
 
 
 
@@ -139,8 +141,15 @@ class SodarAPI:
             raise NotImplementedError("Only single-study projects are supported.")
         study = list(samplesheet["studies"].keys())[0]
         if len(samplesheet["assays"]) > 1:
-            raise NotImplementedError("Only single-assay projects are supported.")
-        assay = list(samplesheet["assays"].keys())[0]
+            assay = get_assay_from_uuid(
+                self.sodar_server_url,
+                self.sodar_api_token,
+                self.project_uuid,
+                self.assay_uuid,
+                self.yes,
+                )
+        else:
+            assay = list(samplesheet["assays"].keys())[0]
 
         return {
             "investigation": {
