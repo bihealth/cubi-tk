@@ -6,7 +6,6 @@ from unittest.mock import patch, MagicMock
 from cubi_tk import sodar_api
 from cubi_tk.common import GLOBAL_CONFIG_PATH
 from cubi_tk.exceptions import ParameterException, SodarAPIException
-from tests.conftest import my_sodar_api_export
 from tests.factories import InvestigationFactory
 
 
@@ -117,4 +116,4 @@ def test_sodar_api_get_ISA_samplesheet(mock_api_call, mock_samplesheet_retrieve,
     }
     mock_samplesheet_retrieve.return_value = InvestigationFactory()
     assert expected == sodar_api_instance.get_ISA_samplesheet()
-    
+
