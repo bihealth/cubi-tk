@@ -115,7 +115,7 @@ def build_sheet(
     assay_filename = None
     if len(isa_dict["assays"]) > 1 or args.assay_uuid:
         #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
-        assay = get_assay_from_uuid(
+        assay, _study = get_assay_from_uuid(
             args.sodar_server_url,
             args.sodar_api_token,
             project_uuid,

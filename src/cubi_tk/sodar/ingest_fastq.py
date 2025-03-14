@@ -264,7 +264,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
         assay_file_name = list(isa_dict["assays"].keys())[0]
         if len(isa_dict["assays"]) > 1:
-            assay = get_assay_from_uuid(
+            assay, _study = get_assay_from_uuid(
                 self.args.sodar_server_url,
                 self.args.sodar_api_token,
                 project_uuid,

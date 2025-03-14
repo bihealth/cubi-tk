@@ -182,8 +182,9 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
 
     # Test with additional assay
     mock_api_export.return_value = my_sodar_api_export(2)
-    mock_api_retrieve.return_value = InvestigationFactory()
-    assay_uuid = list(mock_api_retrieve.return_value.studies["s_Study_0"].assays.keys())[0]
+    mock_api_retrieve.return_value = InvestigationFactory() # if run as singluar test will need to adjust to "s_Study_0.txt "
+    print(mock_api_retrieve.return_value)
+    assay_uuid = list(mock_api_retrieve.return_value.studies["s_Study_1.txt"].assays.keys())[0] # if run as singluar test will need to adjust to "s_Study_0.txt "
     ingestfastq.args.assay_uuid = assay_uuid
 
     assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")

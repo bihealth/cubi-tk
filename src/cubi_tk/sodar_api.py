@@ -19,34 +19,63 @@ def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_u
             sodar_api_token=sodar_api_token,
             project_uuid=project_uuid,
         )
-    for study in investigation.studies.values():
+    studies = investigation.studies.values()
+    #if assay_uuid given and multiple studies iterate through all studies and find assay
+    #if mulitple staudies and yes, iterate through first study
+    #if multiple studies, no asssay uuid and not yes, let user decide which study to use
+    if(len(studies) > 1 and not assay_uuid):
+        study_keys =investigation.studies.keys()
+        if not yes:
+            study = get_user_input_study(study_keys)
+            studies = [study]
+        else:
+            multi_assay_study_warning(study_keys, string="studies")
+
+    for study in studies:
         if assay_uuid:
             #bug fix for rare case that multiple studies and multiple assays exist
             if assay_uuid in study.assays.keys():
                 logger.info(f"Using provided Assay UUID: {assay_uuid}")
                 assay = study.assays[assay_uuid]
-                return assay
+                return assay, study
         #will only iterate through first study, if multiple studys present
         assays_ = list(study.assays.keys())
         #only one assay
         if len(assays_) == 1:
-            return study.assays[assays_[0]]
+            return study.assays[assays_[0]], study
         # multiple assays, if not interactive take fisrt
         if yes:
-            multi_assay_warning(assays=assays_)
+            multi_assay_study_warning(assays=assays_)
             for _assay_uuid in assays_:
                 assay = study.assays[_assay_uuid]
-                return assay
+                return assay, study
         #interactive, print uuids and ask for which
         assay_uuid = get_user_input_assay_uuid(assay_uuids=assays_)
         assay = study.assays[assay_uuid]
-        return assay
+        return assay, study
     if assay_uuid is not None:
         msg = f"Assay with UUID {assay_uuid} not found in investigation."
         logger.error(msg)
         raise ParameterException(msg)
-    return assay
+    return None
 
+
+def get_user_input_study(study_uuids):
+    """Display available study UUIDS and let User choose which one to use.
+
+    :param assays: Assays UUIDs as found in Studies.
+    :type assays: list
+    """
+    logger.warning("Multiple studies present, which one do you want to choose?")
+    i = 0
+    while i < len(study_uuids):
+        logger.warning("{}: {}", i+1, study_uuids[i] )
+        i+=1
+    study_num = 0
+    while (study_num<= 0 or study_num> len(study_uuids)):
+        study_num = input("Please enter the index of the Study UUID (e.g 2):")
+        study_num =int(study_num)
+    return study_uuids[study_num-1]
 
 def get_user_input_assay_uuid(assay_uuids):
     """Display available assay UUIDS and let User choose which one to use.
@@ -66,15 +95,15 @@ def get_user_input_assay_uuid(assay_uuids):
     return assay_uuids[assay_num-1]
 
 
-def multi_assay_warning(assays):
+def multi_assay_study_warning(content, string = "Assays"):
     """Display warning for multi-assay study.
 
     :param assays: Assays UUIDs as found in Studies.
     :type assays: list
     """
-    multi_assay_str = "\n".join(assays)
+    multi_assay_str = "\n".join(content)
     logger.warning(
-        f"Project contains multiple Assays, will only consider UUID '{assays[0]}'.\n"
+        f"Project contains multiple {string}, will only consider UUID '{content[0]}'.\n"
         f"All available UUIDs:\n{multi_assay_str}"
     )
 
@@ -89,7 +118,6 @@ class SodarAPI:
        self.project_uuid = args.project_uuid
        self.assay_uuid = getattr(args, "assay_uuid", None)
        self.yes = getattr(args, "yes", False)
-
 
 
     def _base_api_header(self) -> dict[str, str]:
@@ -137,19 +165,20 @@ class SodarAPI:
 
         # Consider: support multi-assay and multi-study projects?
         # -> would require proper ISA parsing to handle assay<>study relations
-        if len(samplesheet["studies"]) > 1:
-            raise NotImplementedError("Only single-study projects are supported.")
+        # if len(samplesheet["studies"]) > 1:
+            #raise NotImplementedError("Only single-study projects are supported.")
         study = list(samplesheet["studies"].keys())[0]
-        if len(samplesheet["assays"]) > 1:
-            assay = get_assay_from_uuid(
+        assay = list(samplesheet["assays"].keys())[0]
+        if len(samplesheet["studies"]) > 1 or len(samplesheet["assays"]) > 1:
+            assay, study = get_assay_from_uuid(
                 self.sodar_server_url,
                 self.sodar_api_token,
                 self.project_uuid,
                 self.assay_uuid,
                 self.yes,
                 )
-        else:
-            assay = list(samplesheet["assays"].keys())[0]
+            assay = assay.file_name
+            study= study.file_name
 
         return {
             "investigation": {

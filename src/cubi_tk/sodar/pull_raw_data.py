@@ -132,7 +132,7 @@ class PullRawDataCommand:
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
-        assay = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
+        assay, _study = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
 
         library_to_folder = self._get_library_to_folder(assay)
 

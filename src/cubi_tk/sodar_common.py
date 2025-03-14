@@ -55,7 +55,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         logger.info("Starting remote files search ...")
 
         # Get assay iRODS path
-        assay = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
+        assay, _study = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
         self.assay_path = assay.irods_path
 
         # Get iRODS collection
