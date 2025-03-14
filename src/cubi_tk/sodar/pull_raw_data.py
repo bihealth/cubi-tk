@@ -12,6 +12,7 @@ from loguru import logger
 from sodar_cli import api
 
 from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.sodar_api import get_assay_from_uuid
 #TODO: check if InvestigationTraversal is needed and why
 from ..isa_support import (
     InvestigationTraversal,
@@ -131,20 +132,7 @@ class PullRawDataCommand:
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
-        investigation = api.samplesheet.retrieve(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=self.args.project_uuid,
-        )
-        assay = None
-        for study in investigation.studies.values():
-            for assay_uuid in study.assays.keys():
-                if (self.args.assay_uuid is None) and (assay is None):
-                    assay = study.assays[assay_uuid]
-                if (self.args.assay_uuid is not None) and (self.args.assay_uuid == assay_uuid):
-                    assay = study.assays[assay_uuid]
-                    logger.info("Using irods path of assay {}: {}", assay_uuid, assay.irods_path)
-                    break
+        assay = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
 
         library_to_folder = self._get_library_to_folder(assay)
 

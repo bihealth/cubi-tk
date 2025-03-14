@@ -165,6 +165,9 @@ snappy_pull_data_group.add_argument(
     required=True,
     help="Output directory, where downloaded files will be stored.",
 )
+snappy_pull_data_group.add_argument(
+    "--yes", default=False, action="store_true", help="Assume all answers are yes."
+)
 snappy_pull_data_group.add_argument("project_uuid", help="UUID of project to download data for.")
 
 def get_snappy_pull_data_parser():

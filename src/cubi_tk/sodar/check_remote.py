@@ -377,7 +377,7 @@ class SodarCheckRemoteCommand:
         )
 
         remote_files_dict = irodscollector.perform()
-        assay_path = irodscollector.get_assay_irods_path(self.args.assay_uuid)
+        assay_path = irodscollector.get_assay_irods_path()
 
         # Find all local files with md5 sum
         local_files_dict = FindLocalMD5Files(

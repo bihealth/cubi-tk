@@ -13,23 +13,69 @@ from .exceptions import ParameterException, SodarAPIException
 from sodar_cli import api
 
 #TODO: integrate into new SodarApi class
-def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid):
+def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid = None, yes = False):
     investigation = api.samplesheet.retrieve(
             sodar_url=sodar_server_url,
             sodar_api_token=sodar_api_token,
             project_uuid=project_uuid,
         )
-    assay = None
     for study in investigation.studies.values():
-        for remote_assay_uuid in study.assays.keys():
-            if assay_uuid== remote_assay_uuid:
-                assay = study.assays[remote_assay_uuid]
-                break
-    if assay is None:
+        if assay_uuid:
+            #bug fix for rare case that multiple studies and multiple assays exist
+            if assay_uuid in study.assays.keys():
+                logger.info(f"Using provided Assay UUID: {assay_uuid}")
+                assay = study.assays[assay_uuid]
+                return assay
+            #will only iterate through first study, if multiple studys present
+            assays_ = list(study.assays.keys())
+            #only one assay
+            if len(assays_) == 1:
+                return study.assays[assays_[0]]
+            # multiple assays, if not interactive take fisrt
+            if yes:
+                multi_assay_warning(assays=assays_)
+                for _assay_uuid in assays_:
+                    assay = study.assays[_assay_uuid]
+                    return assay
+            #interactive, print uuids and ask for which
+            assay_uuid = get_user_input_assay_uuid(assays=assays_)
+            assay = study.assays[assay_uuid]
+            return assay
+    if assay_uuid is not None:
         msg = f"Assay with UUID {assay_uuid} not found in investigation."
         logger.error(msg)
         raise ParameterException(msg)
     return assay
+
+
+def get_user_input_assay_uuid(assay_uuids):
+    """Display available assay UUIDS and let User choose which one to use.
+
+    :param assays: Assays UUIDs as found in Studies.
+    :type assays: list
+    """
+    logger.info("No --assay-uuid specified but multiple assays present, which assay do you want to choose?")
+    i = 0
+    while i < len(assay_uuids):
+        logger.info("{}: {}", i+1, assay_uuids[i] )
+        i+=1
+    assay_num = 0
+    while (assay_num<= 0 or assay_num> len(assay_uuids)):
+        assay_num = input("Please enter the index of the Assay UUID (e.g 2):")
+    return assay_uuids[assay_num-1]
+
+
+def multi_assay_warning(assays):
+    """Display warning for multi-assay study.
+
+    :param assays: Assays UUIDs as found in Studies.
+    :type assays: list
+    """
+    multi_assay_str = "\n".join(assays)
+    logger.warning(
+        f"Project contains multiple Assays, will only consider UUID '{assays[0]}'.\n"
+        f"All available UUIDs:\n{multi_assay_str}"
+    )
 
 
 class SodarAPI:

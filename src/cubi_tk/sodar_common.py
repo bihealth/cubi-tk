@@ -3,7 +3,8 @@ from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
-from sodar_cli import api
+
+from cubi_tk.sodar_api import get_assay_from_uuid
 
 from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
 
@@ -47,23 +48,29 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         self.sodar_api_token = sodar_api_token
         self.assay_uuid = assay_uuid
         self.project_uuid = project_uuid
+        self.assay_path = None
 
     def perform(self) -> Dict[str, List[iRODSDataObject]]:
         """Perform class routines."""
         logger.info("Starting remote files search ...")
 
         # Get assay iRODS path
-        assay_path = self.get_assay_irods_path(assay_uuid=self.assay_uuid)
+        assay = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
+        self.assay_path = assay.irods_path
 
         # Get iRODS collection
         irods_collection_dict = {}
-        if assay_path:
-            irods_collection_dict = self.retrieve_irods_data_objects(irods_path=assay_path)
+        if self.assay_path:
+            irods_collection_dict = self.retrieve_irods_data_objects(irods_path=self.assay_path)
 
         logger.info("... done with remote files search.")
         return irods_collection_dict
 
-    def get_assay_irods_path(self, assay_uuid=None):
+    def get_assay_uuid(self):
+        return self.assay_uuid
+
+
+    def get_assay_irods_path(self):
         """Get Assay iRODS path.
 
         :param assay_uuid: Assay UUID.
@@ -71,44 +78,6 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
 
         :return: Returns Assay iRODS path - extracted via SODAR API.
         """
-        investigation = api.samplesheet.retrieve(
-            sodar_url=self.sodar_server_url,
-            sodar_api_token=self.sodar_api_token,
-            project_uuid=self.project_uuid,
-        )
+        return self.assay_path
 
-        for study in investigation.studies.values():
-            if assay_uuid:
-                #bug fix for rare case that multiple studies and multiple assays exist
-                if assay_uuid in study.assays.keys():
-                    logger.info(f"Using provided Assay UUID: {assay_uuid}")
-                    assay = study.assays[assay_uuid]
-                    return assay.irods_path
 
-            else:
-                # Assumption: there is only one assay per study for `snappy` projects.
-                # If multi-assay project it will only consider the first one and throw a warning.
-                assays_ = list(study.assays.keys())
-                if len(assays_) > 1:
-                    self.multi_assay_warning(assays=assays_)
-                for _assay_uuid in assays_:
-                    assay = study.assays[_assay_uuid]
-                    return assay.irods_path
-
-        if assay_uuid:
-            logger.error("Provided Assay UUID is not present in the Investigation.")
-            raise Exception("Cannot find assay with UUID %s" % assay_uuid)
-        return None
-
-    @staticmethod
-    def multi_assay_warning(assays):
-        """Display warning for multi-assay study.
-
-        :param assays: Assays UUIDs as found in Studies.
-        :type assays: list
-        """
-        multi_assay_str = "\n".join(assays)
-        logger.warning(
-            f"Project contains multiple Assays, will only consider UUID '{assays[0]}'.\n"
-            f"All available UUIDs:\n{multi_assay_str}"
-        )

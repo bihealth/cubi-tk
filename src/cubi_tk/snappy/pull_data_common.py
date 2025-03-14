@@ -3,7 +3,6 @@ from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
-from sodar_cli import api
 
 from ..irods_common import TransferJob, iRODSTransfer
 
@@ -79,31 +78,6 @@ class PullDataCommon:
         common_links = {"ResultsReports", "MiscFiles", "TrackHubs"}
         path_part_set = set(irods_path.split("/"))
         return len(common_links.intersection(path_part_set)) > 0
-
-    def get_assay_uuid(self, sodar_server_url, sodar_api_token, project_uuid):
-        """Get assay UUID.
-
-        :param sodar_server_url: SODAR url, e.g.: https://sodar.bihealth.org/
-        :type sodar_server_url: str
-
-        :param sodar_api_token: SODAR authentication token.
-        :type sodar_api_token: str
-
-        :param project_uuid: SODAR project UUID.
-        :type project_uuid: str
-
-        :return: Returns assay UUID.
-        """
-        investigation = api.samplesheet.retrieve(
-            sodar_url=sodar_server_url,
-            sodar_api_token=sodar_api_token,
-            project_uuid=project_uuid,
-        )
-        for study in investigation.studies.values():
-            for _assay_uuid in study.assays:
-                # If multi-assay project it will only consider the first one
-                return _assay_uuid
-        return None
 
     @staticmethod
     def get_irods_files(irods_local_path_pairs, force_overwrite=False):

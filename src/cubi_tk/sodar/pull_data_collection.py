@@ -194,7 +194,7 @@ class PullDataCollection(PullDataCommon):
         )
 
         remote_files_dict = filesearcher.perform()
-        assay_path = filesearcher.get_assay_irods_path(self.args.assay_uuid)
+        assay_path = filesearcher.get_assay_irods_path()
 
         if self.args.all_files:
             file_patterns = []

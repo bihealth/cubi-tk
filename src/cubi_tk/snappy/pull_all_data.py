@@ -35,9 +35,6 @@ class PullAllDataCommand:
             help="Allow missing data in assay",
         )
         parser.add_argument(
-            "--yes", default=False, action="store_true", help="Assume all answers are yes."
-        )
-        parser.add_argument(
             "--dry-run",
             "-n",
             default=False,

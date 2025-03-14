@@ -264,15 +264,12 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
         assay_file_name = list(isa_dict["assays"].keys())[0]
         if len(isa_dict["assays"]) > 1:
-            if not self.args.assay_uuid:
-                msg = "Multiple assays found in investigation, please specify which one to use with --assay-uid."
-                logger.error(msg)
-                raise ParameterException(msg)
             assay = get_assay_from_uuid(
                 self.args.sodar_server_url,
                 self.args.sodar_api_token,
                 project_uuid,
-                self.args.assay_uuid
+                self.args.assay_uuid,
+                self.args.yes,
                 )
             assay_file_name = assay.file_name
         assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]

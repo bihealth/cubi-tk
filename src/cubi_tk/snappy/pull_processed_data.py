@@ -134,22 +134,15 @@ class PullProcessedDataCommand(PullDataCommon):
                 by_sample_id=self.args.sample_id,
             )
 
-        # Get assay UUID if not provided
-        assay_uuid = None
-        if not self.args.assay_uuid:
-            assay_uuid = self.get_assay_uuid(
-                sodar_server_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-            )
-
-        # Find all remote files (iRODS)
+        # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
             self.args.sodar_server_url,
             self.args.sodar_api_token,
             self.args.assay_uuid,
             self.args.project_uuid,
+            ask = self.args.yes
         ).perform()
+        self.args.assay_uuid = remote_files_dict.get_assay_uuid()
 
         # Filter based on identifiers and file type
         filtered_remote_files_dict = self.filter_irods_collection(
@@ -165,7 +158,7 @@ class PullProcessedDataCommand(PullDataCommon):
         path_pair_list = self.pair_ipath_with_outdir(
             remote_files_dict=filtered_remote_files_dict,
             output_dir=self.args.output_directory,
-            assay_uuid=self.args.assay_uuid or assay_uuid,
+            assay_uuid=self.args.assay_uuid,
             retrieve_all=self.args.download_all_versions,
         )
 

@@ -137,7 +137,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         not_project_uuid = False
         create_lz_bool = self.args.yes
         in_destination = self.args.destination
-        assay_uuid = self.args.assay
+        assay_uuid = self.args.assay_uuid
 
         # Project UUID provided by user
         if is_uuid(in_destination):

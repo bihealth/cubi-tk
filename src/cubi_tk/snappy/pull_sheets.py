@@ -113,12 +113,14 @@ def build_sheet(
         project_uuid=project_uuid,
     )
     assay_filename = None
-    if(args.assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
+    if len(isa_dict["assays"]) > 1 or args.assay_uuid:
+        #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
         assay = get_assay_from_uuid(
             args.sodar_server_url,
             args.sodar_api_token,
             project_uuid,
-            args.assay_uuid
+            args.assay_uuid,
+            args.yes
         )
         assay_filename = assay.file_name
     isa = isa_dict_to_isa_data(isa_dict, assay_filename)
