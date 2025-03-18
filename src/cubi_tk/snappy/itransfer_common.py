@@ -137,7 +137,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         not_project_uuid = False
         create_lz_bool = self.args.yes
         in_destination = self.args.destination
-        assay_uuid = self.args.assay
+        assay_uuid = self.args.assay_uuid
 
         # Project UUID provided by user
         if is_uuid(in_destination):
@@ -371,7 +371,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """
         logger.info("Creating new Landing Zone...")
         from sodar_cli.api import landingzone
-
+        #TODO: make sure assay_uuid is not none if multiple assays
         lz = landingzone.create(
             sodar_url=self.args.sodar_server_url,
             sodar_api_token=self.args.sodar_api_token,

@@ -6,6 +6,7 @@ from unittest.mock import patch, MagicMock
 from cubi_tk import sodar_api
 from cubi_tk.common import GLOBAL_CONFIG_PATH
 from cubi_tk.exceptions import ParameterException, SodarAPIException
+from tests.factories import InvestigationFactory
 
 
 @pytest.fixture
@@ -87,9 +88,9 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
         data={"test": "test2"},
     )
 
-
+@patch("cubi_tk.sodar_api.api.samplesheet.retrieve")
 @patch("cubi_tk.sodar_api.SodarAPI._api_call")
-def test_sodar_api_get_ISA_samplesheet(mock_api_call, sodar_api_instance):
+def test_sodar_api_get_ISA_samplesheet(mock_api_call, mock_samplesheet_retrieve, sodar_api_instance):
     mock_api_call.return_value = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
@@ -102,12 +103,17 @@ def test_sodar_api_get_ISA_samplesheet(mock_api_call, sodar_api_instance):
         "assay": {"filename": "a_name_0", "content": ""},
     }
     assert expected == sodar_api_instance.get_ISA_samplesheet()
-
     mock_api_call.return_value = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}, "s_Study_1.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}, "a_name_1": {"tsv": ""}},
         "date_modified": "2021-09-01T12:00:00Z",
     }
-    with pytest.raises(NotImplementedError):
-        sodar_api_instance.get_ISA_samplesheet()
+    expected = {
+        "investigation": {"filename": "i_Investigation.txt", "content": ""},
+        "study": {"filename": "s_Study_0.txt", "content": ""},
+        "assay": {"filename": "a_name_0", "content": ""},
+    }
+    mock_samplesheet_retrieve.return_value = InvestigationFactory()
+    assert expected == sodar_api_instance.get_ISA_samplesheet()
+

@@ -116,16 +116,7 @@ class PullRawDataCommand(PullDataCommon):
             )
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
 
-        # Get assay UUID if not provided
-        assay_uuid = None
-        if not self.args.assay_uuid:
-            assay_uuid = self.get_assay_uuid(
-                sodar_server_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-            )
-
-        # Find all remote files (iRODS)
+        # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
             self.args.sodar_server_url,
             self.args.sodar_api_token,
@@ -133,6 +124,7 @@ class PullRawDataCommand(PullDataCommon):
             self.args.project_uuid,
         ).perform()
 
+        self.args.assay_uuid = remote_files_dict.get_assay_uuid()
         # Filter based on identifiers and file type
         if self.args.use_library_name:
             filtered_remote_files_dict = self.filter_irods_collection_by_library_name_in_path(
@@ -162,7 +154,7 @@ class PullRawDataCommand(PullDataCommon):
             library_to_irods_dict=library_to_irods_dict,
             identifiers_tuples=selected_identifiers_tuples,
             output_dir=download_path,
-            assay_uuid=self.args.assay_uuid or assay_uuid,
+            assay_uuid=self.args.assay_uuid,
         )
 
         # Retrieve files from iRODS or print

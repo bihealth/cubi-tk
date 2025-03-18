@@ -30,7 +30,7 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
 
     parser = argparse.ArgumentParser(parents=[
         get_snappy_itransfer_parser(),
-        get_sodar_parser(with_dest = True, dest_string="destination", help_string="Landing zone path or UUID from Landing Zone or Project")])
+        get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
     args = parser.parse_args(["466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)
@@ -47,7 +47,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_va
 
     parser = argparse.ArgumentParser(parents=[
         get_snappy_itransfer_parser(),
-        get_sodar_parser(with_dest = True, dest_string="destination", help_string="Landing zone path or UUID from Landing Zone or Project")])
+        get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
     args = parser.parse_args(["466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)

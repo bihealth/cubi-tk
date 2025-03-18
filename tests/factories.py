@@ -35,7 +35,7 @@ class StudyFactory(factory.Factory):
 
     sodar_uuid = factory.LazyAttribute(lambda o: str(uuid.uuid4()))
     identifier = factory.Sequence(lambda n: "study_%d" % n)
-    file_name = factory.Sequence(lambda n: "s_Study_%d" % n)
+    file_name = factory.Sequence(lambda n: "s_Study_%d.txt" % n)
     irods_path = factory.Sequence(lambda n: "/testZone/path/to/study_%d" % n)
     title = factory.Sequence(lambda n: "Study %d" % n)
     description = factory.Sequence(lambda n: "This is study %d" % n)

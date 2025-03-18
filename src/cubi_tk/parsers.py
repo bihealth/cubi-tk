@@ -24,7 +24,7 @@ def get_basic_parser():
         return basic_config_parser
 
 
-def get_sodar_parser(with_dest = False, dest_string = "project_uuid", help_string ="SODAR project UUID"):
+def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_string ="SODAR project UUID", with_assay_uuid = False):
     sodar_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
     sodar_group = sodar_config_parser.add_argument_group("Basic Sodar Configuration")
     sodar_group.add_argument(
@@ -43,10 +43,19 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", help_strin
     if with_dest:
        sodar_config_parser.add_argument(
             dest_string,
-            help=help_string,
+            help=dest_help_string,
+        )
+    if with_assay_uuid:
+        sodar_group.add_argument(
+            "--assay-uuid",
+            default=None,
+            type=str,
+            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
     return sodar_config_parser
 
+#TODO: possibly rename to setup_sodar_params,
+#TODO: when doing sodar api refactoring, possibly move to sodar api (e.g as init function)
 def check_args_global_parser(args, set_default = False, with_dest = False, dest_string = "project_uuid"):
     any_error = False
 
@@ -85,11 +94,7 @@ sodar_group_spec.add_argument(
     choices=("germline", "generic", "cancer"),
     help="The shortcut TSV schema to use.",
 )
-sodar_group_spec.add_argument(
-    "--assay-uuid",
-    default=None,
-    help="UUID of assay to download data for."
-)
+
 sodar_group_spec.add_argument(
     "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
 )
@@ -97,8 +102,6 @@ sodar_group_spec.add_argument(
     "--last-batch", type=int, required=False, help="Last batch to be transferred."
 )
 
-def get_specific_sodar_parser():
-    return sodar_specific_parser
 
 snappy_cmd_basic_parser = argparse.ArgumentParser(description="The basic parser for snappy commands",add_help=False)
 snappy_basic_group = snappy_cmd_basic_parser.add_argument_group("Snappy Configuration")
@@ -161,6 +164,9 @@ snappy_pull_data_group.add_argument(
     default=None,
     required=True,
     help="Output directory, where downloaded files will be stored.",
+)
+snappy_pull_data_group.add_argument(
+    "--yes", default=False, action="store_true", help="Assume all answers are yes."
 )
 snappy_pull_data_group.add_argument("project_uuid", help="UUID of project to download data for.")
 

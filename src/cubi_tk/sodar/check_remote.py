@@ -336,12 +336,6 @@ class SodarCheckRemoteCommand:
             action="store_true",
             help="Flag to indicate if md5 sums should be included in file report",
         )
-        parser.add_argument(
-            "--assay-uuid",
-            default=None,
-            type=str,
-            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
-        )
 
     @classmethod
     def run(
@@ -383,7 +377,7 @@ class SodarCheckRemoteCommand:
         )
 
         remote_files_dict = irodscollector.perform()
-        assay_path = irodscollector.get_assay_irods_path(self.args.assay_uuid)
+        assay_path = irodscollector.get_assay_irods_path()
 
         # Find all local files with md5 sum
         local_files_dict = FindLocalMD5Files(

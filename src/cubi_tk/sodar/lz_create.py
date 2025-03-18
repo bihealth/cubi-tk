@@ -43,10 +43,6 @@ class CreateLandingZoneCommand:
         )
 
         parser.add_argument(
-            "--assay-uuid", default=None, help="UUID of assay to create landing zone for."
-        )
-
-        parser.add_argument(
             "--format",
             dest="format_string",
             default=None,
@@ -88,7 +84,7 @@ class CreateLandingZoneCommand:
         if existing_lzs and self.args.unless_exists:
             lz = existing_lzs[-1]
         else:
-            #TODO: make sure assay_uuid is not none
+            #TODO: make sure assay_uuid is not none if multiple assays
             lz = api.landingzone.create(
                 sodar_url=self.args.sodar_server_url,
                 sodar_api_token=self.args.sodar_api_token,
