@@ -136,11 +136,7 @@ class PullProcessedDataCommand(PullDataCommon):
 
         # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
-            ask = self.args.yes
+            self.args
         ).perform()
         self.args.assay_uuid = remote_files_dict.get_assay_uuid()
 

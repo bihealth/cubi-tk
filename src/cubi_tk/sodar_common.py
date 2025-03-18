@@ -1,10 +1,11 @@
+from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
 
-from cubi_tk.sodar_api import get_assay_from_uuid
+from cubi_tk.sodar_api import SodarApi
 
 from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
 
@@ -12,12 +13,8 @@ from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
 class RetrieveSodarCollection(iRODSRetrieveCollection):
     def __init__(
         self,
-        sodar_server_url,
-        sodar_api_token,
-        assay_uuid,
-        project_uuid,
+        args: Namespace,
         hash_scheme: str = DEFAULT_HASH_SCHEME,
-        ask: bool = False,
         irods_env_path: Path = None,
     ):
         """Constructor.
@@ -43,11 +40,8 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        super().__init__(hash_scheme, ask, irods_env_path)
-        self.sodar_server_url = sodar_server_url
-        self.sodar_api_token = sodar_api_token
-        self.assay_uuid = assay_uuid
-        self.project_uuid = project_uuid
+        super().__init__(hash_scheme, ask= getattr(args, "yes", False), irods_env_path= irods_env_path)
+        self.sodar_api = SodarApi(args, with_dest=True)
         self.assay_path = None
 
     def perform(self) -> Dict[str, List[iRODSDataObject]]:
@@ -55,7 +49,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         logger.info("Starting remote files search ...")
 
         # Get assay iRODS path
-        assay, _study = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
+        assay, _study = self.sodar_api.get_assay_from_uuid()
         self.assay_path = assay.irods_path
 
         # Get iRODS collection

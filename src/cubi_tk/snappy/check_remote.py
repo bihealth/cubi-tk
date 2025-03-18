@@ -652,10 +652,7 @@ class SnappyCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         library_remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         ).perform()
 
         # Find all local files (canonical paths)

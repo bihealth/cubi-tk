@@ -8,58 +8,11 @@ import requests
 
 from cubi_tk.parsers import check_args_global_parser
 
-from .exceptions import ParameterException, SodarAPIException
+from .exceptions import ParameterException, SodarApiException
 
 from sodar_cli import api
 
-#TODO: integrate into new SodarApi class
-def get_assay_from_uuid(sodar_server_url, sodar_api_token, project_uuid, assay_uuid = None, yes = False):
-    investigation = api.samplesheet.retrieve(
-            sodar_url=sodar_server_url,
-            sodar_api_token=sodar_api_token,
-            project_uuid=project_uuid,
-        )
-    studies = investigation.studies.values()
-    #if assay_uuid given and multiple studies iterate through all studies and find assay
-    #if mulitple staudies and yes, iterate through first study
-    #if multiple studies, no asssay uuid and not yes, let user decide which study to use
-    if(len(studies) > 1 and not assay_uuid):
-        study_keys =investigation.studies.keys()
-        if not yes:
-            study = get_user_input_study(study_keys)
-            studies = [study]
-        else:
-            multi_assay_study_warning(study_keys, string="studies")
-
-    for study in studies:
-        if assay_uuid:
-            #bug fix for rare case that multiple studies and multiple assays exist
-            if assay_uuid in study.assays.keys():
-                logger.info(f"Using provided Assay UUID: {assay_uuid}")
-                assay = study.assays[assay_uuid]
-                return assay, study
-        #will only iterate through first study, if multiple studys present
-        assays_ = list(study.assays.keys())
-        #only one assay
-        if len(assays_) == 1:
-            return study.assays[assays_[0]], study
-        # multiple assays, if not interactive take fisrt
-        if yes:
-            multi_assay_study_warning(assays=assays_)
-            for _assay_uuid in assays_:
-                assay = study.assays[_assay_uuid]
-                return assay, study
-        #interactive, print uuids and ask for which
-        assay_uuid = get_user_input_assay_uuid(assay_uuids=assays_)
-        assay = study.assays[assay_uuid]
-        return assay, study
-    if assay_uuid is not None:
-        msg = f"Assay with UUID {assay_uuid} not found in investigation."
-        logger.error(msg)
-        raise ParameterException(msg)
-    return None
-
-
+#TODO: add studyname
 def get_user_input_study(study_uuids):
     """Display available study UUIDS and let User choose which one to use.
 
@@ -77,6 +30,7 @@ def get_user_input_study(study_uuids):
         study_num =int(study_num)
     return study_uuids[study_num-1]
 
+#TODO: add assayname
 def get_user_input_assay_uuid(assay_uuids):
     """Display available assay UUIDS and let User choose which one to use.
 
@@ -107,27 +61,26 @@ def multi_assay_study_warning(content, string = "Assays"):
         f"All available UUIDs:\n{multi_assay_str}"
     )
 
+SODAR_API_VERSION=1.0
 
-class SodarAPI:
-    def __init__(self, args: argparse.Namespace):
-       any_error, args= check_args_global_parser(args, with_dest=True)
+class SodarApi:
+    def __init__(self, args: argparse.Namespace, set_default = False, with_dest = False, dest_string = "project_uuid"):
+       any_error, args= check_args_global_parser(args, set_default = set_default, with_dest=with_dest, dest_string= dest_string)
        if any_error:
             raise ParameterException('Sodar args missing')
        self.sodar_server_url = args.sodar_server_url
-       self.sodar_api_token = args.sodar_api_token
-       self.project_uuid = args.project_uuid
+       self.sodar_api_token = args.sodar_api_token #TODO: remove and just use for header
+       self.project_uuid = getattr(args, "project_uuid", None)
        self.assay_uuid = getattr(args, "assay_uuid", None)
        self.yes = getattr(args, "yes", False)
-
-
-    def _base_api_header(self) -> dict[str, str]:
-        # FIXME: only add versioning header once SODAR API v1.0 is released
-        # (this will introduce individual versioning for specific calls and break the general versioning)
-        sodar_headers = {
-            "Authorization": "token {}".format(self.sodar_api_token),
-            # 'Accept': f'application/vnd.bihealth.sodar+json; version={SODAR_API_VERSION}',
+       self.sodar_headers = {
+           "samplesheets": {
+               "Authorization": "token {}".format(self.sodar_api_token),
+                'Accept': f'application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION}'},
+            "landingzones": {
+               "Authorization": "token {}".format(self.sodar_api_token),
+                'Accept': f'application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION}'},
         }
-        return sodar_headers
 
     def _api_call(
         self,
@@ -149,62 +102,54 @@ class SodarAPI:
             url += "?" + urlparse.urlencode(params)
 
         if method == "get":
-            response = requests.get(url, headers=self._base_api_header())
+            response = requests.get(url, headers=self.sodar_headers[api])
         elif method == "post":
-            response = requests.post(url, headers=self._base_api_header(), files=files, data=data)
+            response = requests.post(url, headers=self.sodar_headers[api], files=files, data=data)
         else:
             raise ValueError("Unknown HTTP method.")
 
         if response.status_code != 200:
-            raise SodarAPIException(f"API response: {response.text}")
+            raise SodarApiException(f"API response: {response.text}")
 
         return response.json()
 
-    def get_ISA_samplesheet(self) -> dict[str, dict[str, str]]:
+    # Samplesheet api calls
+    def get_samplesheet_export(self, get_all = False) -> dict[str, dict[str, str]]:
         samplesheet = self._api_call("samplesheets", "export/json")
-
+        if get_all:
+            return samplesheet
         # Consider: support multi-assay and multi-study projects?
         # -> would require proper ISA parsing to handle assay<>study relations
         # if len(samplesheet["studies"]) > 1:
             #raise NotImplementedError("Only single-study projects are supported.")
-        study = list(samplesheet["studies"].keys())[0]
-        assay = list(samplesheet["assays"].keys())[0]
+        study_name = list(samplesheet["studies"].keys())[0]
+        assay_name = list(samplesheet["assays"].keys())[0]
         if len(samplesheet["studies"]) > 1 or len(samplesheet["assays"]) > 1:
-            assay, study = get_assay_from_uuid(
-                self.sodar_server_url,
-                self.sodar_api_token,
-                self.project_uuid,
-                self.assay_uuid,
-                self.yes,
-                )
-            assay = assay.file_name
-            study= study.file_name
+            assay_name, study_name = self.get_assay_from_uuid()
+            assay_name = assay_name.file_name
+            study_name= study_name.file_name
 
         return {
             "investigation": {
-                "filename": samplesheet["investigation"]["path"],
-                "content": samplesheet["investigation"]["tsv"],
+                "path": samplesheet["investigation"]["path"],
+                "tsv": samplesheet["investigation"]["tsv"],
             },
-            "study": {"filename": study, "content": samplesheet["studies"][study]["tsv"]},
-            "assay": {"filename": assay, "content": samplesheet["assays"][assay]["tsv"]},
+            "studies": {study_name : samplesheet["studies"][study_name]},
+            "assays": {assay_name : samplesheet["assays"][assay_name]},
         }
 
-    def upload_ISA_samplesheet(
+    def post_samplesheet_import(
         self,
-        investigation: tuple[str, str],
-        study: tuple[str, str],
-        assay: tuple[str, str],
+        files_dict: dict[str, tuple[str, str]],
     ):
+        for key, value in files_dict:
+            files_dict[key] = (*value, "text/plain")
         try:
             ret_val = self._api_call(
                 "samplesheets",
                 "import",
                 method="post",
-                files={
-                    "file_investigation": (*investigation, "text/plain"),
-                    "file_study": (*study, "text/plain"),
-                    "file_assay": (*assay, "text/plain"),
-                },
+                files=files_dict,
             )
             if "sodar_warnings" in ret_val:
                 logger.info("ISA-tab uploaded with warnings.")
@@ -213,6 +158,52 @@ class SodarAPI:
             else:
                 logger.info("ISA-tab uploaded successfully.")
             return 0
-        except SodarAPIException as e:
+        except SodarApiException as e:
             logger.error(f"Failed to upload ISA-tab:\n{e}")
             return 1
+
+    # landingzone Api calls
+    # helper functions
+    def get_assay_from_uuid(self):
+        investigation = api.samplesheet.retrieve(
+                sodar_url=self.sodar_server_url,
+                sodar_api_token=self.sodar_api_token,
+                project_uuid=self.project_uuid,
+            )
+        studies = investigation.studies.values()
+        #if assay_uuid given and multiple studies iterate through all studies and find assay
+        #if mulitple staudies and yes, iterate through first study
+        #if multiple studies, no asssay uuid and not yes, let user decide which study to use
+        if(len(studies) > 1 and not self.assay_uuid):
+            study_keys =investigation.studies.keys()
+            if not self.yes:
+                study = get_user_input_study(study_keys)
+                studies = [study]
+            else:
+                multi_assay_study_warning(study_keys, string="studies")
+
+        for study in studies:
+            if self.assay_uuid:
+                #bug fix for rare case that multiple studies and multiple assays exist
+                if self.assay_uuid in study.assays.keys():
+                    logger.info(f"Using provided Assay UUID: {self.assay_uuid}")
+                    assay = study.assays[self.assay_uuid]
+                    return assay, study
+            assays_ = list(study.assays.keys())
+            #only one assay or not interactive -> take first
+            if len(assays_) == 1 or self.yes:
+                assay = study.assays[assays_[0]]
+                if self.yes and len(assays_) > 1:
+                    multi_assay_study_warning(assays=assays_)
+                return assay, study
+            #multiple assays and interactive, print uuids and ask for which
+            self.assay_uuid = get_user_input_assay_uuid(assay_uuids=assays_)
+            assay = study.assays[self.assay_uuid]
+            return assay, study
+        if self.assay_uuid is not None:
+            msg = f"Assay with UUID {self.assay_uuid} not found in investigation."
+            logger.error(msg)
+            raise ParameterException(msg)
+        return None
+
+

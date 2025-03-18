@@ -9,7 +9,7 @@ import os
 import re
 import unittest
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
@@ -127,11 +127,12 @@ def test_run_sodar_ingest_fastq_ont_preset_regex():
             assert groups["subfolder"] is None
 
 
-@patch("cubi_tk.sodar.ingest_fastq.api.samplesheet.retrieve")
-@patch("cubi_tk.sodar.ingest_fastq.api.samplesheet.export")
+@patch("sodar_cli.api.samplesheet.retrieve")
+@patch("cubi_tk.sodar_api.requests.get") #export call
 def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export, mock_api_retrieve):
     # Patched sodar API call
-    mock_api_export.return_value = my_sodar_api_export()
+    mock_api_export.return_value.status_code = 200
+    mock_api_export.return_value.json = MagicMock(return_value=my_sodar_api_export())
 
     # Instantiate SodarIngestFastq (seems to require args?)
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -181,10 +182,11 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
         ingestfastq.get_match_to_collection_mapping(project_uuid, "Typo-Column")
 
     # Test with additional assay
-    mock_api_export.return_value = my_sodar_api_export(2)
-    mock_api_retrieve.return_value = InvestigationFactory() # if run as singluar test will need to adjust to "s_Study_0.txt "
-    print(mock_api_retrieve.return_value)
-    assay_uuid = list(mock_api_retrieve.return_value.studies["s_Study_1.txt"].assays.keys())[0] # if run as singluar test will need to adjust to "s_Study_0.txt "
+    mock_api_export.return_value.status_code = 200
+    mock_api_export.return_value.json = MagicMock(return_value= my_sodar_api_export(2, offset = 1)) #for factory index, if run as single test set to 0
+    mock_api_retrieve.return_value = InvestigationFactory()
+    study_key = list(mock_api_retrieve.return_value.studies.keys())[0]
+    assay_uuid = list(mock_api_retrieve.return_value.studies[study_key].assays.keys())[0]
     ingestfastq.args.assay_uuid = assay_uuid
 
     assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")

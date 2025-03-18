@@ -9,10 +9,9 @@ import typing
 
 import attr
 from loguru import logger
-from sodar_cli import api
 
 from cubi_tk.parsers import check_args_global_parser, print_args
-from cubi_tk.sodar_api import get_assay_from_uuid
+from cubi_tk.sodar_api import SodarApi
 #TODO: check if InvestigationTraversal is needed and why
 from ..isa_support import (
     InvestigationTraversal,
@@ -126,15 +125,16 @@ class PullRawDataCommand:
         _, self.args = check_args_global_parser(self.args, with_dest=True)
 
         logger.info("Starting cubi-tk sodar pull-raw-data")
+        sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
         out_path = Path(self.args.output_dir)
         if not out_path.exists():
             out_path.mkdir(parents=True)
 
-        assay, _study = get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
+        assay, _study = sodar_api.get_assay_from_uuid(self.sodar_server_url, self.sodar_api_token, self.project_uuid, self.assay_uuid, self.yes)
 
-        library_to_folder = self._get_library_to_folder(assay)
+        library_to_folder = self._get_library_to_folder(assay, sodar_api)
 
         commands = self._build_commands(assay, library_to_folder)
         if not commands:
@@ -196,25 +196,12 @@ class PullRawDataCommand:
             return True
         return False
 
-    def _get_library_to_folder(self, assay):
-        isa_dict = api.samplesheet.export(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=self.args.project_uuid,
-        )
-        isa = isa_dict_to_isa_data(isa_dict)
-
-        assays = {}
-        if assay:
-            if self.args.assay_uuid is None:
-                logger.info("Using irods path of first assay: {}", assay.irods_path)
-            assays = {k: v for (k, v) in isa.assays.items() if k == assay.file_name}
-        else:  # no assay found
-            logger.info("Found no assay")
-            return 1
+    def _get_library_to_folder(self, assay, sodar_api):
+        isa_dict = sodar_api.get_samplesheet_export()
+        isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay.file_name)
 
         collector = LibraryInfoCollector()
-        iwalker = InvestigationTraversal(isa.investigation, isa.studies, assays)
+        iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
         iwalker.run(collector)
         return {
             sample["library_name"]: sample["folder_name"]

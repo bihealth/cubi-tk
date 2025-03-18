@@ -14,11 +14,10 @@ import sys
 import typing
 
 from loguru import logger
-from sodar_cli import api
 import tqdm
 
 from cubi_tk.parsers import check_args_global_parser, print_args
-from cubi_tk.sodar_api import get_assay_from_uuid
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
@@ -256,22 +255,11 @@ class SodarIngestFastq(SnappyItransferCommandBase):
     ) -> dict[str, str]:
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
-
-        isa_dict = api.samplesheet.export(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=project_uuid,
-        )
+        self.args.project_uuid = project_uuid
+        sodar_api = SodarApi(self.args, with_dest=True)
+        print_args(self.args)
+        isa_dict = sodar_api.get_samplesheet_export()
         assay_file_name = list(isa_dict["assays"].keys())[0]
-        if len(isa_dict["assays"]) > 1:
-            assay, _study = get_assay_from_uuid(
-                self.args.sodar_server_url,
-                self.args.sodar_api_token,
-                project_uuid,
-                self.args.assay_uuid,
-                self.args.yes,
-                )
-            assay_file_name = assay.file_name
         assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]
         assay_header, *assay_lines = assay_tsv.rstrip("\n").split("\n")
         assay_header = assay_header.split("\t")
