@@ -7,9 +7,9 @@ import typing
 
 import cattr
 from loguru import logger
-from sodar_cli import api
 
 from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.sodar_api import SodarApi
 
 class MoveLandingZoneCommand:
     """Implementation of the ``landing-zone-move`` command."""
@@ -60,15 +60,14 @@ class MoveLandingZoneCommand:
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
-
+        sodar_api = SodarApi(self.args)
         logger.info("Starting cubi-tk sodar landing-zone-move")
         print_args(self.args)
 
-        landing_zone = api.landingzone.submit_move(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            landingzone_uuid=self.args.landing_zone_uuid,
-        )
+        new_lz_uuid = sodar_api.post_landingzone_submit_move(lz_uuid=self.args.landing_zone_uuid)
+        if new_lz_uuid is None:
+            return 1
+        landing_zone = sodar_api.get_landingzone_retrieve(lz_uuid=new_lz_uuid)
         values = cattr.unstructure(landing_zone)
         if self.args.format_string:
             print(self.args.format_string.replace(r"\t", "\t") % values)

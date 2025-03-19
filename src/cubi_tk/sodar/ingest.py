@@ -6,10 +6,10 @@ import sys
 import typing
 
 from loguru import logger
-from sodar_cli import api
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 
@@ -100,15 +100,11 @@ class SodarIngest:
         print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
-            try:
-                lz_info = api.landingzone.retrieve(
-                    sodar_url=self.args.sodar_server_url,
-                    sodar_api_token=self.args.sodar_api_token,
-                    landingzone_uuid=self.args.destination,
-                )
-            except Exception as e:  # pragma: no cover
+
+            sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+            lz_info = sodar_api.get_landingzone_retrieve()
+            if lz_info is None:  # pragma: no cover
                 logger.error("Failed to retrieve landing zone information.")
-                logger.exception(e)
                 sys.exit(1)
 
             # TODO: Replace with status_locked check once implemented in sodar_cli

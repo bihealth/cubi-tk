@@ -7,13 +7,9 @@ import typing
 
 import cattr
 from loguru import logger
-from sodar_cli import api
 
 from cubi_tk.parsers import check_args_global_parser, print_args
-
-
-# TODO: Obtain from somewhere else, e.g. sodar-cli or sodar API or sodar-core or …
-LANDING_ZONE_STATES = ["ACTIVE", "FAILED", "VALIDATING"]
+from cubi_tk.sodar_api import LANDING_ZONE_STATES, SodarApi
 
 
 class ListLandingZoneCommand:
@@ -83,19 +79,11 @@ class ListLandingZoneCommand:
             return res
 
         logger.info("Starting cubi-tk sodar landing-zone-list")
+        sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
-        existing_lzs = sorted(
-            api.landingzone.list_(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-            ),
-            key=lambda lz: lz.date_modified,
-        )
+        existing_lzs = sodar_api.get_landingzone_list(filter_for_state = self.args.filter_status)
         for lz in existing_lzs:
-            if lz.status not in self.args.filter_status:
-                continue
             values = cattr.unstructure(lz)
             if self.args.format_string:
                 print(self.args.format_string.replace(r"\t", "\t") % values)

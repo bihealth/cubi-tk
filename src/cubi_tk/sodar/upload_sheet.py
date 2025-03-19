@@ -12,6 +12,7 @@ from loguru import logger
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
+
 from .. import isa_support
 
 
@@ -44,7 +45,6 @@ class UploadSheetCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-
         logger.info("Starting cubi-tk sodar upload-sheet")
         sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)

@@ -151,11 +151,8 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
 @patch("cubi_tk.sodar.ingest.TransferJob")
 @patch("cubi_tk.sodar.ingest.iRODSTransfer")
 @patch("cubi_tk.sodar.ingest.iRODSCommon.session")
-@patch("cubi_tk.sodar.ingest.api.landingzone.retrieve")
+@patch("cubi_tk.sodar_api.requests.get")
 def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs):
-    class DummyAPI(object):
-        pass
-
     class DummyColl(object):
         pass
 
@@ -198,10 +195,22 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         main(argv2)
 
     # Test cancel no invalid LZ
-    api_return = DummyAPI()
-    api_return.status = "DELETED"
-    api_return.irods_path = "target"
-    mockapi.return_value = api_return
+    api_return = {
+        "assay": "",
+        "config_data": "",
+        "configuration": "",
+        "date_modified": "",
+        "description": "",
+        "irods_path": "target",
+        "project": "",
+        "sodar_uuid": "",
+        "status": "DELETED",
+        "status_info": "",
+        "title": "",
+        "user": "",
+    }
+    mockapi.return_value.status_code = 200
+    mockapi.return_value.json = MagicMock(return_value=api_return)
 
     with pytest.raises(SystemExit):
         main(argv)
@@ -210,7 +219,7 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         )
 
     # Test cancel if no files to transfer
-    api_return.status = "ACTIVE"
+    api_return["status"] = "ACTIVE"
     with pytest.raises(SystemExit):
         argv2 = argv.copy()
         argv2[-1] = "empty"

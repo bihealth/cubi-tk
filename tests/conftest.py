@@ -6,6 +6,7 @@ import textwrap
 from biomedsheets.io_tsv import read_germline_tsv_sheet, read_cancer_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from biomedsheets.shortcuts import GermlineCaseSheet, CancerCaseSheet
+
 import pytest
 from loguru import logger
 from _pytest.logging import LogCaptureFixture
@@ -130,7 +131,7 @@ def my_exists(self):
     return str(self) == "/base/path/.snappy_pipeline"
 
 
-def my_get_sodar_info(_self):
+def my_get_sodar_info(_self, sodar_api = None):
     """Method is used to patch cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info"""
     return "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
 

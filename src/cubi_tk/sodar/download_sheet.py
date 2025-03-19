@@ -71,6 +71,7 @@ class DownloadSheetCommand:
         return cls(args).execute()
 
     def execute(self) -> typing.Optional[int]:
+
         """Execute the transfer."""
         logger.info("Starting cubi-tk sodar download-sheet")
         sodar_api = SodarApi(self.args, with_dest=True)

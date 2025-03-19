@@ -7,9 +7,9 @@ import typing
 
 import cattr
 from loguru import logger
-from sodar_cli import api
 
 from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.sodar_api import SodarApi
 
 
 
@@ -53,15 +53,14 @@ class ValidateLandingZoneCommand:
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
-
+        sodar_api = SodarApi(self.args)
         logger.info("Starting cubi-tk sodar landing-zone-validate.")
         print_args(self.args)
 
-        landing_zone = api.landingzone.submit_validate(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            landingzone_uuid=self.args.landing_zone_uuid,
-        )
+        lz_uuid = sodar_api.post_landingzone_submit_validate(lz_uuid=self.args.landing_zone_uuid)
+        if lz_uuid is None:
+            return 1
+        landing_zone = sodar_api.get_landingzone_retrieve(lz_uuid=lz_uuid)
         values = cattr.unstructure(landing_zone)
         if self.args.format_string:
             logger.info("Formatted server response:")

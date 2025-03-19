@@ -229,21 +229,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         return res
 
-    def get_project_uuid(self, lz_uuid: str) -> str:
-        """Get project UUID from landing zone UUID.
-        :param lz_uuid: Landing zone UUID.
-        :type lz_uuid: str
-
-        :return: Returns SODAR UUID of corresponding project.
-        """
-        from sodar_cli.api import landingzone
-
-        lz = landingzone.retrieve(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            landingzone_uuid=lz_uuid,
-        )
-        return lz.project
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         raise NotImplementedError(
@@ -251,13 +236,10 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
 
     def get_match_to_collection_mapping(
-        self, project_uuid: str, in_column: str, out_column: typing.Optional[str] = None
+        self, sodar_api: SodarApi, in_column: str, out_column: typing.Optional[str] = None
     ) -> dict[str, str]:
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
-        self.args.project_uuid = project_uuid
-        sodar_api = SodarApi(self.args, with_dest=True)
-        print_args(self.args)
         isa_dict = sodar_api.get_samplesheet_export()
         assay_file_name = list(isa_dict["assays"].keys())[0]
         assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]
@@ -380,12 +362,12 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 "will ignore parameter 'library_names' = {} in ingest_fastq.build_jobs()",
                 str(library_names),
             )
-
-        lz_uuid, lz_irods_path = self.get_sodar_info()
-        project_uuid = self.get_project_uuid(lz_uuid)
+        sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+        lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        sodar_api.get_landingzone_retrieve(lz_uuid=lz_uuid) #sets project uuid in sodar_api
         if self.args.match_column is not None:
             column_match = self.get_match_to_collection_mapping(
-                project_uuid, self.args.match_column, self.args.collection_column
+                sodar_api, self.args.match_column, self.args.collection_column
             )
         else:
             column_match = None

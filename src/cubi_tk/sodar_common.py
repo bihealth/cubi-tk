@@ -4,8 +4,8 @@ from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
-
 from cubi_tk.sodar_api import SodarApi
+
 
 from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
 
@@ -18,7 +18,6 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         irods_env_path: Path = None,
     ):
         """Constructor.
-
         :param sodar_server_url: SODAR url.
         :type sodar_server_url: str
 
