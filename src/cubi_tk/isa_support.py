@@ -49,44 +49,34 @@ def load_investigation(i_path: typing.Union[str, Path], assay_txt=None, study_tx
             studies[study_txt] = StudyReader.from_stream(
                 study_id=study_txt, input_file=s_file
             ).read()
-            if assay_txt:
-                with (i_path.parent / assay_txt).open() as a_file:
-                        assays[assay_txt] = AssayReader.from_stream(
-                            study_id=studies[study_txt].file.name,
-                            assay_id=assay_txt,
-                            input_file=a_file,
-                        ).read()
-            else:
-                for assay in studies[study_txt].assays:
-                    with (i_path.parent / assay.path).open() as a_file:
-                        assays[assay.path.name] = AssayReader.from_stream(
-                            study_id=studies[study_txt].file.name,
-                            assay_id=assay.path.name,
-                            input_file=a_file,
-                        ).read()
+            read_assay(i_path, assays, studies[study_txt], study_txt, assay_txt)
     else:
         for study in investigation.studies:
             with (i_path.parent / study.info.path).open() as s_file:
                 studies[study.info.path.name] = StudyReader.from_stream(
                     study_id=study.info.path.name, input_file=s_file
                 ).read()
-                if assay_txt:
-                    with (i_path.parent / assay_txt).open() as a_file:
-                            assays[assay_txt] = AssayReader.from_stream(
-                                study_id=studies[study.info.path.name].file.name,
-                                assay_id=assay_txt,
-                                input_file=a_file,
-                            ).read()
-                else:
-                    for assay in study.assays:
-                        with (i_path.parent / assay.path).open() as a_file:
-                            assays[assay.path.name] = AssayReader.from_stream(
-                                study_id=studies[study.info.path.name].file.name,
-                                assay_id=assay.path.name,
-                                input_file=a_file,
-                            ).read()
+                read_assay(i_path, assays, study, study.info.path.name, assay_txt)
 
     return IsaData(investigation, str(i_path), studies, assays)
+
+
+def read_assay(i_path, assays, study, study_path, assay_txt = None):
+    if assay_txt:
+        with (i_path.parent / assay_txt).open() as a_file:
+                assays[assay_txt] = AssayReader.from_stream(
+                    study_id=study_path,
+                    assay_id=assay_txt,
+                    input_file=a_file,
+                ).read()
+    else:
+        for assay in study.assays:
+            with (i_path.parent / assay.path).open() as a_file:
+                assays[assay.path.name] = AssayReader.from_stream(
+                    study_id=study_path,
+                    assay_id=assay.path.name,
+                    input_file=a_file,
+                ).read()
 
 
 def isa_dict_to_isa_data(isa_dict, assay_txt=None, study_txt = None):

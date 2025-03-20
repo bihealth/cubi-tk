@@ -52,7 +52,7 @@ def get_user_input_assay_uuid(assay_uuids, assays):
         assay_num = input("Please enter the index of the Assay (e.g 2):")
         assay_num =int(assay_num)
     assay_uuid = assay_uuids[assay_num-1]
-    logger.info("Chosen Study: {}", assays[assay_uuid].file_name)
+    logger.info("Chosen Assay: {}", assays[assay_uuid].file_name)
     return assay_uuid
 
 
