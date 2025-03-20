@@ -1,6 +1,8 @@
 from argparse import Namespace
 import os
 
+import cattr
+
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -89,36 +91,33 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
         data={"test": "test2"},
     )
 
-@patch("sodar_cli.api.samplesheet.retrieve")
-@patch("cubi_tk.sodar_api.requests.get")
-def test_sodar_api_get_samplesheet_export(mock_api_call, mock_samplesheet_retrieve, sodar_api_instance):
-    mock_api_call.return_value.status_code = 200
-    mock_api_call.return_value.json = MagicMock(return_value=
-        {
+def test_sodar_api_get_samplesheet_export(requests_mock, sodar_api_instance):
+    ret_json = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}},
         "date_modified": "2021-09-01T12:00:00Z",
-        })
+        }
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
     expected = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}},
     }
     assert expected == sodar_api_instance.get_samplesheet_export()
-    mock_api_call.return_value.status_code = 200
-    mock_api_call.return_value.json = MagicMock(return_value=
+    ret_json = MagicMock(return_value=
         {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}, "s_Study_1.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}, "a_name_1": {"tsv": ""}},
         "date_modified": "2021-09-01T12:00:00Z",
         })
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
     expected = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}},
     }
-    mock_samplesheet_retrieve.return_value = InvestigationFactory()
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000", json= cattr.unstructure(InvestigationFactory()), status_code= 200)
     assert expected == sodar_api_instance.get_samplesheet_export()
 

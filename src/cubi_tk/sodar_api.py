@@ -13,7 +13,6 @@ from cubi_tk import api_models
 
 from .exceptions import ParameterException, SodarApiException
 
-from sodar_cli import api
 
 #TODO: add studyname
 def get_user_input_study(study_uuids):
@@ -66,7 +65,6 @@ def multi_assay_study_warning(content, string = "Assays"):
 
 SODAR_API_VERSION=1.0
 
-# TODO: Obtain from somewhere else, e.g. sodar API or sodar-core or …
 LANDING_ZONE_STATES = ["ACTIVE", "FAILED", "VALIDATING"]
 
 class SodarApi:
@@ -114,14 +112,16 @@ class SodarApi:
             url += "?" + urlparse.urlencode(params)
 
         if method == "get":
+            logger.debug(f"HTTP GET request to {url} with headers {self.sodar_headers[api]}")
             response = requests.get(url, headers=self.sodar_headers[api])
         elif method == "post":
+            logger.debug(f"HTTP POST request to {url} with headers {self.sodar_headers[api]}, files {files}, and data {data}")
             response = requests.post(url, headers=self.sodar_headers[api], files=files, data=data)
         else:
             raise ValueError("Unknown HTTP method.")
 
-        if response.status_code != 200:
-            raise SodarApiException(f"API response: {response.text}")
+        if response.status_code != 200 and response.status_code != 201:
+            raise SodarApiException(f"API response: {response.text} and status code: {response.status_code}")
 
         return response.json()
 
@@ -132,10 +132,7 @@ class SodarApi:
         if get_all:
             logger.debug("Returning all samplesheets")
             return samplesheet
-        # Consider: support multi-assay and multi-study projects?
-        # -> would require proper ISA parsing to handle assay<>study relations
-        # if len(samplesheet["studies"]) > 1:
-            #raise NotImplementedError("Only single-study projects are supported.")
+
         study_name = list(samplesheet["studies"].keys())[0]
         assay_name = list(samplesheet["assays"].keys())[0]
         if len(samplesheet["studies"]) > 1 or len(samplesheet["assays"]) > 1:
@@ -152,7 +149,13 @@ class SodarApi:
             "assays": {assay_name : samplesheet["assays"][assay_name]},
         }
 
-    #TODO: samplesheet.retrieve get samplesheets/api/investigation/retrieve
+    def get_samplesheet_retrieve(self) -> api_models.Investigation:
+        logger.debug("Get investigation information.")
+        investigationJson = self._api_call("samplesheets", "investigation/retrieve")
+        investigation = cattr.structure(investigationJson, api_models.Investigation)
+        logger.debug(f"Got investigation: {investigation}")
+        return investigation
+
 
     def post_samplesheet_import(
         self,
@@ -180,7 +183,6 @@ class SodarApi:
             return 1
 
     # landingzone Api calls
-
     def get_landingzone_retrieve(self, lz_uuid: UUID = None) -> api_models.LandingZone | None:
         logger.debug("Retrieving Landing Zone ...")
         try:
@@ -256,11 +258,7 @@ class SodarApi:
 
     # helper functions
     def get_assay_from_uuid(self):
-        investigation = api.samplesheet.retrieve(
-                sodar_url=self.sodar_server_url,
-                sodar_api_token=self.sodar_api_token,
-                project_uuid=self.project_uuid,
-            )
+        investigation = self.get_samplesheet_retrieve()
         studies = investigation.studies.values()
         #if assay_uuid given and multiple studies iterate through all studies and find assay
         #if mulitple staudies and yes, iterate through first study

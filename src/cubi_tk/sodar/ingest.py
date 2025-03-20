@@ -107,7 +107,6 @@ class SodarIngest:
                 logger.error("Failed to retrieve landing zone information.")
                 sys.exit(1)
 
-            # TODO: Replace with status_locked check once implemented in sodar_cli
             if lz_info.status in ["ACTIVE", "FAILED"]:
                 self.lz_irods_path = lz_info.irods_path
                 logger.info(f"Target iRods path: {self.lz_irods_path}")

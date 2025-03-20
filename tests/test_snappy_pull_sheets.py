@@ -5,6 +5,8 @@ import json
 import pathlib
 from unittest.mock import MagicMock, patch
 
+import cattr
+
 
 from cubi_tk.snappy.pull_sheets import build_sheet
 from cubi_tk.sodar_api import SodarApi
@@ -72,9 +74,8 @@ def test_build_sheet_cancer(mocker):
     actual = build_sheet(args=args, project_uuid="", sodar_api=SodarApi(args, set_default=True))
     assert actual == expected
 
-@patch("cubi_tk.sodar_api.requests.get")
-@patch("sodar_cli.api.samplesheet.retrieve")
-def test_build_sheet_cancer_multiassay(mocker, mocker_sodar_api):
+
+def test_build_sheet_cancer_multiassay(requests_mock):
     """Tests ``build_sheet()`` - for cancer ISA tab"""
     args = Namespace( verbose = False,
             config = None,
@@ -88,16 +89,15 @@ def test_build_sheet_cancer_multiassay(mocker, mocker_sodar_api):
             library_types= ("WES", "RNA_seq"),
             first_batch= 0,
             last_batch= None,
-            project_uuid="",
+            project_uuid="1234",
             tsv_shortcut= "cancer",
             assay_uuid= "992dc872-0033-4c3b-817b-74b324327e7d"
     )
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_cancer.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
-    mocker_sodar_api.return_value.status_code = 200
-    mocker_sodar_api.return_value.json = MagicMock(return_value=load_isa_dict("isa_dict_cancer_multiassay.txt"))
-    mocker.return_value=return_api_investigation_mock()
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/1234", json=load_isa_dict("isa_dict_cancer_multiassay.txt"), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/1234", json= cattr.unstructure(return_api_investigation_mock()), status_code= 200)
 
     actual = build_sheet(args=args, project_uuid="", sodar_api=SodarApi(args, set_default=True))
     assert actual == expected
