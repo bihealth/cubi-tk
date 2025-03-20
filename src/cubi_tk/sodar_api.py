@@ -157,8 +157,12 @@ class SodarApi:
 
     def get_samplesheet_retrieve(self) -> api_models.Investigation:
         logger.debug("Get investigation information.")
-        investigationJson = self._api_call("samplesheets", "investigation/retrieve")
-        investigation = cattr.structure(investigationJson, api_models.Investigation)
+        try:
+            investigationJson = self._api_call("samplesheets", "investigation/retrieve")
+            investigation = cattr.structure(investigationJson, api_models.Investigation)
+        except SodarApiException as e:
+            logger.error(f"Failed to retrieve investigation information:\n{e}")
+            return None
         logger.debug(f"Got investigation: {investigation}")
         return investigation
 
@@ -207,14 +211,18 @@ class SodarApi:
             return None
 
     def get_landingzone_list(self, sort_reverse = False, filter_for_state=LANDING_ZONE_STATES) -> List[api_models.LandingZone]:
-        logger.debug("Creating new Landing Zone...")
-        landingzones_json = self._api_call("landingzones", "list")
-        landingzones = cattr.structure(landingzones_json, List[api_models.LandingZone])
+        logger.debug("Get list of Landing Zones...")
+        try:
+            landingzones_json = self._api_call("landingzones", "list")
+            landingzones = cattr.structure(landingzones_json, List[api_models.LandingZone])
+        except SodarApiException as e:
+            logger.error(f"Failed to retrieve Landingzone:\n{e}")
+            return None
         landingzones = sorted(
-            landingzones,
-            key=lambda lz: lz.date_modified,
-            reverse=sort_reverse
-        )
+                landingzones,
+                key=lambda lz: lz.date_modified,
+                reverse=sort_reverse
+            )
         #if assay_uuid filter for assay_uuid
         if self.assay_uuid:
             landingzones = list(filter(lambda lz: lz.assay == self.assay_uuid, landingzones))
@@ -271,6 +279,8 @@ class SodarApi:
     # helper functions
     def get_assay_from_uuid(self):
         investigation = self.get_samplesheet_retrieve()
+        if investigation is None:
+            return None, None
         studies = investigation.studies.values()
         #if assay_uuid given and multiple studies iterate through all studies and find assay
         #if mulitple staudies and yes, iterate through first study
@@ -306,7 +316,7 @@ class SodarApi:
             msg = f"Assay with UUID {self.assay_uuid} not found in investigation."
             logger.error(msg)
             raise ParameterException(msg)
-        return None
+        return None, None
 
     def setup_sodar_params(self, args, set_default = False, with_dest = False, dest_string = "project_uuid"): # noqa: C901
         any_error = False

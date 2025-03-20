@@ -116,10 +116,10 @@ class PullProcessedDataCommand(PullDataCommon):
         sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
         # Filter requested samples or libraries
-        if self.args.selected_samples:
+        if self.args.samples:
             selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
                 sheet=sheet,
-                selected_samples=self.args.selected_samples,
+                selected_samples=self.args.samples,
                 by_sample_id=self.args.sample_id,
             )
         else:

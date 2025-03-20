@@ -19,7 +19,7 @@ class PullAllDataCommand:
 
     def __init__(self, args: argparse.Namespace):
         #: Command line arguments.
-        self.args = args
+        self.args = argparse.Namespace(**args)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -57,6 +57,7 @@ class PullAllDataCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         logger.info("=> will download to {}", self.args.output_directory)
+        self.args.output_dir = self.args.output_directory
         logger.info("Using cubi-tk sodar pull-raw-data to actually download data")
         res = sodar_pull_raw_data.PullRawDataCommand(
             self.args

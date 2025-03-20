@@ -72,6 +72,8 @@ class ListLandingZoneCommand:
         print_args(self.args)
 
         existing_lzs = sodar_api.get_landingzone_list(filter_for_state = self.args.filter_status)
+        if existing_lzs is None:
+            return 1
         for lz in existing_lzs:
             values = cattr.unstructure(lz)
             if self.args.format_string:

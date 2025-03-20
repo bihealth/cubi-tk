@@ -68,7 +68,7 @@ class DownloadSheetCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        return cls(args).execute()
+        return cls(argparse.Namespace(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
 

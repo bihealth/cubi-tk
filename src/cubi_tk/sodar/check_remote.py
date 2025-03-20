@@ -367,10 +367,7 @@ class SodarCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         )
 
         remote_files_dict = irodscollector.perform()

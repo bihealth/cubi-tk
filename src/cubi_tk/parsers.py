@@ -9,7 +9,7 @@ from cubi_tk.common import GLOBAL_CONFIG_PATH
 
 
 def print_args(args: argparse.Namespace):
-    token = args.sodar_api_token
+    token = getattr(args, "sodar_api_token","")
     args.sodar_api_token = "****"
     logger.info("Args: {}", args)
     args.sodar_api_token = token

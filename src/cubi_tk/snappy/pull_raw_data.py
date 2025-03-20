@@ -68,18 +68,18 @@ class PullRawDataCommand(PullDataCommon):
         args.pop("config", None)
         args.pop("cmd", None)
         args.pop("snappy_cmd", None)
-        return cls(args).execute(args)
+        return cls(argparse.Namespace(**args)).execute()
 
-    def execute(self, args) -> typing.Optional[int]:
+    def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         logger.info("Loading configuration file and look for dataset")
 
         # Find download path
-        if(args.output_directory):
-            if not (os.path.exists(args.output_directory) and os.access(args.output_directory, os.W_OK)):
-                logger.error(f"Output directory path either does not exist or it is not writable: {args.base_path}")
+        if(self.args.output_directory):
+            if not (os.path.exists(self.args.output_directory) and os.access(self.args.output_directory, os.W_OK)):
+                logger.error(f"Output directory path either does not exist or it is not writable: {self.args.base_path}")
                 return 1
-            download_path = args.output_directory
+            download_path = self.args.output_directory
         else:
             download_path = self._get_download_path()
         if not download_path:

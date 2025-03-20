@@ -189,6 +189,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
+
                     lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path, sodar_api)
 
         # Check if `in_destination` is a Landing zone path.

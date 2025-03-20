@@ -100,7 +100,7 @@ class IrodsCheckCommand(iRODSRetrieveCollection):
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        return cls(args).execute()
+        return cls(argparse.Namespace(**args)).execute()
 
     def execute(self):
         """Execute checks."""
