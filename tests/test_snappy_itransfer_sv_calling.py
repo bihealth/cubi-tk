@@ -172,6 +172,8 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
         "itransfer-sv-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         # tsv_path,
