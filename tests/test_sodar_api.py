@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 from cubi_tk.sodar_api import SodarApi
 from cubi_tk.common import GLOBAL_CONFIG_PATH
-from cubi_tk.exceptions import ParameterException, SodarApiException
+from cubi_tk.exceptions import SodarApiException
 from tests.factories import InvestigationFactory
 
 
@@ -36,15 +36,15 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
 
     # No toml config available, fail if any value is not given, or malformed
     args["sodar_server_url"] = ""
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(SystemExit):
         SodarApi(Namespace(**args))
     args["sodar_server_url"] = "https://sodar.bihealth.org/"
     args["sodar_api_token"] = ""
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(SystemExit):
         SodarApi(Namespace(**args))
     args["sodar_api_token"] = "token"
     args["project_uuid"] = "not a uuid"
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(SystemExit):
         SodarApi(Namespace(**args), with_dest=True)
 
     # With toml config available, only project_uuid is required

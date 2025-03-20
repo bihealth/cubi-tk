@@ -119,7 +119,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     )
         return lz_uuid, sorted(transfer_jobs, key=lambda x: x.path_local)
 
-    #TODO: logic in sodarApi
     def get_sodar_info(self, sodar_api:SodarApi) -> tuple[str, str]:  #noqa: C901
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
