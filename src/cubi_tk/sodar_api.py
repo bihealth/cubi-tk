@@ -134,7 +134,7 @@ class SodarApi:
         logger.debug("Exporting samplesheet..")
         samplesheet = self._api_call("samplesheets", "export/json")
         if get_all:
-            logger.debug("Returning all samplesheets")
+            logger.debug("Returning all samplesheet infos : {}", samplesheet)
             return samplesheet
 
         study_name = list(samplesheet["studies"].keys())[0]
@@ -144,7 +144,7 @@ class SodarApi:
             assay_name = assay_name.file_name
             study_name= study_name.file_name
 
-        return {
+        small_samplesheet={
             "investigation": {
                 "path": samplesheet["investigation"]["path"],
                 "tsv": samplesheet["investigation"]["tsv"],
@@ -152,6 +152,8 @@ class SodarApi:
             "studies": {study_name : samplesheet["studies"][study_name]},
             "assays": {assay_name : samplesheet["assays"][assay_name]},
         }
+        logger.debug("Returning all samplesheet with single assay and study : {}", small_samplesheet)
+        return small_samplesheet
 
     def get_samplesheet_retrieve(self) -> api_models.Investigation:
         logger.debug("Get investigation information.")
@@ -159,6 +161,12 @@ class SodarApi:
         investigation = cattr.structure(investigationJson, api_models.Investigation)
         logger.debug(f"Got investigation: {investigation}")
         return investigation
+
+    def get_samplesheet_remote(self):
+        logger.debug("Get remote investigation information.")
+        samplesheet = self._api_call("samplesheets", "remote/get", params={"isa" : 1})
+        logger.debug(f"Got samplesheet: {samplesheet}")
+        return samplesheet
 
 
     def post_samplesheet_import(
