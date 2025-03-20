@@ -161,7 +161,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "Folder3": "Sample3-N1-DNA1-WES1",
     }
     args.project_uuid = project_uuid
-    sodar_api = SodarApi(args, with_dest= True)
+    sodar_api = SodarApi(args, set_default=True, with_dest= True)
     assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
     assert expected == ingestfastq.get_match_to_collection_mapping(
         sodar_api, "Folder name", "Library Name"

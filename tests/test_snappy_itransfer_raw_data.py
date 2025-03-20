@@ -58,6 +58,8 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
         "itransfer-raw-data",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         sodar_uuid,

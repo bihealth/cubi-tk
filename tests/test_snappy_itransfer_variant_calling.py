@@ -60,6 +60,8 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
         "itransfer-variant-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         # tsv_path,
