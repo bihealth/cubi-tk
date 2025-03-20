@@ -15,8 +15,7 @@ from cubi_tk import api_models
 from .exceptions import ParameterException, SodarApiException
 
 
-#TODO: add studyname
-def get_user_input_study(study_uuids):
+def get_user_input_study(study_uuids, studies):
     """Display available study UUIDS and let User choose which one to use.
 
     :param assays: Assays UUIDs as found in Studies.
@@ -25,16 +24,18 @@ def get_user_input_study(study_uuids):
     logger.warning("Multiple studies present, which one do you want to choose?")
     i = 0
     while i < len(study_uuids):
-        logger.warning("{}: {}", i+1, study_uuids[i] )
+        study_name = studies[study_uuids[i]].file_name
+        logger.warning("{}: {}", i+1, study_name)
         i+=1
     study_num = 0
     while (study_num<= 0 or study_num> len(study_uuids)):
-        study_num = input("Please enter the index of the Study UUID (e.g 2):")
+        study_num = input("Please enter the index of the Study (e.g 2):")
         study_num =int(study_num)
-    return study_uuids[study_num-1]
+    study_uuid = study_uuids[study_num-1]
+    logger.info("Chosen Study: {}", studies[study_uuid].file_name)
+    return study_uuid
 
-#TODO: add assayname
-def get_user_input_assay_uuid(assay_uuids):
+def get_user_input_assay_uuid(assay_uuids, assays):
     """Display available assay UUIDS and let User choose which one to use.
 
     :param assays: Assays UUIDs as found in Studies.
@@ -43,13 +44,16 @@ def get_user_input_assay_uuid(assay_uuids):
     logger.warning("No --assay-uuid specified but multiple assays present, which assay do you want to choose?")
     i = 0
     while i < len(assay_uuids):
-        logger.warning("{}: {}", i+1, assay_uuids[i] )
+        assay_name = assays[assay_uuids[i]].file_name
+        logger.warning("{}: {}", i+1, assay_name)
         i+=1
     assay_num = 0
     while (assay_num<= 0 or assay_num> len(assay_uuids)):
-        assay_num = input("Please enter the index of the Assay UUID (e.g 2):")
+        assay_num = input("Please enter the index of the Assay (e.g 2):")
         assay_num =int(assay_num)
-    return assay_uuids[assay_num-1]
+    assay_uuid = assay_uuids[assay_num-1]
+    logger.info("Chosen Study: {}", assays[assay_uuid].file_name)
+    return assay_uuid
 
 
 def multi_assay_study_warning(content, string = "Assays"):
@@ -264,10 +268,10 @@ class SodarApi:
         #if mulitple staudies and yes, iterate through first study
         #if multiple studies, no asssay uuid and not yes, let user decide which study to use
         if(len(studies) > 1 and not self.assay_uuid):
-            study_keys =investigation.studies.keys()
+            study_keys =list(investigation.studies.keys())
             if not self.yes:
-                study = get_user_input_study(study_keys)
-                studies = [study]
+                study_uuid = get_user_input_study(study_keys, investigation.studies)
+                studies = [investigation.studies[study_uuid]]
             else:
                 multi_assay_study_warning(study_keys, string="studies")
 
@@ -287,7 +291,7 @@ class SodarApi:
                     multi_assay_study_warning(assays=assays_)
                 return assay, study
             #multiple assays and interactive, print uuids and ask for which
-            self.assay_uuid = get_user_input_assay_uuid(assay_uuids=assays_)
+            self.assay_uuid = get_user_input_assay_uuid(assays_, study.assays)
             assay = study.assays[self.assay_uuid]
             return assay, study
         if self.assay_uuid is not None:

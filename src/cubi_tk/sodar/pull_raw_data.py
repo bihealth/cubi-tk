@@ -196,7 +196,8 @@ class PullRawDataCommand:
 
     def _get_library_to_folder(self, assay, sodar_api):
         isa_dict = sodar_api.get_samplesheet_export()
-        isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay.file_name)
+        study_key = list(isa_dict["studies"].keys())[0]
+        isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay.file_name, study_txt=study_key)
 
         collector = LibraryInfoCollector()
         iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)

@@ -100,8 +100,9 @@ def build_sheet(
 
     # Obtain ISA-tab from SODAR REST API.
     isa_dict = sodar_api.get_samplesheet_export()
+    study_key = list(isa_dict["studies"].keys())[0]
     assay_key = list(isa_dict["assays"].keys())[0]
-    isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay_key)
+    isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay_key, study_txt=study_key)
     if args.tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline()
         builder.set_germline_specific_values(args.library_types, project_uuid, args.first_batch, args.last_batch)
