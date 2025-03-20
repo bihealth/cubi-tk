@@ -7,7 +7,6 @@ import typing
 
 from loguru import logger
 
-from cubi_tk.exceptions import ParameterException
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
@@ -95,10 +94,9 @@ class SodarIngest:
         print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
-            try:
-                sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
-            except ParameterException:
-                sys.exit(1)
+
+            sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+
             lz_info = sodar_api.get_landingzone_retrieve()
             if lz_info is None:  # pragma: no cover
                 logger.error("Failed to retrieve landing zone information.")

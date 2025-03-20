@@ -36,15 +36,15 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
 
     # No toml config available, fail if any value is not given, or malformed
     args["sodar_server_url"] = ""
-    with pytest.raises(ParameterException):
+    with pytest.raises(SystemExit) as e:
         SodarApi(Namespace(**args))
     args["sodar_server_url"] = "https://sodar.bihealth.org/"
     args["sodar_api_token"] = ""
-    with pytest.raises(ParameterException):
+    with pytest.raises(SystemExit) as e:
         SodarApi(Namespace(**args))
     args["sodar_api_token"] = "token"
     args["project_uuid"] = "not a uuid"
-    with pytest.raises(ParameterException):
+    with pytest.raises(SystemExit) as e:
         SodarApi(Namespace(**args), with_dest=True)
 
     # With toml config available, only project_uuid is required

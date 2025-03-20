@@ -1,5 +1,6 @@
 import argparse
 from functools import reduce
+import sys
 from typing import List, Literal
 import urllib.parse as urlparse
 from uuid import UUID
@@ -71,7 +72,7 @@ class SodarApi:
     def __init__(self, args: argparse.Namespace, set_default = False, with_dest = False, dest_string = "project_uuid"):
        any_error, args= self.setup_sodar_params(args, set_default = set_default, with_dest=with_dest, dest_string= dest_string)
        if any_error:
-            raise ParameterException('Sodar args missing')
+            sys.exit(1)
        self.sodar_server_url = args.sodar_server_url
        self.project_uuid = args.project_uuid
        self.assay_uuid = getattr(args, "assay_uuid", None)
