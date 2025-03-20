@@ -73,6 +73,12 @@ SODAR_API_VERSION=1.0
 LANDING_ZONE_STATES = ["ACTIVE", "FAILED", "VALIDATING"]
 
 class SodarApi:
+    """
+    params: 
+    args: parsed input arguments (see parsers.py get_sodar_parser())
+    if set_default is true, default values will be set, otherwise an error will be thrown if required params are missing (serverurl and api token)
+    if with_dest is true the destination will be checked and sodarapi set up accordingly, can be project_uuid, destination (project_uuid, lz_path or lz_uuid) or landing_zone_uuid
+    """
     def __init__(self, args: argparse.Namespace, set_default = False, with_dest = False, dest_string = "project_uuid"):
        any_error, args= self.setup_sodar_params(args, set_default = set_default, with_dest=with_dest, dest_string= dest_string)
        if any_error:
