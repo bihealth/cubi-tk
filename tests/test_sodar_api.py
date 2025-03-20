@@ -105,13 +105,12 @@ def test_sodar_api_get_samplesheet_export(requests_mock, sodar_api_instance):
         "assays": {"a_name_0": {"tsv": ""}},
     }
     assert expected == sodar_api_instance.get_samplesheet_export()
-    ret_json = MagicMock(return_value=
-        {
+    ret_json = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}, "s_Study_1.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}, "a_name_1": {"tsv": ""}},
         "date_modified": "2021-09-01T12:00:00Z",
-        })
+        }
     requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
     expected = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},

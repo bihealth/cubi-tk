@@ -7,8 +7,9 @@ import typing
 
 from loguru import logger
 
+from cubi_tk.exceptions import ParameterException
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
 from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
@@ -28,12 +29,6 @@ class SodarIngest:
         self.irods_env_path = Path(Path.home(), ".irods", "irods_environment.json")
         if not self.irods_env_path.exists():
             logger.error("iRODS environment file is missing.")
-            sys.exit(1)
-
-        # Get SODAR API info
-        _res, args = check_args_global_parser(args, set_default=True)
-        if not self.args.sodar_api_token:
-            logger.error("SODAR API token missing.")
             sys.exit(1)
 
     @classmethod
@@ -100,8 +95,10 @@ class SodarIngest:
         print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
-
-            sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+            try:
+                sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+            except ParameterException:
+                sys.exit(1)
             lz_info = sodar_api.get_landingzone_retrieve()
             if lz_info is None:  # pragma: no cover
                 logger.error("Failed to retrieve landing zone information.")

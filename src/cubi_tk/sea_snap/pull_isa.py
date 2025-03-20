@@ -18,7 +18,7 @@ More Information
 # from loguru import logger
 # import requests
 
-# from cubi_tk.parsers import check_args_global_parser, print_args
+# from cubi_tk.parsers import print_args
 
 
 
@@ -45,7 +45,6 @@ More Information
 
 # def check_args(args) -> int:
 #     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
-#     any_error, args = check_args_global_parser(args)
 
 #     # Check output file presence vs. overwrite allowed.
 #     if hasattr(args.output_folder, "name") and Path(args.output_folder).exists():  # pragma: nocover

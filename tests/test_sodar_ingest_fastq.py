@@ -203,6 +203,8 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "ingest-fastq",
         "--num-parallel-transfers",
         "0",
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -342,6 +344,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "ingest-fastq",
         "--num-parallel-transfers",
         "0",
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -460,7 +464,6 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestfastq = SodarIngestFastq(args)
-    ingestfastq.check_args(args)
     lz, actual = ingestfastq.build_jobs()
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote

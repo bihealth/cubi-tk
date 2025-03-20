@@ -5,7 +5,7 @@ import os
 
 from loguru import logger
 
-from cubi_tk.common import GLOBAL_CONFIG_PATH, is_uuid, load_toml_config
+from cubi_tk.common import GLOBAL_CONFIG_PATH
 
 
 def print_args(args: argparse.Namespace):
@@ -53,49 +53,6 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_
             help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
     return sodar_config_parser
-
-#TODO: possibly rename to setup_sodar_params,
-#TODO: when doing sodar api refactoring, possibly move to sodar api (e.g as init function)
-def check_args_global_parser(args, set_default = False, with_dest = False, dest_string = "project_uuid"): # noqa: C901
-    any_error = False
-
-    # If SODAR info not provided, fetch from user's toml file
-    toml_config = load_toml_config(args.config)
-    if toml_config:
-        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get("sodar_api_token")
-
-    # Check presence of SODAR URL and auth token.
-    if not args.sodar_api_token:  # pragma: nocover
-        logger.error(
-            "SODAR API token not given on command line and not found in toml config files. Please specify using --sodar-api-token or set in config."
-        )
-        args.sodar_api_token="XXXX"
-        if not set_default:
-            any_error = True
-    if not args.sodar_server_url:  # pragma: nocover
-        logger.error("SODAR URL not given on command line and not found in toml config files. Please specify using --sodar-server-url, or set in config.")
-        args.sodar_server_url="https://sodar.bihealth.org/"
-        if not set_default:
-            any_error = True
-    if with_dest:
-        dest = getattr(args, dest_string)
-        is_dest_uuid = is_uuid(dest)
-        if dest_string == "project_uuid" and not is_dest_uuid:
-           logger.error("{} is not a valid UUID.", dest_string)
-           any_error = True
-        elif dest_string == "destination" and not is_dest_uuid:
-            uuids = [p for p in dest.split("/") if is_uuid(p)]
-            args.project_uuid = uuids[0]
-            if len(uuids) != 1 or not dest_string.startswith("/"):
-                logger.error("{} is not a valid UUID or Path.", dest_string)
-                any_error = True
-        #destiantion is UUID
-        else:
-            args.project_uuid = dest
-    elif getattr(args, "project_uuid", None) is None:
-        args.project_uuid = None #init project_uuid to none if not already in args for some snappy commands where project uuid is in config
-    return any_error, args
 
 sodar_specific_parser = argparse.ArgumentParser(description="The specific config parser", add_help=False)
 sodar_group_spec = sodar_specific_parser.add_argument_group("Specific Sodar Configuration")

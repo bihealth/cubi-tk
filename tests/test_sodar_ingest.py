@@ -176,7 +176,6 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         "source",
 
     ]
-
     # to make it sortable
     mockjob.return_value.path_local = 1
 

@@ -10,7 +10,7 @@ import typing
 import attr
 from loguru import logger
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 #TODO: check if InvestigationTraversal is needed and why
 from ..isa_support import (
@@ -122,8 +122,6 @@ class PullRawDataCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
-        _, self.args = check_args_global_parser(self.args, with_dest=True)
-
         logger.info("Starting cubi-tk sodar pull-raw-data")
         sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)

@@ -14,7 +14,7 @@ from uuid import UUID
 
 
 from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
 from loguru import logger
 
@@ -91,14 +91,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="The shortcut TSV schema to use; default: 'germline'.",
     )
 
-
-def check_args(args) -> int:
-    """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
-    any_error = False
-    any_error, args =  check_args_global_parser(args)
-
-    return int(any_error)
-
 def build_sheet(
     args : argparse.Namespace,
     project_uuid: typing.Union[str, UUID],
@@ -127,9 +119,6 @@ def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
     """Run ``cubi-tk snappy pull-sheet``."""
-    res: typing.Optional[int] = check_args(args)
-    if res:  # pragma: nocover
-        return res
 
     logger.info("Starting to pull sheet...")
 

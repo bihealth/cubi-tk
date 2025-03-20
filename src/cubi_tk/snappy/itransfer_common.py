@@ -15,7 +15,7 @@ from loguru import logger
 import requests
 import tqdm
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
 from ..common import check_irods_icommands, is_uuid, sizeof_fmt
@@ -66,8 +66,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
         res = 0
-        res, args = check_args_global_parser(args, set_default=True)
-
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
             res = 1

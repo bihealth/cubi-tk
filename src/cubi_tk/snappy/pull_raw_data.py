@@ -15,7 +15,6 @@ import typing
 from loguru import logger
 import yaml
 
-from cubi_tk.parsers import check_args_global_parser
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
@@ -62,7 +61,6 @@ class PullRawDataCommand(PullDataCommon):
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        res, args = check_args_global_parser(args)
         args = vars(args)
         # Adjust `base_path` to snappy root
         args["base_path"] = find_snappy_root_dir(args["base_path"])

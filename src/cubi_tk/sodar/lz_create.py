@@ -8,7 +8,7 @@ import typing
 import cattr
 from loguru import logger
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
 
@@ -55,19 +55,8 @@ class CreateLandingZoneCommand:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args):
-        """Called for checking arguments, override to change behaviour."""
-        res = 0
-
-        res, args = check_args_global_parser(args, with_dest=True)
-
-        return res
-
     def execute(self) -> typing.Optional[int]:
         """Execute the landing zone creation."""
-        res = self.check_args(self.args)
-        if res:  # pragma: nocover
-            return res
 
         logger.info("Starting cubi-tk sodar landing-zone-create")
         sodar_api = SodarApi(self.args, with_dest=True)

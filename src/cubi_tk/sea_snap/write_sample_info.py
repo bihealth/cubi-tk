@@ -28,7 +28,8 @@ import pandas as pd
 import requests
 import yaml
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 #: The URL template to use.
 from ..common import get_terminal_columns, print_line
@@ -129,8 +130,6 @@ def check_args(args) -> int:
 
     # if set for pulling ISA files
     if args.project_uuid:
-        any_error, args = check_args_global_parser(args, set_default=True)
-
         # Check output file presence vs. overwrite allowed.
         if (
             hasattr(args.output_folder, "name") and Path(args.output_folder).exists()
@@ -577,6 +576,8 @@ def run(
     res: typing.Optional[int] = check_args(args)
     if res:  # pragma: nocover
         return res
+
+    _sodar_api = SodarApi(args, set_default=True)
 
     if args.project_uuid:
         logger.info("Starting to pull ISA files...")
