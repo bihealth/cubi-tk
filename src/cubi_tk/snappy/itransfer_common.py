@@ -12,7 +12,6 @@ import typing
 
 from biomedsheets import shortcuts
 from loguru import logger
-import requests
 import tqdm
 
 from cubi_tk.parsers import print_args
@@ -140,67 +139,57 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             if self.args.yes:
                 # Assume that provided UUID is associated with a Project and user wants a new LZ.
                 # Behavior: search for available LZ; if none,create new LZ.
-                try:
-                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
-                    if not lz_irods_path:
-                        logger.info(
-                            "No active Landing Zone available for project {}, a new one will be created...", lz_uuid
-                        )
-                        lz = sodar_api.post_landingzone_create()
-                        if lz:
-                            lz_uuid = lz.sodar_uuid
-                            lz_irods_path = lz.irods_path
-                except requests.exceptions.HTTPError as e:
-                    exception_str = str(e)
-                    logger.error(
-                        "Unable to create Landing Zone using UUID {}. HTTP error {} ",
-                        self.args.destination, exception_str
+
+                lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
+                if not lz_irods_path:
+                    logger.info(
+                        "No active Landing Zone available for project {}, a new one will be created...", lz_uuid
                     )
-                    raise
+                    lz = sodar_api.post_landingzone_create()
+                    if lz:
+                        lz_uuid = lz.sodar_uuid
+                        lz_irods_path = lz.irods_path
+                    else:
+                        logger.error(
+                        "Unable to create Landing Zone using UUID {}.",
+                        self.args.destination
+                        )
+                        raise
 
             else:
                 # Assume that provided UUID is associated with a Project.
                 # Behaviour: get iRODS path from latest active Landing Zone.
-                try:
-                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
-                except requests.exceptions.HTTPError as e:
+
+                lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
+                if lz_uuid is None or lz_irods_path is None:
                     not_project_uuid = True
-                    exception_str = str(e)
                     logger.debug(
-                        "Provided UUID may not be associated with a Project. HTTP error {}",
-                        exception_str
-                    )
+                        "Provided UUID may not be associated with a Project.")
 
                 # Assume that provided UUID is associated with a LZ
                 # Behaviour: get iRODS path from it.
                 if not_project_uuid:
-                    try:
-                        lz = sodar_api.get_landingzone_retrieve()
+                    lz = sodar_api.get_landingzone_retrieve()
+                    if lz:
                         lz_irods_path = lz.irods_path
-                    except requests.exceptions.HTTPError as e:
-                        exception_str = str(e)
+                    else:
                         logger.debug(
-                            "Provided UUID may not be associated with a Landing Zone. HTTP error {}",
-                            exception_str
-                        )
+                            "Provided UUID may not be associated with a Landing Zone.")
 
                 # Request input from user.
                 # Behaviour: depends on user reply to questions.
                 if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
-
                     lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path, sodar_api)
 
         # Check if `in_destination` is a Landing zone path.
         elif self.args.destination.startswith("/"):
-            try:
-                lz_uuid = self.get_landing_zone_uuid_by_path(lz_irods_path, sodar_api)
-            except requests.exceptions.HTTPError as e:
-                exception_str = str(e)
+            lz_uuid = self.get_landing_zone_uuid_by_path(lz_irods_path, sodar_api)
+            if lz_uuid is None:
                 logger.error(
-                    "Unable to identify UUID of given LZ {}. HTTP error {} ",
-                    self.args.destination, exception_str
+                    "Unable to identify UUID of given LZ {}.",
+                    self.args.destination
                 )
                 raise
 
