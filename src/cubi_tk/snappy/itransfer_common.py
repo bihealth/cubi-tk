@@ -19,7 +19,7 @@ from cubi_tk.sodar_api import SodarApi
 
 from ..common import check_irods_icommands, is_uuid, sizeof_fmt
 from ..irods_common import TransferJob, iRODSTransfer
-from ..exceptions import MissingFileException, ParameterException, UserCanceledException
+from ..exceptions import CubiTkException, MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 
@@ -81,7 +81,11 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """Build file transfer jobs."""
 
         # Get path to iRODS directory
-        lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        try:
+            lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        except CubiTkException as e:
+            logger.error(f"couldn't find LZ UUID and LZ iRods Path: {e}")
+            sys.exit(1)
 
         transfer_jobs = []
         for library_name in library_names:
@@ -150,11 +154,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                         lz_uuid = lz.sodar_uuid
                         lz_irods_path = lz.irods_path
                     else:
-                        logger.error(
-                        "Unable to create Landing Zone using UUID {}.",
-                        self.args.destination
-                        )
-                        raise
+                        msg = "Unable to create Landing Zone using UUID {0}.".format(self.args.destination)
+                        raise ParameterException(msg)
 
             else:
                 # Assume that provided UUID is associated with a Project.
@@ -182,17 +183,18 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
-                    lz_uuid, lz_irods_path = self._get_user_input(lz_irods_path, lz_uuid, sodar_api)
+                    try:
+                        lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path,lz_uuid, sodar_api)
+                    except UserCanceledException as e :
+                        raise e
+
 
         # Check if `in_destination` is a Landing zone path.
         elif self.args.destination.startswith("/"):
             lz_uuid = self.get_landing_zone_uuid_by_path(lz_irods_path, sodar_api)
             if lz_uuid is None:
-                logger.error(
-                    "Unable to identify UUID of given LZ {}.",
-                    self.args.destination
-                )
-                raise
+                msg = "Unable to identify UUID of given LZ {0}.".format(self.args.destination)
+                raise ParameterException(msg)
 
         # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz, or could not extract UUID from LZ path.
