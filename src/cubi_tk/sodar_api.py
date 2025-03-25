@@ -252,12 +252,13 @@ class SodarApi:
 
         return landingzones
 
-    def post_landingzone_create(self)-> api_models.LandingZone | None:
+    def post_landingzone_create(self, create_colls:bool = True, restrict_colls:bool = True)-> api_models.LandingZone | None:
         logger.debug("Creating new Landing Zone...")
         if not self.assay_uuid:
             self.get_assay_from_uuid()
         try:
             ret_val = self._api_call("landingzones", "create", method="post",
+                params={"create_colls" : create_colls, "restrict_colls": restrict_colls},
                 data={"assay": self.assay_uuid},
             )
             if "sodar_warnings" in ret_val:
