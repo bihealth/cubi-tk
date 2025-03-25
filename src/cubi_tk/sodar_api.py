@@ -15,7 +15,7 @@ from cubi_tk import api_models
 from .exceptions import ParameterException, SodarApiException
 
 
-def get_user_input_study(study_uuids, studies):
+def get_user_input_study(study_uuids: list[str], studies:dict[str, api_models.Study]) -> UUID:
     """Display available study UUIDS and let User choose which one to use.
 
     :param assays: Assays UUIDs as found in Studies.
@@ -35,7 +35,7 @@ def get_user_input_study(study_uuids, studies):
     logger.info("Chosen Study: {}", studies[study_uuid].file_name)
     return study_uuid
 
-def get_user_input_assay_uuid(assay_uuids, assays):
+def get_user_input_assay_uuid(assay_uuids:list[str], assays: dict[str, api_models.Assay]) -> UUID:
     """Display available assay UUIDS and let User choose which one to use.
 
     :param assays: Assays UUIDs as found in Studies.
@@ -56,7 +56,7 @@ def get_user_input_assay_uuid(assay_uuids, assays):
     return assay_uuid
 
 
-def multi_assay_study_warning(content, string = "Assays"):
+def multi_assay_study_warning(content:dict, string :str = "Assays") -> None:
     """Display warning for multi-assay study.
 
     :param assays: Assays UUIDs as found in Studies.
@@ -68,7 +68,8 @@ def multi_assay_study_warning(content, string = "Assays"):
         f"All available UUIDs:\n{multi_assay_str}"
     )
 
-SODAR_API_VERSION=1.0
+SODAR_API_VERSION_SAMPLESHEETS=1.0
+SODAR_API_VERSION_LANDINGZONES=1.0
 
 LANDING_ZONE_STATES = ["ACTIVE", "FAILED", "VALIDATING"]
 
@@ -79,7 +80,7 @@ class SodarApi:
     if set_default is true, default values will be set, otherwise an error will be thrown if required params are missing (serverurl and api token)
     if with_dest is true the destination will be checked and sodarapi set up accordingly, can be project_uuid, destination (project_uuid, lz_path or lz_uuid) or landing_zone_uuid
     """
-    def __init__(self, args: argparse.Namespace, set_default = False, with_dest = False, dest_string = "project_uuid"):
+    def __init__(self, args: argparse.Namespace, set_default:bool = False, with_dest:bool = False, dest_string:str = "project_uuid"):
        any_error, args= self.setup_sodar_params(args, set_default = set_default, with_dest=with_dest, dest_string= dest_string)
        if any_error:
             sys.exit(1)
@@ -93,10 +94,10 @@ class SodarApi:
        self.sodar_headers = {
            "samplesheets": {
                "Authorization": "token {}".format(args.sodar_api_token),
-                'Accept': f'application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION}'},
+                'Accept': f'application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION_SAMPLESHEETS}'},
             "landingzones": {
                "Authorization": "token {}".format(args.sodar_api_token),
-                'Accept': f'application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION}'},
+                'Accept': f'application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION_LANDINGZONES}'},
         }
 
     def _api_call(
@@ -136,7 +137,7 @@ class SodarApi:
         return response.json()
 
     # Samplesheet api calls
-    def get_samplesheet_export(self, get_all = False) -> dict[str, dict] | None:
+    def get_samplesheet_export(self, get_all: bool = False) -> dict[str, dict] | None:
         logger.debug("Exporting samplesheet..")
         try:
             samplesheet = self._api_call("samplesheets", "export/json")
@@ -150,9 +151,9 @@ class SodarApi:
         study_name = list(samplesheet["studies"].keys())[0]
         assay_name = list(samplesheet["assays"].keys())[0]
         if len(samplesheet["studies"]) > 1 or len(samplesheet["assays"]) > 1:
-            assay_name, study_name = self.get_assay_from_uuid()
-            assay_name = assay_name.file_name
-            study_name= study_name.file_name
+            assay, study = self.get_assay_from_uuid()
+            assay_name = assay.file_name
+            study_name= study.file_name
 
         small_samplesheet={
             "investigation": {
@@ -176,7 +177,7 @@ class SodarApi:
         logger.debug(f"Got investigation: {investigation}")
         return investigation
 
-    def get_samplesheet_remote(self):
+    def get_samplesheet_remote(self) -> dict | None:
         logger.debug("Get remote samplesheet isa information.")
         #valid Uri?
         try:
@@ -225,7 +226,7 @@ class SodarApi:
             logger.error(f"Failed to retrieve Landingzone:\n{e}")
             return None
 
-    def get_landingzone_list(self, sort_reverse = False, filter_for_state=LANDING_ZONE_STATES) -> List[api_models.LandingZone]:
+    def get_landingzone_list(self, sort_reverse:bool = False, filter_for_state :list[str]=LANDING_ZONE_STATES) -> List[api_models.LandingZone]|None:
         logger.debug("Get list of Landing Zones...")
         try:
             landingzones_json = self._api_call("landingzones", "list")
@@ -269,7 +270,7 @@ class SodarApi:
             return None
 
 
-    def post_landingzone_submit_move(self, lz_uuid)-> UUID | None:
+    def post_landingzone_submit_move(self, lz_uuid : UUID)-> UUID | None:
         logger.debug("Moving landing zone with the given UUID")
         try:
             ret_val = self._api_call("landingzones", "submit/move", method="post", dest_uuid=lz_uuid)
@@ -280,7 +281,7 @@ class SodarApi:
             logger.error(f"Failed to move Landingzone:\n{e}")
             return None
 
-    def post_landingzone_submit_validate(self, lz_uuid)-> UUID | None:
+    def post_landingzone_submit_validate(self, lz_uuid: UUID)-> UUID | None:
         logger.debug("Validating landing zone with the given UUID")
         try:
             ret_val = self._api_call("landingzones", "submit/validate", method="post", dest_uuid=lz_uuid)
@@ -292,14 +293,14 @@ class SodarApi:
             return None
 
     # helper functions
-    def get_assay_from_uuid(self):
+    def get_assay_from_uuid(self)-> (tuple[None, None] | tuple[api_models.Assay, api_models.Study]):
         investigation = self.get_samplesheet_retrieve()
         if investigation is None:
             return None, None
         studies = investigation.studies.values()
-        #if assay_uuid given and multiple studies iterate through all studies and find assay
-        #if mulitple staudies and yes, iterate through first study
-        #if multiple studies, no asssay uuid and not yes, let user decide which study to use
+        # if assay_uuid given and multiple studies iterate through all studies and find assay
+        # if mulitple studies and yes, iterate through first study
+        # if multiple studies, no asssay uuid and not yes, let user decide which study to use
         if(len(studies) > 1 and not self.assay_uuid):
             study_keys =list(investigation.studies.keys())
             if not self.yes:
@@ -310,30 +311,32 @@ class SodarApi:
 
         for study in studies:
             if self.assay_uuid:
-                #bug fix for rare case that multiple studies and multiple assays exist
+                # if assay uuid is in current study return it, else do nothing, search next study
                 if self.assay_uuid in study.assays.keys():
                     logger.info(f"Using provided Assay UUID: {self.assay_uuid}")
                     assay = study.assays[self.assay_uuid]
                     return assay, study
-            assays_ = list(study.assays.keys())
-            #only one assay or not interactive -> take first
-            if len(assays_) == 1 or self.yes:
-                assay = study.assays[assays_[0]]
-                self.assay_uuid = assays_[0]
-                if self.yes and len(assays_) > 1:
-                    multi_assay_study_warning(assays=assays_)
+            else:
+                # no assay specified, return first one or ask user
+                assays_ = list(study.assays.keys())
+                # only one assay or not interactive -> take first
+                if len(assays_) == 1 or self.yes:
+                    assay = study.assays[assays_[0]]
+                    self.assay_uuid = assays_[0]
+                    if self.yes and len(assays_) > 1:
+                        multi_assay_study_warning(assays=assays_)
+                    return assay, study
+                # multiple assays and interactive, print uuids and ask for which
+                self.assay_uuid = get_user_input_assay_uuid(assays_, study.assays)
+                assay = study.assays[self.assay_uuid]
                 return assay, study
-            #multiple assays and interactive, print uuids and ask for which
-            self.assay_uuid = get_user_input_assay_uuid(assays_, study.assays)
-            assay = study.assays[self.assay_uuid]
-            return assay, study
         if self.assay_uuid is not None:
             msg = f"Assay with UUID {self.assay_uuid} not found in investigation."
             logger.error(msg)
             raise ParameterException(msg)
         return None, None
 
-    def setup_sodar_params(self, args, set_default = False, with_dest = False, dest_string = "project_uuid"): # noqa: C901
+    def setup_sodar_params(self, args : argparse.Namespace, set_default : bool = False, with_dest : bool = False, dest_string :str= "project_uuid")->tuple[bool, argparse.Namespace] : # noqa: C901
         any_error = False
 
         # If SODAR info not provided, fetch from user's toml file
@@ -347,14 +350,15 @@ class SodarApi:
             logger.error(
                 "SODAR API token not given on command line and not found in toml config files. Please specify using --sodar-api-token or set in config."
             )
-            args.sodar_api_token="XXXX"
-            if not set_default:
-                any_error = True
+            any_error = True
         if not args.sodar_server_url:  # pragma: nocover
-            logger.error("SODAR URL not given on command line and not found in toml config files. Please specify using --sodar-server-url, or set in config.")
             args.sodar_server_url="https://sodar.bihealth.org/"
+            msg = "SODAR URL not given on command line and not found in toml config files. Please specify using --sodar-server-url, or set in config."
             if not set_default:
+                logger.error(msg)
                 any_error = True
+            else:
+                logger.warning(msg)
         if with_dest:
             dest = getattr(args, dest_string)
             is_dest_uuid = is_uuid(dest)
