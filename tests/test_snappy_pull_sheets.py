@@ -25,7 +25,7 @@ def test_build_sheet_germline(mocker):
     """Tests ``build_sheet()`` - for germline ISA tab"""
     args = Namespace( verbose = False,
             config = None,
-            sodar_api_token= None,
+            sodar_api_token= "****",
             sodar_server_url= None,
             base_path= None,
             yes= False,
@@ -52,7 +52,7 @@ def test_build_sheet_cancer(mocker):
     """Tests ``build_sheet()`` - for cancer ISA tab"""
     args = Namespace( verbose = False,
             config = None,
-            sodar_api_token= None,
+            sodar_api_token= "****",
             sodar_server_url= None,
             base_path= None,
             yes= False,
@@ -79,7 +79,7 @@ def test_build_sheet_cancer_multiassay(requests_mock):
     """Tests ``build_sheet()`` - for cancer ISA tab"""
     args = Namespace( verbose = False,
             config = None,
-            sodar_api_token= None,
+            sodar_api_token= "****",
             sodar_server_url= None,
             base_path= None,
             yes= False,
