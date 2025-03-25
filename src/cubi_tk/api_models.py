@@ -81,7 +81,7 @@ class LandingZone:
     status: str
 
     status_locked:bool
-    
+
     #: UUID of the containing project.
     project: str
 

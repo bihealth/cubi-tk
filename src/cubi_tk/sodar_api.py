@@ -176,7 +176,7 @@ class SodarApi:
             return None
         logger.debug(f"Got investigation: {investigation}")
         return investigation
-    
+
     #Todo: remove/refactor write_sampleinfo sea snap
     def get_samplesheet_remote(self) -> dict | None:
         logger.debug("Get remote samplesheet isa information.")
