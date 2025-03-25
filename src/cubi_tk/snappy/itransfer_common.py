@@ -136,16 +136,19 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # Initialise variables
         lz_irods_path = None
         lz_uuid = None
-        not_project_uuid = False
+        # Check if provided UUID is associated with a Project (we have access to)
+        #FIXME: sodar_api.get_samplesheet_retrieve() should probably not log an error message here
+        dest_is_project_uuid = is_uuid(self.args.destination) and sodar_api.get_samplesheet_retrieve() is not None
 
         # Project UUID provided by user
-        if is_uuid(self.args.destination):
+        if dest_is_project_uuid:
+            # UUID is associated with a Project.
+            # Behaviour: get iRODS path from latest active Landing Zone.
+            lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
+            # No active lz available
             if self.args.yes:
-                # Assume that provided UUID is associated with a Project and user wants a new LZ.
-                # Behavior: search for available LZ; if none,create new LZ.
-
-                lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
-                if not lz_irods_path:
+                # Assume a new LZ should be created if --yes flag is set.
+                if lz_uuid is None or lz_irods_path is None:
                     logger.info(
                         "No active Landing Zone available for project {}, a new one will be created...", lz_uuid
                     )
@@ -156,40 +159,26 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     else:
                         msg = "Unable to create Landing Zone using UUID {0}.".format(self.args.destination)
                         raise ParameterException(msg)
-
             else:
-                # Assume that provided UUID is associated with a Project.
-                # Behaviour: get iRODS path from latest active Landing Zone.
-
-                lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
-                if lz_uuid is None or lz_irods_path is None:
-                    not_project_uuid = True
-                    logger.debug(
-                        "Provided UUID may not be associated with a Project.")
-
-                # Assume that provided UUID is associated with a LZ
-                # Behaviour: get iRODS path from it.
-                if not_project_uuid:
-                    lz = sodar_api.get_landingzone_retrieve()
-                    if lz:
-                        lz_irods_path = lz.irods_path
-                        lz_uuid = lz.sodar_uuid
-                    else:
-                        logger.debug(
-                            "Provided UUID may not be associated with a Landing Zone.")
-
-                # Request input from user.
+                # Request input from user (either confirm usage of found LZ or create a new LZ)
                 # Behaviour: depends on user reply to questions.
-                if not not_project_uuid:
-                    # Active lz available
-                    # Ask user if should use latest available or create new one.
-                    try:
-                        lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path,lz_uuid, sodar_api)
-                    except UserCanceledException as e :
-                        raise e
-
-
-        # Check if `in_destination` is a Landing zone path.
+                try:
+                    lz_uuid, lz_irods_path = self._get_user_input(lz_irods_path, lz_uuid, sodar_api)
+                except UserCanceledException as e:
+                    raise e
+        # Provided UUID is NOT associated with a project, assume it is LZ instead
+        elif is_uuid(self.args.destination):
+            # Behaviour: get iRODS path from it.
+            lz = sodar_api.get_landingzone_retrieve()
+            if lz:
+                lz_irods_path = lz.irods_path
+                lz_uuid = lz.sodar_uuid
+            else:
+                msg = "Provided UUID ({}) could neither be associated with a project nor with a Landing Zone.".format(
+                    self.args.destination
+                )
+                raise ParameterException(msg)
+        # Check if `destination` is a Landing zone (irods) path.
         elif self.args.destination.startswith("/"):
             lz_uuid = self.get_latest_landing_zone_uuid_by_path(lz_irods_path, sodar_api)
             if lz_uuid is None:
