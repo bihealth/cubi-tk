@@ -172,6 +172,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     lz = sodar_api.get_landingzone_retrieve()
                     if lz:
                         lz_irods_path = lz.irods_path
+                        lz_uuid = lz.sodar_uuid
                     else:
                         logger.debug(
                             "Provided UUID may not be associated with a Landing Zone.")
@@ -181,7 +182,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 if not not_project_uuid:
                     # Active lz available
                     # Ask user if should use latest available or create new one.
-                    lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path, sodar_api)
+                    lz_uuid, lz_irods_path = self._get_user_input(lz_irods_path, lz_uuid, sodar_api)
 
         # Check if `in_destination` is a Landing zone path.
         elif self.args.destination.startswith("/"):
@@ -209,9 +210,9 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         return lz_uuid, lz_irods_path
 
     #possibly integrate in Sodar/transfer specific class/function
-    def _get_user_input(self, lz_irods_path, sodar_api):
+    def _get_user_input(self, lz_irods_path, lz_uuid, sodar_api):
         if lz_irods_path:
-            logger.info("Found active Landing Zone: {}", lz_irods_path)
+            logger.info("Found active Landing Zone: {} (uuid: {})", lz_irods_path, lz_uuid)
             if (
                 not input("Can the process use this path? [yN] ")
                 .lower()
