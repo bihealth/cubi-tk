@@ -191,7 +191,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
 
         # Check if `in_destination` is a Landing zone path.
         elif self.args.destination.startswith("/"):
-            lz_uuid = self.get_landing_zone_uuid_by_path(lz_irods_path, sodar_api)
+            lz_uuid = self.get_latest_landing_zone_uuid_by_path(lz_irods_path, sodar_api)
             if lz_uuid is None:
                 msg = "Unable to identify UUID of given LZ {0}.".format(self.args.destination)
                 raise ParameterException(msg)
@@ -257,16 +257,18 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 raise UserCanceledException(msg)
         return lz_uuid, lz_irods_path
 
-    def get_landing_zone_uuid_by_path(self, lz_irods_path, sodar_api, ):
+    def get_latest_landing_zone_uuid_by_path(self, lz_irods_path, sodar_api, ):
         """
         :return: Returns LZ UUID.
         """
 
         # List existing lzs
+        # lzuuid from lz path already in sodar_api.projectUUID, doen't need to be in arguments
         existing_lzs = sodar_api.get_landingzone_list(sort_reverse = True, filter_for_state=["ACTIVE", "FAILED"])
 
         if existing_lzs:
             lz_uuid = existing_lzs[0].sodar_uuid
+            logger.info(f"Latest active landingzone with UUID {lz_uuid} will be used")
         else:
             msg = (
                 "Could not find an active LZ with the given path. Please review input: {0}".format(
@@ -274,7 +276,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 )
             )
             logger.error(msg)
-            raise ParameterException(msg)
+            lz_uuid =  None
 
         return lz_uuid
 
@@ -295,6 +297,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             lz = existing_lzs[-1]
             lz_irods_path = lz.irods_path
             lz_uuid = lz.sodar_uuid
+            logger.info(f"Latest active landingzone with UUID {lz_uuid} will be used")
 
         # Return
         return lz_uuid, lz_irods_path
