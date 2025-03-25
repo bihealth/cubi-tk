@@ -22,6 +22,7 @@ def test_validate(mockapi_post, mockapi_get, caplog):
         "project": "",
         "sodar_uuid": "466ab946-ce6a-4c78-9981-19b79e7bbe86",
         "status": "",
+        "status_locked" : "",
         "status_info": "",
         "title": "",
         "user":  "",

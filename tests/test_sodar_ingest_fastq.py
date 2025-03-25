@@ -290,6 +290,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "sodar_uuid": "",
         "status": "",
         "status_info": "",
+        "status_locked" : "",
         "title": "",
         "user":  "",
     }
@@ -442,6 +443,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "sodar_uuid": "",
         "status": "",
         "status_info": "",
+        "status_locked" : "",
         "title": "",
         "user": "",
     }

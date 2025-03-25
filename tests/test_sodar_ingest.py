@@ -204,6 +204,7 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         "project": "",
         "sodar_uuid": "",
         "status": "DELETED",
+        "status_locked" : "",
         "status_info": "",
         "title": "",
         "user": "",

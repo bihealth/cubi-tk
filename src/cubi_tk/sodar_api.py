@@ -132,7 +132,7 @@ class SodarApi:
             raise ValueError("Unknown HTTP method.")
 
         if response.status_code != 200 and response.status_code != 201:
-            raise SodarApiException(f"API response: {response.text} and status code: {response.status_code}")
+            raise SodarApiException(response.status_code, f"API response: {response.text} and status code: {response.status_code}")
 
         return response.json()
 
@@ -176,7 +176,8 @@ class SodarApi:
             return None
         logger.debug(f"Got investigation: {investigation}")
         return investigation
-
+    
+    #Todo: remove/refactor write_sampleinfo sea snap
     def get_samplesheet_remote(self) -> dict | None:
         logger.debug("Get remote samplesheet isa information.")
         #valid Uri?
@@ -226,6 +227,7 @@ class SodarApi:
             logger.error(f"Failed to retrieve Landingzone:\n{e}")
             return None
 
+    # maybe use status_locked of lz and only retrun not locked if wanted (instead of filter_for_state filter_for_not_locked:bool)
     def get_landingzone_list(self, sort_reverse:bool = False, filter_for_state :list[str]=LANDING_ZONE_STATES) -> List[api_models.LandingZone]|None:
         logger.debug("Get list of Landing Zones...")
         try:
@@ -266,6 +268,8 @@ class SodarApi:
                 logger.info("Landingzone created successfully.")
             return cattr.structure(ret_val, api_models.LandingZone)
         except SodarApiException as e:
+            if e.status_code == 503:
+                logger.error("Investigation for the project is not found or project iRODS collections have not been created")
             logger.error(f"Failed to create Landingzone:\n{e}")
             return None
 
@@ -278,6 +282,8 @@ class SodarApi:
             logger.info("Landingzone with UUID {} moved successfully.", new_uuid)
             return new_uuid
         except SodarApiException as e:
+            if e.status_code == 503:
+                logger.error("Project is currently locked by another operation")
             logger.error(f"Failed to move Landingzone:\n{e}")
             return None
 
@@ -289,6 +295,8 @@ class SodarApi:
             logger.info("Landingzone with UUID {} valiated successfully.", new_uuid)
             return new_uuid
         except SodarApiException as e:
+            if e.status_code == 503:
+                logger.error("Project is currently locked by another operation")
             logger.error(f"Failed to validate Landingzone:\n{e}")
             return None
 

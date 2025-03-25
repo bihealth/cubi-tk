@@ -58,4 +58,7 @@ class FileMd5MismatchException(CubiTkException):
 
 
 class SodarApiException(CubiTkException):
+    def __init__(self, status_code:int, *args):
+        super().__init__(*args)
+        self.status_code = status_code
     """Raised when the SODAR API does not return success."""
