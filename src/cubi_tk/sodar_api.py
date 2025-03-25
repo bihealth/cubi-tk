@@ -136,9 +136,13 @@ class SodarApi:
         return response.json()
 
     # Samplesheet api calls
-    def get_samplesheet_export(self, get_all = False) -> dict[str, dict]:
+    def get_samplesheet_export(self, get_all = False) -> dict[str, dict] | None:
         logger.debug("Exporting samplesheet..")
-        samplesheet = self._api_call("samplesheets", "export/json")
+        try:
+            samplesheet = self._api_call("samplesheets", "export/json")
+        except SodarApiException as e:
+            logger.error(f"Failed to export samplesheet:\n{e}")
+            return None
         if get_all:
             logger.debug("Returning all samplesheet infos : {}", samplesheet)
             return samplesheet
@@ -161,7 +165,7 @@ class SodarApi:
         logger.debug("Returning all samplesheet with single assay and study : {}", small_samplesheet)
         return small_samplesheet
 
-    def get_samplesheet_retrieve(self) -> api_models.Investigation:
+    def get_samplesheet_retrieve(self) -> api_models.Investigation | None:
         logger.debug("Get investigation information.")
         try:
             investigationJson = self._api_call("samplesheets", "investigation/retrieve")
@@ -173,8 +177,13 @@ class SodarApi:
         return investigation
 
     def get_samplesheet_remote(self):
-        logger.debug("Get remote investigation information.")
-        samplesheet = self._api_call("samplesheets", "remote/get", params={"isa" : 1})
+        logger.debug("Get remote samplesheet isa information.")
+        #valid Uri?
+        try:
+            samplesheet = self._api_call("samplesheets", "remote/get", params={"isa" : 1})
+        except SodarApiException as e:
+            logger.error(f"Failed to retrieve samplesheets information:\n{e}")
+            return None
         logger.debug(f"Got samplesheet: {samplesheet}")
         return samplesheet
 
