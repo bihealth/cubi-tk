@@ -377,7 +377,7 @@ class SodarApi:
             elif dest_string == "destination" and not is_dest_uuid:
                 uuids = [p for p in dest.split("/") if is_uuid(p)]
                 args.project_uuid = uuids[0]
-                if len(uuids) != 1 or not dest_string.startswith("/"):
+                if len(uuids) != 1 or not dest.startswith("/"):
                     logger.error("{} is not a valid UUID or Path.", dest_string)
                     any_error = True
             #destiantion is UUID
