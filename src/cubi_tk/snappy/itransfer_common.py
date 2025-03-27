@@ -83,8 +83,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # Get path to iRODS directory
         try:
             lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
-        except CubiTkException as e:
-            logger.error(f"couldn't find LZ UUID and LZ iRods Path: {e}")
+        except ParameterException as e:
+            logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
             sys.exit(1)
 
         transfer_jobs = []
@@ -192,7 +192,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
                 self.args.destination
             )
-            logger.error(msg)
             raise ParameterException(msg)
 
         # Log

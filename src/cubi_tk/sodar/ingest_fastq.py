@@ -357,7 +357,12 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 str(library_names),
             )
         sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
-        lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        try:
+            lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        except ParameterException as e:
+            logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
+            sys.exit(1)
+
         sodar_api.get_landingzone_retrieve(lz_uuid=lz_uuid) #sets project uuid in sodar_api
         if self.args.match_column is not None:
             column_match = self.get_match_to_collection_mapping(
