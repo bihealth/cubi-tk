@@ -19,7 +19,7 @@ from cubi_tk.sodar_api import SodarApi
 
 from ..common import check_irods_icommands, is_uuid, sizeof_fmt
 from ..irods_common import TransferJob, iRODSTransfer
-from ..exceptions import CubiTkException, MissingFileException, ParameterException, UserCanceledException
+from ..exceptions import MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 
