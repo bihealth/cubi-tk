@@ -165,7 +165,8 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 try:
                     lz_uuid, lz_irods_path = self._get_user_input(lz_irods_path, lz_uuid, sodar_api)
                 except UserCanceledException as e:
-                    raise e
+                    logger.info(f"User cancelled: {e}")
+                    sys.exit(1)
         # Provided UUID is NOT associated with a project, assume it is LZ instead
         elif is_uuid(self.args.destination):
             # Behaviour: get iRODS path from it.
@@ -224,7 +225,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                         lz_irods_path = lz.irods_path
                 else:
                     msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                    logger.info(msg)
                     raise UserCanceledException(msg)
 
         # No active lz available
@@ -242,7 +242,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     lz_irods_path = lz.irods_path
             else:
                 msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                logger.info(msg)
                 raise UserCanceledException(msg)
         return lz_uuid, lz_irods_path
 
