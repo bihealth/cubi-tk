@@ -199,12 +199,16 @@ class iRODSTransfer(iRODSCommon):
                 )
                 try:
                     with self.session as session:
+                        kw_options = {}
                         if recursive:
                             self._create_collections(job)
-                        if sync and session.data_objects.exists(job.path_remote):
-                            t.update(job.bytes)
-                            continue
-                        session.data_objects.put(job.path_local, job.path_remote)
+                        if session.data_objects.exists(job.path_remote):
+                            if sync:
+                                t.update(job.bytes)
+                                continue
+                            else:
+                                kw_options = {FORCE_FLAG_KW: None}
+                        session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
