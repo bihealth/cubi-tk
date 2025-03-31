@@ -206,7 +206,7 @@ class iRODSTransfer(iRODSCommon):
                             if sync:
                                 t.update(job.bytes)
                                 continue
-                            else:
+                            else:#TODO: add question if should overwrite if not yes oder force_overwrite flag
                                 kw_options = {FORCE_FLAG_KW: None}
                         session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
