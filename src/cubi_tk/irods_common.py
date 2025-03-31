@@ -209,22 +209,22 @@ class iRODSTransfer(iRODSCommon):
                             if sync:
                                 t.update(job.bytes)
                                 continue
-                            else:
-                                #only show warning/ aks once
-                                if not allow_overwrite:
-                                    #set overwrite options
-                                    allow_overwrite = True
-                                    kw_options = {FORCE_FLAG_KW: None}
-                                    print("\n")
-                                    #show warning
-                                    if yes:
-                                        logger.warning("The file is already present, this and all following present files in irodscollection will get overwritten.")
-                                    #ask user
-                                    else:
-                                        logger.info("The file is already present, this and all following present files in irodscollection will get overwritten.")
-                                        if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-                                            logger.info("Aborting at your request.")
-                                            sys.exit(0)
+                            #only show warning/ ask once
+                            elif not allow_overwrite:
+                                #set overwrite options
+                                allow_overwrite = True
+                                kw_options = {FORCE_FLAG_KW: None}
+                                print("\n")
+                                msg = "The file is already present, this and all following present files in irodscollection will get overwritten."
+                                #show warning
+                                if yes:
+                                    logger.warning(msg)
+                                #ask user
+                                else:
+                                    logger.info(msg)
+                                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                                        logger.info("Aborting at your request.")
+                                        sys.exit(0)
                         session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
