@@ -215,12 +215,13 @@ class iRODSTransfer(iRODSCommon):
                                     #set overwrite options
                                     allow_overwrite = True
                                     kw_options = {FORCE_FLAG_KW: None}
+                                    print("\n")
                                     #show warning
                                     if yes:
-                                        logger.warning("\nThe file is already present, this and all following present files in irodscollection will get overwritten.")
+                                        logger.warning("The file is already present, this and all following present files in irodscollection will get overwritten.")
                                     #ask user
                                     else:
-                                        logger.info("\nThe file is already present, this and all following present files in irodscollection will get overwritten.")
+                                        logger.info("The file is already present, this and all following present files in irodscollection will get overwritten.")
                                         if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
                                             logger.info("Aborting at your request.")
                                             sys.exit(0)
