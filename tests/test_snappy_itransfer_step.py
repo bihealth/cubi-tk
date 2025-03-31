@@ -158,7 +158,7 @@ def test_run_snappy_itransfer_step_smoke_test(
 
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes)
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes = False)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1
