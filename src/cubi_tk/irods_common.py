@@ -3,6 +3,7 @@ import getpass
 import os.path
 from pathlib import Path
 import re
+import sys
 from typing import Iterable, Union
 
 import attrs
@@ -181,7 +182,7 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, sync: bool = False):
+    def put(self, recursive: bool = False, sync: bool = False, ask: bool = False):
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -206,7 +207,14 @@ class iRODSTransfer(iRODSCommon):
                             if sync:
                                 t.update(job.bytes)
                                 continue
-                            else:#TODO: add question if should overwrite if not yes oder force_overwrite flag
+                            else:
+                                if not ask:
+                                    logger.info("The file is already present, files in irodscollection will get overwritten.")
+                                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                                        logger.info("Aborting at your request.")
+                                        sys.exit(0)
+                                    else:
+                                        ask = True
                                 kw_options = {FORCE_FLAG_KW: None}
                         session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
