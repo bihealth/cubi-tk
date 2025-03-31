@@ -194,6 +194,7 @@ class iRODSTransfer(iRODSCommon):
             ) as t,
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
+            allow_overwrite = False
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
@@ -208,13 +209,16 @@ class iRODSTransfer(iRODSCommon):
                                 t.update(job.bytes)
                                 continue
                             else:
-                                if not ask:
-                                    logger.info("The file is already present, files in irodscollection will get overwritten.")
+                                if not ask and not allow_overwrite:
+                                    logger.info("/nThe file is already present, this and all following present files in irodscollection will get overwritten.")
                                     if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
                                         logger.info("Aborting at your request.")
                                         sys.exit(0)
                                     else:
-                                        ask = True
+                                        allow_overwrite = True
+                                elif ask and not allow_overwrite:
+                                    logger.warning("/nThe file is already present, this and all following present files in irodscollection will get overwritten.")
+                                    allow_overwrite = True
                                 kw_options = {FORCE_FLAG_KW: None}
                         session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
