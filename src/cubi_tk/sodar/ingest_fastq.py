@@ -480,7 +480,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put(recursive=True, sync=self.args.sync, ask=self.args.yes)
+        itransfer.put(recursive=True, sync=self.args.sync, yes=self.args.yes)
         logger.info("File transfer complete.")
 
         # Validate and move transferred files

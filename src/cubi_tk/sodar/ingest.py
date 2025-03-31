@@ -137,7 +137,7 @@ class SodarIngest:
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
+        itransfer.put(recursive=self.args.recursive, sync=self.args.sync, yes=self.args.yes)
         logger.info("File transfer complete.")
 
         # Compute server-side checksums

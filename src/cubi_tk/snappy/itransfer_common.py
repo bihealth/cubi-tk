@@ -355,7 +355,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
-        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
+        itransfer.put(recursive=True, sync=self.args.overwrite_remote, yes=self.args.yes)
         logger.info("File transfer complete.")
 
         # Validate and move transferred files
