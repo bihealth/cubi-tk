@@ -222,6 +222,8 @@ class SodarApi:
             landingzone = self._api_call("landingzones", "retrieve", dest_uuid=lz_uuid) #if None: assume projectuuid is lz_uuid
             landingzone = cattr.structure(landingzone, api_models.LandingZone)
             self.project_uuid = landingzone.project
+            if not self.assay_uuid:
+                self.assay_uuid = landingzone.assay
             return landingzone
         except SodarApiException as e:
             logger.error(f"Failed to retrieve Landingzone:\n{e}")
