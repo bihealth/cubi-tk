@@ -265,9 +265,9 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             raise ParameterException
         #assuming that outcolumn is in study
         match_dict = {}
-        for sample_name_out in out_column_dict.keys():
-            if sample_name_out in in_column_dict.keys():
-                match_dict[in_column_dict[sample_name_out]] = out_column_dict[sample_name_out]
+        for sample_name in out_column_dict.keys():
+            if sample_name in in_column_dict.keys():
+                match_dict[in_column_dict[sample_name]] = out_column_dict[sample_name]
         return match_dict
 
     def _get_indices(self,sheet_header, in_column, out_column):
