@@ -149,7 +149,7 @@ def my_sodar_api_export(n_assays=1, offset =0):
 
     isa_dict = {
         "investigation": {"path": "i_Investigation.txt", "tsv": None},
-        "studies": {"s_Study_%d.txt" % offset : {"tsv": None}},
+        "studies": {"s_Study_%d.txt" % offset : {"tsv": ""}},
         "assays": {"a_name_%d" % offset: {"tsv": assay}},
     }
     if n_assays > 1:
