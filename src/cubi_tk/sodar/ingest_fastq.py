@@ -237,6 +237,40 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         isa_dict = sodar_api.get_samplesheet_export()
         in_column_dict = None
         out_column_dict= None
+
+        for sheet_type in ["assays", "studies"]:
+            sheet_file_name = list(isa_dict[sheet_type].keys())[0]
+            sheet_tsv = isa_dict[sheet_type][sheet_file_name]["tsv"]
+            sheet_header, *sheet_lines = sheet_tsv.rstrip("\n").split("\n")
+            sheet_header = sheet_header.split("\t")
+            sheet_lines =  [x.split("\t") for x in sheet_lines]
+
+            sample_name_idx, in_column_index, out_column_index = self._get_indices(sheet_header, in_column, out_column)
+            if in_column_dict is None:
+                in_column_dict = self._check_col_index_and_get_val(in_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
+            if out_column_dict is None:
+                if out_column is None:
+                    #take last extractname without asking user
+                    out_column_index = [max(out_column_index)]
+                out_column_dict = self._check_col_index_and_get_val(out_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
+
+            #dont go into studies
+            if in_column_dict is not None and out_column_dict is not None:
+                continue
+        if in_column_dict is None:
+            msg = "Could not identify any column in the assay or study sheet matching provided data. Please review input: --match-column={}".format(
+                        in_column
+                    )
+            logger.error(msg)
+            raise ParameterException
+        #assuming that outcolumn is in study
+        match_dict = {}
+        for sample_name_out in out_column_dict.keys():
+            if sample_name_out in in_column_dict.keys():
+                match_dict[in_column_dict[sample_name_out]] = out_column_dict[sample_name_out]
+        return match_dict
+
+    def _get_indices(self,sheet_header, in_column, out_column):
         # Never match these (hidden) assay columns
         ignore_cols = (
             "Performer",
@@ -253,58 +287,24 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "Sample Name",
             "Source Name",
         )
+        sample_name_idx = None
+        in_column_index = []
+        out_column_index = []
 
-        for sheet_type in ["assays", "studies"]:
-            sheet_file_name = list(isa_dict[sheet_type].keys())[0]
-            sheet_tsv = isa_dict[sheet_type][sheet_file_name]["tsv"]
-            sheet_header, *sheet_lines = sheet_tsv.rstrip("\n").split("\n")
-            sheet_header = sheet_header.split("\t")
-            sheet_lines =  [x.split("\t") for x in sheet_lines]
-            sample_name_idx = None
-
-            in_column_index = []
-            out_column_index = []
-            for i, head in enumerate(sheet_header):
-                if head not in ignore_cols:
-                    search_vals = re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
-                    if in_column.lower() in search_vals:
-                        in_column_index.append(i)
-                    if out_column is not None and out_column.lower() in search_vals:
-                        out_column_index.append(i)
-                if "Sample Name" in head:
-                    sample_name_idx = i
-                # Get index of last material column that is not 'Raw Data File'
-                if out_column is None and head in materials:
+        for i, head in enumerate(sheet_header):
+            if head not in ignore_cols:
+                search_vals = re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
+                if in_column.lower() in search_vals:
+                    in_column_index.append(i)
+                if out_column is not None and out_column.lower() in search_vals:
                     out_column_index.append(i)
-                
-            logger.info(f"SampleData: {sample_name_idx}")
+            if "Sample Name" in head:
+                sample_name_idx = i
+            # Get index of last material column that is not 'Raw Data File'
+            if out_column is None and head in materials:
+                out_column_index.append(i)
 
-            if in_column_dict is None:
-                in_column_dict = self._check_col_index_and_get_val(in_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
-                logger.info(in_column_dict)
-            if out_column_dict is None:
-                if out_column is None:
-                    #take last extractname without asking user
-                    out_column_index = [max(out_column_index)]
-                out_column_dict = self._check_col_index_and_get_val(out_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
-                logger.info(out_column_dict)
-            
-            #dont go into studies
-            if in_column_dict is not None and out_column_dict is not None:
-                continue
-        if in_column_dict is None:
-            msg = "Could not identify any column in the assay or study sheet matching provided data. Please review input: --match-column={}".format(
-                        in_column
-                    )
-            logger.error(msg)
-            raise ParameterException
-        #assuming that outcolumn is in study
-        match_dict = {}
-        for sample_name_out in out_column_dict.keys():
-            if sample_name_out in in_column_dict.keys():
-                match_dict[in_column_dict[sample_name_out]] = out_column_dict[sample_name_out]
-        logger.info(match_dict)
-        return match_dict
+        return sample_name_idx, in_column_index, out_column_index
 
     def _check_col_index_and_get_val(self, column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx):
         if not column_index:
