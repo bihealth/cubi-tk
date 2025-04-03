@@ -351,7 +351,6 @@ dependencies = [
     { name = "requests" },
     { name = "retrying" },
     { name = "simplejson" },
-    { name = "sodar-cli" },
     { name = "termcolor" },
     { name = "toml" },
     { name = "toolz" },
@@ -410,7 +409,6 @@ requires-dist = [
     { name = "retrying", specifier = ">=1.3.4" },
     { name = "simplejson", specifier = ">=3.19.3" },
     { name = "snappy-pipeline", marker = "extra == 'snappy'", git = "https://github.com/bihealth/snappy-pipeline?rev=5d11f311357e75516ba2d7045cc0c1bd61201e14" },
-    { name = "sodar-cli", git = "https://github.com/bihealth/sodar-cli?rev=b2c599fe99160eba25ee82d18b8a3ef744e1116a" },
     { name = "termcolor", specifier = ">=2.5.0" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "toolz", specifier = ">=1.0.0" },
@@ -1783,23 +1781,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/44/7b/af302bebf22c749c56c9c3e8ae13190b5b5db37a33d9068652e8f73b7089/snowballstemmer-2.2.0.tar.gz", hash = "sha256:09b16deb8547d3412ad7b590689584cd0fe25ec8db3be37788be3810cbf19cb1", size = 86699 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/dc/c02e01294f7265e63a7315fe086dd1df7dacb9f840a804da846b96d01b96/snowballstemmer-2.2.0-py2.py3-none-any.whl", hash = "sha256:c8e1716e83cc398ae16824e5572ae04e0d9fc2c6b985fb0f900f5f0c96ecba1a", size = 93002 },
-]
-
-[[package]]
-name = "sodar-cli"
-version = "0.2.0"
-source = { git = "https://github.com/bihealth/sodar-cli?rev=b2c599fe99160eba25ee82d18b8a3ef744e1116a#b2c599fe99160eba25ee82d18b8a3ef744e1116a" }
-dependencies = [
-    { name = "attrs" },
-    { name = "cattrs" },
-    { name = "logzero" },
-    { name = "python-dateutil" },
-    { name = "python-levenshtein" },
-    { name = "requests" },
-    { name = "simplejson" },
-    { name = "tabulate" },
-    { name = "toml" },
-    { name = "tqdm" },
 ]
 
 [[package]]

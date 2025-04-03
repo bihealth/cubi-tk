@@ -10,9 +10,11 @@ from loguru import logger
 import pandas as pd
 from ruamel.yaml import YAML
 
+from cubi_tk.parsers import print_args
+
 from ..exceptions import ParameterException
 from ..parse_ped import parse_ped
-from ..sodar_api import SodarAPI
+from ..sodar_api import SodarApi
 
 REQUIRED_COLUMNS = ["Source Name", "Sample Name", "Extract Name"]
 REQUIRED_IF_EXISTING_COLUMNS = ["Library Name"]
@@ -251,11 +253,14 @@ class UpdateSamplesheetCommand:
             )
 
         # Get samplehseet from SODAR API
-        sodar_api = SodarAPI(self.args)
-        isa_data = sodar_api.get_ISA_samplesheet()
-        investigation = isa_data["investigation"]["content"]
-        study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t", dtype=str)
-        assay = pd.read_csv(StringIO(isa_data["assay"]["content"]), sep="\t", dtype=str)
+        sodar_api = SodarApi(self.args, with_dest=True)
+        print_args(self.args)
+        isa_data = sodar_api.get_samplesheet_export()
+        investigation = isa_data["investigation"]["tsv"]
+        study_key = list(isa_data["studies"].keys())[0]
+        study = pd.read_csv(StringIO(isa_data["studies"][study_key]["tsv"]), sep="\t", dtype=str)
+        assay_key = list(isa_data["assays"].keys())[0]
+        assay = pd.read_csv(StringIO(isa_data["assays"][assay_key]["tsv"]), sep="\t", dtype=str)
         isa_names = self.gather_ISA_column_names(study, assay)
 
         # Check that given sample-data field names can be used
@@ -295,10 +300,14 @@ class UpdateSamplesheetCommand:
         assay_tsv = assay_final.to_csv(
             sep="\t", index=False, header=list(map(orig_col_name, assay_final.columns))
         )
-        ret = sodar_api.upload_ISA_samplesheet(
-            (isa_data["investigation"]["filename"], investigation),
-            (isa_data["study"]["filename"], study_tsv),
-            (isa_data["assay"]["filename"], assay_tsv),
+
+        files_dict = {
+            "file_investigation": (isa_data["investigation"]["path"], investigation),
+            "file_study": (study_key, study_tsv),
+            "file_assay": (assay_key, assay_tsv),
+        }
+        ret = sodar_api.post_samplesheet_import(
+            files_dict
         )
         return ret
 

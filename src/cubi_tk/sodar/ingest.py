@@ -6,10 +6,10 @@ import sys
 import typing
 
 from loguru import logger
-from sodar_cli import api
 
 from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 
@@ -28,12 +28,6 @@ class SodarIngest:
         self.irods_env_path = Path(Path.home(), ".irods", "irods_environment.json")
         if not self.irods_env_path.exists():
             logger.error("iRODS environment file is missing.")
-            sys.exit(1)
-
-        # Get SODAR API info
-        _res, args = check_args_global_parser(args, set_default=True)
-        if not self.args.sodar_api_token:
-            logger.error("SODAR API token missing.")
             sys.exit(1)
 
     @classmethod
@@ -100,18 +94,14 @@ class SodarIngest:
         print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
-            try:
-                lz_info = api.landingzone.retrieve(
-                    sodar_url=self.args.sodar_server_url,
-                    sodar_api_token=self.args.sodar_api_token,
-                    landingzone_uuid=self.args.destination,
-                )
-            except Exception as e:  # pragma: no cover
+
+            sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+
+            lz_info = sodar_api.get_landingzone_retrieve()
+            if lz_info is None:  # pragma: no cover
                 logger.error("Failed to retrieve landing zone information.")
-                logger.exception(e)
                 sys.exit(1)
 
-            # TODO: Replace with status_locked check once implemented in sodar_cli
             if lz_info.status in ["ACTIVE", "FAILED"]:
                 self.lz_irods_path = lz_info.irods_path
                 logger.info(f"Target iRods path: {self.lz_irods_path}")
@@ -147,7 +137,7 @@ class SodarIngest:
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
+        itransfer.put(recursive=self.args.recursive, sync=self.args.sync, yes=self.args.yes)
         logger.info("File transfer complete.")
 
         # Compute server-side checksums

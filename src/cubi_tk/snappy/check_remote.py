@@ -13,7 +13,7 @@ import typing
 from biomedsheets import shortcuts
 from loguru import logger
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -623,9 +623,6 @@ class SnappyCheckRemoteCommand:
     def check_args(args):
         """Called for checking arguments."""
         res = 0
-
-        res, args = check_args_global_parser(args, with_dest=True)
-
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
@@ -652,10 +649,7 @@ class SnappyCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         library_remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         ).perform()
 
         # Find all local files (canonical paths)

@@ -3,6 +3,7 @@ import getpass
 import os.path
 from pathlib import Path
 import re
+import sys
 from typing import Iterable, Union
 
 import attrs
@@ -181,7 +182,7 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, sync: bool = False):
+    def put(self, recursive: bool = False, sync: bool = False, yes: bool = False):
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -193,18 +194,38 @@ class iRODSTransfer(iRODSCommon):
             ) as t,
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
+            allow_overwrite = False
+            kw_options = {}
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
                     with self.session as session:
+
                         if recursive:
                             self._create_collections(job)
-                        if sync and session.data_objects.exists(job.path_remote):
-                            t.update(job.bytes)
-                            continue
-                        session.data_objects.put(job.path_local, job.path_remote)
+                        if session.data_objects.exists(job.path_remote):
+                            if sync:
+                                t.update(job.bytes)
+                                continue
+                            #only show warning/ ask once
+                            elif not allow_overwrite:
+                                #set overwrite options
+                                allow_overwrite = True
+                                kw_options = {FORCE_FLAG_KW: None}
+                                print("\n")
+                                msg = "The file is already present, this and all following present files in irodscollection will get overwritten."
+                                #show warning
+                                if yes:
+                                    logger.warning(msg)
+                                #ask user
+                                else:
+                                    logger.info(msg)
+                                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                                        logger.info("Aborting at your request.")
+                                        sys.exit(0)
+                        session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")

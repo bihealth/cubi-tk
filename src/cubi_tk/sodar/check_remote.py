@@ -19,7 +19,7 @@ import typing
 import attr
 from loguru import logger
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 
 from ..common import compute_md5_checksum
 from ..exceptions import FileMd5MismatchException
@@ -349,9 +349,6 @@ class SodarCheckRemoteCommand:
         """Called for checking arguments."""
         res = 0
 
-        # If SODAR info not provided, fetch from user's toml file
-        res, args = check_args_global_parser(args, with_dest=True)
-
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
@@ -370,10 +367,7 @@ class SodarCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         )
 
         remote_files_dict = irodscollector.perform()

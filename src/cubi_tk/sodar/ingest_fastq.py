@@ -14,11 +14,10 @@ import sys
 import typing
 
 from loguru import logger
-from sodar_cli import api
 import tqdm
 
-from cubi_tk.parsers import check_args_global_parser, print_args
-from cubi_tk.sodar_api import get_assay_from_uuid
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
@@ -213,13 +212,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
-        # DEPRECATING
-        # # Check presence of icommands when not testing.
-        # if "pytest" not in sys.modules:  # pragma: nocover
-        #     check_irods_icommands(warn_only=False)
         res = 0
-
-        res, args = check_args_global_parser(args, set_default=True)
 
         if args.src_regex and args.remote_dir_pattern and args.preset != "default":
             logger.error(
@@ -230,21 +223,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
         return res
 
-    def get_project_uuid(self, lz_uuid: str) -> str:
-        """Get project UUID from landing zone UUID.
-        :param lz_uuid: Landing zone UUID.
-        :type lz_uuid: str
-
-        :return: Returns SODAR UUID of corresponding project.
-        """
-        from sodar_cli.api import landingzone
-
-        lz = landingzone.retrieve(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            landingzone_uuid=lz_uuid,
-        )
-        return lz.project
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         raise NotImplementedError(
@@ -252,64 +230,47 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
 
     def get_match_to_collection_mapping(
-        self, project_uuid: str, in_column: str, out_column: typing.Optional[str] = None
+        self, sodar_api: SodarApi, in_column: str, out_column: typing.Optional[str] = None
     ) -> dict[str, str]:
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
+        isa_dict = sodar_api.get_samplesheet_export()
+        in_column_dict = None
+        out_column_dict= None
 
-        isa_dict = api.samplesheet.export(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=project_uuid,
-        )
-        assay_file_name = list(isa_dict["assays"].keys())[0]
-        if len(isa_dict["assays"]) > 1:
-            assay, _study = get_assay_from_uuid(
-                self.args.sodar_server_url,
-                self.args.sodar_api_token,
-                project_uuid,
-                self.args.assay_uuid,
-                self.args.yes,
-                )
-            assay_file_name = assay.file_name
-        assay_tsv = isa_dict["assays"][assay_file_name]["tsv"]
-        assay_header, *assay_lines = assay_tsv.rstrip("\n").split("\n")
-        assay_header = assay_header.split("\t")
-        assay_lines =  [x.split("\t") for x in assay_lines]
+        for sheet_type in ["assays", "studies"]:
+            sheet_file_name = list(isa_dict[sheet_type].keys())[0]
+            sheet_tsv = isa_dict[sheet_type][sheet_file_name]["tsv"]
+            sheet_header, *sheet_lines = sheet_tsv.rstrip("\n").split("\n")
+            sheet_header = sheet_header.split("\t")
+            sheet_lines =  [x.split("\t") for x in sheet_lines]
 
-        def check_col_index(column_index):
-            if not column_index:
-                msg = "Could not identify any column in the assay sheet matching provided data. Please review input: --match-column={0}".format(
-                    in_column
-                )
-                logger.error(msg)
-                raise ParameterException(msg)
-            elif len(column_index) > 1:
-                column_index = max(column_index)
-                if self.args.yes:
-                    logger.info(
-                        "Multiple columns in the assay sheet match the provided column name ({}), using the last one.".format(
-                            assay_header[column_index]
-                        )
+            sample_name_idx, in_column_index, out_column_index = self._get_indices(sheet_header, in_column, out_column)
+            if in_column_dict is None:
+                in_column_dict = self._check_col_index_and_get_val(in_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
+            if out_column_dict is None:
+                if out_column is None:
+                    #take last extractname without asking user
+                    out_column_index = [max(out_column_index)]
+                out_column_dict = self._check_col_index_and_get_val(out_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
+
+            #dont go into studies
+            if in_column_dict is not None and out_column_dict is not None:
+                continue
+        if in_column_dict is None:
+            msg = "Could not identify any column in the assay or study sheet matching provided data. Please review input: --match-column={}".format(
+                        in_column
                     )
-                elif (
-                    input(
-                        "Multiple columns in the assay sheet match the provided column name ({}), use the last one? [yN] ".format(
-                            assay_header[column_index]
-                        )
-                    )
-                    .lower()
-                    .startswith("y")
-                ):
-                    pass
-                else:
-                    msg = "Not possible to continue the process without a defined match-column. Breaking..."
-                    logger.info(msg)
-                    raise UserCanceledException(msg)
-            else:
-                column_index = column_index[0]
-            return column_index
+            logger.error(msg)
+            raise ParameterException
+        #assuming that outcolumn is in study
+        match_dict = {}
+        for sample_name in out_column_dict.keys():
+            if sample_name in in_column_dict.keys():
+                match_dict[in_column_dict[sample_name]] = out_column_dict[sample_name]
+        return match_dict
 
+    def _get_indices(self,sheet_header, in_column, out_column):
         # Never match these (hidden) assay columns
         ignore_cols = (
             "Performer",
@@ -319,37 +280,67 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "Term Source REF",
             "Term Accession Number",
         )
+        materials = (
+            "Extract Name",
+            "Labeled Extract Name",
+            "Library Name",
+            "Sample Name",
+            "Source Name",
+        )
+        sample_name_idx = None
+        in_column_index = []
+        out_column_index = []
 
-        in_column_index = [
-            i
-            for i, head in enumerate(assay_header)
-            if head not in ignore_cols
-            and in_column.lower()
-            in re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
-        ]
-        in_column_index = check_col_index(in_column_index)
-
-        if out_column is None:
+        for i, head in enumerate(sheet_header):
+            if head not in ignore_cols:
+                search_vals = re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
+                if in_column.lower() in search_vals:
+                    in_column_index.append(i)
+                if out_column is not None and out_column.lower() in search_vals:
+                    out_column_index.append(i)
+            if "Sample Name" in head:
+                sample_name_idx = i
             # Get index of last material column that is not 'Raw Data File'
-            materials = (
-                "Extract Name",
-                "Labeled Extract Name",
-                "Library Name",
-                "Sample Name",
-                "Source Name",
-            )
-            out_column_index = max([i for i, head in enumerate(assay_header) if head in materials])
-        else:
-            out_column_index = [
-                i
-                for i, head in enumerate(assay_header)
-                if head not in ignore_cols
-                and out_column.lower()
-                in re.sub("(Parameter Value|Comment|Characteristics)", "", head).lower()
-            ]
-            out_column_index = check_col_index(out_column_index)
+            if out_column is None and head in materials:
+                out_column_index.append(i)
 
-        return {line[in_column_index]: line[out_column_index] for line in assay_lines}
+        return sample_name_idx, in_column_index, out_column_index
+
+    def _check_col_index_and_get_val(self, column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx):
+        if not column_index:
+            msg = "Could not identify any column in the {} sheet matching provided data.".format(
+                sheet_type[:-1]
+            )
+            logger.info(msg)
+            return None
+        elif len(column_index) > 1:
+            column_index = max(column_index)
+            if self.args.yes:
+                logger.info(
+                    "Multiple columns in the {} sheet match the provided column name ({}), using the last one.".format(
+                        sheet_type[:-1], sheet_header[column_index]
+                    )
+                )
+            elif (
+                input(
+                    "Multiple columns in the {} sheet match the provided column name ({}), use the last one? [yN] ".format(
+                        sheet_type[:-1], sheet_header[column_index]
+                    )
+                )
+                .lower()
+                .startswith("y")
+            ):
+                pass
+            else:
+                msg = "Not possible to continue the process without a defined match-column. Breaking..."
+                logger.info(msg)
+                raise UserCanceledException(msg)
+        else:
+            column_index = column_index[0]
+        column_dict: dict[str,str] = {}
+        for line in sheet_lines:
+            column_dict[line[sample_name_idx]] = line[column_index]
+        return column_dict
 
     def download_webdav(self, sources):
         download_jobs = []
@@ -392,12 +383,17 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 "will ignore parameter 'library_names' = {} in ingest_fastq.build_jobs()",
                 str(library_names),
             )
+        sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
+        try:
+            lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        except ParameterException as e:
+            logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
+            sys.exit(1)
 
-        lz_uuid, lz_irods_path = self.get_sodar_info()
-        project_uuid = self.get_project_uuid(lz_uuid)
+        sodar_api.get_landingzone_retrieve(lz_uuid=lz_uuid) #sets project uuid in sodar_api
         if self.args.match_column is not None:
             column_match = self.get_match_to_collection_mapping(
-                project_uuid, self.args.match_column, self.args.collection_column
+                sodar_api, self.args.match_column, self.args.collection_column
             )
         else:
             column_match = None
@@ -511,7 +507,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put(recursive=True, sync=self.args.sync)
+        itransfer.put(recursive=True, sync=self.args.sync, yes=self.args.yes)
         logger.info("File transfer complete.")
 
         # Validate and move transferred files

@@ -60,6 +60,8 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
         "itransfer-variant-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         # tsv_path,
@@ -144,7 +146,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     res = main(argv)
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes)
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1

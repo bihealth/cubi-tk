@@ -9,8 +9,10 @@ import os
 import re
 import unittest
 from unittest import mock
-from unittest.mock import patch
 
+import cattr
+
+from cubi_tk.sodar_api import SodarApi
 from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
@@ -127,11 +129,9 @@ def test_run_sodar_ingest_fastq_ont_preset_regex():
             assert groups["subfolder"] is None
 
 
-@patch("cubi_tk.sodar.ingest_fastq.api.samplesheet.retrieve")
-@patch("cubi_tk.sodar.ingest_fastq.api.samplesheet.export")
-def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export, mock_api_retrieve):
+def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
     # Patched sodar API call
-    mock_api_export.return_value = my_sodar_api_export()
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
 
     # Instantiate SodarIngestFastq (seems to require args?)
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -160,10 +160,11 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
         "Folder2": "Sample2-N1-DNA1-WES1",
         "Folder3": "Sample3-N1-DNA1-WES1",
     }
-
-    assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")
+    args.project_uuid = project_uuid
+    sodar_api = SodarApi(args, set_default=True, with_dest= True)
+    assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
     assert expected == ingestfastq.get_match_to_collection_mapping(
-        project_uuid, "Folder name", "Library Name"
+        sodar_api, "Folder name", "Library Name"
     )
 
     # Test for alternative collection column
@@ -173,21 +174,22 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(mock_api_export,
         "Folder3": "Sample3-N1-DNA1",
     }
     assert expected2 == ingestfastq.get_match_to_collection_mapping(
-        project_uuid, "Folder name", "Extract Name"
+        sodar_api, "Folder name", "Extract Name"
     )
 
     # Test for missing column
     with unittest.TestCase.assertRaises(unittest.TestCase, ParameterException):
-        ingestfastq.get_match_to_collection_mapping(project_uuid, "Typo-Column")
+        ingestfastq.get_match_to_collection_mapping(sodar_api, "Typo-Column")
 
     # Test with additional assay
-    mock_api_export.return_value = my_sodar_api_export(2)
-    mock_api_retrieve.return_value = InvestigationFactory() # if run as singluar test will need to adjust to "s_Study_0.txt "
-    print(mock_api_retrieve.return_value)
-    assay_uuid = list(mock_api_retrieve.return_value.studies["s_Study_1.txt"].assays.keys())[0] # if run as singluar test will need to adjust to "s_Study_0.txt "
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
+    retval = InvestigationFactory()
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86", json= cattr.unstructure(retval), status_code= 200)
+    study_key = list(retval.studies.keys())[0]
+    assay_uuid = list(retval.studies[study_key].assays.keys())[0]
     ingestfastq.args.assay_uuid = assay_uuid
 
-    assert expected == ingestfastq.get_match_to_collection_mapping(project_uuid, "Folder name")
+    assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
 
 
 def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
@@ -201,6 +203,8 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "ingest-fastq",
         "--num-parallel-transfers",
         "0",
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -286,8 +290,9 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "sodar_uuid": "",
         "status": "",
         "status_info": "",
+        "status_locked" : "",
         "title": "",
-        "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
+        "user":  "",
     }
 
     url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
@@ -340,6 +345,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "ingest-fastq",
         "--num-parallel-transfers",
         "0",
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -436,8 +443,9 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "sodar_uuid": "",
         "status": "",
         "status_info": "",
+        "status_locked" : "",
         "title": "",
-        "user": {"sodar_uuid": "", "username": "", "name": "", "email": ""},
+        "user": "",
     }
     url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
@@ -458,7 +466,6 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestfastq = SodarIngestFastq(args)
-    ingestfastq.check_args(args)
     lz, actual = ingestfastq.build_jobs()
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote

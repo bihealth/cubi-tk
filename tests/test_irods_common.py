@@ -106,12 +106,12 @@ def test_irods_transfer_put(mockrecursive, mocksession, jobs):
     itransfer = iRODSTransfer(jobs)
 
     # put
-    itransfer.put()
-    calls = [call(j.path_local, j.path_remote) for j in jobs]
+    itransfer.put(yes=True)
+    calls = [call(j.path_local, j.path_remote, forceFlag=None) for j in jobs]
     mockput.assert_has_calls(calls)
 
     # recursive
-    itransfer.put(recursive=True)
+    itransfer.put(recursive=True, yes=True)
     calls = [call(j) for j in jobs]
     mockrecursive.assert_has_calls(calls)
 

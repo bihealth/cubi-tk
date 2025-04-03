@@ -25,17 +25,13 @@ from altamisa.isatab import AssayReader
 import icdiff
 from loguru import logger
 import pandas as pd
-import requests
 import yaml
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 #: The URL template to use.
 from ..common import get_terminal_columns, print_line
-
-
-#TODO: remove and use sodar api
-URL_TPL = "%(sodar_server_url)ssamplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
 
 
 def strip(x):
@@ -129,8 +125,6 @@ def check_args(args) -> int:
 
     # if set for pulling ISA files
     if args.project_uuid:
-        any_error, args = check_args_global_parser(args, set_default=True)
-
         # Check output file presence vs. overwrite allowed.
         if (
             hasattr(args.output_folder, "name") and Path(args.output_folder).exists()
@@ -447,20 +441,9 @@ class SampleInfoTool:
                 )
 
 
-def pull_isa(args) -> typing.Optional[int]:
+def pull_isa(args, sodar_api) -> typing.Optional[int]:
     """Pull ISA files"""
-
-    # Query investigation JSON from API.
-    url = URL_TPL % {
-        "sodar_server_url": args.sodar_server_url,
-        "project_uuid": args.project_uuid,
-        "api_key": args.sodar_api_token,
-    }
-    logger.info("Fetching {}", url)
-    r = requests.get(url)
-    r.raise_for_status()
-    all_data = r.json()
-    logger.info("all_data {}", all_data)
+    all_data = sodar_api.get_samplesheet_remote()
     isa_dir = Path(args.output_folder)
 
     path = isa_dir / all_data["investigation"]["path"]
@@ -578,11 +561,13 @@ def run(
     if res:  # pragma: nocover
         return res
 
+    sodar_api = SodarApi(args, set_default=True)
+
     if args.project_uuid:
         logger.info("Starting to pull ISA files...")
         print_args(args)
 
-        pull_isa(args)
+        pull_isa(args, sodar_api)
 
     logger.info("Starting to write sample info...")
     print_args(args)

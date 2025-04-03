@@ -12,14 +12,14 @@ import typing
 
 from biomedsheets import shortcuts
 from loguru import logger
-import requests
 import tqdm
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import check_irods_icommands, is_uuid, sizeof_fmt
 from ..irods_common import TransferJob, iRODSTransfer
-from ..exceptions import MissingFileException, ParameterException, UserCanceledException
+from ..exceptions import CubiTkException, MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 
@@ -65,8 +65,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
         res = 0
-        res, args = check_args_global_parser(args, set_default=True)
-
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
             res = 1
@@ -79,11 +77,15 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names) -> tuple[str, list[TransferJob, ...]]:
+    def build_jobs(self, library_names, sodar_api) -> tuple[str, list[TransferJob, ...]]:
         """Build file transfer jobs."""
 
         # Get path to iRODS directory
-        lz_uuid, lz_irods_path = self.get_sodar_info()
+        try:
+            lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+        except ParameterException as e:
+            logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
+            sys.exit(1)
 
         transfer_jobs = []
         for library_name in library_names:
@@ -120,7 +122,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                     )
         return lz_uuid, sorted(transfer_jobs, key=lambda x: x.path_local)
 
-    def get_sodar_info(self) -> tuple[str, str]:  #noqa: C901
+    def get_sodar_info(self, sodar_api:SodarApi) -> tuple[str, str]:  #noqa: C901
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
         1. User provides Landing Zone UUID: fetch path and use it.
@@ -134,99 +136,65 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # Initialise variables
         lz_irods_path = None
         lz_uuid = None
-        not_project_uuid = False
-        create_lz_bool = self.args.yes
-        in_destination = self.args.destination
-        assay_uuid = self.args.assay_uuid
+        # Check if provided UUID is associated with a Project (we have access to)
+        #FIXME: sodar_api.get_samplesheet_retrieve() should probably not log an error message here
+        dest_is_project_uuid = is_uuid(self.args.destination) and sodar_api.get_samplesheet_retrieve() is not None
 
         # Project UUID provided by user
-        if is_uuid(in_destination):
-            if create_lz_bool:
-                # Assume that provided UUID is associated with a Project and user wants a new LZ.
-                # Behavior: search for available LZ; if none,create new LZ.
-                try:
-                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(
-                        project_uuid=in_destination, assay_uuid=assay_uuid
+        if dest_is_project_uuid:
+            # UUID is associated with a Project.
+            # Behaviour: get iRODS path from latest active Landing Zone.
+            lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
+            # No active lz available
+            if self.args.yes:
+                # Assume a new LZ should be created if --yes flag is set.
+                if lz_uuid is None or lz_irods_path is None:
+                    logger.info(
+                        "No active Landing Zone available for project {}, a new one will be created...", lz_uuid
                     )
-                    if not lz_irods_path:
-                        logger.info(
-                            "No active Landing Zone available for project {}, a new one will be created...", lz_uuid
-                        )
-                        lz_uuid, lz_irods_path = self.create_landing_zone(
-                            project_uuid=in_destination, assay_uuid=assay_uuid
-                        )
-                except requests.exceptions.HTTPError as e:
-                    exception_str = str(e)
-                    logger.error(
-                        "Unable to create Landing Zone using UUID {}. HTTP error {} ",
-                        in_destination, exception_str
-                    )
-                    raise
-
+                    lz = sodar_api.post_landingzone_create()
+                    if lz:
+                        lz_uuid = lz.sodar_uuid
+                        lz_irods_path = lz.irods_path
+                    else:
+                        msg = "Unable to create Landing Zone using UUID {0}.".format(self.args.destination)
+                        raise ParameterException(msg)
             else:
-                # Assume that provided UUID is associated with a Project.
-                # Behaviour: get iRODS path from latest active Landing Zone.
-                try:
-                    lz_uuid, lz_irods_path = self.get_latest_landing_zone(
-                        project_uuid=in_destination, assay_uuid=assay_uuid
-                    )
-                except requests.exceptions.HTTPError as e:
-                    not_project_uuid = True
-                    exception_str = str(e)
-                    logger.debug(
-                        "Provided UUID may not be associated with a Project. HTTP error {}",
-                        exception_str
-                    )
-
-                # Assume that provided UUID is associated with a LZ
-                # Behaviour: get iRODS path from it.
-                if not_project_uuid:
-                    try:
-                        lz_uuid = in_destination
-                        lz_irods_path = self.get_landing_zone_by_uuid(lz_uuid=lz_uuid)
-                    except requests.exceptions.HTTPError as e:
-                        exception_str = str(e)
-                        logger.debug(
-                            "Provided UUID may not be associated with a Landing Zone. HTTP error {}",
-                            exception_str
-                        )
-
-                # Request input from user.
+                # Request input from user (either confirm usage of found LZ or create a new LZ)
                 # Behaviour: depends on user reply to questions.
-                if not not_project_uuid:
-                    # Active lz available
-                    # Ask user if should use latest available or create new one.
-                    lz_uuid, lz_irods_path =  self._get_user_input(lz_irods_path, in_destination, assay_uuid)
-
-        # Check if `in_destination` is a Landing zone path.
-        elif in_destination.startswith("/"):
-            # We expect to find one UUID in the LZ path, this will be the project UUID
-            # Note: it might bet better to split on irods.path_sep if that can be determined
-            uuids = [p for p in in_destination.split("/") if is_uuid(p)]
-            if len(uuids) == 1:
-                sodar_uuid = uuids[0]
-                lz_irods_path = in_destination
-                # Get uuid of lz that matches lz_path, this validates the path is correct & we have access
-                # validate that the LZ exists & user has access
                 try:
-                    lz_uuid = self.get_landing_zone_uuid_by_path(
-                        lz_irods_path, sodar_uuid, self.args.assay
-                    )
-                except requests.exceptions.HTTPError as e:
-                    exception_str = str(e)
-                    logger.error(
-                        "Unable to identify UUID of given LZ {}. HTTP error {} ",
-                        in_destination, exception_str
-                    )
-                    raise
+                    lz_uuid, lz_irods_path = self._get_user_input(lz_irods_path, lz_uuid, sodar_api)
+                except UserCanceledException as e:
+                    logger.info(f"User cancelled: {e}")
+                    sys.exit(1)
+                except CubiTkException as e:
+                    logger.error(f"Landingzone creation failed: {e}")
+                    sys.exit(1)
+        # Provided UUID is NOT associated with a project, assume it is LZ instead
+        elif is_uuid(self.args.destination):
+            # Behaviour: get iRODS path from it.
+            lz = sodar_api.get_landingzone_retrieve()
+            if lz:
+                lz_irods_path = lz.irods_path
+                lz_uuid = lz.sodar_uuid
+            else:
+                msg = "Provided UUID ({}) could neither be associated with a project nor with a Landing Zone.".format(
+                    self.args.destination
+                )
+                raise ParameterException(msg)
+        # Check if `destination` is a Landing zone (irods) path.
+        elif self.args.destination.startswith("/"):
+            lz_uuid, lz_irods_path = self.get_latest_landing_zone(sodar_api)
+            if lz_uuid is None:
+                msg = "Unable to identify UUID of given LZ {0}.".format(self.args.destination)
+                raise ParameterException(msg)
 
         # Not able to process - raise exception.
         # UUID provided is not associated with project nor lz, or could not extract UUID from LZ path.
         if lz_irods_path is None:
             msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
-                in_destination
+                self.args.destination
             )
-            logger.error(msg)
             raise ParameterException(msg)
 
         # Log
@@ -236,190 +204,66 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         return lz_uuid, lz_irods_path
 
     #possibly integrate in Sodar/transfer specific class/function
-    def _get_user_input(self, lz_irods_path, in_destination, assay_uuid):
+    def _get_user_input(self, lz_irods_path, lz_uuid, sodar_api):
         if lz_irods_path:
-            logger.info("Found active Landing Zone: {}", lz_irods_path)
+            logger.info("Found active Landing Zone: {} (uuid: {})", lz_irods_path, lz_uuid)
             if (
                 not input("Can the process use this path? [yN] ")
                 .lower()
                 .startswith("y")
             ):
-                logger.info(
-                    "...an alternative is to create another Landing Zone using the UUID {}",
-                    in_destination
-                )
-                if (
-                    input("Can the process create a new landing zone? [yN] ")
-                    .lower()
-                    .startswith("y")
-                ):
-                    lz_uuid, lz_irods_path = self.create_landing_zone(
-                        project_uuid=in_destination, assay_uuid=assay_uuid
-                    )
-                else:
-                    msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                    logger.info(msg)
-                    raise UserCanceledException(msg)
+                logger.info(f"...an alternative is to create another Landing Zone using the UUID {self.args.destination}")
+                try :
+                    lz_uuid, lz_irods_path = self.ask_user_create_lz(sodar_api=sodar_api)
+                except CubiTkException as e:
+                    raise e
 
         # No active lz available
         # As user if should create new new.
         else:
-            logger.info("No active Landing Zone available for UUID {}", in_destination)
-            if (
-                input("Can the process create a new landing zone? [yN] ")
-                .lower()
-                .startswith("y")
-            ):
-                lz_uuid, lz_irods_path = self.create_landing_zone(
-                    project_uuid=in_destination, assay_uuid=assay_uuid
-                )
-            else:
-                msg = "Not possible to continue the process without a landing zone path. Breaking..."
-                logger.info(msg)
-                raise UserCanceledException(msg)
+            logger.info("No active Landing Zone available for UUID {}", self.args.destination)
+            try :
+                lz_uuid, lz_irods_path = self.ask_user_create_lz(sodar_api=sodar_api)
+            except CubiTkException as e:
+                raise e
         return lz_uuid, lz_irods_path
 
-    def move_landing_zone(self, lz_uuid):
-        """
-        Method calls SODAR API to validate and move transferred files.
+    def ask_user_create_lz(self,sodar_api):
 
-        :param lz_uuid: Landing zone UUID.
-        :type lz_uuid: str
-        """
-        from sodar_cli.api import landingzone
-
-        logger.info(
-            "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
-            lz_uuid
-        )
-        _ = landingzone.submit_move(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            landingzone_uuid=lz_uuid,
-        )
-        logger.info("done.")
-
-    def get_landing_zone_by_uuid(self, lz_uuid):
-        """
-        :param lz_uuid: Landing zone UUID.
-        :type lz_uuid: str
-
-        :return: Returns iRODS path.
-        """
-        from sodar_cli.api import landingzone
-
-        lz = landingzone.retrieve(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            landingzone_uuid=lz_uuid,
-        )
-        return lz.irods_path
-
-    def get_landing_zone_uuid_by_path(self, lz_irods_path, project_uuid, assay_uuid=None):
-        """
-        :param lz_irods_path: Landing zone path.
-        :type lz_irods_path: str
-
-        :param project_uuid: Project UUID.
-        :type project_uuid: str
-
-        :param assay_uuid: Assay UUID (optional).
-        :type assay_uuid: str
-
-        :return: Returns LZ UUID.
-        """
-        from sodar_cli.api import landingzone
-
-        # List existing lzs
-        existing_lzs = sorted(
-            landingzone.list_(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=project_uuid,
-            ),
-            key=lambda x: x.date_modified,
-            reverse=True,
-        )
-
-        # Filter for assay
-        if assay_uuid:
-            existing_lzs = list(filter(lambda x: x.assay == assay_uuid, existing_lzs))
-
-        matching_lzs = list(filter(lambda x: x.irods_path == lz_irods_path, existing_lzs))
-        if matching_lzs and matching_lzs[0].status in ("ACTIVE", "FAILED"):
-            lz_uuid = matching_lzs[0].sodar_uuid
+        if (
+            input("Can the process create a new landing zone? [yN] ")
+            .lower()
+            .startswith("y")
+        ):
+            lz = sodar_api.post_landingzone_create()
+            if lz:
+                lz_uuid = lz.sodar_uuid
+                lz_irods_path = lz.irods_path
+                return lz_uuid, lz_irods_path
+            raise CubiTkException("Something went wrong during Lz creation")
         else:
-            msg = (
-                "Could not find an active LZ with the given path. Please review input: {0}".format(
-                    lz_irods_path
-                )
-            )
-            logger.error(msg)
-            raise ParameterException(msg)
+            msg = "Not possible to continue the process without a landing zone path. Breaking..."
+            raise UserCanceledException(msg)
 
-        return lz_uuid
 
-    def create_landing_zone(self, project_uuid, assay_uuid=None):
+    def get_latest_landing_zone(self, sodar_api):
         """
-        :param project_uuid: Project UUID.
-        :type project_uuid: str
-
-        :param assay_uuid: Assay UUID (optional).
-        :type assay_uuid: str
-
-        :return: Returns landing zone UUID and iRODS path to newly created landing zone.
-        """
-        logger.info("Creating new Landing Zone...")
-        from sodar_cli.api import landingzone
-        #TODO: make sure assay_uuid is not none if multiple assays
-        lz = landingzone.create(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=project_uuid,
-            assay_uuid=assay_uuid,
-        )
-        logger.info("done!")
-        return lz.sodar_uuid, lz.irods_path
-
-    def get_latest_landing_zone(self, project_uuid, assay_uuid=None):
-        """
-        :param project_uuid: Project UUID.
-        :type project_uuid: str
-
-        :param assay_uuid: Assay UUID (optional).
-        :type assay_uuid: str
-
         :return: Returns landing zone UUID and iRODS path in latest active landing zone available.
         If none available, it returns None for both.
         """
-        from sodar_cli.api import landingzone
 
         # Initialise variables
         lz_irods_path = None
         lz_uuid = None
 
         # List existing lzs
-        existing_lzs = sorted(
-            landingzone.list_(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=project_uuid,
-            ),
-            key=lambda x: x.date_modified,
-            reverse=True,
-        )
+        existing_lzs = sodar_api.get_landingzone_list(sort_reverse = True, filter_for_state=["ACTIVE", "FAILED"])
 
-        # Filter for assay
-        if assay_uuid:
-            existing_lzs = list(filter(lambda x: x.assay == assay_uuid, existing_lzs))
-
-        # Get the latest active lz
-        allowed_status = ("ACTIVE", "FAILED")
-        existing_lzs = list(filter(lambda x: x.status in allowed_status, existing_lzs))
         if existing_lzs:
             lz = existing_lzs[-1]
             lz_irods_path = lz.irods_path
             lz_uuid = lz.sodar_uuid
+            logger.info(f"Latest active landingzone with UUID {lz_uuid} will be used")
 
         # Return
         return lz_uuid, lz_irods_path
@@ -471,6 +315,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """Execute the transfer."""
         # Validate arguments
         res = self.check_args(self.args)
+        sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
         if res:  # pragma: nocover
             return res
 
@@ -496,7 +341,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         )
         logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
 
-        lz_uuid, transfer_jobs = self.build_jobs(library_names)
+        lz_uuid, transfer_jobs = self.build_jobs(library_names, sodar_api)
         # logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         if self.fix_md5_files:
@@ -510,7 +355,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
-        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
+        itransfer.put(recursive=True, sync=self.args.overwrite_remote, yes=self.args.yes)
         logger.info("File transfer complete.")
 
         # Validate and move transferred files
@@ -518,7 +363,15 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # it will ask SODAR to validate and move transferred files.
         # (*) It can be None if user provided path
         if lz_uuid and self.args.validate_and_move:
-            self.move_landing_zone(lz_uuid=lz_uuid)
+            logger.info(
+                "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
+                lz_uuid
+            )
+            uuid = sodar_api.post_landingzone_submit_move(lz_uuid)
+            if uuid is None:
+                logger.error("something went wrong during lz move")
+                return
+            logger.info("done.")
         else:
             logger.info("Transferred files will \033[1mnot\033[0m be automatically moved in SODAR.")
 

@@ -15,7 +15,6 @@ import typing
 from loguru import logger
 import yaml
 
-from cubi_tk.parsers import check_args_global_parser
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
@@ -62,7 +61,6 @@ class PullRawDataCommand(PullDataCommon):
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        res, args = check_args_global_parser(args)
         args = vars(args)
         # Adjust `base_path` to snappy root
         args["base_path"] = find_snappy_root_dir(args["base_path"])
@@ -70,18 +68,18 @@ class PullRawDataCommand(PullDataCommon):
         args.pop("config", None)
         args.pop("cmd", None)
         args.pop("snappy_cmd", None)
-        return cls(args).execute(args)
+        return cls(argparse.Namespace(**args)).execute()
 
-    def execute(self, args) -> typing.Optional[int]:
+    def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         logger.info("Loading configuration file and look for dataset")
 
         # Find download path
-        if(args.output_directory):
-            if not (os.path.exists(args.output_directory) and os.access(args.output_directory, os.W_OK)):
-                logger.error(f"Output directory path either does not exist or it is not writable: {args.base_path}")
+        if(self.args.output_directory):
+            if not (os.path.exists(self.args.output_directory) and os.access(self.args.output_directory, os.W_OK)):
+                logger.error(f"Output directory path either does not exist or it is not writable: {self.args.base_path}")
                 return 1
-            download_path = args.output_directory
+            download_path = self.args.output_directory
         else:
             download_path = self._get_download_path()
         if not download_path:
@@ -118,10 +116,7 @@ class PullRawDataCommand(PullDataCommon):
 
         # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         ).perform()
 
         self.args.assay_uuid = remote_files_dict.get_assay_uuid()

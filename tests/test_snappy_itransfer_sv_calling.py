@@ -172,6 +172,8 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
         "itransfer-sv-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         # tsv_path,
@@ -265,7 +267,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     # mock_transfer.assert_called_with(expected_gcnv, ask=not args.yes)
     mock_transfer.assert_called_with(expected_manta, ask=not args.yes)
     assert mock_transfer_obj.put.call_count == 2
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1

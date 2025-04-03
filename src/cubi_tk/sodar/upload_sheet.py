@@ -1,18 +1,19 @@
 """``cubi-tk sodar upload-sheet``: upload ISA-tab to SODAR."""
 
 import argparse
+import contextlib
 import itertools
 from pathlib import Path
+import pathlib
 import typing
 
 from loguru import logger
-from sodar_cli import api
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
+
 
 from .. import isa_support
-from ..common import overwrite_helper
-from ..exceptions import OverwriteRefusedException
 
 
 
@@ -40,13 +41,12 @@ class UploadSheetCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        return cls(args).execute()
+        return cls(argparse.Namespace(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
-        _, self.args = check_args_global_parser(self.args, with_dest=True)
-
         logger.info("Starting cubi-tk sodar upload-sheet")
+        sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
         i_path = Path(self.args.input_investigation_file)
@@ -61,33 +61,16 @@ class UploadSheetCommand:
             file_paths.append(i_path.parent / name)
 
         logger.info("Uploading files: \n{}", "\n".join(map(str, file_paths)))
+        files_dict={}
+        with contextlib.ExitStack() as stack:
+            for no, path in enumerate(file_paths):
+                p = pathlib.Path(path)
+                files_dict["file_%d" % no] = (p.name, stack.enter_context(p.open("rt")))
 
-        api.samplesheet.upload(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=self.args.project_uuid,
-            file_paths=file_paths,
-        )
+        sodar_api.post_samplesheet_import(files_dict=files_dict)
 
         logger.info("All done. Have a nice day!")
         return 0
-
-    def _write_file(self, out_path, file_name, text):
-        out_path = out_path / file_name
-        if out_path.exists() and not self.args.overwrite and not self.args.dry_run:
-            raise OverwriteRefusedException(
-                "Refusing to overwrite without --overwrite: %s" % out_path
-            )
-        logger.info(
-            "{} {}", "Not writing (dry-run)" if self.args.dry_run else "Writing", out_path
-        )
-        overwrite_helper(
-            out_path,
-            text,
-            do_write=not self.args.dry_run,
-            show_diff=self.args.show_diff,
-            show_diff_side_by_side=self.args.show_diff_side_by_side,
-        )
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:

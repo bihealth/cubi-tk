@@ -10,7 +10,7 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import pandas as pd
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 
 from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.pull_data_common import PullDataCommon
@@ -142,10 +142,6 @@ class PullDataCollection(PullDataCommon):
     def check_args(self, args) -> int:
         """Called for checking arguments."""
         res = 0
-
-        # If SODAR info not provided, fetch from user's toml file
-        res, args = check_args_global_parser(args, with_dest=True)
-
         # Validate output directory path
         if not os.path.exists(args.output_dir):
             try:
@@ -187,10 +183,7 @@ class PullDataCollection(PullDataCommon):
 
         # Find all remote files (iRODS)
         filesearcher = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         )
 
         remote_files_dict = filesearcher.perform()

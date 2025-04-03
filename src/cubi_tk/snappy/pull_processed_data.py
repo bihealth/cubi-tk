@@ -11,7 +11,7 @@ import typing
 
 from loguru import logger
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
 
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
@@ -83,10 +83,6 @@ class PullProcessedDataCommand(PullDataCommon):
     def check_args(self, args):
         """Called for checking arguments."""
         res = 0
-
-        # If SODAR info not provided, fetch from user's toml file
-        res, args = check_args_global_parser(args)
-
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error(f"Base path does not exist: {args.base_path}")
@@ -120,10 +116,10 @@ class PullProcessedDataCommand(PullDataCommon):
         sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
         # Filter requested samples or libraries
-        if self.args.selected_samples:
+        if self.args.samples:
             selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
                 sheet=sheet,
-                selected_samples=self.args.selected_samples,
+                selected_samples=self.args.samples,
                 by_sample_id=self.args.sample_id,
             )
         else:
@@ -136,11 +132,7 @@ class PullProcessedDataCommand(PullDataCommon):
 
         # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_server_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
-            ask = self.args.yes
+            self.args
         ).perform()
         self.args.assay_uuid = remote_files_dict.get_assay_uuid()
 

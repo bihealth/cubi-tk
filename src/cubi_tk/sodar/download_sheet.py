@@ -5,9 +5,9 @@ from pathlib import Path
 import typing
 
 from loguru import logger
-from sodar_cli import api
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import overwrite_helper
 from ..exceptions import OverwriteRefusedException
@@ -68,23 +68,20 @@ class DownloadSheetCommand:
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)
-        return cls(args).execute()
+        return cls(argparse.Namespace(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
+
         """Execute the transfer."""
-        _any_error, self.args = check_args_global_parser(self.args, with_dest=True)
         logger.info("Starting cubi-tk sodar download-sheet")
+        sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
         out_path = Path(self.args.output_dir)
         if not out_path.exists() and self.args.makedirs:
             out_path.mkdir(parents=True)
 
-        isa_dict = api.samplesheet.export(
-            sodar_url=self.args.sodar_server_url,
-            sodar_api_token=self.args.sodar_api_token,
-            project_uuid=self.args.project_uuid,
-        )
+        isa_dict = sodar_api.get_samplesheet_export(get_all=True)
         try:
             self._write_file(
                 out_path, isa_dict["investigation"]["path"], isa_dict["investigation"]["tsv"]

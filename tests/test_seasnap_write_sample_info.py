@@ -10,8 +10,6 @@ import os
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
-from cubi_tk.sea_snap.write_sample_info import URL_TPL
-
 
 def test_run_seasnap_write_sample_info_help(capsys):
     parser, _subparsers = setup_argparse()
@@ -72,7 +70,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     fs.add_real_file(target_file)
 
     # --- mock modules
-    url = URL_TPL % {"sodar_server_url": "https://sodar.bihealth.org/", "project_uuid": project_uuid, "api_key": "XXX"}
+    url = "https://sodar.bihealth.org/samplesheets/api/remote/get/466ab946-ce6a-4c78-9981-19b79e7bbe86?isa=1"
     requests_mock.get(url, text=json_text)
 
     # --- run as end-to-end test

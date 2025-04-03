@@ -7,9 +7,9 @@ import typing
 
 import cattr
 from loguru import logger
-from sodar_cli import api
 
-from cubi_tk.parsers import check_args_global_parser, print_args
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 
 class CreateLandingZoneCommand:
@@ -55,42 +55,20 @@ class CreateLandingZoneCommand:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def check_args(self, args):
-        """Called for checking arguments, override to change behaviour."""
-        res = 0
-
-        res, args = check_args_global_parser(args, with_dest=True)
-
-        return res
-
     def execute(self) -> typing.Optional[int]:
         """Execute the landing zone creation."""
-        res = self.check_args(self.args)
-        if res:  # pragma: nocover
-            return res
 
         logger.info("Starting cubi-tk sodar landing-zone-create")
+        sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
-        existing_lzs = sorted(
-            api.landingzone.list_(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-            ),
-            key=lambda lz: lz.date_modified,
-        )
-        existing_lzs = list(filter(lambda lz: lz.status == "ACTIVE", existing_lzs))
+        existing_lzs = sodar_api.get_landingzone_list(filter_for_state = ["ACTIVE"])
         if existing_lzs and self.args.unless_exists:
             lz = existing_lzs[-1]
         else:
-            #TODO: make sure assay_uuid is not none if multiple assays
-            lz = api.landingzone.create(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-                assay_uuid=self.args.assay_uuid,
-            )
+            lz = sodar_api.post_landingzone_create()
+            if lz is None:
+                return 1
 
         values = cattr.unstructure(lz)
         if self.args.format_string:

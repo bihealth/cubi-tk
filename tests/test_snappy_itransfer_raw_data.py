@@ -58,6 +58,8 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
         "itransfer-raw-data",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         sodar_uuid,
@@ -124,4 +126,4 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     res = main(argv)
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes)
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)

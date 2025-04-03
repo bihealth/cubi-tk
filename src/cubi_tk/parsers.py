@@ -5,11 +5,11 @@ import os
 
 from loguru import logger
 
-from cubi_tk.common import GLOBAL_CONFIG_PATH, is_uuid, load_toml_config
+from cubi_tk.common import GLOBAL_CONFIG_PATH
 
 
 def print_args(args: argparse.Namespace):
-    token = args.sodar_api_token
+    token = getattr(args, "sodar_api_token","")
     args.sodar_api_token = "****"
     logger.info("Args: {}", args)
     args.sodar_api_token = token
@@ -54,39 +54,7 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_
         )
     return sodar_config_parser
 
-#TODO: possibly rename to setup_sodar_params,
-#TODO: when doing sodar api refactoring, possibly move to sodar api (e.g as init function)
-def check_args_global_parser(args, set_default = False, with_dest = False, dest_string = "project_uuid"):
-    any_error = False
-
-    # If SODAR info not provided, fetch from user's toml file
-    toml_config = load_toml_config(args.config)
-    if toml_config:
-        args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get("sodar_api_token")
-
-    # Check presence of SODAR URL and auth token.
-    if not args.sodar_api_token:  # pragma: nocover
-        logger.error(
-            "SODAR API token not given on command line and not found in toml config files. Please specify using --sodar-api-token or set in config."
-        )
-        if(set_default):
-            args.sodar_api_token="XXXX"
-        else:
-            any_error = True
-    if not args.sodar_server_url:  # pragma: nocover
-        logger.error("SODAR URL not given on command line and not found in toml config files.Please specify using --sodar-server-url, or set in config.")
-        if(set_default):
-            args.sodar_server_url="https://sodar.bihealth.org/"
-        else:
-            any_error = True
-    if with_dest:
-        if not is_uuid(getattr(args, dest_string)):
-           logger.error("{} is not a valid UUID.", dest_string)
-           any_error = True
-    return any_error, args
-
-sodar_specific_parser = argparse.ArgumentParser(description="The specifig config parser", add_help=False)
+sodar_specific_parser = argparse.ArgumentParser(description="The specific config parser", add_help=False)
 sodar_group_spec = sodar_specific_parser.add_argument_group("Specific Sodar Configuration")
 sodar_group_spec.add_argument(
     "--tsv-shortcut",

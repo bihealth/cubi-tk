@@ -16,6 +16,7 @@ from loguru import logger
 import tqdm
 
 from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import check_irods_icommands, sizeof_fmt
 from ..snappy.itransfer_common import SnappyItransferCommandBase
@@ -124,15 +125,16 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            from sodar_cli.api import landingzone
 
-            lz_irods_path = landingzone.retrieve(
-                sodar_url=self.args.sodar_server_url,
-                sodar_api_token=self.args.sodar_api_token,
-                landingzone_uuid=self.args.destination,
-            ).irods_path
-            logger.info("Target iRods path: {}", lz_irods_path)
+            sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
 
+            lz = sodar_api.get_landingzone_retrieve(self.args.destination)
+            if lz is not None:
+                lz_irods_path = lz.irods_path
+                logger.info("Target iRods path: {}", lz_irods_path)
+            else:
+                logger.error("Target iRods path couldn't be retrieved")
+                return transfer_jobs
         for cmd_block in (cb for cb in command_blocks if cb):
             sources = [
                 word
