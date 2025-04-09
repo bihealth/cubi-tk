@@ -57,7 +57,10 @@ class ValidateIsaTabCommand:
         logger.info("Starting cubi-tk isa-tab validate")
         logger.info("args: {}", self.args)
 
-        return int(isatab_validate.run(self.args) is not None)
+        return int(isatab_validate.main(
+            input_investigation_file=self.args.input_investigation_file.name,
+            show_duplicate_warnings=self.args.show_duplicate_warnings,
+        ) is not None)
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
