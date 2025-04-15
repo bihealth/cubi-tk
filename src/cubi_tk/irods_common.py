@@ -10,19 +10,14 @@ import attrs
 from irods.collection import iRODSCollection
 from irods.column import Like
 from irods.data_object import iRODSDataObject
-from irods.exception import (
-    CAT_INVALID_AUTHENTICATION,
-    CAT_INVALID_USER,
-    CAT_PASSWORD_EXPIRED,
-    PAM_AUTH_PASSWORD_FAILED,
-)
 from irods.keywords import FORCE_FLAG_KW
 from irods.models import Collection as CollectionModel
 from irods.models import DataObject as DataObjectModel
-from irods.password_obfuscation import encode
-from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
+from irods.session import iRODSSession
 from loguru import logger
 from tqdm import tqdm
+
+from irods.client_init import write_pam_irodsA_file
 
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
@@ -72,8 +67,10 @@ class iRODSCommon:
         if irods_env_path is None:
             self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
         else:
-            self.irods_env_path = irods_env_path
+            self.irods_env_path = Path(irods_env_path)
+        self.irodsA_file_found = False
         self.ask = ask
+
 
     @staticmethod
     def get_irods_error(e: Exception):
@@ -83,68 +80,37 @@ class iRODSCommon:
 
     def _init_irods(self) -> iRODSSession:
         """Connect to iRODS. Login if needed."""
+        self._check_and_gen_irodsA()
+        count_tries = 1
         while True:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
                 session.connection_timeout = 600
                 return session
-            except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
-                logger.info(self.get_irods_error(e))
-                self._irods_login()
-            except (
-                CAT_INVALID_AUTHENTICATION,
-                CAT_INVALID_USER,
-                CAT_PASSWORD_EXPIRED,
-            ):  # pragma: no cover
-                logger.warning("Problem with your session token.")
-                self.irods_env_path.parent.joinpath(".irodsA").unlink()
-                self._irods_login()
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                raise
-
-    def _irods_login(self):
-        """Ask user to log into iRODS."""
-        # No valid .irodsA file. Query user for password.
-        attempts = 0
-        while attempts < 3:
-            try:
-                session = iRODSSession(
-                    irods_env_file=self.irods_env_path,
-                    password=getpass.getpass(prompt="Please enter SODAR password:"),
-                )
-                token = session.pam_pw_negotiated
-                session.cleanup()
-                break
-            except PAM_AUTH_PASSWORD_FAILED as e:  # pragma: no cover
-                if attempts < 2:
-                    logger.warning("Wrong password. Please try again.")
-                    attempts += 1
-                    continue
-                else:
-                    logger.error("iRODS connection failed.")
+                self._check_and_gen_irodsA(overwrite=True)
+                count_tries+=1
+                if count_tries >3:
                     raise e
-            except Exception as e:  # pragma: no cover
-                logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                raise RuntimeError from e
 
-        if self.ask and input(
-            "Save iRODS session for passwordless operation? [y/N] "
-        ).lower().startswith("y"):
-            self._save_irods_token(token)  # pragma: no cover
-        elif not self.ask:
-            self._save_irods_token(token)
 
-    def _save_irods_token(self, token: str):
-        """Retrieve PAM temp auth token 'obfuscate' it and save to disk."""
-        irods_auth_path = self.irods_env_path.parent.joinpath(".irodsA")
-        irods_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    def _check_and_gen_irodsA(self, overwrite = False):
+        """check if irodsA exists and generate it"""
+        if self.irodsA_file_found is True and not overwrite:
+            return
+        try:
+            for file in self.irods_env_path.parent.iterdir():
+                if file.name == ".irodsA":
+                    self.irodsA_file_found = True
+                    break
+            if not self.irodsA_file_found or overwrite:
+                write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '), overwrite=overwrite)
+                self.irodsA_file_found = True
+        except FileNotFoundError as e:
+            logger.info("Please check the irods_env_path")
+            logger.info(e)
 
-        if isinstance(token, list) and token:
-            irods_auth_path.write_text(encode(token[0]))
-            irods_auth_path.chmod(0o600)
-        else:
-            logger.warning("No token found to be saved.")
 
     @property
     def session(self):
