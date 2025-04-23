@@ -58,7 +58,7 @@ SRC_REGEX_PRESETS = {
     ),
     "onk_analysis":(
         r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+))"
-        r"_(?P<conservation>(FF|FFPE))"
+        r"_(?P<conservation>(FF|FFPE))(\.|_)"
         r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"
         r"\.(bam|.*bed$|.*bed.gz|txt|json|.*vcf|.*counts)"
     )
@@ -405,18 +405,25 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         if not isinstance(val, list):
             return val
         #needs further matching with tumor and conservation method
+        conservation_col_name = None
         conservation = m.groupdict(default=None)["conservation"]
         tissue = m.groupdict(default=None)["tissue"]
         for col_col_name, col_sample_name, col_conservation in val:
             col_tissue = col_sample_name.split("-")[-1][0]
             tissue_match = tissue =="tumor" and col_tissue =="T" or tissue == "normal" and col_tissue  == "N"
-            conservation_match = conservation == col_conservation or conservation == "FF" and col_conservation == "fresh frozen"
+            conservation_match = conservation == col_conservation or (conservation == "FF" and col_conservation == "fresh frozen")
+            if conservation_match:
+                #for rare case that name is e.g. FFPE..._normal.bed, but no normal sample with FFPE exists, find tumor FFPE sample 
+                conservation_col_name = col_col_name
             if conservation is not None and tissue is not None and tissue_match and conservation_match:
                 return col_col_name
             elif conservation is not None and tissue is None and conservation_match:
                 return col_col_name
             elif tissue is not None and conservation is None and tissue_match:
                 return col_col_name
+        if conservation_col_name is not None:
+            logger.info("Couldnt match to tissue, returning conservation match")
+            return conservation_col_name
         logger.info("Couldnt match to conservation and/or tissue, returning first")
         return val[0][0]
 
@@ -483,6 +490,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                         sample_name = re.sub(m_pat, r_pat, sample_name)
                     try:
                         collection_name = self.find_collection_name(sample_name, column_match, m)
+                        logger.debug(f"sample-name: {sample_name}, collection_name: {collection_name}")
                         remote_file = pathlib.Path(lz_irods_path) / self.remote_dir_pattern.format(
                             # Removed the `+ self.args.add_suffix` here, since adding anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
