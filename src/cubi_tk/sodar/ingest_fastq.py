@@ -56,12 +56,19 @@ SRC_REGEX_PRESETS = {
         r"(?:(?P<subfolder>[a-z0-9_]+/))?"
         r".+\.(bam|pod5|txt|json)"
     ),
+    "onk_analysis":(
+        r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+))"
+        r"_(?P<conservation>(FF|FFPE))"
+        r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"
+        r"\.(bam|.*bed$|.*bed.gz|txt|json|.*vcf)"
+    )
 }
 
 DEST_PATTERN_PRESETS = {
     "default": r"{collection_name}/raw_data/{date}/{filename}",
     "digestiflow": r"{collection_name}/raw_data/{flowcell}/{filename}",
     "ONT": r"{collection_name}/raw_data/{RunID}/{subfolder}/{filename}",
+    "onk_analysis": r"{collection_name}/analysis/{date}/{filename}"
 }
 
 #: Default number of parallel transfers.
@@ -245,14 +252,14 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             sheet_header = sheet_header.split("\t")
             sheet_lines =  [x.split("\t") for x in sheet_lines]
 
-            sample_name_idx, in_column_index, out_column_index = self._get_indices(sheet_header, in_column, out_column)
+            sample_name_idx, in_column_index, out_column_index, conservation_method_idx = self._get_indices(sheet_header, in_column, out_column)
             if in_column_dict is None:
-                in_column_dict = self._check_col_index_and_get_val(in_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
+                in_column_dict = self._check_col_index_and_get_val(in_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx, conservation_method_idx)
             if out_column_dict is None:
                 if out_column is None:
                     #take last extractname without asking user
                     out_column_index = [max(out_column_index)]
-                out_column_dict = self._check_col_index_and_get_val(out_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx)
+                out_column_dict = self._check_col_index_and_get_val(out_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx, conservation_method_idx)
 
             #dont go into studies
             if in_column_dict is not None and out_column_dict is not None:
@@ -267,7 +274,15 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         match_dict = {}
         for sample_name in out_column_dict.keys():
             if sample_name in in_column_dict.keys():
-                match_dict[in_column_dict[sample_name]] = out_column_dict[sample_name]
+                key = in_column_dict[sample_name]
+                if isinstance(key, list):
+                    #add sample name for tumor/normal check and key[1] conservationmethod
+                    #dont overwrite matchdict key if multiple present
+                    val = match_dict.get(key[0], [])
+                    val.append((out_column_dict[sample_name], sample_name, key[1]))
+                    match_dict[key[0]] = val
+                else:
+                    match_dict[key] = out_column_dict[sample_name]
         return match_dict
 
     def _get_indices(self,sheet_header, in_column, out_column):
@@ -288,6 +303,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             "Source Name",
         )
         sample_name_idx = None
+        conservation_method_idx = None
         in_column_index = []
         out_column_index = []
 
@@ -300,13 +316,15 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     out_column_index.append(i)
             if "Sample Name" in head:
                 sample_name_idx = i
+            if "Conservation method" in head:
+                conservation_method_idx = i
             # Get index of last material column that is not 'Raw Data File'
             if out_column is None and head in materials:
                 out_column_index.append(i)
 
-        return sample_name_idx, in_column_index, out_column_index
+        return sample_name_idx, in_column_index, out_column_index, conservation_method_idx
 
-    def _check_col_index_and_get_val(self, column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx):
+    def _check_col_index_and_get_val(self, column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx, conservation_method_idx):
         if not column_index:
             msg = "Could not identify any column in the {} sheet matching provided data.".format(
                 sheet_type[:-1]
@@ -339,7 +357,11 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             column_index = column_index[0]
         column_dict: dict[str,str] = {}
         for line in sheet_lines:
-            column_dict[line[sample_name_idx]] = line[column_index]
+            if conservation_method_idx is not None and self.args.preset == "onk_analysis":
+                #add conservation method
+                column_dict[line[sample_name_idx]] = [line[column_index], line[conservation_method_idx]]
+            else:
+                column_dict[line[sample_name_idx]] = line[column_index]
         return column_dict
 
     def download_webdav(self, sources):
@@ -375,6 +397,29 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     pool.join()
 
         return folders
+
+    def find_collection_name(self, sample_name, column_match, m):
+        if column_match is None:
+            return sample_name
+        val = column_match[sample_name]
+        if not isinstance(val, list):
+            return val
+        #needs further matching with tumor and conservation method
+        conservation = m.groupdict(default=None)["conservation"]
+        tissue = m.groupdict(default=None)["tissue"]
+        for col_col_name, col_sample_name, col_conservation in val:
+            col_tissue = col_sample_name.split("-")[-1][0]
+            tissue_match = tissue =="tumor" and col_tissue =="T" or tissue == "normal" and col_tissue  == "N"
+            conservation_match = conservation == col_conservation or conservation == "FF" and col_conservation == "fresh frozen"
+            if conservation is not None and tissue is not None and tissue_match and conservation_match:
+                return col_col_name
+            elif conservation is not None and tissue is None and conservation_match:
+                return col_col_name
+            elif tissue is not None and conservation is None and tissue_match:
+                return col_col_name
+        logger.info("Couldnt match to conservation and/or tissue, returning first")
+        return val[0][0]
+
 
     def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
         """Build file transfer jobs."""
@@ -412,7 +457,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 real_path = os.path.realpath(path)
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
-                if real_path.endswith(".md5"):
+                if real_path.endswith((".md5", ".md5sum")):
                     continue  # skip, will be added automatically
 
                 if not os.path.exists(real_path):  # pragma: nocover
@@ -436,15 +481,13 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                     sample_name = m.groupdict(default="")["sample"]
                     for m_pat, r_pat in self.args.sample_collection_mapping:
                         sample_name = re.sub(m_pat, r_pat, sample_name)
-
                     try:
+                        collection_name = self.find_collection_name(sample_name, column_match, m)
                         remote_file = pathlib.Path(lz_irods_path) / self.remote_dir_pattern.format(
                             # Removed the `+ self.args.add_suffix` here, since adding anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
                             date=self.args.remote_dir_date,
-                            collection_name=column_match[sample_name]
-                            if column_match
-                            else sample_name,
+                            collection_name=collection_name,
                             **match_wildcards,
                         )
                     except KeyError:
