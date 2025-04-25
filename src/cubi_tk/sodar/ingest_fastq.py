@@ -60,7 +60,7 @@ SRC_REGEX_PRESETS = {
         r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+))"
         r"_(?P<conservation>(FF|FFPE))(\.|_)"
         r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"
-        r"\.(bam|.*bed$|.*bed.gz|txt|json|.*vcf|.*counts)"
+        r"(bam|.*bed$|.*bed.gz|txt|json|.*vcf|.*counts|.*maf)"
     )
 }
 
