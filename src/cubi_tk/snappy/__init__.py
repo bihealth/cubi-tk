@@ -53,7 +53,6 @@ from .itransfer_sv_calling import setup_argparse as setup_argparse_itransfer_sv_
 from .itransfer_variant_calling import (
     setup_argparse as setup_argparse_itransfer_variant_calling,
 )
-from .kickoff import setup_argparse as setup_argparse_kickoff
 from .pull_all_data import setup_argparse as setup_argparse_pull_all_data
 from .pull_processed_data import setup_argparse as setup_argparse_pull_processed_data
 from .pull_raw_data import setup_argparse as setup_argparse_pull_raw_data
@@ -163,13 +162,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
             "varfish-upload",
             parents=[basic_parser, snappy_parser],
             help="Upload variant analysis results into VarFish")
-    )
-
-    setup_argparse_kickoff(
-        subparsers.add_parser(
-            "kickoff",
-            parents=[basic_parser, snappy_parser],
-            help="Kick-off SNAPPY pipeline steps.")
     )
 
 

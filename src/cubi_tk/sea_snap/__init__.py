@@ -30,7 +30,6 @@ from .itransfer_results import (
     setup_argparse as setup_argparse_itransfer_mapping_results,
 )
 
-# from .pull_isa import setup_argparse as setup_argparse_pull_isa
 from .working_dir import setup_argparse as setup_argparse_working_dir
 from .write_sample_info import setup_argparse as setup_argparse_write_sample_info
 
@@ -60,7 +59,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_check_irods(
         subparsers.add_parser(
-            "check-irods", parents=[basic_parser,], help="Check consistency of sample info, blueprint and files on SODAR"
+            "check-irods", parents=[basic_parser,], help="DEPRECATING! Check consistency of sample info, blueprint and files on SODAR"
         )
     )
 

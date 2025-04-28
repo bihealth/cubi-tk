@@ -6,6 +6,7 @@ from pathlib import Path
 import shlex
 from subprocess import SubprocessError, check_call
 import typing
+import warnings
 
 import attr
 from loguru import logger
@@ -113,6 +114,10 @@ class PullRawDataCommand:
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
+        warnings.warn(
+            "The `pull-raw-data` command will be deprecated. Please use `pull-data -f '*.fastq.gz'` instead",
+            DeprecationWarning
+        )
         args = vars(args)
         args.pop("cmd", None)
         args.pop("sodar_cmd", None)

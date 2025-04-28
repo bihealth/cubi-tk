@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, List
+import warnings
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
@@ -10,6 +11,7 @@ from ..irods_common import TransferJob, iRODSTransfer
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
 
 
+# FIXME: this is not used by the new `pull-data` command and should also be deprecated
 class PullDataCommon:
     """Implementation of common pull data methods."""
 
@@ -17,6 +19,10 @@ class PullDataCommon:
     file_type_to_extensions_dict = None
 
     def __init__(self):
+        warnings.warn(
+            "The `PullDataCommon` class will be deprecated",
+            DeprecationWarning
+        )
         pass
 
     def filter_irods_collection(

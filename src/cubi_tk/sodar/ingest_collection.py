@@ -1,4 +1,4 @@
-"""``cubi-tk sodar ingest``: upload arbitrary files and folders into a specific SODAR landing zone collection"""
+"""``cubi-tk sodar ingest-collection``: upload arbitrary files and folders into a specific SODAR landing zone collection"""
 
 import argparse
 from pathlib import Path
@@ -17,8 +17,8 @@ from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
 logger.propagate = True
 
 
-class SodarIngest:
-    """Implementation of sodar ingest command."""
+class SodarIngestCollection:
+    """Implementation of sodar ingest-collection command."""
 
     def __init__(self, args):
         # Command line arguments.
@@ -90,7 +90,7 @@ class SodarIngest:
     def execute(self):
         """Execute ingest."""
         self.lz_irods_path = self.args.destination
-        logger.info("Starting cubi-tk sodar ingest")
+        logger.info("Starting cubi-tk sodar ingest-collection")
         print_args(self.args)
         # Retrieve iRODS path if destination is UUID
         if is_uuid(self.args.destination):
@@ -255,4 +255,4 @@ class SodarIngest:
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk sodar ingest``."""
-    return SodarIngest.setup_argparse(parser)
+    return SodarIngestCollection.setup_argparse(parser)

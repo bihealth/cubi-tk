@@ -51,11 +51,7 @@ pythonpath = [
     ".", "tests"
 ]
 
-[project.optional-dependencies]
-snappy = [
-    "snappy-pipeline @ git+https://github.com/bihealth/snappy-pipeline@5d11f311357e75516ba2d7045cc0c1bd61201e14",
-]
-all = ["cubi-tk[snappy]"]
+# [project.optional-dependencies]
 
 [dependency-groups]
 dev = [

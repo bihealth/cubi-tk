@@ -1,4 +1,4 @@
-"""``cubi-tk sodar ingest-fastq``: add FASTQ files to SODAR"""
+"""``cubi-tk sodar ingest-data``: add FASTQ files to SODAR"""
 
 import argparse
 from ctypes import c_ulonglong
@@ -29,7 +29,7 @@ logger.propagate = True
 
 
 SRC_REGEX_PRESETS = {
-    "default": (
+    "fastq": (
         r"(.*/)?(?P<sample>.+?)"
         r"(?:_S[0-9]+)?"
         r"(?:_(?P<lane>L[0-9]+?))?"
@@ -65,7 +65,7 @@ SRC_REGEX_PRESETS = {
 }
 
 DEST_PATTERN_PRESETS = {
-    "default": r"{collection_name}/raw_data/{date}/{filename}",
+    "fastq": r"{collection_name}/raw_data/{date}/{filename}",
     "digestiflow": r"{collection_name}/raw_data/{flowcell}/{filename}",
     "ONT": r"{collection_name}/raw_data/{RunID}/{subfolder}/{filename}",
     "onk_analysis": r"{collection_name}/analysis/{date}/{filename}"
@@ -103,11 +103,11 @@ def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
             pass  # swallow, pyfakefs and multiprocessing don't lik each other
 
 
-class SodarIngestFastq(SnappyItransferCommandBase):
-    """Implementation of sodar ingest-fastq command."""
+class SodarIngestData(SnappyItransferCommandBase):
+    """Implementation of sodar ingest-data command."""
 
     fix_md5_files = True
-    command_name = "ingest-fastq"
+    command_name = "ingest-data"
 
     def __init__(self, args):
         super().__init__(args)
@@ -151,16 +151,16 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         )
         parser.add_argument(
             "--preset",
-            default="default",
+            default="fastq",
             choices=DEST_PATTERN_PRESETS.keys(),
             help=f"Use predefined values for regular expression to find local files (--src-regex) and pattern to for "
-            f"constructing remote file paths.\nDefault src-regex: {SRC_REGEX_PRESETS['default']}.\n"
-            f"Default --remote-dir-pattern: {DEST_PATTERN_PRESETS['default']}.",
+            f"constructing remote file paths.\nDefault src-regex: {SRC_REGEX_PRESETS['fastq']}.\n"
+            f"Default --remote-dir-pattern: {DEST_PATTERN_PRESETS['fastq']}.",
         )
         parser.add_argument(
             "--src-regex",
             default=None,
-            help="Manually defined regular expression to use for matching input fastq files. Takes precedence over "
+            help="Manually defined regular expression to use for matching input files. Takes precedence over "
             "--preset.  This regex controls which files are ingested, so it can be used for any file type. "
             "Any named capture group in the regex can be used with --remote-dir-pattern. The 'sample' group is "
             "used to set irods collection names (as-is or via --match-column).",
@@ -215,13 +215,13 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             help="Folder to save files from WebDAV temporarily, if set as source.",
         )
 
-        parser.add_argument("sources", help="paths to fastq folders", nargs="+")
+        parser.add_argument("sources", help="paths to folders", nargs="+")
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
         res = 0
 
-        if args.src_regex and args.remote_dir_pattern and args.preset != "default":
+        if args.src_regex and args.remote_dir_pattern and args.preset != "fastq":
             logger.error(
                 "Using both --src-regex and --remote-dir-pattern at the same time overwrites all values defined "
                 "by --preset. Please drop the use of --preset or at least one of the other manual definitions."
@@ -233,7 +233,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         raise NotImplementedError(
-            "build_base_dir_glob_pattern() not implemented in SodarIngestFastq!"
+            "build_base_dir_glob_pattern() not implemented in SodarIngestData!"
         )
 
     def get_match_to_collection_mapping(
@@ -364,39 +364,6 @@ class SodarIngestFastq(SnappyItransferCommandBase):
                 column_dict[line[sample_name_idx]] = line[column_index]
         return column_dict
 
-    def download_webdav(self, sources):
-        download_jobs = []
-        folders = []
-        for src in sources:
-            if re.match("davs://", src):
-                download_jobs.append(TransferJob(path_remote=src, path_local=self.args.tmp))
-                tmp_folder = f"tmp_folder_{len(download_jobs)}"
-                pathlib.Path(tmp_folder).mkdir(parents=True, exist_ok=True)
-            else:
-                folders.append(src)
-
-        if download_jobs:
-            logger.info("Planning to download folders...")
-            for job in download_jobs:
-                logger.info("{} => {}", job.path_remote, job.path_local)
-            if not self.args.yes and not input("Is this OK? [yN] ").lower().startswith("y"):
-                logger.error("OK, breaking at your request")
-                return []
-
-            counter = Value(c_ulonglong, 0)
-            total_bytes = sum([job.bytes for job in download_jobs])
-            with tqdm.tqdm(total=total_bytes) as t:
-                if self.args.num_parallel_transfers == 0:  # pragma: nocover
-                    for job in download_jobs:
-                        download_folder(job, counter, t)
-                else:
-                    pool = ThreadPool(processes=self.args.num_parallel_transfers)
-                    for job in download_jobs:
-                        pool.apply_async(download_folder, args=(job, counter, t))
-                    pool.close()
-                    pool.join()
-
-        return folders
 
     def find_collection_name(self, sample_name, column_match, m):
         if column_match is None:
@@ -413,7 +380,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
             tissue_match = tissue =="tumor" and col_tissue =="T" or tissue == "normal" and col_tissue  == "N"
             conservation_match = conservation == col_conservation or (conservation == "FF" and col_conservation == "fresh frozen")
             if conservation_match:
-                #for rare case that name is e.g. FFPE..._normal.bed, but no normal sample with FFPE exists, find tumor FFPE sample 
+                #for rare case that name is e.g. FFPE..._normal.bed, but no normal sample with FFPE exists, find tumor FFPE sample
                 conservation_col_name = col_col_name
             if conservation is not None and tissue is not None and tissue_match and conservation_match:
                 return col_col_name
@@ -428,13 +395,8 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         return val[0][0]
 
 
-    def build_jobs(self, library_names=None) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
+    def build_jobs(self) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
         """Build file transfer jobs."""
-        if library_names:
-            logger.warning(
-                "will ignore parameter 'library_names' = {} in ingest_fastq.build_jobs()",
-                str(library_names),
-            )
         sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
         try:
             lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
@@ -450,7 +412,7 @@ class SodarIngestFastq(SnappyItransferCommandBase):
         else:
             column_match = None
 
-        folders = self.download_webdav(self.args.sources)
+        folders = self.args.sources
         transfer_jobs = []
 
         if self.args.src_regex:
@@ -634,4 +596,4 @@ def download_folder(job: TransferJob, counter: Value, t: tqdm.tqdm):
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk org-raw check``."""
-    return SodarIngestFastq.setup_argparse(parser)
+    return SodarIngestData.setup_argparse(parser)

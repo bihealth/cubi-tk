@@ -4,6 +4,7 @@ import argparse
 import os
 from pathlib import Path
 import re
+import warnings
 
 from loguru import logger
 import yaml
@@ -69,6 +70,11 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
 
     def execute(self):
         """Execute checks."""
+        warnings.warn(
+            "The `check-irods` function will be deprecated",
+            DeprecationWarning
+        )
+
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res

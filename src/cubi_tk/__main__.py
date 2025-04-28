@@ -11,14 +11,10 @@ from cubi_tk import __version__
 from cubi_tk.parsers import get_basic_parser
 
 from .common import run_nocmd
-from .irods import run as run_irods
-from .irods import setup_argparse as setup_argparse_irods
 from .isa_tab import run as run_isa_tab
 from .isa_tab import setup_argparse as setup_argparse_isa_tab
 from .isa_tpl import run as run_isa_tpl
 from .isa_tpl import setup_argparse as setup_argparse_isa_tpl
-from .org_raw import run as run_org_raw
-from .org_raw import setup_argparse as setup_argparse_org_raw
 from .sea_snap import run as run_sea_snap
 from .sea_snap import setup_argparse as setup_argparse_sea_snap
 from .snappy import run as run_snappy
@@ -57,8 +53,6 @@ def setup_argparse():
         subparsers.add_parser("snappy", help="Tools for supporting the SNAPPY pipeline."),
     )
     setup_argparse_sodar(subparsers.add_parser("sodar", help="SODAR command line interface."))
-    setup_argparse_irods(subparsers.add_parser("irods", help="iRods command line interface."))
-    setup_argparse_org_raw(subparsers.add_parser("org-raw", help="org_raw command line interface."))
     setup_argparse_sea_snap(
         subparsers.add_parser("sea-snap", help="Tools for supporting the RNA-SeASnaP pipeline.")
     )
@@ -92,8 +86,6 @@ def main(argv=None):
         "snappy": run_snappy,
         "sea-snap": run_sea_snap,
         "sodar": run_sodar,
-        "irods": run_irods,
-        "org-raw": run_org_raw,
     }
 
     res = cmds[args.cmd](args, parser, subparsers.choices[args.cmd] if args.cmd else None)

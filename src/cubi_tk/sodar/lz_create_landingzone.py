@@ -1,4 +1,4 @@
-"""``cubi-tk sodar landing-zone-create`` command line program
+"""``cubi-tk sodar create-landingzone`` command line program
 """
 
 import argparse
@@ -58,7 +58,7 @@ class CreateLandingZoneCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the landing zone creation."""
 
-        logger.info("Starting cubi-tk sodar landing-zone-create")
+        logger.info("Starting cubi-tk sodar create-landingzone")
         sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 

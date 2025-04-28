@@ -1,4 +1,4 @@
-"""``cubi-tk sodar pull-data-collection``: download raw data from iRODS via SODAR."""
+"""``cubi-tk sodar pull-data``: download data from iRODS via SODAR."""
 
 import argparse
 from collections import defaultdict
@@ -13,14 +13,13 @@ import pandas as pd
 from cubi_tk.parsers import print_args
 
 from ..irods_common import TransferJob, iRODSTransfer
-from ..snappy.pull_data_common import PullDataCommon
 from ..sodar_common import RetrieveSodarCollection
 
 
-class PullDataCollection(PullDataCommon):
-    """Implementation of pull data collection command."""
+class PullDataCommand:
+    """Implementation of pull data command."""
 
-    command_name = "pull-data-collection"
+    command_name = "pull-data"
 
     presets = {
         "dragen": [
@@ -54,7 +53,7 @@ class PullDataCollection(PullDataCommon):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup arguments for ``pull-data-collection`` command."""
+        """Setup arguments for ``pull-data`` command."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -166,7 +165,7 @@ class PullDataCollection(PullDataCommon):
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk sodar pull-data-collection")
+        logger.info("Starting cubi-tk sodar pull-data")
         print_args(self.args)
 
         # Get list of sample ids
@@ -215,6 +214,27 @@ class PullDataCollection(PullDataCommon):
 
         logger.info("All done. Have a nice day!")
         return 0
+
+    @staticmethod
+    def report_no_file_found(available_files):
+        """Report no files found
+
+        :param available_files: List of available files in SODAR.
+        :type available_files: list
+        """
+        available_files = sorted(available_files)
+        if len(available_files) > 50:
+            limited_str = " (limited to first 50)"
+            ellipsis_ = "..."
+            remote_files_str = "\n".join(available_files[:50])
+        else:
+            limited_str = ""
+            ellipsis_ = ""
+            remote_files_str = "\n".join(available_files)
+        logger.warning(
+            f"No file was found using the selected criteria.\n"
+            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+        )
 
     @staticmethod
     def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> set[str]:
@@ -328,4 +348,4 @@ class PullDataCollection(PullDataCommon):
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk org-raw check``."""
-    return PullDataCollection.setup_argparse(parser)
+    return PullDataCommand.setup_argparse(parser)

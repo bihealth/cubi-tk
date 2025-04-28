@@ -1,4 +1,4 @@
-"""Tests for ``cubi_tk.sodar.ingest_fastq``.
+"""Tests for ``cubi_tk.sodar.ingest_data``.
 
 We only run some smoke tests here.
 """
@@ -19,10 +19,10 @@ import pytest
 from cubi_tk.__main__ import main, setup_argparse
 from cubi_tk.exceptions import ParameterException
 from cubi_tk.irods_common import TransferJob
-from cubi_tk.sodar.ingest_fastq import (
+from cubi_tk.sodar.ingest_data import (
     DEST_PATTERN_PRESETS,
     SRC_REGEX_PRESETS,
-    SodarIngestFastq,
+    SodarIngestData,
 )
 
 from .conftest import my_get_sodar_info, my_sodar_api_export
@@ -32,7 +32,7 @@ from .factories import InvestigationFactory
 def test_run_sodar_ingest_fastq_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "ingest-fastq", "--help"])
+        parser.parse_args(["sodar", "ingest-data", "--help"])
 
     assert e.value.code == 0
 
@@ -45,7 +45,7 @@ def test_run_sodar_ingest_fastq_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "ingest-fastq"])
+        parser.parse_args(["sodar", "ingest-data"])
 
     assert e.value.code == 2
 
@@ -76,7 +76,7 @@ def test_run_sodar_ingest_fastq_default_preset_regex():
         "P1234_Samplename2_R1.fastq.gz": "P1234_Samplename2",
     }
     for test_filename, expected_sample in test_filenames.items():
-        res = re.match(SRC_REGEX_PRESETS["default"], test_filename)
+        res = re.match(SRC_REGEX_PRESETS["fastq"], test_filename)
         assert res is not None
         assert res.groupdict()["sample"] == expected_sample
 
@@ -133,14 +133,14 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
     # Patched sodar API call
     requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
 
-    # Instantiate SodarIngestFastq (seems to require args?)
+    # Instantiate SodarIngestData (seems to require args?)
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     project_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     fake_base_path = "/base/path"
     argv = [
         "--verbose",
         "sodar",
-        "ingest-fastq",
+        "ingest-data",
         "--num-parallel-transfers",
         "0",
         "--sodar-api-token",
@@ -152,7 +152,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
 
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
-    ingestfastq = SodarIngestFastq(args)
+    ingestfastq = SodarIngestData(args)
 
     # test to get expected dict
     expected = {
@@ -200,7 +200,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     argv = [
         "--verbose",
         "sodar",
-        "ingest-fastq",
+        "ingest-data",
         "--num-parallel-transfers",
         "0",
         "--sodar-server-url",
@@ -264,18 +264,18 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
 
     mock_check_call = mock.MagicMock(return_value=0)
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
-    mocker.patch("cubi_tk.sodar.ingest_fastq.check_call", mock_check_call)
+    mocker.patch("cubi_tk.sodar.ingest_data.check_call", mock_check_call)
 
-    mocker.patch("cubi_tk.sodar.ingest_fastq.pathlib", fake_pl)
-    mocker.patch("cubi_tk.sodar.ingest_fastq.os", fake_os)
+    mocker.patch("cubi_tk.sodar.ingest_data.pathlib", fake_pl)
+    mocker.patch("cubi_tk.sodar.ingest_data.os", fake_os)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
-    mocker.patch("cubi_tk.sodar.ingest_fastq.open", fake_open)
+    mocker.patch("cubi_tk.sodar.ingest_data.open", fake_open)
 
     # necessary because independent test fail
     mock_value = mock.MagicMock()
-    mocker.patch("cubi_tk.sodar.ingest_fastq.Value", mock_value)
+    mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.snappy.itransfer_common.Value", mock_value)
 
     # requests mock
@@ -313,10 +313,10 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     # Test that the TransferJob contain all files (setting the remote_dest with this mock setup does not work)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
-    ingestfastq = SodarIngestFastq(args)
-    ingestfastq.check_args(args)
-    assert ingestfastq.remote_dir_pattern == DEST_PATTERN_PRESETS["default"]
-    lz, actual = ingestfastq.build_jobs()
+    ingestdata = SodarIngestData(args)
+    ingestdata.check_args(args)
+    assert ingestdata.remote_dir_pattern == DEST_PATTERN_PRESETS["fastq"]
+    lz, actual = ingestdata.build_jobs()
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote
     )
@@ -330,8 +330,8 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     ]
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
-    ingestfastq = SodarIngestFastq(args)
-    assert ingestfastq.remote_dir_pattern == remote_pattern
+    ingestdata = SodarIngestData(args)
+    assert ingestdata.remote_dir_pattern == remote_pattern
 
 
 def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs):
@@ -342,7 +342,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     argv = [
         "--verbose",
         "sodar",
-        "ingest-fastq",
+        "ingest-data",
         "--num-parallel-transfers",
         "0",
         "--sodar-server-url",
@@ -417,18 +417,18 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
 
     mock_check_call = mock.MagicMock(return_value=0)
     mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
-    mocker.patch("cubi_tk.sodar.ingest_fastq.check_call", mock_check_call)
+    mocker.patch("cubi_tk.sodar.ingest_data.check_call", mock_check_call)
 
-    mocker.patch("cubi_tk.sodar.ingest_fastq.pathlib", fake_pl)
-    mocker.patch("cubi_tk.sodar.ingest_fastq.os", fake_os)
+    mocker.patch("cubi_tk.sodar.ingest_data.pathlib", fake_pl)
+    mocker.patch("cubi_tk.sodar.ingest_data.os", fake_os)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
-    mocker.patch("cubi_tk.sodar.ingest_fastq.open", fake_open)
+    mocker.patch("cubi_tk.sodar.ingest_data.open", fake_open)
 
     # necessary because independent test fail
     mock_value = mock.MagicMock()
-    mocker.patch("cubi_tk.sodar.ingest_fastq.Value", mock_value)
+    mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.snappy.itransfer_common.Value", mock_value)
 
     # requests mock
@@ -465,8 +465,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     # Test that the TransferJob contain all files, except html (3x2 for md5s)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
-    ingestfastq = SodarIngestFastq(args)
-    lz, actual = ingestfastq.build_jobs()
+    ingestdata = SodarIngestData(args)
+    lz, actual = ingestdata.build_jobs()
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote
     )

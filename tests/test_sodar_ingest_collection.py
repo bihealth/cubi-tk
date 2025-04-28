@@ -8,13 +8,13 @@ from cubi_tk.parsers import get_sodar_parser
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
-from cubi_tk.sodar.ingest import SodarIngest
+from cubi_tk.sodar.ingest_collection import SodarIngestCollection
 
 
 def test_run_sodar_ingest_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "ingest", "--help"])
+        parser.parse_args(["sodar", "ingest-collection", "--help"])
 
     assert e.value.code == 0
 
@@ -27,7 +27,7 @@ def test_run_sodar_ingest_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "ingest"])
+        parser.parse_args(["sodar", "ingest-collection"])
 
     assert e.value.code == 2
 
@@ -53,10 +53,10 @@ def ingest(fs):
 
     sodar_parser = get_sodar_parser(with_dest= True, dest_string="destination", dest_help_string="UUID from Landing Zone or Project - where files will be moved to.")
     parser = ArgumentParser(parents=[sodar_parser])
-    SodarIngest.setup_argparse(parser)
+    SodarIngestCollection.setup_argparse(parser)
     args = parser.parse_args(argv)
 
-    obj = SodarIngest(args)
+    obj = SodarIngestCollection(args)
     obj.lz_irods_path = "/irodsZone"
     obj.target_coll = "targetCollection"
     return obj
@@ -88,7 +88,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_file("/file6")
     fs.create_symlink("/testdir/file3", "/file3")
 
-    paths = SodarIngest.build_file_list(dummy)
+    paths = SodarIngestCollection.build_file_list(dummy)
 
     # Sources
     assert "File not found: broken_link" in caplog.messages
@@ -109,7 +109,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
 
     # Re-run without recursive search
     args.recursive = False
-    paths = SodarIngest.build_file_list(dummy)
+    paths = SodarIngestCollection.build_file_list(dummy)
     assert {"spath": Path("/testdir/file1"), "ipath": Path("file1")} in paths
     assert {
         "spath": Path("/testdir/file1.md5"),
@@ -125,7 +125,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     assert {"spath": Path("file6"), "ipath": Path("file6")} in paths
 
 
-@patch("cubi_tk.sodar.ingest.TransferJob")
+@patch("cubi_tk.sodar.ingest_collection.TransferJob")
 def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
     paths = [
         {"spath": Path("myfile.csv"), "ipath": Path("dest_dir/myfile.csv")},
@@ -148,9 +148,9 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
         )
 
 
-@patch("cubi_tk.sodar.ingest.TransferJob")
-@patch("cubi_tk.sodar.ingest.iRODSTransfer")
-@patch("cubi_tk.sodar.ingest.iRODSCommon.session")
+@patch("cubi_tk.sodar.ingest_collection.TransferJob")
+@patch("cubi_tk.sodar.ingest_collection.iRODSTransfer")
+@patch("cubi_tk.sodar.ingest_collection.iRODSCommon.session")
 @patch("cubi_tk.sodar_api.requests.get")
 def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs):
     class DummyColl(object):
@@ -163,7 +163,7 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
     lz_uuid = "f46b4fc3-0927-449d-b725-9ffed231507b"
     argv = [
         "sodar",
-        "ingest",
+        "ingest-collection",
         "--sodar-server-url",
         "sodar_server_url",
         "--sodar-api-token",
