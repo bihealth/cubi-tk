@@ -5,7 +5,7 @@ import os
 
 from loguru import logger
 
-from cubi_tk.common import GLOBAL_CONFIG_PATH
+from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH
 
 
 def print_args(args: argparse.Namespace):

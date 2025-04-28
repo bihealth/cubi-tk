@@ -9,10 +9,15 @@ import cattr
 from loguru import logger
 import requests
 
-from cubi_tk.common import is_uuid, load_toml_config
+from cubi_tk.common import is_uuid
 from cubi_tk import api_models
 
+import toml
+import os
 from .exceptions import ParameterException, SodarApiException
+
+#: Paths to search the global configuration in.
+GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"
 
 
 def get_user_input_study(study_uuids: list[str], studies:dict[str, api_models.Study]) -> UUID:
@@ -351,7 +356,7 @@ class SodarApi:
         any_error = False
 
         # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(getattr(args, "config", None))
+        toml_config = self.load_toml_config(getattr(args, "config", None))
         if toml_config:
             args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
             args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get("sodar_api_token")
@@ -388,5 +393,19 @@ class SodarApi:
         elif getattr(args, "project_uuid", None) is None:
             args.project_uuid = None #init project_uuid to none if not already in args for some snappy commands where project uuid is in config
         return any_error, args
+    
+    def load_toml_config(self, config):
+    # Load configuration from TOML cubitkrc file, if any.
+        if config:
+            config_paths = [config,]
+        else:
+            config_paths = [GLOBAL_CONFIG_PATH, ]
+        for config_path in config_paths:
+            config_path = os.path.expanduser(os.path.expandvars(config_path))
+            if os.path.exists(config_path):
+                with open(config_path, "rt") as tomlf:
+                    return toml.load(tomlf)
+        logger.warning("Could not find any of the global configuration files {}.", config_paths)
+        return None
 
 
