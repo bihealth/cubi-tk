@@ -358,8 +358,12 @@ class SodarApi:
         # If SODAR info not provided, fetch from user's toml file
         toml_config = self.load_toml_config(getattr(args, "config", None))
         if toml_config:
-            args.sodar_server_url = args.sodar_server_url or toml_config.get("global", {}).get("sodar_server_url")
-            args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get("sodar_api_token")
+            profile = getattr(args, "config_profile", "global")
+            if not profile in toml_config:
+                logger.error(f"Profile {profile} is not in toml_config, present vals are: {toml_config.keys()}")
+                any_error = True
+            args.sodar_server_url = args.sodar_server_url or toml_config.get(profile, {}).get("sodar_server_url")
+            args.sodar_api_token = args.sodar_api_token or toml_config.get(profile, {}).get("sodar_api_token")
 
         # Check presence of SODAR URL and auth token.
         if not args.sodar_api_token:  # pragma: nocover

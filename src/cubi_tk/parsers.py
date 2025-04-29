@@ -33,6 +33,11 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_
         help="Path to configuration file.",
     )
     sodar_group.add_argument(
+        "--config-profile",
+        default="global",
+        help="Profile from configuration file that should be used.",
+    )
+    sodar_group.add_argument(
         "--sodar-server-url",
         help="SODAR server URL key to use.",
     )
