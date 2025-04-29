@@ -156,7 +156,7 @@ class PullProcessedDataCommand(PullDataCommon):
 
         # Retrieve files from iRODS
         self.get_irods_files(
-            irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite
+            irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite, sodar_profile=self.args.config_profile
         )
 
         logger.info("All done. Have a nice day!")

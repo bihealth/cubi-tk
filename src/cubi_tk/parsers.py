@@ -5,7 +5,7 @@ import os
 
 from loguru import logger
 
-from cubi_tk.common import GLOBAL_CONFIG_PATH
+from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH
 
 
 def print_args(args: argparse.Namespace):
@@ -31,6 +31,11 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_
         "--config",
         default=GLOBAL_CONFIG_PATH,
         help="Path to configuration file.",
+    )
+    sodar_group.add_argument(
+        "--config-profile",
+        default="global",
+        help="Sodar profile from configuration file and irods_environment_{config-profile}.json that should be used. If not specified global and irods_environment.json will be used",
     )
     sodar_group.add_argument(
         "--sodar-server-url",

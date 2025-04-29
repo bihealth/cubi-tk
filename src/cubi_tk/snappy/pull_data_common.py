@@ -21,7 +21,7 @@ class PullDataCommon:
     def __init__(self):
         warnings.warn(
             "The `PullDataCommon` class will be deprecated",
-            DeprecationWarning
+            DeprecationWarning, stacklevel=2
         )
         pass
 
@@ -86,7 +86,7 @@ class PullDataCommon:
         return len(common_links.intersection(path_part_set)) > 0
 
     @staticmethod
-    def get_irods_files(irods_local_path_pairs, force_overwrite=False):
+    def get_irods_files(irods_local_path_pairs, force_overwrite=False, sodar_profile = "global"):
         """Get iRODS files
 
         Retrieves iRODS path and stores it locally.

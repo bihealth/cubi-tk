@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 from cubi_tk.sodar_api import SodarApi
-from cubi_tk.common import GLOBAL_CONFIG_PATH
+from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH
 from cubi_tk.exceptions import SodarApiException
 from tests.factories import InvestigationFactory
 

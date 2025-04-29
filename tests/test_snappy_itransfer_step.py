@@ -157,7 +157,7 @@ def test_run_snappy_itransfer_step_smoke_test(
     res = main(argv)
 
     assert not res
-    mock_transfer.assert_called_with(expected_tfj, ask=not args.yes)
+    mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile = "global")
     mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes = False)
 
     assert fs.exists(fake_file_paths[3])

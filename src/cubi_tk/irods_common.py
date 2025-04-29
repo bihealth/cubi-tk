@@ -62,12 +62,14 @@ class iRODSCommon:
     :type irods_env_path: pathlib.Path, optional
     """
 
-    def __init__(self, ask: bool = False, irods_env_path: Path = None):
+    def __init__(self, ask: bool = False, irods_env_path: Path = None, sodar_profile: str = "global"):
         # Path to iRODS environment file
         if irods_env_path is None:
-            self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
+            irods_env_name = "irods_environment.json" if sodar_profile == "global" else "irods_environment_" + sodar_profile +".json"
+            self.irods_env_path = Path.home().joinpath(".irods", irods_env_name)
         else:
             self.irods_env_path = Path(irods_env_path)
+        logger.debug(f"using irods_file: {self.irods_env_path}")
         self.irodsA_file_found = False
         self.ask = ask
 
