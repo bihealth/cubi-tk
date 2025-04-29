@@ -265,7 +265,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     assert mock_transfer.call_count == 2
     # No easy way to check two calls
     # mock_transfer.assert_called_with(expected_gcnv, ask=not args.yes)
-    mock_transfer.assert_called_with(expected_manta, ask=not args.yes)
+    mock_transfer.assert_called_with(expected_manta, ask=not args.yes, sodar_profile = "global")
     assert mock_transfer_obj.put.call_count == 2
     mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)
 

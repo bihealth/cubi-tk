@@ -35,7 +35,7 @@ def get_sodar_parser(with_dest = False, dest_string = "project_uuid", dest_help_
     sodar_group.add_argument(
         "--config-profile",
         default="global",
-        help="Profile from configuration file that should be used.",
+        help="Sodar profile from configuration file and irods_environment_{config-profile}.json that should be used. If not specified global and irods_environment.json will be used",
     )
     sodar_group.add_argument(
         "--sodar-server-url",

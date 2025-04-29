@@ -123,7 +123,7 @@ class SodarIngestCollection:
         jobs = sorted(jobs, key=lambda x: x.path_local)
 
         # Final go from user & transfer
-        itransfer = iRODSTransfer(jobs, ask=not self.args.yes)
+        itransfer = iRODSTransfer(jobs, ask=not self.args.yes, sodar_profile=self.args.config_profile)
         logger.info("Planning to transfer the following files:")
 
         for job in jobs:
@@ -147,7 +147,7 @@ class SodarIngestCollection:
 
     def build_target_coll(self):
         # Initiate iRODS session
-        irods_session = iRODSCommon().session
+        irods_session = iRODSCommon(sodar_profile=self.args.config_profile).session
         # Query target collection
         logger.info("Querying landing zone collections…")
         collections = []

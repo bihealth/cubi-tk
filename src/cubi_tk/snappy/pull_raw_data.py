@@ -155,7 +155,7 @@ class PullRawDataCommand(PullDataCommon):
         # Retrieve files from iRODS or print
         if not self.args.dry_run:
             self.get_irods_files(
-                irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite
+                irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite, sodar_profile=self.args.config_profile
             )
         else:
             self._report_files(

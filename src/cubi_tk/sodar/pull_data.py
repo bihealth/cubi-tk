@@ -210,7 +210,7 @@ class PullDataCommand:
         )
 
         # Retrieve files from iRODS
-        iRODSTransfer(transfer_jobs).get(self.args.overwrite)
+        iRODSTransfer(transfer_jobs, sodar_profile=self.args.config_profile).get(self.args.overwrite)
 
         logger.info("All done. Have a nice day!")
         return 0

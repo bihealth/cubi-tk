@@ -348,7 +348,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
 
         # Final go from user & transfer
-        itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes)
+        itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes, sodar_profile=self.args.config_profile)
         logger.info("Planning to transfer the following files:")
         for job in transfer_jobs:
             logger.info(job.path_local)
