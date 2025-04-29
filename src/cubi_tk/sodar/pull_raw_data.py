@@ -116,7 +116,7 @@ class PullRawDataCommand:
         """Entry point into the command."""
         warnings.warn(
             "The `pull-raw-data` command will be deprecated. Please use `pull-data -f '*.fastq.gz'` instead",
-            DeprecationWarning
+            DeprecationWarning, stacklevel=2
         )
         args = vars(args)
         args.pop("cmd", None)

@@ -359,7 +359,7 @@ class SodarApi:
         toml_config = self.load_toml_config(getattr(args, "config", None))
         if toml_config:
             profile = getattr(args, "config_profile", "global")
-            if not profile in toml_config:
+            if profile not in toml_config:
                 logger.error(f"Profile {profile} is not in toml_config, present vals are: {toml_config.keys()}")
                 any_error = True
             args.sodar_server_url = args.sodar_server_url or toml_config.get(profile, {}).get("sodar_server_url")
@@ -397,7 +397,7 @@ class SodarApi:
         elif getattr(args, "project_uuid", None) is None:
             args.project_uuid = None #init project_uuid to none if not already in args for some snappy commands where project uuid is in config
         return any_error, args
-    
+
     def load_toml_config(self, config):
     # Load configuration from TOML cubitkrc file, if any.
         if config:

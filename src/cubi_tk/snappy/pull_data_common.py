@@ -21,7 +21,7 @@ class PullDataCommon:
     def __init__(self):
         warnings.warn(
             "The `PullDataCommon` class will be deprecated",
-            DeprecationWarning
+            DeprecationWarning, stacklevel=2
         )
         pass
 
