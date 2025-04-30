@@ -147,15 +147,16 @@ def run(args, parser, subparser):  # pragma: nocover
         if not status:
             logger.info("Running AltamISA validator:")
             i_files = Path(args.output_dir).rglob("i_*")
-            args.show_duplicate_warnings = False
             warnings.filterwarnings(
                 "error", category=altamisa.exceptions.CriticalIsaValidationWarning
             )
             for i in i_files:
                 try:
                     with i.open() as i_file:
-                        args.input_investigation_file = i_file
-                        altamisa.apps.isatab_validate.run(args)
+                        altamisa.apps.isatab_validate.main(
+                            input_investigation_file=i,
+                            show_duplicate_warnings=False,
+                        )
                 except (
                     altamisa.exceptions.ParseIsatabException,
                     altamisa.exceptions.CriticalIsaValidationWarning,
