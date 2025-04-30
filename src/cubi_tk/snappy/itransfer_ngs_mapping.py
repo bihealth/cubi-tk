@@ -12,7 +12,6 @@ TPL_INPUT_DIR = "ngs_mapping/output/%(mapper)s.%(library_name)s"
 class SnappyItransferNgsMappingCommand(SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for ngs_mapping results."""
 
-    fix_md5_files = True
     command_name = "itransfer-ngs-mapping"
     step_name = "ngs_mapping"
 

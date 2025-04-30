@@ -51,7 +51,7 @@ def check_and_gen_irodsA(mocksession, mockpass, fs):
     icommon = iRODSCommon()
     mockpass.return_value = password
 
-    icommon._check_and_gen_irodsA()
+    icommon._check_and_gen_irods_files()
     mockpass.assert_called()
     mocksession.assert_any_call(irods_env_file=ANY, password=password)
     assert icommon.irods_env_path.parent.joinpath(".irodsA").exists()
@@ -92,12 +92,12 @@ def test_irods_transfer_put(mockrecursive, mocksession, jobs):
     itransfer = iRODSTransfer(jobs)
 
     # put
-    itransfer.put(yes=True)
+    itransfer.put()
     calls = [call(j.path_local, j.path_remote, forceFlag=None) for j in jobs]
     mockput.assert_has_calls(calls)
 
     # recursive
-    itransfer.put(recursive=True, yes=True)
+    itransfer.put(recursive=True)
     calls = [call(j) for j in jobs]
     mockrecursive.assert_has_calls(calls)
 

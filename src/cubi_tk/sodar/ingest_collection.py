@@ -11,7 +11,7 @@ from cubi_tk.irods_common import TransferJob, iRODSCommon, iRODSTransfer
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
-from ..common import compute_md5_checksum, is_uuid, sizeof_fmt
+from ..common import compute_checksum, is_uuid, sizeof_fmt
 
 # for testing
 logger.propagate = True
@@ -109,8 +109,11 @@ class SodarIngestCollection:
                 logger.error("Target landing zone is not ACTIVE.")
                 sys.exit(1)
 
+        irods_hash_scheme= iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
+        hash_ending = "." + irods_hash_scheme.lower()
+
         # Build file list
-        source_paths = self.build_file_list()
+        source_paths = self.build_file_list(hash_ending)
         if len(source_paths) == 0:
             logger.info("Nothing to do. Quitting.")
             sys.exit(0)
@@ -118,8 +121,8 @@ class SodarIngestCollection:
         # Query user for target sub-collection
         self.build_target_coll()
 
-        # Build transfer jobs and add missing md5 files
-        jobs = self.build_jobs(source_paths)
+        # Build transfer jobs and add missing checksum files
+        jobs = self.build_jobs(source_paths, irods_hash_scheme, hash_ending)
         jobs = sorted(jobs, key=lambda x: x.path_local)
 
         # Final go from user & transfer
@@ -137,7 +140,7 @@ class SodarIngestCollection:
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put(recursive=self.args.recursive, sync=self.args.sync, yes=self.args.yes)
+        itransfer.put(recursive=self.args.recursive, sync=self.args.sync)
         logger.info("File transfer complete.")
 
         # Compute server-side checksums
@@ -188,7 +191,7 @@ class SodarIngestCollection:
             logger.error("Selected target collection does not exist in landing zone.")
             sys.exit(1)
 
-    def build_file_list(self) -> typing.List[typing.Dict[Path, Path]]:
+    def build_file_list(self, hash_ending) -> typing.List[typing.Dict[Path, Path]]:
         """
         Build list of source files to transfer.
         iRODS paths are relative to target collection.
@@ -213,28 +216,29 @@ class SodarIngestCollection:
                 for p in paths:
                     if excludes and any(p.match(e) for e in excludes):
                         continue
-                    if p.is_file() and not p.suffix.lower() == ".md5":
+                    if p.is_file() and not p.suffix.lower() == hash_ending:
                         output_paths.append({"spath": p, "ipath": p.relative_to(abspath)})
             else:
                 if not any(src.match(e) for e in excludes if e):
                     output_paths.append({"spath": src, "ipath": Path(src.name)})
         return output_paths
 
-    def build_jobs(self, source_paths: typing.Iterable[Path]) -> typing.Tuple[TransferJob]:
+    def build_jobs(self, source_paths: typing.Iterable[Path], irods_hash_scheme, hash_ending) -> typing.Tuple[TransferJob]:
         """Build file transfer jobs."""
 
         transfer_jobs = []
 
         for p in source_paths:
             path_remote = f"{self.target_coll}/{str(p['ipath'])}"
-            md5_path = p["spath"].parent / (p["spath"].name + ".md5")
 
-            if md5_path.exists():
-                logger.info(f"Found md5 hash on disk for {p['spath']}")
+            hash_path = p["spath"].parent / (p["spath"].name + hash_ending)
+
+            if hash_path.exists():
+                logger.info(f"Found {irods_hash_scheme} hash on disk for {p['spath']}")
             else:
-                md5sum = compute_md5_checksum(p["spath"])
-                with md5_path.open("w", encoding="utf-8") as f:
-                    f.write(f"{md5sum}  {p['spath'].name}")
+                checksum = compute_checksum(p["spath"], irods_hash_scheme)
+                with hash_path.open("w", encoding="utf-8") as f:
+                    f.write(f"{checksum}  {p['spath'].name}")
 
             transfer_jobs.append(
                 TransferJob(
@@ -245,8 +249,8 @@ class SodarIngestCollection:
 
             transfer_jobs.append(
                 TransferJob(
-                    path_local=str(md5_path),
-                    path_remote=path_remote + ".md5",
+                    path_local=str(hash_path),
+                    path_remote=path_remote + hash_ending,
                 )
             )
 

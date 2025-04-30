@@ -1,15 +1,13 @@
 """``cubi-tk sodar ingest-data``: add FASTQ files to SODAR"""
 
 import argparse
-from ctypes import c_ulonglong
 import datetime
 import glob
 from multiprocessing import Value
-from multiprocessing.pool import ThreadPool
 import os
 import pathlib
 import re
-from subprocess import SubprocessError, check_call, check_output
+from subprocess import SubprocessError, check_output
 import sys
 import typing
 
@@ -19,9 +17,9 @@ import tqdm
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
-from ..common import sizeof_fmt
+from ..common import execute_checksum_files_fix, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
-from ..irods_common import TransferJob, iRODSTransfer
+from ..irods_common import TransferJob, iRODSCommon, iRODSTransfer
 from ..snappy.itransfer_common import SnappyItransferCommandBase
 
 # for testing
@@ -75,38 +73,10 @@ DEST_PATTERN_PRESETS = {
 DEFAULT_NUM_TRANSFERS = 8
 
 
-def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
-    """Compute MD5 sum with ``md5sum`` command."""
-    dirname = os.path.dirname(job.path_local)
-    filename = os.path.basename(job.path_local)[: -len(".md5")]
-    path_md5 = job.path_local
-
-    md5sum_argv = ["md5sum", filename]
-    logger.debug("Computing MD5sum {} > {}", " ".join(md5sum_argv), filename + ".md5")
-    try:
-        with open(path_md5, "wt") as md5f:
-            check_call(md5sum_argv, cwd=dirname, stdout=md5f)
-    except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: {}", e)
-        logger.info("Removing file after error: {}", path_md5)
-        try:
-            os.remove(path_md5)
-        except OSError as e_rm:  # pragma: nocover
-            logger.error("Could not remove file: {}", e_rm)
-        raise e
-
-    with counter.get_lock():
-        counter.value = os.path.getsize(job.path_local[: -len(".md5")])
-        try:
-            t.update(counter.value)
-        except TypeError:
-            pass  # swallow, pyfakefs and multiprocessing don't lik each other
-
 
 class SodarIngestData(SnappyItransferCommandBase):
     """Implementation of sodar ingest-data command."""
 
-    fix_md5_files = True
     command_name = "ingest-data"
 
     def __init__(self, args):
@@ -395,7 +365,7 @@ class SodarIngestData(SnappyItransferCommandBase):
         return val[0][0]
 
 
-    def build_jobs(self) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
+    def build_jobs(self, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
         """Build file transfer jobs."""
         sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
         try:
@@ -426,15 +396,11 @@ class SodarIngestData(SnappyItransferCommandBase):
                 real_path = os.path.realpath(path)
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
-                if real_path.endswith((".md5", ".md5sum")):
+                if real_path.endswith((".md5", ".md5sum", ".sha256")):
                     continue  # skip, will be added automatically
 
                 if not os.path.exists(real_path):  # pragma: nocover
                     raise MissingFileException("Missing file %s" % real_path)
-                if (
-                    not os.path.exists(real_path + ".md5") and not self.fix_md5_files
-                ):  # pragma: nocover
-                    raise MissingFileException("Missing file %s" % (real_path + ".md5"))
 
                 # logger.debug(f"Checking file: {path}")
                 m = re.match(use_regex, path)
@@ -474,7 +440,7 @@ class SodarIngestData(SnappyItransferCommandBase):
                     # for m_pat, r_pat in self.args.remote_dir_mapping:
                     #     remote_file = re.sub(m_pat, r_pat, remote_file)
 
-                    for ext in ("", ".md5"):
+                    for ext in ("", hash_ending):
                         transfer_jobs.append(
                             TransferJob(
                                 path_local=real_path + ext,
@@ -492,8 +458,9 @@ class SodarIngestData(SnappyItransferCommandBase):
 
         logger.info("Starting cubi-tk sodar {}", self.command_name)
         print_args(self.args)
-
-        lz_uuid, transfer_jobs = self.build_jobs()
+        irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
+        irods_hash_ending = "."+irods_hash_scheme.lower()
+        lz_uuid, transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
         # Exit early if no files were found/matched
         if not transfer_jobs:
@@ -505,9 +472,7 @@ class SodarIngestData(SnappyItransferCommandBase):
             logger.warning("No matching files were found!\nUsed regex: {}", used_regex)
             return None
 
-        if self.fix_md5_files:
-            transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
-
+        transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.num_parallel_transfers)
         # Final go from user & transfer
         itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes, sodar_profile=self.args.config_profile)
         logger.info("Planning to transfer the following files:")
@@ -520,7 +485,7 @@ class SodarIngestData(SnappyItransferCommandBase):
                 logger.info("Aborting at your request.")
                 sys.exit(0)
 
-        itransfer.put(recursive=True, sync=self.args.sync, yes=self.args.yes)
+        itransfer.put(recursive=True, sync=self.args.sync)
         logger.info("File transfer complete.")
 
         # Validate and move transferred files
@@ -534,48 +499,6 @@ class SodarIngestData(SnappyItransferCommandBase):
 
         logger.info("All done")
         return None
-
-    def _execute_md5_files_fix(
-        self, transfer_jobs: typing.Tuple[TransferJob, ...]
-    ) -> typing.Tuple[TransferJob, ...]:
-        """Create missing MD5 files."""
-        ok_jobs = []
-        todo_jobs = []
-        for job in transfer_jobs:
-            if not os.path.exists(job.path_local):
-                todo_jobs.append(job)
-            else:
-                ok_jobs.append(job)
-
-        total_bytes = sum([os.path.getsize(j.path_local[: -len(".md5")]) for j in todo_jobs])
-        logger.info(
-            "Computing MD5 sums for {} files of {} with up to {} processes",
-            len(todo_jobs),
-            sizeof_fmt(total_bytes),
-            self.args.num_parallel_transfers,
-        )
-        logger.info("Missing MD5 files:\n{}", "\n".join( j.path_local for j in todo_jobs))
-        counter = Value(c_ulonglong, 0)
-        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if self.args.num_parallel_transfers == 0:  # pragma: nocover
-                for job in todo_jobs:
-                    compute_md5sum(job, counter, t)
-            else:
-                pool = ThreadPool(processes=self.args.num_parallel_transfers)
-                for job in todo_jobs:
-                    pool.apply_async(compute_md5sum, args=(job, counter, t))
-                pool.close()
-                pool.join()
-
-        # Finally, determine file sizes after done.
-        done_jobs = [
-            TransferJob(
-                path_local=j.path_local,
-                path_remote=j.path_remote,
-            )
-            for j in todo_jobs
-        ]
-        return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
 
 
 def download_folder(job: TransferJob, counter: Value, t: tqdm.tqdm):

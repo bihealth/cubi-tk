@@ -1,7 +1,7 @@
 """``cubi-tk snappy check-remote``: check that files are present in remote SODAR/iRODS.
 
 Only uses local information for checking that the linked-in RAW data files are correct in terms
-of the MD5 sum.  Otherwise, just checks for presence of files (for now), the rationale being that
+of the checksum.  Otherwise, just checks for presence of files (for now), the rationale being that
 
 """
 import argparse
@@ -222,7 +222,7 @@ class FindLocalFiles(FindFilesCommon):
 class Checker:
     """Class with common checker methods."""
 
-    def __init__(self, local_files_dict, remote_files_dict, check_md5=False):
+    def __init__(self, local_files_dict, remote_files_dict, check_checksum=False):
         """Constructor.
 
         :param local_files_dict: Dictionary with local files and directories structure for all libraries in sample
@@ -233,11 +233,11 @@ class Checker:
         sheet.
         :type remote_files_dict: dict
 
-        :param check_md5: Flag to indicate if local MD5 files should be compared with
+        :param check_checksum: Flag to indicate if local checksum files should be compared with
         """
         self.local_files_dict = local_files_dict
         self.remote_files_dict = remote_files_dict
-        self.check_md5 = check_md5
+        self.check_checksum = check_checksum
 
     def coordinate_run(self, check_name):
         """Coordinates the execution of methods necessary to check step files.
@@ -274,11 +274,11 @@ class Checker:
 
         # Report
         self.report_multiple_file_versions_in_sodar(remote_dict=subset_remote_files_dict)
-        if self.check_md5:  # md5 check report
-            okay_list, different_list = self.compare_md5_files(
+        if self.check_checksum:  # checksum check report
+            okay_list, different_list = self.compare_checksum_files(
                 remote_dict=subset_remote_files_dict, in_both_set=in_both_set
             )
-            self.report_findings_md5(okay_list, different_list)
+            self.report_findings_checksum(okay_list, different_list)
         else:  # simple report
             self.report_findings(
                 both_locations=in_both_set, only_local=local_only_set, only_remote=remote_only_set
@@ -288,8 +288,8 @@ class Checker:
         return True
 
     @staticmethod
-    def compare_md5_files(remote_dict, in_both_set):
-        """Compares remote and local MD5 files.
+    def compare_checksum_files(remote_dict, in_both_set):
+        """Compares remote and local checksum files.
 
         :param remote_dict: Dictionary with remote file structure. Key: remote directory path; Value: list of file
         names.
@@ -303,23 +303,23 @@ class Checker:
         same checksum (excluding empty files) - key: checksum; values: list of remote paths.
         """
         # Initialise variables
-        same_md5_list = []
-        different_md5_list = []
+        same_checksum_list = []
+        different_checksum_list = []
 
         # Define expected MD5 files - report files where missing
-        all_expected_local_md5 = [file_ + ".md5" for file_ in in_both_set]
-        all_local_md5 = [file_ for file_ in all_expected_local_md5 if os.path.isfile(file_)]
-        missing_list = set(all_expected_local_md5) - set(all_local_md5)
+        all_expected_local_checksums = [file_ + ".md5" for file_ in in_both_set]
+        all_local_checksums = [file_ for file_ in all_expected_local_checksums if os.path.isfile(file_)]
+        missing_list = set(all_expected_local_checksums) - set(all_local_checksums)
 
         if len(missing_list) > 0:
             missing_str = "\n".join(missing_list)
             logger.warning(
-                f"Comparison was not possible for the case(s) below, MD5 file(s) expected but not "
+                f"Comparison was not possible for the case(s) below, checksum file(s) expected but not "
                 f"found locally:\n{missing_str}"
             )
 
         # Compare
-        for md5_file in all_local_md5:
+        for md5_file in all_local_checksums:
             file_name = os.path.basename(md5_file)
             original_file_name = file_name.replace(".md5", "")
             # Read local MD5
@@ -331,9 +331,9 @@ class Checker:
             # Compare to remote MD5
             for irods_dat in remote_dict.get(original_file_name):
                 if local_md5 != irods_dat.FILE_MD5SUM:
-                    different_md5_list.append((md5_file.replace(".md5", ""), irods_dat.path))
+                    different_checksum_list.append((md5_file.replace(".md5", ""), irods_dat.path))
                 else:
-                    same_md5_list.append(md5_file.replace(".md5", ""))
+                    same_checksum_list.append(md5_file.replace(".md5", ""))
                 # BONUS - check remote replicas
                 if not all(
                     (
@@ -348,7 +348,7 @@ class Checker:
                         f"Metadata checksum: {', '.join(irods_dat.REPLICAS_MD5SUM)}\n"
                     )
 
-        return same_md5_list, different_md5_list
+        return same_checksum_list, different_checksum_list
 
     @staticmethod
     def compare_local_and_remote_files(local_dict, remote_dict):
@@ -428,7 +428,7 @@ class Checker:
             logger.warning(f"Files with different versions in SODAR:{pairs_str}")
 
     @staticmethod
-    def report_findings_md5(okay_list, different_list):
+    def report_findings_checksum(okay_list, different_list):
         """Report MD5 findings.
 
         :param okay_list: Set with all files with the exact same MD5 value - local path.

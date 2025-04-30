@@ -2,6 +2,7 @@ import argparse
 import datetime
 from unittest.mock import patch
 
+from cubi_tk.common import execute_checksum_files_fix
 from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_parser
 from cubi_tk.snappy.itransfer_common import SnappyItransferCommandBase
 from cubi_tk.irods_common import TransferJob
@@ -27,7 +28,7 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = sorted(expected, key=lambda x: x.path_local)
+    expected = tuple(sorted(expected, key=lambda x: x.path_local))
 
     parser = argparse.ArgumentParser(parents=[
         get_snappy_itransfer_parser(),
@@ -37,12 +38,12 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
 
-    assert ("466ab946-ce6a-4c78-9981-19b79e7bbe86", expected) == SIC.build_jobs(["dummy_name"], sodar_api)
+    assert ("466ab946-ce6a-4c78-9981-19b79e7bbe86", expected) == SIC.build_jobs(["dummy_name"], sodar_api, ".md5")
 
 
 # Need to patch multiprocessing & subprocess functions
-@patch("cubi_tk.snappy.itransfer_common.Value")
-@patch("cubi_tk.snappy.itransfer_common.check_call")
+@patch("cubi_tk.common.Value")
+@patch("cubi_tk.common.check_call")
 def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_value, fs):
     mock_check_call.return_value = "dummy-md5-sum dummy/file/name"
 
@@ -67,7 +68,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_va
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = sorted(expected, key=lambda x: x.path_local)
+    expected = tuple(sorted(expected, key=lambda x: x.path_local))
 
-    SIC._execute_md5_files_fix(expected, parallel_jobs=0)
+    execute_checksum_files_fix(expected, "MD5", parallel_jobs=0)
     assert mock_check_call.call_count == 2

@@ -1,15 +1,19 @@
 """Common code."""
 import contextlib
+from ctypes import c_ulonglong
 import difflib
 import fcntl
 import glob
 import hashlib
+from multiprocessing.pool import ThreadPool
 import os
 import pathlib
 import shutil
 import struct
 import subprocess
-from subprocess import CalledProcessError, check_output
+from subprocess import CalledProcessError, SubprocessError, check_call, check_output
+from multiprocessing import Value
+import tqdm
 import sys
 import tempfile
 import termios
@@ -24,24 +28,96 @@ from .exceptions import (
     IrodsIcommandsUnavailableException,
 )
 
-
+from .irods_common import TransferJob
 
 
 def mask_password(value: str) -> str:
     return repr(value[:4] + (len(value) - 4) * "*")
 
 
-def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
+def compute_checksum(filename, hash_scheme, buffer_size=1_048_576, verbose=True):
     if verbose:
-        logger.info("Computing md5 hash for {}".format(filename))
+        logger.info(f"Computing {hash_scheme} hash for {filename}")
     the_hash = None
     with open(filename, "rb") as f:
-        the_hash = hashlib.md5()
+        if hash_scheme.lower() == "md5":
+            the_hash = hashlib.md5()
+        else: #currently only md5 and SHA256 supported
+            the_hash= hashlib.sha256()
         chunk = f.read(buffer_size)
         while chunk:
             the_hash.update(chunk)
             chunk = f.read(buffer_size)
     return the_hash.hexdigest()
+
+def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, hash_scheme) -> None: # type: ignore
+    """Compute checksum with ``md5sum`` or ``sha256sum``command."""
+    hash_ending = "."+hash_scheme.lower()
+    dirname = os.path.dirname(job.path_local)
+    filename = os.path.basename(job.path_local)[: -len(hash_ending)]
+    path_checksum = job.path_local
+    checksum_argv = [hash_scheme.lower()+"sum", filename]
+    logger.debug("Computing checksum {} > {}", " ".join(checksum_argv), filename + hash_ending)
+    try:
+        with open(path_checksum, "wt") as checksumfile:
+            check_call(checksum_argv, cwd=dirname, stdout=checksumfile)
+    except SubprocessError as e:  # pragma: nocover
+        logger.error("Problem executing checksum hash: {}", e)
+        logger.info("Removing file after error: {}", path_checksum)
+        try:
+            os.remove(path_checksum)
+        except OSError as e_rm:  # pragma: nocover
+            logger.error("Could not remove file: {}", e_rm)
+        raise e
+
+    with counter.get_lock():
+        counter.value = os.path.getsize(job.path_local[: -len(hash_ending)])
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other
+
+def execute_checksum_files_fix(
+        transfer_jobs: typing.Tuple[TransferJob, ...], hash_scheme, parallel_jobs: int = 8,
+    ) -> typing.Tuple[TransferJob, ...]:
+        """Create missing checksum files."""
+        ok_jobs = []
+        todo_jobs = []
+        for job in transfer_jobs:
+            if not os.path.exists(job.path_local):
+                todo_jobs.append(job)
+            else:
+                ok_jobs.append(job)
+
+        total_bytes = sum([os.path.getsize(j.path_local[: -len("."+hash_scheme.lower())]) for j in todo_jobs])
+        logger.info(
+            "Computing checksum sums for {} files of {} with up to {} processes",
+            len(todo_jobs),
+            sizeof_fmt(total_bytes),
+            parallel_jobs,
+        )
+        logger.info("Missing checksum files:\n{}", "\n".join( j.path_local for j in todo_jobs))
+        counter = Value(c_ulonglong, 0)
+        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
+            if parallel_jobs == 0:  # pragma: nocover
+                for job in todo_jobs:
+                    compute_checksum_parallel(job, counter, t, hash_scheme)
+            else:
+                pool = ThreadPool(processes=parallel_jobs)
+                for job in todo_jobs:
+                    pool.apply_async(compute_checksum_parallel, args=(job, counter, t, hash_scheme))
+                pool.close()
+                pool.join()
+
+        # Finally, determine file sizes after done.
+        done_jobs = [
+            TransferJob(
+                path_local=j.path_local,
+                path_remote=j.path_remote,
+            )
+            for j in todo_jobs
+        ]
+        return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
 
 
 def execute_shell_commands(cmds, verbose=True, check=True):

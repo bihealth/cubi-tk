@@ -116,7 +116,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
         )
         for f in fake_file_paths
     ]
-    expected_tfj = sorted(expected_tfj, key=lambda x: x.path_local)
+    expected_tfj = tuple(sorted(expected_tfj, key=lambda x: x.path_local))
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -132,13 +132,21 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_variant_calling.os", fake_os)
+    mocker.patch("cubi_tk.common.os", fake_os)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
+    mocker.patch("cubi_tk.common.open", fake_open)
 
-    mock_check_call = mock.mock_open()
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
+    mock_check_call = mock.MagicMock(return_value=0)
+    mocker.patch("cubi_tk.common.check_call", mock_check_call)
+
+     # necessary because independent test fail
+    mock_value = mock.MagicMock()
+    mocker.patch("cubi_tk.common.Value", mock_value)
+
+    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
     # Actually exercise code and perform test.
     parser, _subparsers = setup_argparse()
@@ -146,8 +154,8 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     res = main(argv)
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile='global')
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)
-
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    print(fs)
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1
     mock_check_call.assert_called_once_with(

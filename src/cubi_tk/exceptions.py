@@ -53,8 +53,8 @@ class InvalidReadmeException(CubiTkException):
     """Raised if the Readme does not meet the specification."""
 
 
-class FileMd5MismatchException(CubiTkException):
-    """Raised if the recorded md5 sum for a file does not match the (re)computed value."""
+class FileChecksumMismatchException(CubiTkException):
+    """Raised if the recorded checksum for a file does not match the (re)computed value."""
 
 
 class SodarApiException(CubiTkException):

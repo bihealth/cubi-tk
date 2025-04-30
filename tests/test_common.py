@@ -20,7 +20,7 @@ def test_compute_md5_checksum(mocker):
     fake_open = fake_filesystem.FakeFileOpen(fs)
     fs.create_file(file_path, contents="Hello World!\n", create_missing_dirs=True)
     mocker.patch("cubi_tk.common.open", fake_open)
-    assert common.compute_md5_checksum(file_path) == "8ddd8be4b179a529afa5f2ffae4b9858"
+    assert common.compute_checksum(file_path, "MD5") == "8ddd8be4b179a529afa5f2ffae4b9858"
 
 
 def test_execute_shell_commands():

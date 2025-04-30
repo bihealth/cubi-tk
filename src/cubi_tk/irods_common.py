@@ -1,5 +1,6 @@
 from collections import defaultdict
 import getpass
+import json
 import os.path
 from pathlib import Path
 import re
@@ -72,6 +73,7 @@ class iRODSCommon:
         logger.debug(f"using irods_file: {self.irods_env_path}")
         self.irodsA_file_found = False
         self.ask = ask
+        self.hash_scheme = DEFAULT_HASH_SCHEME
 
 
     @staticmethod
@@ -82,7 +84,7 @@ class iRODSCommon:
 
     def _init_irods(self) -> iRODSSession:
         """Connect to iRODS. Login if needed."""
-        self._check_and_gen_irodsA()
+        self._check_and_gen_irods_files()
         count_tries = 1
         while True:
             try:
@@ -91,28 +93,43 @@ class iRODSCommon:
                 return session
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                self._check_and_gen_irodsA(overwrite=True)
+                self._check_and_gen_irods_files(overwrite=True)
                 count_tries+=1
                 if count_tries >3:
                     raise e
 
 
-    def _check_and_gen_irodsA(self, overwrite = False):
+    def _check_and_gen_irods_files(self, overwrite = False):
         """check if irodsA exists and generate it"""
         if self.irodsA_file_found is True and not overwrite:
             return
         try:
-            for file in self.irods_env_path.parent.iterdir():
-                if file.name == ".irodsA":
-                    self.irodsA_file_found = True
-                    break
-            if not self.irodsA_file_found or overwrite:
+            #check if irodsfile exists
+            irodsA_path = self.irods_env_path.parent.joinpath(".irodsA")
+            if (irodsA_path.exists()):
+                self.irodsA_file_found = True
+
+            write_irods_file = not self.irodsA_file_found or overwrite
+            if self.ask and write_irods_file :
                 write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '), overwrite=overwrite)
                 self.irodsA_file_found = True
-        except FileNotFoundError as e:
-            logger.info("Please check the irods_env_path")
-            logger.info(e)
+            elif not self.ask and write_irods_file:
+                logger.error("Password for irods conenction needs to be entered, please switch to interactive mode")
 
+            #read hashscheme vom irods env file
+            with open(self.irods_env_path) as irods_env_data:
+                irods_env_json = json.load(irods_env_data)
+                self.hash_scheme = irods_env_json["irods_default_hash_scheme"]
+                if self.hash_scheme not in HASH_SCHEMES:
+                    logger.error("Hashscheme currently not supported")
+                logger.debug(f"Hashscheme to use: {self.hash_scheme}")
+        except FileNotFoundError as e:
+            logger.error("Please check the irods_env_path")
+            logger.error(e)
+
+    def irods_hash_scheme(self):
+        self._init_irods()
+        return self.hash_scheme
 
     @property
     def session(self):
@@ -150,7 +167,7 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, sync: bool = False, yes: bool = False):
+    def put(self, recursive: bool = False, sync: bool = False):
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -185,7 +202,7 @@ class iRODSTransfer(iRODSCommon):
                                 print("\n")
                                 msg = "The file is already present, this and all following present files in irodscollection will get overwritten."
                                 #show warning
-                                if yes:
+                                if not self.ask:
                                     logger.warning(msg)
                                 #ask user
                                 else:
@@ -201,9 +218,9 @@ class iRODSTransfer(iRODSCommon):
             t.clear()
 
     def chksum(self):
-        """Compute remote md5 checksums for all jobs."""
+        """Compute remote checksums for all jobs."""
         common_prefix = os.path.commonpath(self.__destinations)
-        checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith(".md5"))
+        checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith("." + self.hash_scheme.lower()))
         logger.info(f"Triggering remote checksum computation for {len(checkjobs)} files.")
         for n, job in enumerate(checkjobs):
             logger.info(
@@ -268,12 +285,9 @@ class iRODSRetrieveCollection(iRODSCommon):
     """Class retrieves iRODS Collection associated with Assay"""
 
     def __init__(
-        self, hash_scheme: str = DEFAULT_HASH_SCHEME, ask: bool = False, irods_env_path: Path = None
-    ):
-        """Constructor.
+        self, **kwargs):
 
-        :param hash_scheme: iRODS hash scheme, default MD5.
-        :type hash_scheme: str, optional
+        """Constructor.
 
         :param ask: Confirm with user before certain actions.
         :type ask: bool, optional
@@ -281,8 +295,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        super().__init__(ask, irods_env_path)
-        self.hash_scheme = hash_scheme
+        super().__init__(**kwargs)
 
     def retrieve_irods_data_objects(self, irods_path: str) -> dict[str, list[iRODSDataObject]]:
         """Retrieve data objects from iRODS.

@@ -229,7 +229,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
         )
         for f in fake_file_paths
     ]
-    expected_manta = sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
+    expected_manta = tuple(sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local))
     # expected_gcnv = list(
     #     sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
     # )
@@ -248,14 +248,18 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_variant_calling.os", fake_os)
+    mocker.patch("cubi_tk.common.os", fake_os)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_sv_calling.open", fake_open)
     mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
+    mocker.patch("cubi_tk.common.open", fake_open)
 
     mock_check_call = mock.mock_open()
-    mocker.patch("cubi_tk.snappy.itransfer_common.check_call", mock_check_call)
+    mocker.patch("cubi_tk.common.check_call", mock_check_call)
+
+    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
     # Actually exercise code and perform test.
     parser, _subparsers = setup_argparse()
@@ -267,7 +271,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     # mock_transfer.assert_called_with(expected_gcnv, ask=not args.yes)
     mock_transfer.assert_called_with(expected_manta, ask=not args.yes, sodar_profile = "global")
     assert mock_transfer_obj.put.call_count == 2
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1
