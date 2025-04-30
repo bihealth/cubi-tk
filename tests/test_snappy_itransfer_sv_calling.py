@@ -259,6 +259,8 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     mock_check_call = mock.mock_open()
     mocker.patch("cubi_tk.common.check_call", mock_check_call)
 
+    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+
     # Actually exercise code and perform test.
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)

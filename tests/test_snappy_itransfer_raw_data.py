@@ -119,6 +119,8 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
     mocker.patch("cubi_tk.common.open", fake_open)
+    
+    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
 
     # Actually exercise code and perform test.

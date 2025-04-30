@@ -117,7 +117,8 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         pass
-
+    
+    # FIXME: possibly use transferjob from .irods_common
     def build_transfer_jobs(self, command_blocks, blueprint, hash_ending) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
@@ -217,6 +218,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.info("All done")
         return None
 
+    # FIXME: possibly use methd from ..common
     def _execute_checksum_files_fix(self, transfer_jobs: typing.Tuple[TransferJob, ...], hash_scheme) -> typing.Tuple[TransferJob, ...]:
         """Create missing checksum files."""
         ok_jobs = []
@@ -264,7 +266,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk sea-snap itransfer-results``."""
     return SeasnapItransferMappingResultsCommand.setup_argparse(parser)
 
-
+# FIXME: possibly use methd from ..common
 def compute_checksum(job: TransferJob, counter: Value, t: tqdm.tqdm, hash_scheme) -> None:
     """Compute checksum sum with ``md5sum`or sha256sum` command."""
     dirname = os.path.dirname(job.path_src)
