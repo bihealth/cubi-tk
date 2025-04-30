@@ -6,6 +6,7 @@ We only run some smoke tests here.
 import datetime
 import os
 import re
+from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from pyfakefs import fake_filesystem
@@ -119,7 +120,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
     mocker.patch("cubi_tk.common.open", fake_open)
-    
+
     mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
 

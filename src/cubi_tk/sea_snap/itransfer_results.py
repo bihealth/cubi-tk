@@ -117,7 +117,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         pass
-    
+
     # FIXME: possibly use transferjob from .irods_common
     def build_transfer_jobs(self, command_blocks, blueprint, hash_ending) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
