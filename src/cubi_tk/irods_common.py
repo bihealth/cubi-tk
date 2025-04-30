@@ -11,7 +11,7 @@ import attrs
 from irods.collection import iRODSCollection
 from irods.column import Like
 from irods.data_object import iRODSDataObject
-from irods.keywords import FORCE_FLAG_KW
+from irods.keywords import FORCE_FLAG_KW, DEST_RESC_NAME_KW
 from irods.models import Collection as CollectionModel
 from irods.models import DataObject as DataObjectModel
 from irods.session import iRODSSession
@@ -180,7 +180,7 @@ class iRODSTransfer(iRODSCommon):
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
             allow_overwrite = False
-            kw_options = {}
+            kw_options = {DEST_RESC_NAME_KW:'cephfs-2'}
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
@@ -198,7 +198,7 @@ class iRODSTransfer(iRODSCommon):
                             elif not allow_overwrite:
                                 #set overwrite options
                                 allow_overwrite = True
-                                kw_options = {FORCE_FLAG_KW: None}
+                                kw_options[FORCE_FLAG_KW] = None
                                 print("\n")
                                 msg = "The file is already present, this and all following present files in irodscollection will get overwritten."
                                 #show warning
