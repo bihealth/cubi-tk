@@ -154,7 +154,7 @@ def run(args, parser, subparser):  # pragma: nocover
                 try:
                     with i.open() as i_file:
                         altamisa.apps.isatab_validate.main(
-                            input_investigation_file=i,
+                            input_investigation_file=i_file,
                             show_duplicate_warnings=False,
                         )
                 except (
