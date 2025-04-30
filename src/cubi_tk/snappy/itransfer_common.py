@@ -1,24 +1,19 @@
 """Common code for ``cubi-tk snappy itransfer-*`` commands."""
 
 import argparse
-from ctypes import c_ulonglong
 import glob
-from multiprocessing import Value
-from multiprocessing.pool import ThreadPool
 import os
-from subprocess import SubprocessError, check_call
 import sys
 import typing
 
 from biomedsheets import shortcuts
 from loguru import logger
-import tqdm
 
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
-from ..common import check_irods_icommands, is_uuid, sizeof_fmt
-from ..irods_common import TransferJob, iRODSTransfer
+from ..common import check_irods_icommands, execute_checksum_files_fix, is_uuid, sizeof_fmt
+from ..irods_common import TransferJob, iRODSCommon, iRODSTransfer
 from ..exceptions import CubiTkException, MissingFileException, ParameterException, UserCanceledException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
@@ -42,8 +37,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
     command_name: typing.Optional[str] = None
     #: The step folder name to create.
     step_name: typing.Optional[str] = None
-    #: Whether or not to fix .md5 files on the fly.
-    fix_md5_files: bool = False
     #: Whether to look into largest start batch in family.
     start_batch_in_family: bool = False
 
@@ -77,7 +70,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names, sodar_api) -> tuple[str, list[TransferJob, ...]]:
+    def build_jobs(self, library_names, sodar_api, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:
         """Build file transfer jobs."""
 
         # Get path to iRODS directory
@@ -95,7 +88,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             for glob_result in glob.glob(glob_pattern, recursive=True):
                 rel_result = os.path.relpath(glob_result, base_dir)
                 real_result = os.path.realpath(glob_result)
-                if real_result.endswith(".md5"):
+                if real_result.endswith(hash_ending):
                     continue  # skip, will be added automatically
                 if not os.path.isfile(real_result):
                     continue  # skip if did not resolve to file
@@ -109,18 +102,14 @@ class SnappyItransferCommandBase(ParseSampleSheet):
                 )
                 if not os.path.exists(real_result):  # pragma: nocover
                     raise MissingFileException("Missing file %s" % real_result)
-                if (
-                    not os.path.exists(real_result + ".md5") and not self.fix_md5_files
-                ):  # pragma: nocover
-                    raise MissingFileException("Missing file %s" % (real_result + ".md5"))
-                for ext in ("", ".md5"):
+                for ext in ("", hash_ending):
                     transfer_jobs.append(
                         TransferJob(
                             path_local=real_result + ext,
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-        return lz_uuid, sorted(transfer_jobs, key=lambda x: x.path_local)
+        return lz_uuid, tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
 
     def get_sodar_info(self, sodar_api:SodarApi) -> tuple[str, str]:  #noqa: C901
         """Method evaluates user input to extract or create iRODS path. Use cases:
@@ -268,49 +257,6 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         # Return
         return lz_uuid, lz_irods_path
 
-    def _execute_md5_files_fix(
-        self, transfer_jobs: list[TransferJob],
-        parallel_jobs: int = 8
-    ) -> list[TransferJob]:
-        """Create missing MD5 files."""
-        ok_jobs = []
-        todo_jobs = []
-        for job in transfer_jobs:
-            if not os.path.exists(job.path_local):
-                todo_jobs.append(job)
-            else:
-                ok_jobs.append(job)
-
-        total_bytes = sum([os.path.getsize(j.path_local[: -len(".md5")]) for j in todo_jobs])
-        logger.info(
-            "Computing MD5 sums for {} files of {} with up to {} processes",
-            len(todo_jobs),
-            sizeof_fmt(total_bytes),
-            parallel_jobs,
-        )
-        logger.info("Missing MD5 files:\n{}", "\n".join(j.path_local for j in todo_jobs))
-        counter = Value(c_ulonglong, 0)
-        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if parallel_jobs == 0:  # pragma: nocover
-                for job in todo_jobs:
-                    compute_md5sum(job, counter, t)
-            else:
-                pool = ThreadPool(processes=parallel_jobs)
-                for job in todo_jobs:
-                    pool.apply_async(compute_md5sum, args=(job, counter, t))
-                pool.close()
-                pool.join()
-
-        # Finally, determine file sizes after done.
-        done_jobs = [
-            TransferJob(
-                path_local=j.path_local,
-                path_remote=j.path_remote,
-            )
-            for j in todo_jobs
-        ]
-        return sorted(done_jobs + ok_jobs, key=lambda x: x.path_local)
-
     def execute(self) -> int | None:
         """Execute the transfer."""
         # Validate arguments
@@ -340,12 +286,12 @@ class SnappyItransferCommandBase(ParseSampleSheet):
             )
         )
         logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
-
-        lz_uuid, transfer_jobs = self.build_jobs(library_names, sodar_api)
+        irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
+        hash_ending = "."+irods_hash_scheme.lower()
+        lz_uuid, transfer_jobs = self.build_jobs(library_names, sodar_api, hash_ending)
         # logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
-        if self.fix_md5_files:
-            transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
+        transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme)
 
         # Final go from user & transfer
         itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes, sodar_profile=self.args.config_profile)
@@ -355,7 +301,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
 
         # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
-        itransfer.put(recursive=True, sync=self.args.overwrite_remote, yes=self.args.yes)
+        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
         logger.info("File transfer complete.")
 
         # Validate and move transferred files
@@ -438,30 +384,3 @@ class IndexLibrariesOnlyMixin:
             logger.debug("Processing NGS library for donor {}", donor.name)
             yield donor.dna_ngs_library.name
 
-
-def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
-    """Compute MD5 sum with ``md5sum`` command."""
-    dirname = os.path.dirname(job.path_local)
-    filename = os.path.basename(job.path_local)[: -len(".md5")]
-    path_md5 = job.path_local
-
-    md5sum_argv = ["md5sum", filename]
-    logger.debug("Computing MD5sum {} > {}", " ".join(md5sum_argv), filename + ".md5")
-    try:
-        with open(path_md5, "wt") as md5f:
-            check_call(md5sum_argv, cwd=dirname, stdout=md5f)
-    except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: {}", e)
-        logger.info("Removing file after error: {}", path_md5)
-        try:
-            os.remove(path_md5)
-        except OSError as e_rm:  # pragma: nocover
-            logger.error("Could not remove file: {}", e_rm)
-        raise e
-
-    with counter.get_lock():
-        counter.value = os.path.getsize(job.path_local[: -len(".md5")])
-        try:
-            t.update(counter.value)
-        except TypeError:
-            pass  # swallow, pyfakefs and multiprocessing don't lik each other

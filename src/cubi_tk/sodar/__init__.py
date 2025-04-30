@@ -47,7 +47,7 @@ Sub Commands
     Upload arbitrary files to SODAR
 
 ``check-remote``
-    Check if or which local files with md5 sums are already deposited in iRODs/Sodar
+    Check if or which local files with checksums are already deposited in iRODs/Sodar
 
 More Information
 ----------------
@@ -128,7 +128,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_check_remote(
         subparsers.add_parser(
-            "check-remote", parents=[basic_parser,sodar_parser_project_uuid_assay_uuid], help="Compare local files with md5 sum against SODAR/iRODS"
+            "check-remote", parents=[basic_parser,sodar_parser_project_uuid_assay_uuid], help="Compare local files with checksum against SODAR/iRODS"
         )
     )
 

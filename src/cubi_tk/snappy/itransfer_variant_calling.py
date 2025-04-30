@@ -12,7 +12,6 @@ TPL_INPUT_DIR = "variant_calling/output/%(mapper)s.%(caller)s.%(library_name)s"
 class SnappyItransferVariantCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for variant calling results."""
 
-    fix_md5_files = True
     command_name = "itransfer-variant-calling"
     step_name = "variant_calling"
     start_batch_in_family = True

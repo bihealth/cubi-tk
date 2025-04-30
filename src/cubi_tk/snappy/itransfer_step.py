@@ -11,7 +11,6 @@ from .itransfer_common import SnappyItransferCommandBase
 class SnappyItransferStepCommand(SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for results from any step."""
 
-    fix_md5_files = True
     command_name = "itransfer-step"
     step_name = None
 

@@ -101,7 +101,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
         )
         for f in fake_file_paths
     ]
-    expected_tfj = sorted(expected_tfj, key=lambda x: x.path_local)
+    expected_tfj = tuple(sorted(expected_tfj, key=lambda x: x.path_local))
 
     # Set Mocker
     mocker.patch("pathlib.Path.exists", my_exists)
@@ -114,9 +114,12 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     mocker.patch("glob.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch("cubi_tk.snappy.itransfer_raw_data.os", fake_os)
+    mocker.patch("cubi_tk.common.os", fake_os)
 
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.common.open", fake_open)
+    mocker.patch("cubi_tk.common.open", fake_open)
+
 
     # Actually exercise code and perform test.
     parser, subparsers = setup_argparse()
@@ -126,4 +129,4 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     res = main(argv)
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile = "global")
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote, yes=False)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)

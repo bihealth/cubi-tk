@@ -21,7 +21,6 @@ class SnappyStepNotFoundException(Exception):
 class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for variant calling results."""
 
-    fix_md5_files = True
     command_name = "itransfer-sv-calling"
     step_names = ("sv_calling_wgs", "sv_calling_targeted")
     start_batch_in_family = True

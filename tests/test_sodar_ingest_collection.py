@@ -88,7 +88,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_file("/file6")
     fs.create_symlink("/testdir/file3", "/file3")
 
-    paths = SodarIngestCollection.build_file_list(dummy)
+    paths = SodarIngestCollection.build_file_list(dummy, ".md5")
 
     # Sources
     assert "File not found: broken_link" in caplog.messages
@@ -109,7 +109,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
 
     # Re-run without recursive search
     args.recursive = False
-    paths = SodarIngestCollection.build_file_list(dummy)
+    paths = SodarIngestCollection.build_file_list(dummy, ".md5")
     assert {"spath": Path("/testdir/file1"), "ipath": Path("file1")} in paths
     assert {
         "spath": Path("/testdir/file1.md5"),
@@ -135,7 +135,7 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
         fs.create_file(path["spath"])
     fs.create_file("myfile.csv.md5")
 
-    ingest.build_jobs(paths)
+    ingest.build_jobs(paths, "MD5", ".md5")
 
     for p in paths:
         mockjob.assert_any_call(
@@ -147,12 +147,12 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
             path_remote=f"{ingest.target_coll}/{str(p['ipath']) + '.md5'}",
         )
 
-
+@patch("cubi_tk.sodar.ingest_collection.iRODSCommon.irods_hash_scheme")
 @patch("cubi_tk.sodar.ingest_collection.TransferJob")
 @patch("cubi_tk.sodar.ingest_collection.iRODSTransfer")
 @patch("cubi_tk.sodar.ingest_collection.iRODSCommon.session")
 @patch("cubi_tk.sodar_api.requests.get")
-def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs):
+def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, mock_hack_scheme, fs):
     class DummyColl(object):
         pass
 
@@ -185,6 +185,8 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
 
     fs.create_dir(Path.home().joinpath(".irods"))
     fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
+
+    mock_hack_scheme.return_value= "MD5"
 
     # Test args no api token
     with pytest.raises(SystemExit):

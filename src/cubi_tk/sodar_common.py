@@ -7,14 +7,13 @@ from loguru import logger
 from cubi_tk.sodar_api import SodarApi
 
 
-from .irods_common import DEFAULT_HASH_SCHEME, iRODSRetrieveCollection
+from .irods_common import iRODSRetrieveCollection
 
 
 class RetrieveSodarCollection(iRODSRetrieveCollection):
     def __init__(
         self,
         args: Namespace,
-        hash_scheme: str = DEFAULT_HASH_SCHEME,
         irods_env_path: Path = None,
     ):
         """Constructor.
@@ -30,16 +29,13 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         :param project_uuid: Project UUID.
         :type project_uuid: str
 
-        :param hash_scheme: iRODS hash scheme, default MD5.
-        :type hash_scheme: str, optional
-
         :param ask: Confirm with user before certain actions.
         :type ask: bool, optional
 
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        super().__init__(hash_scheme, ask= getattr(args, "yes", False), irods_env_path= irods_env_path)
+        super().__init__(ask= getattr(args, "yes", False), irods_env_path= irods_env_path, sodar_profile = getattr(args, "config_profile", "global"))
         self.sodar_api = SodarApi(args, with_dest=True)
         self.assay_path = None
 
