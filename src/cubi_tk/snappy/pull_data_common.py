@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Dict, List
+import warnings
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
-from sodar_cli import api
 
 from ..irods_common import TransferJob, iRODSTransfer
 
@@ -11,6 +11,7 @@ from ..irods_common import TransferJob, iRODSTransfer
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
 
 
+# FIXME: this is not used by the new `pull-data` command and should also be deprecated
 class PullDataCommon:
     """Implementation of common pull data methods."""
 
@@ -18,6 +19,10 @@ class PullDataCommon:
     file_type_to_extensions_dict = None
 
     def __init__(self):
+        warnings.warn(
+            "The `PullDataCommon` class will be deprecated",
+            DeprecationWarning, stacklevel=2
+        )
         pass
 
     def filter_irods_collection(
@@ -80,33 +85,8 @@ class PullDataCommon:
         path_part_set = set(irods_path.split("/"))
         return len(common_links.intersection(path_part_set)) > 0
 
-    def get_assay_uuid(self, sodar_url, sodar_api_token, project_uuid):
-        """Get assay UUID.
-
-        :param sodar_url: SODAR url, e.g.: https://sodar.bihealth.org/
-        :type sodar_url: str
-
-        :param sodar_api_token: SODAR authentication token.
-        :type sodar_api_token: str
-
-        :param project_uuid: SODAR project UUID.
-        :type project_uuid: str
-
-        :return: Returns assay UUID.
-        """
-        investigation = api.samplesheet.retrieve(
-            sodar_url=sodar_url,
-            sodar_api_token=sodar_api_token,
-            project_uuid=project_uuid,
-        )
-        for study in investigation.studies.values():
-            for _assay_uuid in study.assays:
-                # If multi-assay project it will only consider the first one
-                return _assay_uuid
-        return None
-
     @staticmethod
-    def get_irods_files(irods_local_path_pairs, force_overwrite=False):
+    def get_irods_files(irods_local_path_pairs, force_overwrite=False, sodar_profile = "global"):
         """Get iRODS files
 
         Retrieves iRODS path and stores it locally.

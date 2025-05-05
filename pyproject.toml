@@ -18,7 +18,7 @@ dependencies = [
     "icdiff>=2.0.7",
     "loguru>=0.7.3",
     "pandas>=2.2.3",
-    "python-irodsclient==3.0.0",
+    "python-irodsclient==3.1.0",
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
     "retrying>=1.3.4",
@@ -32,7 +32,6 @@ dependencies = [
     "vcfpy >=0.13.8",
     "altamisa @ git+https://github.com/bihealth/altamisa.git@817dc491ff819e4c80686082bf3e5f602f1ac14c",
     "biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8",
-    "sodar-cli @ git+https://github.com/bihealth/sodar-cli@b2c599fe99160eba25ee82d18b8a3ef744e1116a",
 ]
 
 [project.license]
@@ -52,11 +51,7 @@ pythonpath = [
     ".", "tests"
 ]
 
-[project.optional-dependencies]
-snappy = [
-    "snappy-pipeline @ git+https://github.com/bihealth/snappy-pipeline@5d11f311357e75516ba2d7045cc0c1bd61201e14",
-]
-all = ["cubi-tk[snappy]"]
+# [project.optional-dependencies]
 
 [dependency-groups]
 dev = [

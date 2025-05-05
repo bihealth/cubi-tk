@@ -1,79 +1,126 @@
 """Common code."""
 import contextlib
+from ctypes import c_ulonglong
 import difflib
 import fcntl
 import glob
 import hashlib
+from multiprocessing.pool import ThreadPool
 import os
 import pathlib
 import shutil
 import struct
 import subprocess
-from subprocess import CalledProcessError, check_output
+from subprocess import CalledProcessError, SubprocessError, check_call, check_output
+from multiprocessing import Value
+import tqdm
 import sys
 import tempfile
 import termios
 import typing
 from uuid import UUID
-import warnings
 
-import attr
 import icdiff
 from loguru import logger
 from termcolor import colored
-import toml
 
 from .exceptions import (
     IrodsIcommandsUnavailableException,
-    IrodsIcommandsUnavailableWarning,
 )
 
-#: Paths to search the global configuration in.
-GLOBAL_CONFIG_PATHS = ("~/.cubitkrc.toml",)
+from .irods_common import TransferJob
 
 
 def mask_password(value: str) -> str:
     return repr(value[:4] + (len(value) - 4) * "*")
 
 
-@attr.s(frozen=True, auto_attribs=True)
-class CommonConfig:
-    """Common configuration for all commands."""
-
-    #: Verbose mode activated
-    verbose: bool
-
-    #: API token to use for SODAR.
-    sodar_api_token: str = attr.ib(repr=mask_password)  # type: ignore
-
-    #: Base URL to SODAR server.
-    sodar_server_url: typing.Optional[str]
-
-    @staticmethod
-    def create(args, toml_config=None):
-        toml_config = toml_config or {}
-        return CommonConfig(
-            verbose=args.verbose,
-            sodar_api_token=(
-                args.sodar_api_token or toml_config.get("global", {})["sodar_api_token"]
-            ),
-            sodar_server_url=(
-                args.sodar_server_url or toml_config.get("global", {})["sodar_server_url"]
-            ),
-        )
-
-
-def compute_md5_checksum(filename, buffer_size=1_048_576, verbose=True):
+def compute_checksum(filename, hash_scheme, buffer_size=1_048_576, verbose=True):
     if verbose:
-        logger.info("Computing md5 hash for {}".format(filename))
+        logger.info(f"Computing {hash_scheme} hash for {filename}")
     the_hash = None
     with open(filename, "rb") as f:
-        the_hash = hashlib.md5()
+        if hash_scheme.lower() == "md5":
+            the_hash = hashlib.md5()
+        elif hash_scheme.lower() == "sha256": #currently only md5 and SHA256 supported
+            the_hash= hashlib.sha256()
+        else:
+            logger.error(f"Hashscheme {hash_scheme} not supported, contact cubi-tk admin")
+            sys.exit(1)
         chunk = f.read(buffer_size)
         while chunk:
             the_hash.update(chunk)
             chunk = f.read(buffer_size)
     return the_hash.hexdigest()
+
+def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, hash_scheme) -> None: # type: ignore
+    """Compute checksum with ``md5sum`` or ``sha256sum``command."""
+    hash_ending = "."+hash_scheme.lower()
+    dirname = os.path.dirname(job.path_local)
+    filename = os.path.basename(job.path_local)[: -len(hash_ending)]
+    path_checksum = job.path_local
+    checksum_argv = [hash_scheme.lower()+"sum", filename]
+    logger.debug("Computing checksum {} > {}", " ".join(checksum_argv), filename + hash_ending)
+    try:
+        with open(path_checksum, "wt") as checksumfile:
+            check_call(checksum_argv, cwd=dirname, stdout=checksumfile)
+    except SubprocessError as e:  # pragma: nocover
+        logger.error("Problem executing checksum hash: {}", e)
+        logger.info("Removing file after error: {}", path_checksum)
+        try:
+            os.remove(path_checksum)
+        except OSError as e_rm:  # pragma: nocover
+            logger.error("Could not remove file: {}", e_rm)
+        raise e
+
+    with counter.get_lock():
+        counter.value = os.path.getsize(job.path_local[: -len(hash_ending)])
+        try:
+            t.update(counter.value)
+        except TypeError:
+            pass  # swallow, pyfakefs and multiprocessing don't lik each other
+
+def execute_checksum_files_fix(
+        transfer_jobs: typing.Tuple[TransferJob, ...], hash_scheme, parallel_jobs: int = 8,
+    ) -> typing.Tuple[TransferJob, ...]:
+        """Create missing checksum files."""
+        ok_jobs = []
+        todo_jobs = []
+        for job in transfer_jobs:
+            if not os.path.exists(job.path_local):
+                todo_jobs.append(job)
+            else:
+                ok_jobs.append(job)
+
+        total_bytes = sum([os.path.getsize(j.path_local[: -len("."+hash_scheme.lower())]) for j in todo_jobs])
+        logger.info(
+            "Computing checksum sums for {} files of {} with up to {} processes",
+            len(todo_jobs),
+            sizeof_fmt(total_bytes),
+            parallel_jobs,
+        )
+        logger.info("Missing checksum files:\n{}", "\n".join( j.path_local for j in todo_jobs))
+        counter = Value(c_ulonglong, 0)
+        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
+            if parallel_jobs == 0:  # pragma: nocover
+                for job in todo_jobs:
+                    compute_checksum_parallel(job, counter, t, hash_scheme)
+            else:
+                pool = ThreadPool(processes=parallel_jobs)
+                for job in todo_jobs:
+                    pool.apply_async(compute_checksum_parallel, args=(job, counter, t, hash_scheme))
+                pool.close()
+                pool.join()
+
+        # Finally, determine file sizes after done.
+        done_jobs = [
+            TransferJob(
+                path_local=j.path_local,
+                path_remote=j.path_remote,
+            )
+            for j in todo_jobs
+        ]
+        return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
 
 
 def execute_shell_commands(cmds, verbose=True, check=True):
@@ -124,7 +171,7 @@ def execute_shell_commands(cmds, verbose=True, check=True):
 
     # Check return code of all processes in the pipe (if required)
     # Tested only when all processes in the pipe are complete
-    if check and any([x.poll() != 0 for x in process_list]):
+    if check and any(x.poll() != 0 for x in process_list):
         raise subprocess.CalledProcessError(
             returncode=current.returncode,
             cmd=" | ".join([" ".join(cmd) for cmd in cmds]),
@@ -188,7 +235,7 @@ def check_irods_icommands(warn_only=True):  # disabled when testing  # pragma: n
     if missing:
         msg = "Could not find irods-icommands executables: %s", ", ".join(missing)
         if warn_only:
-            warnings.warn(msg, IrodsIcommandsUnavailableWarning)
+            logger.warning(msg)#warnings.warn(msg, IrodsIcommandsUnavailableWarning)
         else:
             raise IrodsIcommandsUnavailableException(msg)
 
@@ -258,30 +305,34 @@ def overwrite_helper(
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
 
+def print_line(line):
+    line = line[:-1]
+    if line.startswith(("+++", "---")):
+        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("@@"):
+        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("+"):
+        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
+    elif line.startswith("-"):
+        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
+    else:
+        print(line, file=sys.stdout)
+
 
 def _overwrite_helper_show_diff(
     lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
 ):
+    old_lines = []
     if out_path != "-" and out_path_obj.exists():
         with out_path_obj.open("rt") as inputf:
             old_lines = inputf.read().splitlines(keepends=False)
-    else:
-        old_lines = []
+
     if not show_diff_side_by_side:
         lines = list(
             difflib.unified_diff(old_lines, new_lines, fromfile=str(out_path), tofile=str(out_path))
         )
         for line in lines:
-            if line.startswith(("+++", "---")):
-                print(colored(line, color="white", attrs=("bold",)), end="", file=out_file)
-            elif line.startswith("@@"):
-                print(colored(line, color="cyan", attrs=("bold",)), end="", file=out_file)
-            elif line.startswith("+"):
-                print(colored(line, color="green", attrs=("bold",)), file=out_file)
-            elif line.startswith("-"):
-                print(colored(line, color="red", attrs=("bold",)), file=out_file)
-            else:
-                print(line, file=out_file)
+            print_line(line)
     else:
         cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
         lines = list(
@@ -363,16 +414,5 @@ class UnionFind:
         self._sz[i] += self._sz[j]
 
 
-def load_toml_config(config):
-    # Load configuration from TOML cubitkrc file, if any.
-    if config.config:
-        config_paths = (config.config,)
-    else:
-        config_paths = GLOBAL_CONFIG_PATHS
-    for config_path in config_paths:
-        config_path = os.path.expanduser(os.path.expandvars(config_path))
-        if os.path.exists(config_path):
-            with open(config_path, "rt") as tomlf:
-                return toml.load(tomlf)
-    logger.info("Could not find any of the global configuration files {}.", config_paths)
-    return None
+
+

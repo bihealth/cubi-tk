@@ -22,7 +22,7 @@ def test_transfer_job_bytes(fs):
 def test_common_init(mocksession):
     assert iRODSCommon().irods_env_path is not None
     icommon = iRODSCommon(irods_env_path="a/b/c.json")
-    assert icommon.irods_env_path == "a/b/c.json"
+    assert icommon.irods_env_path == Path("a/b/c.json")
     assert type(iRODSCommon().ask) is bool
     assert iRODSCommon().session is mocksession.return_value
 
@@ -43,32 +43,18 @@ def test_init_irods(mocksession, fs):
     iRODSCommon()._init_irods()
     mocksession.assert_called()
 
-
 @patch("getpass.getpass")
 @patch("cubi_tk.irods_common.iRODSSession")
-def test_irods_login(mocksession, mockpass, fs):
+def check_and_gen_irodsA(mocksession, mockpass, fs):
     fs.create_file(".irods/irods_environment.json")
     password = "1234"
     icommon = iRODSCommon()
     mockpass.return_value = password
 
-    icommon._irods_login()
+    icommon._check_and_gen_irods_files()
     mockpass.assert_called()
     mocksession.assert_any_call(irods_env_file=ANY, password=password)
-
-
-@patch("cubi_tk.irods_common.encode", return_value="it works")
-@patch("cubi_tk.irods_common.iRODSSession")
-def test_save_irods_token(mocksession, mockencode, fs):
-    token = [
-        "secure",
-    ]
-    icommon = iRODSCommon()
-    icommon.irods_env_path = Path("testdir/env.json")
-    icommon._save_irods_token(token=token)
-
     assert icommon.irods_env_path.parent.joinpath(".irodsA").exists()
-    mockencode.assert_called_with("secure")
 
 
 # Test iRODSTransfer #########
@@ -85,7 +71,7 @@ def jobs():
 def test_irods_transfer_init(jobs):
     with patch("cubi_tk.irods_common.iRODSSession"):
         itransfer = iRODSTransfer(jobs=jobs, irods_env_path="a/b/c", ask=True)
-        assert itransfer.irods_env_path == "a/b/c"
+        assert itransfer.irods_env_path == Path("a/b/c")
         assert itransfer.ask is True
         assert itransfer.jobs == jobs
         assert itransfer.size == sum([job.bytes for job in jobs])
@@ -107,7 +93,7 @@ def test_irods_transfer_put(mockrecursive, mocksession, jobs):
 
     # put
     itransfer.put()
-    calls = [call(j.path_local, j.path_remote) for j in jobs]
+    calls = [call(j.path_local, j.path_remote, forceFlag=None) for j in jobs]
     mockput.assert_has_calls(calls)
 
     # recursive

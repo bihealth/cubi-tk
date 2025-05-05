@@ -1,4 +1,4 @@
-"""``cubi-tk sodar pull-data-collection``: download raw data from iRODS via SODAR."""
+"""``cubi-tk sodar pull-data``: download data from iRODS via SODAR."""
 
 import argparse
 from collections import defaultdict
@@ -10,16 +10,16 @@ from irods.data_object import iRODSDataObject
 from loguru import logger
 import pandas as pd
 
-from ..common import load_toml_config
+from cubi_tk.parsers import print_args
+
 from ..irods_common import TransferJob, iRODSTransfer
-from ..snappy.pull_data_common import PullDataCommon
 from ..sodar_common import RetrieveSodarCollection
 
 
-class PullDataCollection(PullDataCommon):
-    """Implementation of pull data collection command."""
+class PullDataCommand:
+    """Implementation of pull data command."""
 
-    command_name = "pull-data-collection"
+    command_name = "pull-data"
 
     presets = {
         "dragen": [
@@ -53,19 +53,9 @@ class PullDataCollection(PullDataCommon):
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        """Setup arguments for ``pull-data-collection`` command."""
+        """Setup arguments for ``pull-data`` command."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
 
         parser.add_argument(
@@ -73,12 +63,6 @@ class PullDataCollection(PullDataCommon):
             default=False,
             action="store_true",
             help="Allow overwriting of local files.",
-        )
-        parser.add_argument(
-            "--assay-uuid",
-            default=None,
-            type=str,
-            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
         )
 
         group_files = parser.add_mutually_exclusive_group(required=True)
@@ -147,11 +131,6 @@ class PullDataCollection(PullDataCommon):
             "Can be given multiple times, Default: None",
         )
 
-        parser.add_argument(
-            "project_uuid",
-            help="SODAR project UUID",
-        )
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -162,14 +141,6 @@ class PullDataCollection(PullDataCommon):
     def check_args(self, args) -> int:
         """Called for checking arguments."""
         res = 0
-
-        # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
-
         # Validate output directory path
         if not os.path.exists(args.output_dir):
             try:
@@ -194,8 +165,8 @@ class PullDataCollection(PullDataCommon):
         if res:  # pragma: nocover
             return res
 
-        logger.info("Starting cubi-tk sodar pull-data-collection")
-        logger.info("  args: {}", self.args)
+        logger.info("Starting cubi-tk sodar pull-data")
+        print_args(self.args)
 
         # Get list of sample ids
         if self.args.sample_list:
@@ -211,14 +182,11 @@ class PullDataCollection(PullDataCommon):
 
         # Find all remote files (iRODS)
         filesearcher = RetrieveSodarCollection(
-            self.args.sodar_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         )
 
         remote_files_dict = filesearcher.perform()
-        assay_path = filesearcher.get_assay_irods_path(self.args.assay_uuid)
+        assay_path = filesearcher.get_assay_irods_path()
 
         if self.args.all_files:
             file_patterns = []
@@ -242,10 +210,31 @@ class PullDataCollection(PullDataCommon):
         )
 
         # Retrieve files from iRODS
-        iRODSTransfer(transfer_jobs).get(self.args.overwrite)
+        iRODSTransfer(transfer_jobs, sodar_profile=self.args.config_profile).get(self.args.overwrite)
 
         logger.info("All done. Have a nice day!")
         return 0
+
+    @staticmethod
+    def report_no_file_found(available_files):
+        """Report no files found
+
+        :param available_files: List of available files in SODAR.
+        :type available_files: list
+        """
+        available_files = sorted(available_files)
+        if len(available_files) > 50:
+            limited_str = " (limited to first 50)"
+            ellipsis_ = "..."
+            remote_files_str = "\n".join(available_files[:50])
+        else:
+            limited_str = ""
+            ellipsis_ = ""
+            remote_files_str = "\n".join(available_files)
+        logger.warning(
+            f"No file was found using the selected criteria.\n"
+            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+        )
 
     @staticmethod
     def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> set[str]:
@@ -293,7 +282,7 @@ class PullDataCollection(PullDataCommon):
         filtered_dict = defaultdict(list)
 
         # Iterate
-        for filename, irodsobjs in remote_files_dict.items():
+        for _filename, irodsobjs in remote_files_dict.items():
             for irodsobj in irodsobjs:
                 # Path needs to be stripped down to collections (=remove assay part & upwards)
                 path = PurePosixPath(irodsobj.path).relative_to(PurePosixPath(common_assay_path))
@@ -359,4 +348,4 @@ class PullDataCollection(PullDataCommon):
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk org-raw check``."""
-    return PullDataCollection.setup_argparse(parser)
+    return PullDataCommand.setup_argparse(parser)

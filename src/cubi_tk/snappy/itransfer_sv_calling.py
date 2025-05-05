@@ -21,7 +21,6 @@ class SnappyStepNotFoundException(Exception):
 class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for variant calling results."""
 
-    fix_md5_files = True
     command_name = "itransfer-sv-calling"
     step_names = ("sv_calling_wgs", "sv_calling_targeted")
     start_batch_in_family = True
@@ -57,7 +56,9 @@ class SnappyItransferSvCallingCommand(IndexLibrariesOnlyMixin, SnappyItransferCo
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        super().setup_argparse(parser)
+        parser.add_argument(
+            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
         parser.add_argument(
             "--mapper",
             help="Name of the mapper to transfer for, defaults to bwa_mem2.",

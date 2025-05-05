@@ -1,4 +1,4 @@
-"""``cubi-tk sodar landing-zone-move`` command line program
+"""``cubi-tk sodar create-landingzone`` command line program
 """
 
 import argparse
@@ -11,8 +11,9 @@ from loguru import logger
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
 
-class MoveLandingZoneCommand:
-    """Implementation of the ``landing-zone-move`` command."""
+
+class CreateLandingZoneCommand:
+    """Implementation of the ``landing-zone-create`` command."""
 
     def __init__(self, args):
         #: Command line arguments.
@@ -23,6 +24,14 @@ class MoveLandingZoneCommand:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
+
+        parser.add_argument(
+            "--unless-exists",
+            default=False,
+            dest="unless_exists",
+            action="store_true",
+            help="If there already is a landing zone in the current project then use this one",
         )
 
         parser.add_argument(
@@ -39,7 +48,6 @@ class MoveLandingZoneCommand:
             default=None,
             help="Format string for printing, e.g. %%(uuid)s",
         )
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -47,18 +55,22 @@ class MoveLandingZoneCommand:
         """Entry point into the command."""
         return cls(args).execute()
 
-
     def execute(self) -> typing.Optional[int]:
-        """Execute the landing zone moving."""
-        sodar_api = SodarApi(self.args)
-        logger.info("Starting cubi-tk sodar landing-zone-move")
+        """Execute the landing zone creation."""
+
+        logger.info("Starting cubi-tk sodar create-landingzone")
+        sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
-        new_lz_uuid = sodar_api.post_landingzone_submit_move(lz_uuid=self.args.landing_zone_uuid)
-        if new_lz_uuid is None:
-            return 1
-        landing_zone = sodar_api.get_landingzone_retrieve(lz_uuid=new_lz_uuid)
-        values = cattr.unstructure(landing_zone)
+        existing_lzs = sodar_api.get_landingzone_list(filter_for_state = ["ACTIVE"])
+        if existing_lzs and self.args.unless_exists:
+            lz = existing_lzs[-1]
+        else:
+            lz = sodar_api.post_landingzone_create()
+            if lz is None:
+                return 1
+
+        values = cattr.unstructure(lz)
         if self.args.format_string:
             print(self.args.format_string.replace(r"\t", "\t") % values)
         else:
@@ -68,5 +80,5 @@ class MoveLandingZoneCommand:
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
-    """Setup argument parser for ``cubi-tk sodar landing-zone-move``."""
-    return MoveLandingZoneCommand.setup_argparse(parser)
+    """Setup argument parser for ``cubi-tk sodar landing-zone-create``."""
+    return CreateLandingZoneCommand.setup_argparse(parser)

@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import typing
 
 from loguru import logger
 
@@ -12,13 +11,14 @@ from .itransfer_common import SnappyItransferCommandBase
 class SnappyItransferStepCommand(SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for results from any step."""
 
-    fix_md5_files = True
     command_name = "itransfer-step"
     step_name = None
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        super().setup_argparse(parser)
+        parser.add_argument(
+            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
         parser.add_argument(
             "--step",
             help=(

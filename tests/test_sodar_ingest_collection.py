@@ -4,16 +4,17 @@ from argparse import ArgumentParser
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
+from cubi_tk.parsers import get_sodar_parser
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
-from cubi_tk.sodar.ingest import SodarIngest
+from cubi_tk.sodar.ingest_collection import SodarIngestCollection
 
 
 def test_run_sodar_ingest_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "ingest", "--help"])
+        parser.parse_args(["sodar", "ingest-collection", "--help"])
 
     assert e.value.code == 0
 
@@ -26,7 +27,7 @@ def test_run_sodar_ingest_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "ingest"])
+        parser.parse_args(["sodar", "ingest-collection"])
 
     assert e.value.code == 2
 
@@ -42,19 +43,20 @@ def ingest(fs):
 
     argv = [
         "--recursive",
-        "--sodar-url",
-        "sodar_url",
+        "--sodar-server-url",
+        "sodar_server_url",
         "--sodar-api-token",
         "token",
         "testdir",
         "target",
     ]
 
-    parser = ArgumentParser()
-    SodarIngest.setup_argparse(parser)
+    sodar_parser = get_sodar_parser(with_dest= True, dest_string="destination", dest_help_string="UUID from Landing Zone or Project - where files will be moved to.")
+    parser = ArgumentParser(parents=[sodar_parser])
+    SodarIngestCollection.setup_argparse(parser)
     args = parser.parse_args(argv)
 
-    obj = SodarIngest(args)
+    obj = SodarIngestCollection(args)
     obj.lz_irods_path = "/irodsZone"
     obj.target_coll = "targetCollection"
     return obj
@@ -86,7 +88,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     fs.create_file("/file6")
     fs.create_symlink("/testdir/file3", "/file3")
 
-    paths = SodarIngest.build_file_list(dummy)
+    paths = SodarIngestCollection.build_file_list(dummy, ".md5")
 
     # Sources
     assert "File not found: broken_link" in caplog.messages
@@ -107,7 +109,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
 
     # Re-run without recursive search
     args.recursive = False
-    paths = SodarIngest.build_file_list(dummy)
+    paths = SodarIngestCollection.build_file_list(dummy, ".md5")
     assert {"spath": Path("/testdir/file1"), "ipath": Path("file1")} in paths
     assert {
         "spath": Path("/testdir/file1.md5"),
@@ -123,7 +125,7 @@ def test_sodar_ingest_build_file_list(fs, caplog):
     assert {"spath": Path("file6"), "ipath": Path("file6")} in paths
 
 
-@patch("cubi_tk.sodar.ingest.TransferJob")
+@patch("cubi_tk.sodar.ingest_collection.TransferJob")
 def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
     paths = [
         {"spath": Path("myfile.csv"), "ipath": Path("dest_dir/myfile.csv")},
@@ -133,7 +135,7 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
         fs.create_file(path["spath"])
     fs.create_file("myfile.csv.md5")
 
-    ingest.build_jobs(paths)
+    ingest.build_jobs(paths, "MD5", ".md5")
 
     for p in paths:
         mockjob.assert_any_call(
@@ -145,15 +147,12 @@ def test_sodar_ingest_build_jobs(mockjob, ingest, fs):
             path_remote=f"{ingest.target_coll}/{str(p['ipath']) + '.md5'}",
         )
 
-
-@patch("cubi_tk.sodar.ingest.TransferJob")
-@patch("cubi_tk.sodar.ingest.iRODSTransfer")
-@patch("cubi_tk.sodar.ingest.iRODSCommon.session")
-@patch("cubi_tk.sodar.ingest.api.landingzone.retrieve")
-def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs):
-    class DummyAPI(object):
-        pass
-
+@patch("cubi_tk.sodar.ingest_collection.iRODSCommon.irods_hash_scheme")
+@patch("cubi_tk.sodar.ingest_collection.TransferJob")
+@patch("cubi_tk.sodar.ingest_collection.iRODSTransfer")
+@patch("cubi_tk.sodar.ingest_collection.iRODSCommon.session")
+@patch("cubi_tk.sodar_api.requests.get")
+def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, mock_hack_scheme, fs):
     class DummyColl(object):
         pass
 
@@ -164,19 +163,19 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
     lz_uuid = "f46b4fc3-0927-449d-b725-9ffed231507b"
     argv = [
         "sodar",
-        "ingest",
-        "--sodar-url",
-        "sodar_url",
+        "ingest-collection",
+        "--sodar-server-url",
+        "sodar_server_url",
         "--sodar-api-token",
         "token",
         "--collection",
         "coll",
         "--yes",
         "--recursive",
-        "source",
         lz_uuid,
-    ]
+        "source",
 
+    ]
     # to make it sortable
     mockjob.return_value.path_local = 1
 
@@ -187,6 +186,8 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
     fs.create_dir(Path.home().joinpath(".irods"))
     fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
+    mock_hack_scheme.return_value= "MD5"
+
     # Test args no api token
     with pytest.raises(SystemExit):
         argv2 = argv.copy()
@@ -195,22 +196,35 @@ def test_sodar_ingest_smoketest(mockapi, mocksession, mocktransfer, mockjob, fs)
         main(argv2)
 
     # Test cancel no invalid LZ
-    api_return = DummyAPI()
-    api_return.status = "DELETED"
-    api_return.irods_path = "target"
-    mockapi.return_value = api_return
+    api_return = {
+        "assay": "",
+        "config_data": "",
+        "configuration": "",
+        "date_modified": "",
+        "description": "",
+        "irods_path": "target",
+        "project": "",
+        "sodar_uuid": "",
+        "status": "DELETED",
+        "status_locked" : "",
+        "status_info": "",
+        "title": "",
+        "user": "",
+    }
+    mockapi.return_value.status_code = 200
+    mockapi.return_value.json = MagicMock(return_value=api_return)
 
     with pytest.raises(SystemExit):
         main(argv)
         mockapi.assert_called_with(
-            sodar_url="sodar_url", sodar_api_token="token", landingzone_uuid=lz_uuid
+            sodar_url="sodar_server_url", sodar_api_token="token", landingzone_uuid=lz_uuid
         )
 
     # Test cancel if no files to transfer
-    api_return.status = "ACTIVE"
+    api_return["status"] = "ACTIVE"
     with pytest.raises(SystemExit):
         argv2 = argv.copy()
-        argv2[-2] = "empty"
+        argv2[-1] = "empty"
         main(argv2)
 
     # Test user input for subcollection

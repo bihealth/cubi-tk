@@ -53,9 +53,12 @@ class InvalidReadmeException(CubiTkException):
     """Raised if the Readme does not meet the specification."""
 
 
-class FileMd5MismatchException(CubiTkException):
-    """Raised if the recorded md5 sum for a file does not match the (re)computed value."""
+class FileChecksumMismatchException(CubiTkException):
+    """Raised if the recorded checksum for a file does not match the (re)computed value."""
 
 
-class SodarAPIException(CubiTkException):
+class SodarApiException(CubiTkException):
+    def __init__(self, status_code:int, *args):
+        super().__init__(*args)
+        self.status_code = status_code
     """Raised when the SODAR API does not return success."""

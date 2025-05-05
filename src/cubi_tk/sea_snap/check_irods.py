@@ -4,9 +4,12 @@ import argparse
 import os
 from pathlib import Path
 import re
+import warnings
 
 from loguru import logger
 import yaml
+
+from cubi_tk.parsers import print_args
 
 from ..irods.check import IrodsCheckCommand
 
@@ -67,12 +70,17 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
 
     def execute(self):
         """Execute checks."""
+        warnings.warn(
+            "The `check-irods` function will be deprecated",
+            DeprecationWarning, stacklevel=2
+        )
+
         res = self.check_args(self.args)
         if res:  # pragma: nocover
             return res
 
         logger.info("Starting sea-snap check-irods {}", self.command_name)
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # --- get lists
         # files on SODAR

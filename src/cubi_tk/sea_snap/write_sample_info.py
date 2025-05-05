@@ -25,14 +25,13 @@ from altamisa.isatab import AssayReader
 import icdiff
 from loguru import logger
 import pandas as pd
-import requests
-from termcolor import colored
 import yaml
 
-#: The URL template to use.
-from ..common import get_terminal_columns
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
-URL_TPL = "%(sodar_url)s/samplesheets/api/remote/get/%(project_uuid)s/%(api_key)s?isa=1"
+#: The URL template to use.
+from ..common import get_terminal_columns, print_line
 
 
 def strip(x):
@@ -104,18 +103,6 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="Allow to overwrite output file, default is not to allow overwriting output file.",
     )
 
-    group_sodar = parser.add_argument_group("SODAR-related")
-    group_sodar.add_argument(
-        "--sodar-url",
-        default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-        help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-    )
-    group_sodar.add_argument(
-        "--sodar-auth-token",
-        default=os.environ.get("SODAR_AUTH_TOKEN", None),
-        help="Authentication token when talking to SODAR.  Defaults to SODAR_AUTH_TOKEN environment variable.",
-    )
-
     parser.add_argument(
         "in_path_pattern",
         help="Path pattern to use for extracting input file information. See "
@@ -138,17 +125,6 @@ def check_args(args) -> int:
 
     # if set for pulling ISA files
     if args.project_uuid:
-        # Check presence of SODAR URL and auth token.
-        if not args.sodar_auth_token:  # pragma: nocover
-            logger.error(
-                "SODAR authentication token is empty.  Either specify --sodar-auth-token, or set "
-                "SODAR_AUTH_TOKEN environment variable"
-            )
-            any_error = True
-        if not args.sodar_url:  # pragma: nocover
-            logger.error("SODAR URL is empty. Either specify --sodar-url, or set SODAR_URL.")
-            any_error = True
-
         # Check output file presence vs. overwrite allowed.
         if (
             hasattr(args.output_folder, "name") and Path(args.output_folder).exists()
@@ -201,7 +177,7 @@ def check_args(args) -> int:
 
 class Bunch:
     def __init__(self, **kw):
-        setattr(self, "__dict__", kw)
+        self.__dict__ = kw
 
 
 class SampleInfoTool:
@@ -288,7 +264,7 @@ class SampleInfoTool:
         combinations = []
         WildcardComb = namedtuple("WildcardComb", wildcard_values)
         wildcard_comb_num = len(wildcard_values["sample"])
-        assert all([len(val) == wildcard_comb_num for val in wildcard_values.values()])
+        assert all(len(val) == wildcard_comb_num for val in wildcard_values.values())
         for index in range(wildcard_comb_num):
             combinations.append(
                 WildcardComb(**{key: wildcard_values[key][index] for key in wildcard_values})
@@ -465,20 +441,9 @@ class SampleInfoTool:
                 )
 
 
-def pull_isa(args) -> typing.Optional[int]:
+def pull_isa(args, sodar_api) -> typing.Optional[int]:
     """Pull ISA files"""
-
-    # Query investigation JSON from API.
-    url = URL_TPL % {
-        "sodar_url": args.sodar_url,
-        "project_uuid": args.project_uuid,
-        "api_key": args.sodar_auth_token,
-    }
-    logger.info("Fetching {}", url)
-    r = requests.get(url)
-    r.raise_for_status()
-    all_data = r.json()
-
+    all_data = sodar_api.get_samplesheet_remote()
     isa_dir = Path(args.output_folder)
 
     path = isa_dir / all_data["investigation"]["path"]
@@ -539,6 +504,55 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
     return None
 
 
+
+def show_line(line):
+    if hasattr(sys.stdout, "buffer"):
+        sys.stdout.buffer.write(line.encode("utf-8"))
+    else:
+        sys.stdout.write(line)
+
+def show_diff(args, sample_info_file):
+    old_lines = []
+    if os.path.exists(args.output_file.name):
+        with open(args.output_file.name, "rt") as inputf:
+            old_lines = inputf.read().splitlines(keepends=False)
+    sample_info_file.seek(0)
+    new_lines = sample_info_file.read().splitlines(keepends=False)
+
+    is_diff = False
+    if not args.show_diff_side_by_side:
+        lines = difflib.unified_diff(
+            old_lines,
+            new_lines,
+            fromfile=args.output_file.name,
+            tofile=args.output_file.name,
+        )
+        for line in lines:
+            is_diff = True
+            print_line(line)
+    else:
+        cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
+        lines = cd.make_table(
+            old_lines,
+            new_lines,
+            fromdesc=args.output_file.name,
+            todesc=args.output_file.name,
+            context=True,
+            numlines=3,
+        )
+        heading = next(lines)
+
+        for line in lines:
+            if not is_diff:
+                show_line(f"{heading}\n")
+            is_diff = True
+            show_line(f"{line}\n")
+
+    sys.stdout.flush()
+    if not is_diff:
+        logger.info("File {} not changed, no diff...", args.output_file.name)
+
+
 def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
@@ -547,14 +561,16 @@ def run(
     if res:  # pragma: nocover
         return res
 
+    sodar_api = SodarApi(args, set_default=True)
+
     if args.project_uuid:
         logger.info("Starting to pull ISA files...")
-        logger.info("Args: {}", args)
+        print_args(args)
 
-        pull_isa(args)
+        pull_isa(args, sodar_api)
 
     logger.info("Starting to write sample info...")
-    logger.info("Args: {}", args)
+    print_args(args)
 
     with tempfile.NamedTemporaryFile(mode="w+t") as sample_info_file:
         # Write sample info to temporary file.
@@ -564,62 +580,7 @@ def run(
 
             # Compare sample info with output if exists and --show-diff given.
         if args.show_diff:
-            if os.path.exists(args.output_file.name):
-                with open(args.output_file.name, "rt") as inputf:
-                    old_lines = inputf.read().splitlines(keepends=False)
-            else:
-                old_lines = []
-            sample_info_file.seek(0)
-            new_lines = sample_info_file.read().splitlines(keepends=False)
-
-            is_diff = False
-            if not args.show_diff_side_by_side:
-                lines = difflib.unified_diff(
-                    old_lines,
-                    new_lines,
-                    fromfile=args.output_file.name,
-                    tofile=args.output_file.name,
-                )
-                for line in lines:
-                    is_diff = True
-                    line = line[:-1]
-                    if line.startswith(("+++", "---")):
-                        print(colored(line, color="white", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("@@"):
-                        print(colored(line, color="cyan", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("+"):
-                        print(colored(line, color="green", attrs=("bold",)), file=sys.stdout)
-                    elif line.startswith("-"):
-                        print(colored(line, color="red", attrs=("bold",)), file=sys.stdout)
-                    else:
-                        print(line, file=sys.stdout)
-            else:
-                cd = icdiff.ConsoleDiff(cols=get_terminal_columns(), line_numbers=True)
-                lines = cd.make_table(
-                    old_lines,
-                    new_lines,
-                    fromdesc=args.output_file.name,
-                    todesc=args.output_file.name,
-                    context=True,
-                    numlines=3,
-                )
-                heading = next(lines)
-
-                def show_line(line):
-                    if hasattr(sys.stdout, "buffer"):
-                        sys.stdout.buffer.write(line.encode("utf-8"))
-                    else:
-                        sys.stdout.write(line)
-
-                for line in lines:
-                    if not is_diff:
-                        show_line(f"{heading}\n")
-                    is_diff = True
-                    show_line(f"{line}\n")
-
-            sys.stdout.flush()
-            if not is_diff:
-                logger.info("File {} not changed, no diff...", args.output_file.name)
+            show_diff(args, sample_info_file)
 
         # Write to output file if not --dry-run is given
         if hasattr(args.output_file, "name") and args.dry_run:

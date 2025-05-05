@@ -6,11 +6,12 @@ import re
 from unittest.mock import patch
 
 import pandas as pd
+from cubi_tk.parsers import get_sodar_parser
 import pytest
 
 from cubi_tk.exceptions import ParameterException
 from cubi_tk.sodar.update_samplesheet import UpdateSamplesheetCommand
-from cubi_tk.sodar_api import SodarAPI
+from cubi_tk.sodar_api import SodarApi
 
 
 @pytest.fixture
@@ -30,20 +31,23 @@ def MV_ped_samples():
 
 
 @pytest.fixture
-@patch("cubi_tk.sodar_api.SodarAPI._api_call")
+@patch("cubi_tk.sodar_api.SodarApi._api_call")
 def mock_isa_data(API_call, MV_isa_json):
     API_call.return_value = MV_isa_json
-    api = SodarAPI("https://sodar.bihealth.org/", "1234", "123e4567-e89b-12d3-a456-426655440000")
-    isa_data = api.get_ISA_samplesheet()
-    investigation = isa_data["investigation"]["content"]
-    study = pd.read_csv(StringIO(isa_data["study"]["content"]), sep="\t")
-    assay = pd.read_csv(StringIO(isa_data["assay"]["content"]), sep="\t")
+    parser_args = argparse.Namespace(config = None, sodar_server_url="https://sodar.bihealth.org/", sodar_api_token="1234", project_uuid="123e4567-e89b-12d3-a456-426655440000")
+    api = SodarApi(parser_args)
+    isa_data = api.get_samplesheet_export()
+    investigation = isa_data["investigation"]["tsv"]
+    study_key = list(isa_data["studies"].keys())[0]
+    study = pd.read_csv(StringIO(isa_data["studies"][study_key]["tsv"]), sep="\t", dtype=str)
+    assay_key = list(isa_data["assays"].keys())[0]
+    assay = pd.read_csv(StringIO(isa_data["assays"][assay_key]["tsv"]), sep="\t", dtype=str)
     return investigation, study, assay
 
 
 @pytest.fixture
 def UCS_class_object():
-    parser = argparse.ArgumentParser()
+    parser = get_sodar_parser(with_dest=True)
     UpdateSamplesheetCommand.setup_argparse(parser)
     args = parser.parse_args(["123e4567-e89b-12d3-a456-426655440000"])
     UCS = UpdateSamplesheetCommand(args)
@@ -119,7 +123,7 @@ def sample_df():
 
 
 def helper_update_UCS(arg_list, UCS):
-    parser = argparse.ArgumentParser()
+    parser = get_sodar_parser(with_dest=True)
     UpdateSamplesheetCommand.setup_argparse(parser)
     args = parser.parse_args(arg_list)
     UCS.args = args
@@ -359,7 +363,6 @@ def test_collect_sample_data(
 
     # test merging of --ped & -s info (same samples)
     pd.testing.assert_frame_equal(run_usc_collect_sampledata(arg_list), expected)
-
     # incomplete info for sample only given via ped
     arg_list[36] = "mv_extra_sample.ped"
     with pytest.raises(ParameterException):
@@ -623,8 +626,8 @@ def test_update_isa_table(UCS_class_object, caplog):
     pd.testing.assert_frame_equal(actual, expected)
 
 
-@patch("cubi_tk.sodar.update_samplesheet.SodarAPI.upload_ISA_samplesheet")
-@patch("cubi_tk.sodar.update_samplesheet.SodarAPI._api_call")
+@patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
+@patch("cubi_tk.sodar.update_samplesheet.SodarApi._api_call")
 def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
     # restrict to 1 sample, match cols to ISA
     sample_df = sample_df.iloc[0:1, :]
@@ -644,7 +647,8 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         "Library Name",
     ]
 
-    parser = argparse.ArgumentParser()
+    sodar_parser = get_sodar_parser(with_dest=True)
+    parser = argparse.ArgumentParser(parents=[sodar_parser])
     UpdateSamplesheetCommand.setup_argparse(parser)
 
     mock_api_call.return_value = MV_isa_json
@@ -676,7 +680,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         [
             "--sodar-api-token",
             "1234",
-            "--sodar-url",
+            "--sodar-server-url",
             "https://sodar.bihealth.org/",
             "-s",
             "FAM_01",
@@ -690,10 +694,13 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         ]
     )
     UpdateSamplesheetCommand(args).execute()
+    files_dict = {
+            "file_investigation": ("i_Investigation.txt", expected_i),
+            "file_study": ("s_modellvorhaben_rare_diseases.txt", expected_s),
+            "file_assay": ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
+        }
     mock_upload_isa.assert_called_with(
-        ("i_Investigation.txt", expected_i),
-        ("s_modellvorhaben_rare_diseases.txt", expected_s),
-        ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
+        files_dict
     )
 
     # Test MV default
@@ -717,7 +724,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         [
             "--sodar-api-token",
             "1234",
-            "--sodar-url",
+            "--sodar-server-url",
             "https://sodar.bihealth.org/",
             "-d",
             "MV",
@@ -737,8 +744,11 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
         ]
     )
     UpdateSamplesheetCommand(args).execute()
+    files_dict = {
+            "file_investigation": ("i_Investigation.txt", expected_i),
+            "file_study": ("s_modellvorhaben_rare_diseases.txt", expected_s),
+            "file_assay": ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
+        }
     mock_upload_isa.assert_called_with(
-        ("i_Investigation.txt", expected_i),
-        ("s_modellvorhaben_rare_diseases.txt", expected_s),
-        ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
+        files_dict
     )

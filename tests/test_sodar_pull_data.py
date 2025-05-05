@@ -7,7 +7,7 @@ import pytest
 
 from cubi_tk.__main__ import setup_argparse
 from cubi_tk.irods_common import TransferJob
-from cubi_tk.sodar.pull_data_collection import PullDataCollection
+from cubi_tk.sodar.pull_data import PullDataCommand
 
 
 class MockDataObject:
@@ -83,7 +83,7 @@ def test_filter_irods_collection(filtered_data_objects):
     ]
 
     for kwargs, expected in zip(kwarg_list, expected_results, strict=True):
-        result = PullDataCollection.filter_irods_file_list(
+        result = PullDataCommand.filter_irods_file_list(
             fake_irods_data_dict, "/irods/project", **kwargs
         )
         assert result == expected
@@ -95,7 +95,7 @@ def test_build_download_jobs(filtered_data_objects):
     mockargs.output_regex = []  # ['', '', '']
     mockargs.output_pattern = "{collection}/{subcollections}/{filename}"
 
-    testinstance = PullDataCollection(mockargs)
+    testinstance = PullDataCommand(mockargs)
 
     expected_out = [
         TransferJob(
@@ -144,7 +144,7 @@ def test_build_download_jobs(filtered_data_objects):
 
 def test_parse_samplesheet():
     # Test on Biomedsheet
-    samples = PullDataCollection.parse_sample_tsv(
+    samples = PullDataCommand.parse_sample_tsv(
         pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv",
         sample_col=2,
         skip_rows=12,
@@ -153,10 +153,10 @@ def test_parse_samplesheet():
 
 
 def test_run_sodar_pull_data_collection_help(capsys):
-    """Test ``cubi-tk sodar pull-data-collection --help``"""
+    """Test ``cubi-tk sodar pull-data --help``"""
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "pull-data-collection", "--help"])
+        parser.parse_args(["sodar", "pull-data", "--help"])
 
     assert e.value.code == 0
 
@@ -166,11 +166,11 @@ def test_run_sodar_pull_data_collection_help(capsys):
 
 
 def test_run_sodar_pull_data_collection_nothing(capsys):
-    """Test ``cubi-tk sodar pull-data-collection``"""
+    """Test ``cubi-tk sodar pull-data``"""
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
-        parser.parse_args(["sodar", "pull-data-collection"])
+        parser.parse_args(["sodar", "pull-data"])
 
     assert e.value.code == 2
 

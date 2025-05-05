@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import typing
 
 from .itransfer_common import SnappyItransferCommandBase
 
@@ -13,13 +12,14 @@ TPL_INPUT_DIR = "ngs_mapping/output/%(mapper)s.%(library_name)s"
 class SnappyItransferNgsMappingCommand(SnappyItransferCommandBase):
     """Implementation of snappy itransfer command for ngs_mapping results."""
 
-    fix_md5_files = True
     command_name = "itransfer-ngs-mapping"
     step_name = "ngs_mapping"
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
-        super().setup_argparse(parser)
+        parser.add_argument(
+            "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
         parser.add_argument(
             "--mapper", help="Name of the mapper to transfer for, defaults to bwa.", default="bwa"
         )

@@ -12,35 +12,14 @@ import os
 import pathlib
 import typing
 
-import attr
 from loguru import logger
 import yaml
 
-from ..common import load_toml_config
+
 from ..sodar_common import RetrieveSodarCollection
 from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 from .pull_data_common import PullDataCommon
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class Config:
-    """Configuration for the pull-raw-data."""
-
-    base_path: str
-    verbose: bool
-    sodar_server_url: str
-    sodar_url: str
-    sodar_api_token: str = attr.ib(repr=lambda value: "***")  # type: ignore
-    tsv_shortcut: str
-    use_library_name: bool
-    overwrite: bool
-    dry_run: bool
-    first_batch: int
-    last_batch: int
-    samples: typing.List[str]
-    assay_uuid: str
-    project_uuid: str
 
 
 class PullRawDataCommand(PullDataCommon):
@@ -49,36 +28,16 @@ class PullRawDataCommand(PullDataCommon):
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
     file_type_to_extensions_dict = {"fastq": ("fastq.gz",)}
 
-    def __init__(self, config: Config):
+    def __init__(self, args: argparse.Namespace):
         PullDataCommon.__init__(self)
         #: Command line arguments.
-        self.config = config
+        self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-                "work directory and falls back to current working directory by default."
-            ),
-        )
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
         )
         parser.add_argument(
             "--dry-run",
@@ -88,22 +47,6 @@ class PullRawDataCommand(PullDataCommon):
             help="Perform a dry run, i.e., just displays the files that would be downloaded.",
         )
         parser.add_argument(
-            "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
-        )
-        parser.add_argument(
-            "--tsv-shortcut",
-            default="germline",
-            choices=("cancer", "generic", "germline"),
-            help="The shortcut TSV schema to use.",
-        )
-        parser.add_argument(
-            "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
-        )
-        parser.add_argument(
-            "--last-batch", type=int, required=False, help="Last batch to be transferred."
-        )
-        parser.add_argument("--samples", help="Optional list of samples to pull")
-        parser.add_argument(
             "--use-library-name",
             default=False,
             action="store_true",
@@ -112,25 +55,12 @@ class PullRawDataCommand(PullDataCommon):
                 "(e.g. 'P001-N1-DNA1-WGS1') instead of sample identifier (e.g.'P001') in the file name."
             ),
         )
-        parser.add_argument(
-            "--assay-uuid",
-            dest="assay_uuid",
-            default=None,
-            help="UUID of assay to create landing zone for.",
-        )
-        parser.add_argument("project_uuid", help="UUID of project to download data for.")
 
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
     ) -> typing.Optional[int]:
         """Entry point into the command."""
-        # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
         args = vars(args)
         # Adjust `base_path` to snappy root
         args["base_path"] = find_snappy_root_dir(args["base_path"])
@@ -138,65 +68,60 @@ class PullRawDataCommand(PullDataCommon):
         args.pop("config", None)
         args.pop("cmd", None)
         args.pop("snappy_cmd", None)
-        return cls(Config(**args)).execute()
+        return cls(argparse.Namespace(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         logger.info("Loading configuration file and look for dataset")
 
         # Find download path
-        download_path = self._get_download_path()
+        if(self.args.output_directory):
+            if not (os.path.exists(self.args.output_directory) and os.access(self.args.output_directory, os.W_OK)):
+                logger.error(f"Output directory path either does not exist or it is not writable: {self.args.base_path}")
+                return 1
+            download_path = self.args.output_directory
+        else:
+            download_path = self._get_download_path()
         if not download_path:
             return 1
         logger.info(f"=> will download to {download_path}")
 
         # Get sample sheet
         biomedsheet_tsv = get_biomedsheet_path(
-            start_path=self.config.base_path, uuid=self.config.project_uuid
+            start_path=self.args.base_path, uuid=self.args.project_uuid
         )
-        sheet = load_sheet_tsv(biomedsheet_tsv, self.config.tsv_shortcut)
+        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
         # Filter requested samples and folder directories
         parser = ParseSampleSheet()
-        if self.config.use_library_name:
+        if self.args.use_library_name:
             selected_identifiers_tuples = list(
                 parser.yield_ngs_library_and_folder_names(
                     sheet=sheet,
-                    min_batch=self.config.first_batch,
-                    max_batch=self.config.last_batch,
-                    selected_ids=self.config.samples,
+                    min_batch=self.args.first_batch,
+                    max_batch=self.args.last_batch,
+                    selected_ids=self.args.samples,
                 )
             )
         else:
             selected_identifiers_tuples = list(
                 parser.yield_sample_and_folder_names(
                     sheet=sheet,
-                    min_batch=self.config.first_batch,
-                    max_batch=self.config.last_batch,
-                    selected_ids=self.config.samples,
+                    min_batch=self.args.first_batch,
+                    max_batch=self.args.last_batch,
+                    selected_ids=self.args.samples,
                 )
             )
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
 
-        # Get assay UUID if not provided
-        assay_uuid = None
-        if not self.config.assay_uuid:
-            assay_uuid = self.get_assay_uuid(
-                sodar_url=self.config.sodar_url,
-                sodar_api_token=self.config.sodar_api_token,
-                project_uuid=self.config.project_uuid,
-            )
-
-        # Find all remote files (iRODS)
+        # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
-            self.config.sodar_url,
-            self.config.sodar_api_token,
-            self.config.assay_uuid,
-            self.config.project_uuid,
+            self.args
         ).perform()
 
+        self.args.assay_uuid = remote_files_dict.get_assay_uuid()
         # Filter based on identifiers and file type
-        if self.config.use_library_name:
+        if self.args.use_library_name:
             filtered_remote_files_dict = self.filter_irods_collection_by_library_name_in_path(
                 identifiers=selected_identifiers,
                 remote_files_dict=remote_files_dict,
@@ -224,13 +149,13 @@ class PullRawDataCommand(PullDataCommon):
             library_to_irods_dict=library_to_irods_dict,
             identifiers_tuples=selected_identifiers_tuples,
             output_dir=download_path,
-            assay_uuid=self.config.assay_uuid or assay_uuid,
+            assay_uuid=self.args.assay_uuid,
         )
 
         # Retrieve files from iRODS or print
-        if not self.config.dry_run:
+        if not self.args.dry_run:
             self.get_irods_files(
-                irods_local_path_pairs=path_pair_list, force_overwrite=self.config.overwrite
+                irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite, sodar_profile=self.args.config_profile
             )
         else:
             self._report_files(
@@ -288,7 +213,7 @@ class PullRawDataCommand(PullDataCommon):
             if not in_common_links:
                 all_directories = sum([path_.split("/") for path_ in _irods_path_list], [])
                 for id_ in identifiers:
-                    if any([id_ == dir_ for dir_ in all_directories]):
+                    if any(id_ == dir_ for dir_ in all_directories):
                         output_dict[id_].extend(value)
                         break
 
@@ -405,7 +330,7 @@ class PullRawDataCommand(PullDataCommon):
         :return: Return path to download as defined in snappy configuration, i.e., raw data path.
         """
         # Find config file
-        with (pathlib.Path(self.config.base_path) / ".snappy_pipeline" / "config.yaml").open(
+        with (pathlib.Path(self.args.base_path) / ".snappy_pipeline" / "config.yaml").open(
             "rt"
         ) as inputf:
             config = yaml.safe_load(inputf)
@@ -417,13 +342,13 @@ class PullRawDataCommand(PullDataCommon):
             return
         for key, data_set in config["data_sets"].items():
             if (
-                key == self.config.project_uuid
-                or data_set.get("sodar_uuid") == self.config.project_uuid
+                key == self.args.project_uuid
+                or data_set.get("sodar_uuid") == self.args.project_uuid
             ):
                 break
         else:  # no "break" out of for-loop
             logger.error(
-                f"Could not find dataset with key/sodar_uuid entry of {self.config.project_uuid}"
+                f"Could not find dataset with key/sodar_uuid entry of {self.args.project_uuid}"
             )
             return
         if not data_set.get("search_paths"):

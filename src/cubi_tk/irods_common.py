@@ -1,28 +1,24 @@
 from collections import defaultdict
 import getpass
+import json
 import os.path
 from pathlib import Path
 import re
+import sys
 from typing import Iterable, Union
-import typing
 
 import attrs
 from irods.collection import iRODSCollection
 from irods.column import Like
 from irods.data_object import iRODSDataObject
-from irods.exception import (
-    CAT_INVALID_AUTHENTICATION,
-    CAT_INVALID_USER,
-    CAT_PASSWORD_EXPIRED,
-    PAM_AUTH_PASSWORD_FAILED,
-)
 from irods.keywords import FORCE_FLAG_KW
 from irods.models import Collection as CollectionModel
 from irods.models import DataObject as DataObjectModel
-from irods.password_obfuscation import encode
-from irods.session import NonAnonymousLoginWithoutPassword, iRODSSession
+from irods.session import iRODSSession
 from loguru import logger
 from tqdm import tqdm
+
+from irods.client_init import write_pam_irodsA_file
 
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
@@ -67,13 +63,18 @@ class iRODSCommon:
     :type irods_env_path: pathlib.Path, optional
     """
 
-    def __init__(self, ask: bool = False, irods_env_path: Path = None):
+    def __init__(self, ask: bool = False, irods_env_path: Path = None, sodar_profile: str = "global"):
         # Path to iRODS environment file
         if irods_env_path is None:
-            self.irods_env_path = Path.home().joinpath(".irods", "irods_environment.json")
+            irods_env_name = "irods_environment.json" if sodar_profile == "global" else "irods_environment_" + sodar_profile +".json"
+            self.irods_env_path = Path.home().joinpath(".irods", irods_env_name)
         else:
-            self.irods_env_path = irods_env_path
+            self.irods_env_path = Path(irods_env_path)
+        logger.debug(f"using irods_file: {self.irods_env_path}")
+        self.irodsA_file_found = False
         self.ask = ask
+        self.hash_scheme = DEFAULT_HASH_SCHEME
+
 
     @staticmethod
     def get_irods_error(e: Exception):
@@ -83,69 +84,52 @@ class iRODSCommon:
 
     def _init_irods(self) -> iRODSSession:
         """Connect to iRODS. Login if needed."""
+        self._check_and_gen_irods_files()
+        count_tries = 1
         while True:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
                 session.connection_timeout = 600
-                session.server_version
                 return session
-            except NonAnonymousLoginWithoutPassword as e:  # pragma: no cover
-                logger.info(self.get_irods_error(e))
-                self._irods_login()
-            except (
-                CAT_INVALID_AUTHENTICATION,
-                CAT_INVALID_USER,
-                CAT_PASSWORD_EXPIRED,
-            ):  # pragma: no cover
-                logger.warning("Problem with your session token.")
-                self.irods_env_path.parent.joinpath(".irodsA").unlink()
-                self._irods_login()
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                raise
-
-    def _irods_login(self):
-        """Ask user to log into iRODS."""
-        # No valid .irodsA file. Query user for password.
-        attempts = 0
-        while attempts < 3:
-            try:
-                session = iRODSSession(
-                    irods_env_file=self.irods_env_path,
-                    password=getpass.getpass(prompt="Please enter SODAR password:"),
-                )
-                token = session.pam_pw_negotiated
-                session.cleanup()
-                break
-            except PAM_AUTH_PASSWORD_FAILED as e:  # pragma: no cover
-                if attempts < 2:
-                    logger.warning("Wrong password. Please try again.")
-                    attempts += 1
-                    continue
-                else:
-                    logger.error("iRODS connection failed.")
+                self._check_and_gen_irods_files(overwrite=True)
+                count_tries+=1
+                if count_tries >3:
                     raise e
-            except Exception as e:  # pragma: no cover
-                logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
-                raise RuntimeError
 
-        if self.ask and input(
-            "Save iRODS session for passwordless operation? [y/N] "
-        ).lower().startswith("y"):
-            self._save_irods_token(token)  # pragma: no cover
-        elif not self.ask:
-            self._save_irods_token(token)
 
-    def _save_irods_token(self, token: str):
-        """Retrieve PAM temp auth token 'obfuscate' it and save to disk."""
-        irods_auth_path = self.irods_env_path.parent.joinpath(".irodsA")
-        irods_auth_path.parent.mkdir(parents=True, exist_ok=True)
+    def _check_and_gen_irods_files(self, overwrite = False):
+        """check if irodsA exists and generate it"""
+        if self.irodsA_file_found is True and not overwrite:
+            return
+        try:
+            #check if irodsfile exists
+            irodsA_path = self.irods_env_path.parent.joinpath(".irodsA")
+            if (irodsA_path.exists()):
+                self.irodsA_file_found = True
 
-        if isinstance(token, list) and token:
-            irods_auth_path.write_text(encode(token[0]))
-            irods_auth_path.chmod(0o600)
-        else:
-            logger.warning("No token found to be saved.")
+            write_irods_file = not self.irodsA_file_found or overwrite
+            if self.ask and write_irods_file :
+                write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '), overwrite=overwrite)
+                self.irodsA_file_found = True
+            elif not self.ask and write_irods_file:
+                logger.error("Password for irods conenction needs to be entered, please switch to interactive mode")
+
+            #read hashscheme vom irods env file
+            with open(self.irods_env_path) as irods_env_data:
+                irods_env_json = json.load(irods_env_data)
+                self.hash_scheme = irods_env_json["irods_default_hash_scheme"]
+                if self.hash_scheme not in HASH_SCHEMES:
+                    logger.error("Hashscheme currently not supported")
+                logger.debug(f"Hashscheme to use: {self.hash_scheme}")
+        except FileNotFoundError as e:
+            logger.error("Please check the irods_env_path")
+            logger.error(e)
+
+    def irods_hash_scheme(self):
+        self._init_irods()
+        return self.hash_scheme
 
     @property
     def session(self):
@@ -160,15 +144,25 @@ class iRODSTransfer(iRODSCommon):
     :type jobs: Union[list,tuple,dict,set]
     """
 
-    def __init__(self, jobs: Iterable[TransferJob], **kwargs):
+    def __init__(self, jobs: Iterable[TransferJob]|None, **kwargs):
         super().__init__(**kwargs)
         self.__jobs = jobs
-        self.__total_bytes = sum([job.bytes for job in self.__jobs])
-        self.__destinations = [job.path_remote for job in self.__jobs]
+        if jobs is not None:
+            self.__total_bytes = sum([job.bytes for job in self.__jobs])
+            self.__destinations = [job.path_remote for job in self.__jobs]
+        else:
+            self.__total_bytes = None
+            self.__destinations = None
 
     @property
     def jobs(self):
         return self.__jobs
+
+    @jobs.setter
+    def jobs(self, jobs:Iterable[TransferJob]):
+        self.__jobs = jobs
+        self.__total_bytes = sum([job.bytes for job in self.__jobs])
+        self.__destinations = [job.path_remote for job in self.__jobs]
 
     @property
     def size(self):
@@ -195,18 +189,38 @@ class iRODSTransfer(iRODSCommon):
             ) as t,
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
+            allow_overwrite = False
+            kw_options = {}
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
                 try:
                     with self.session as session:
+
                         if recursive:
                             self._create_collections(job)
-                        if sync and session.data_objects.exists(job.path_remote):
-                            t.update(job.bytes)
-                            continue
-                        session.data_objects.put(job.path_local, job.path_remote)
+                        if session.data_objects.exists(job.path_remote):
+                            if sync:
+                                t.update(job.bytes)
+                                continue
+                            #only show warning/ ask once
+                            elif not allow_overwrite:
+                                #set overwrite options
+                                allow_overwrite = True
+                                kw_options = {FORCE_FLAG_KW: None}
+                                print("\n")
+                                msg = "The file is already present, this and all following present files in irodscollection will get overwritten."
+                                #show warning
+                                if not self.ask:
+                                    logger.warning(msg)
+                                #ask user
+                                else:
+                                    logger.info(msg)
+                                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                                        logger.info("Aborting at your request.")
+                                        sys.exit(0)
+                        session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
@@ -214,9 +228,9 @@ class iRODSTransfer(iRODSCommon):
             t.clear()
 
     def chksum(self):
-        """Compute remote md5 checksums for all jobs."""
+        """Compute remote checksums for all jobs."""
         common_prefix = os.path.commonpath(self.__destinations)
-        checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith(".md5"))
+        checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith("." + self.hash_scheme.lower()))
         logger.info(f"Triggering remote checksum computation for {len(checkjobs)} files.")
         for n, job in enumerate(checkjobs):
             logger.info(
@@ -281,12 +295,9 @@ class iRODSRetrieveCollection(iRODSCommon):
     """Class retrieves iRODS Collection associated with Assay"""
 
     def __init__(
-        self, hash_scheme: str = DEFAULT_HASH_SCHEME, ask: bool = False, irods_env_path: Path = None
-    ):
-        """Constructor.
+        self, **kwargs):
 
-        :param hash_scheme: iRODS hash scheme, default MD5.
-        :type hash_scheme: str, optional
+        """Constructor.
 
         :param ask: Confirm with user before certain actions.
         :type ask: bool, optional
@@ -294,8 +305,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
         """
-        super().__init__(ask, irods_env_path)
-        self.hash_scheme = hash_scheme
+        super().__init__(**kwargs)
 
     def retrieve_irods_data_objects(self, irods_path: str) -> dict[str, list[iRODSDataObject]]:
         """Retrieve data objects from iRODS.
@@ -338,7 +348,7 @@ class iRODSRetrieveCollection(iRODSCommon):
             Like(CollectionModel.name, f"{root_coll.path}%")
         )
 
-        data_objs = dict(files=[], checksums={})
+        data_objs = {"files":[], "checksums":{}}
         for res in query:
             # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
             # likely because a name/path/... attribute is overwritten somewhere

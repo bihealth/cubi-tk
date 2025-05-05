@@ -1,6 +1,7 @@
 """``cubi-tk sea-snap itransfer-ngs-mapping``: transfer ngs_mapping results into iRODS landing zone."""
 
 import argparse
+import typing
 import attr
 from ctypes import c_ulonglong
 from multiprocessing import Value
@@ -11,10 +12,13 @@ import re
 from subprocess import STDOUT, SubprocessError, check_call, check_output
 from retrying import retry
 import sys
-import typing
 
 from loguru import logger
 import tqdm
+
+from cubi_tk.irods_common import iRODSCommon
+from cubi_tk.parsers import print_args
+from cubi_tk.sodar_api import SodarApi
 
 from ..common import check_irods_icommands, sizeof_fmt
 from ..snappy.itransfer_common import SnappyItransferCommandBase
@@ -78,25 +82,11 @@ def irsync_transfer(job: TransferJob, counter: Value, t: tqdm.tqdm):
 class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     """Implementation of sea-snap itransfer command for ngs_mapping results."""
 
-    fix_md5_files = True
     command_name = "itransfer-results"
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup arguments"""
-
-        group_sodar = parser.add_argument_group("SODAR-related")
-        group_sodar.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        group_sodar.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -128,7 +118,8 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         pass
 
-    def build_transfer_jobs(self, command_blocks, blueprint) -> list[TransferJob]:
+    # FIXME: possibly use transferjob from .irods_common
+    def build_transfer_jobs(self, command_blocks, blueprint, hash_ending) -> typing.Tuple[TransferJob, ...]:
         """Build file transfer jobs."""
         transfer_jobs = []
         bp_mod_time = pathlib.Path(blueprint).stat().st_mtime
@@ -136,15 +127,16 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-            from sodar_cli.api import landingzone
 
-            lz_irods_path = landingzone.retrieve(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                landingzone_uuid=self.args.destination,
-            ).irods_path
-            logger.info("Target iRods path: {}", lz_irods_path)
+            sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
 
+            lz = sodar_api.get_landingzone_retrieve(self.args.destination)
+            if lz is not None:
+                lz_irods_path = lz.irods_path
+                logger.info("Target iRods path: {}", lz_irods_path)
+            else:
+                logger.error("Target iRods path couldn't be retrieved")
+                return transfer_jobs
         for cmd_block in (cb for cb in command_blocks if cb):
             sources = [
                 word
@@ -164,7 +156,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             dest = dest.replace("__SODAR__", lz_irods_path)
             cmd_block = cmd_block.replace("__SODAR__", lz_irods_path)
 
-            if pathlib.Path(source).suffix == ".md5":
+            if pathlib.Path(source).suffix == hash_ending:
                 continue  # skip, will be added automatically
 
             if pathlib.Path(source).stat().st_mtime > bp_mod_time:
@@ -173,7 +165,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                     "Please update the blueprint." % (blueprint, source)
                 )
 
-            for ext in ("", ".md5"):
+            for ext in ("", hash_ending):
                 try:
                     size = os.path.getsize(source + ext)
                 except OSError:  # pragma: nocover
@@ -186,7 +178,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
                         bytes=size,
                     )
                 )
-        return list(sorted(transfer_jobs, key=lambda x: x.to_oneline()))
+        return tuple(sorted(transfer_jobs, key=lambda x: x.to_oneline()))
 
     def execute(self) -> int | None:
         """Execute the transfer."""
@@ -195,14 +187,15 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             return res
 
         logger.info("Starting cubi-tk sea-snap {}", self.command_name)
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         command_blocks = self.args.transfer_blueprint.read().split(os.linesep + os.linesep)
-        transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name)
-        logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
+        irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
+        hash_ending = "."+irods_hash_scheme.lower()
+        transfer_jobs = self.build_transfer_jobs(command_blocks, self.args.transfer_blueprint.name, hash_ending)
+        logger.debug("Transfer jobs:\n{}", "\n".join(x.to_oneline() for x in transfer_jobs))
 
-        if self.fix_md5_files:
-            transfer_jobs = self._execute_md5_files_fix(transfer_jobs)
+        transfer_jobs = self._execute_checksum_files_fix(transfer_jobs, irods_hash_scheme)
 
         total_bytes = sum([job.bytes for job in transfer_jobs])
         logger.info(
@@ -225,8 +218,9 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         logger.info("All done")
         return None
 
-    def _execute_md5_files_fix(self, transfer_jobs: list[TransferJob]) -> list[TransferJob]:
-        """Create missing MD5 files."""
+    # FIXME: possibly use methd from ..common
+    def _execute_checksum_files_fix(self, transfer_jobs: typing.Tuple[TransferJob, ...], hash_scheme) -> typing.Tuple[TransferJob, ...]:
+        """Create missing checksum files."""
         ok_jobs = []
         todo_jobs = []
         for job in transfer_jobs:
@@ -235,23 +229,23 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             else:
                 ok_jobs.append(job)
 
-        total_bytes = sum([os.path.getsize(j.path_src[: -len(".md5")]) for j in todo_jobs])
+        total_bytes = sum([os.path.getsize(j.path_src[: -len("."+hash_scheme.lower())]) for j in todo_jobs])
         logger.info(
-            "Computing MD5 sums for {} files of {} with up to {} processes",
+            "Computing checksums for {} files of {} with up to {} processes",
             len(todo_jobs),
             sizeof_fmt(total_bytes),
             self.args.num_parallel_transfers,
         )
-        logger.info("Missing MD5 files:\n{}", "\n".join(map(lambda j: j.path_src, todo_jobs)))
+        logger.info("Missing checksum files:\n{}", "\n".join(j.path_src for j in todo_jobs))
         counter = Value(c_ulonglong, 0)
         with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
             if self.args.num_parallel_transfers == 0:  # pragma: nocover
                 for job in todo_jobs:
-                    compute_md5sum(job, counter, t)
+                    compute_checksum(job, counter, t, hash_scheme)
             else:
                 pool = ThreadPool(processes=self.args.num_parallel_transfers)
                 for job in todo_jobs:
-                    pool.apply_async(compute_md5sum, args=(job, counter, t))
+                    pool.apply_async(compute_checksum, args=(job, counter, t, hash_scheme))
                 pool.close()
                 pool.join()
 
@@ -265,36 +259,37 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
             )
             for j in todo_jobs
         ]
-        return list(sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline()))
+        return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.to_oneline()))
 
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk sea-snap itransfer-results``."""
     return SeasnapItransferMappingResultsCommand.setup_argparse(parser)
 
-
-def compute_md5sum(job: TransferJob, counter: Value, t: tqdm.tqdm) -> None:
-    """Compute MD5 sum with ``md5sum`` command."""
+# FIXME: possibly use methd from ..common
+def compute_checksum(job: TransferJob, counter: Value, t: tqdm.tqdm, hash_scheme) -> None:
+    """Compute checksum sum with ``md5sum`or sha256sum` command."""
     dirname = os.path.dirname(job.path_src)
-    filename = os.path.basename(job.path_src)[: -len(".md5")]
-    path_md5 = job.path_src
+    hash_ending = "."+hash_scheme.lower()
+    filename = os.path.basename(job.path_src)[: -len(hash_ending)]
+    path_checksum = job.path_src
 
-    md5sum_argv = ["md5sum", filename]
-    logger.debug("Computing MD5sum {} > {}", " ".join(md5sum_argv), filename + ".md5")
+    checksum_argv = [hash_scheme.lower()+"sum", filename]
+    logger.debug("Computing checksum {} > {}", " ".join(checksum_argv), filename + hash_ending)
     try:
-        with open(path_md5, "wt") as md5f:
-            check_call(md5sum_argv, cwd=dirname, stdout=md5f)
+        with open(path_checksum, "wt") as checksumfile:
+            check_call(checksum_argv, cwd=dirname, stdout=checksumfile)
     except SubprocessError as e:  # pragma: nocover
-        logger.error("Problem executing md5sum: {}", e)
-        logger.info("Removing file after error: {}", path_md5)
+        logger.error("Problem executing checksum: {}", e)
+        logger.info("Removing file after error: {}", path_checksum)
         try:
-            os.remove(path_md5)
+            os.remove(path_checksum)
         except OSError as e_rm:  # pragma: nocover
             logger.error("Could not remove file: {}", e_rm)
         raise e
 
     with counter.get_lock():
-        counter.value = os.path.getsize(job.path_src[: -len(".md5")])
+        counter.value = os.path.getsize(job.path_src[: -len(hash_ending)])
         try:
             t.update(counter.value)
         except TypeError:

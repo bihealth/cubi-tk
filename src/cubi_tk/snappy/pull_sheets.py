@@ -9,60 +9,21 @@ More Information
 """
 
 import argparse
-import os
-import pathlib
 import typing
 from uuid import UUID
 
 
-import attr
 from cubi_tk.isa_support import InvestigationTraversal, isa_dict_to_isa_data
+from cubi_tk.parsers import print_args
 from cubi_tk.snappy.parse_sample_sheet import SampleSheetBuilderCancer, SampleSheetBuilderGermline
 from loguru import logger
-from sodar_cli import api
 
-from ..common import CommonConfig, load_toml_config, overwrite_helper
+from cubi_tk.sodar_api import SodarApi
+
+from ..common import overwrite_helper
 
 from .common import find_snappy_root_dir
 from .models import load_datasets
-
-
-
-@attr.s(frozen=True, auto_attribs=True)
-class PullSheetsConfig:
-    """Configuration for the ``cubi-tk snappy pull-sheets`` command."""
-
-    #: Global configuration.
-    global_config: CommonConfig
-
-    base_path: typing.Optional[pathlib.Path]
-    yes: bool
-    dry_run: bool
-    show_diff: bool
-    show_diff_side_by_side: bool
-    library_types: typing.Tuple[str]
-    first_batch: int
-    last_batch: typing.Union[int, type(None)]
-    tsv_shortcut: str
-    assay_uuid:str
-
-    @staticmethod
-    def create(args, global_config, toml_config=None):
-        _ = toml_config or {}
-        return PullSheetsConfig(
-            global_config=global_config,
-            base_path=pathlib.Path(args.base_path),
-            yes=args.yes,
-            dry_run=args.dry_run,
-            show_diff=args.show_diff,
-            show_diff_side_by_side=args.show_diff_side_by_side,
-            library_types=tuple(args.library_types),
-            first_batch=args.first_batch,
-            last_batch=args.last_batch,
-            tsv_shortcut=args.tsv_shortcut,
-            assay_uuid=args.assay_uuid
-        )
-
 
 
 def strip(x):
@@ -75,16 +36,6 @@ def strip(x):
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk snappy pull-sheet``."""
     parser.add_argument("--hidden-cmd", dest="snappy_cmd", default=run, help=argparse.SUPPRESS)
-
-    parser.add_argument(
-        "--base-path",
-        default=os.getcwd(),
-        required=False,
-        help=(
-            "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
-            "work directory and falls back to current working directory by default."
-        ),
-    )
 
     parser.add_argument(
         "--yes", default=False, action="store_true", help="Assume all answers are yes."
@@ -113,7 +64,11 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
 
     parser.add_argument(
-        "--library-types", help="Library type(s) to use, comma-separated, default is to use all."
+        "--library-types",
+        nargs= "*",
+        choices=( "WES", "WGS", "Panel_seq"),
+        default=[],
+        help="Library type(s) to use passed like '--library-types WES Panel_seq', default is to use all."
     )
 
     parser.add_argument(
@@ -136,63 +91,21 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="The shortcut TSV schema to use; default: 'germline'.",
     )
 
-    parser.add_argument(
-        "--assay-uuid",
-        default=None,
-        required=False,
-        type=str,
-        help="Assay UUID for assay if multiple assays are present",
-    )
-
-
-def check_args(args) -> int:
-    """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
-    any_error = False
-
-    # Postprocess arguments.
-    if args.library_types:
-        args.library_types = args.library_types.split(",")  # pragma: nocover
-    else:
-        args.library_types = []
-
-    return int(any_error)
-
 def build_sheet(
-    config: PullSheetsConfig,
+    args : argparse.Namespace,
     project_uuid: typing.Union[str, UUID],
-    first_batch: typing.Optional[int] = None,
-    last_batch: typing.Optional[int] = None,
-    tsv_shortcut: str = "germline",
-    assay_uuid=None
+    sodar_api : SodarApi
 ) -> str:
     """Build sheet TSV file."""
 
     # Obtain ISA-tab from SODAR REST API.
-    isa_dict = api.samplesheet.export(
-        sodar_url=config.global_config.sodar_server_url,
-        sodar_api_token=config.global_config.sodar_api_token,
-        project_uuid=project_uuid,
-    )
-    assay_filename = None
-    if(assay_uuid): #samplesheet.export doesnt pull assayuuids, get assauuuid via samplesheet.retrive
-        investigation = api.samplesheet.retrieve(
-            sodar_url=config.global_config.sodar_server_url,
-            sodar_api_token=config.global_config.sodar_api_token,
-            project_uuid=project_uuid,
-        )
-        assay = None
-        for study in investigation.studies.values():
-            for remote_assay_uuid in study.assays.keys():
-                if assay_uuid== remote_assay_uuid:
-                    assay = study.assays[remote_assay_uuid]
-                    assay_filename = assay.file_name
-                    break
-        if(assay_filename == None):
-            logger.error("No assay with UUID {} found", assay_uuid)
-    isa = isa_dict_to_isa_data(isa_dict, assay_filename)
-    if tsv_shortcut == "germline":
-        builder = SampleSheetBuilderGermline() 
-        builder.set_germline_specific_values(config, project_uuid, first_batch, last_batch)
+    isa_dict = sodar_api.get_samplesheet_export()
+    study_key = list(isa_dict["studies"].keys())[0]
+    assay_key = list(isa_dict["assays"].keys())[0]
+    isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay_key, study_txt=study_key)
+    if args.tsv_shortcut == "germline":
+        builder = SampleSheetBuilderGermline()
+        builder.set_germline_specific_values(args.library_types, project_uuid, args.first_batch, args.last_batch)
     else:
         builder = SampleSheetBuilderCancer()
     iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
@@ -207,30 +120,26 @@ def run(
     args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
 ) -> typing.Optional[int]:
     """Run ``cubi-tk snappy pull-sheet``."""
-    res: typing.Optional[int] = check_args(args)
-    if res:  # pragma: nocover
-        return res
 
     logger.info("Starting to pull sheet...")
-    logger.info("Args: {}", args)
 
     logger.debug("Load config...")
-    toml_config = load_toml_config(args)
-    global_config = CommonConfig.create(args, toml_config)
     args.base_path = find_snappy_root_dir(args.base_path)
-    config = PullSheetsConfig.create(args, global_config, toml_config)
 
-    config_path = config.base_path / ".snappy_pipeline"
+    config_path = args.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
     logger.info("Pulling for {} datasets", len(datasets))
-    if(len(datasets) >1 and args.assay_uuid != None):
+    if(len(datasets) >1 and args.assay_uuid is not None):
         logger.warning("Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID")
     for dataset in datasets.values():
         if dataset.sodar_uuid:
+            args.project_uuid = dataset.sodar_uuid
+            sodar_api = SodarApi(args, with_dest=True)
+            print_args(args)
             overwrite_helper(
                 config_path / dataset.sheet_file,
                 build_sheet(
-                    config, dataset.sodar_uuid, args.first_batch, args.last_batch, args.tsv_shortcut, args.assay_uuid
+                    args, dataset.sodar_uuid, sodar_api
                 ),
                 do_write=not args.dry_run,
                 show_diff=True,

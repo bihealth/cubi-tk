@@ -6,6 +6,7 @@ import textwrap
 from biomedsheets.io_tsv import read_germline_tsv_sheet, read_cancer_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from biomedsheets.shortcuts import GermlineCaseSheet, CancerCaseSheet
+
 import pytest
 from loguru import logger
 from _pytest.logging import LogCaptureFixture
@@ -130,12 +131,12 @@ def my_exists(self):
     return str(self) == "/base/path/.snappy_pipeline"
 
 
-def my_get_sodar_info(_self):
+def my_get_sodar_info(_self, sodar_api = None):
     """Method is used to patch cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info"""
     return "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
 
 
-def my_sodar_api_export(n_assays=1):
+def my_sodar_api_export(n_assays=1, offset =0):
     """Return contents for api.samplesheet.export"""
     assay = textwrap.dedent(
         """
@@ -148,11 +149,11 @@ def my_sodar_api_export(n_assays=1):
 
     isa_dict = {
         "investigation": {"path": "i_Investigation.txt", "tsv": None},
-        "studies": {"s_Study_0.txt": {"tsv": None}},
-        "assays": {"a_name_0": {"tsv": assay}},
+        "studies": {"s_Study_%d.txt" % offset : {"tsv": ""}},
+        "assays": {"a_name_%d" % offset: {"tsv": assay}},
     }
     if n_assays > 1:
-        for i in range(1, n_assays):
+        for i in range(1+offset, n_assays+offset):
             isa_dict["assays"]["a_name_%d" % i] = {"tsv": assay}
 
     return isa_dict

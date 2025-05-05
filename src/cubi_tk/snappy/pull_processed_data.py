@@ -11,7 +11,8 @@ import typing
 
 from loguru import logger
 
-from ..common import load_toml_config
+from cubi_tk.parsers import print_args
+
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
@@ -44,51 +45,7 @@ class PullProcessedDataCommand(PullDataCommon):
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-        parser.add_argument(
-            "--sodar-url",
-            default=os.environ.get("SODAR_URL", "https://sodar.bihealth.org/"),
-            help="URL to SODAR, defaults to SODAR_URL environment variable or fallback to https://sodar.bihealth.org/",
-        )
-        parser.add_argument(
-            "--sodar-api-token",
-            default=os.environ.get("SODAR_API_TOKEN", None),
-            help="Authentication token when talking to SODAR.  Defaults to SODAR_API_TOKEN environment variable.",
-        )
-        parser.add_argument(
-            "--tsv-shortcut",
-            default="germline",
-            choices=("cancer", "generic", "germline"),
-            help="The shortcut TSV schema to use; default: 'germline'.",
-        )
-        parser.add_argument(
-            "--base-path",
-            default=os.getcwd(),
-            required=False,
-            help=(
-                "Base path of project (contains 'ngs_mapping/' etc.), spiders up from biomedsheet_tsv and falls "
-                "back to current working directory by default."
-            ),
-        )
-        parser.add_argument(
-            "--selected-samples",
-            help=(
-                "Limits the request to the listed sample names. Don't include the full library name, just the "
-                "sample name (e.g., 'P001' instead of 'P001-N1-DNA1-WES1'). Separate the sample with comma for "
-                "multiple samples, example: 'P001,P002,P003'. Note: argument overrides batch related arguments."
-            ),
-        )
-        parser.add_argument(
-            "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
-        )
-        parser.add_argument(
-            "--last-batch", type=int, required=False, help="Last batch to be transferred."
-        )
-        parser.add_argument(
-            "--output-directory",
-            default=None,
-            required=True,
-            help="Output directory, where downloaded files will be stored.",
-        )
+
         parser.add_argument(
             "--sample-id",
             default=False,
@@ -116,20 +73,6 @@ class PullProcessedDataCommand(PullDataCommon):
                 "present, both versions will be downloaded."
             ),
         )
-        parser.add_argument(
-            "--overwrite",
-            default=False,
-            action="store_true",
-            help="Allow overwriting of local files.",
-        )
-        parser.add_argument(
-            "--assay-uuid",
-            default=None,
-            type=str,
-            help="UUID from Assay to check. Used to specify target while dealing with multi-assay projects.",
-        )
-        parser.add_argument("project_uuid", type=str, help="UUID from Project to check.")
-
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -140,14 +83,6 @@ class PullProcessedDataCommand(PullDataCommon):
     def check_args(self, args):
         """Called for checking arguments."""
         res = 0
-
-        # If SODAR info not provided, fetch from user's toml file
-        toml_config = load_toml_config(args)
-        args.sodar_url = args.sodar_url or toml_config.get("global", {}).get("sodar_server_url")
-        args.sodar_api_token = args.sodar_api_token or toml_config.get("global", {}).get(
-            "sodar_api_token"
-        )
-
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error(f"Base path does not exist: {args.base_path}")
@@ -171,7 +106,7 @@ class PullProcessedDataCommand(PullDataCommon):
             return res
 
         logger.info("Starting cubi-tk snappy pull-processed-data")
-        logger.info("  args: {}", self.args)
+        print_args(self.args)
 
         # Find biomedsheet file
         biomedsheet_tsv = get_biomedsheet_path(
@@ -181,10 +116,10 @@ class PullProcessedDataCommand(PullDataCommon):
         sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
         # Filter requested samples or libraries
-        if self.args.selected_samples:
+        if self.args.samples:
             selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
                 sheet=sheet,
-                selected_samples=self.args.selected_samples,
+                selected_samples=self.args.samples,
                 by_sample_id=self.args.sample_id,
             )
         else:
@@ -195,22 +130,11 @@ class PullProcessedDataCommand(PullDataCommon):
                 by_sample_id=self.args.sample_id,
             )
 
-        # Get assay UUID if not provided
-        assay_uuid = None
-        if not self.args.assay_uuid:
-            assay_uuid = self.get_assay_uuid(
-                sodar_url=self.args.sodar_url,
-                sodar_api_token=self.args.sodar_api_token,
-                project_uuid=self.args.project_uuid,
-            )
-
-        # Find all remote files (iRODS)
+        # Find all remote files (iRODS) and get assay UUID if not provided
         remote_files_dict = RetrieveSodarCollection(
-            self.args.sodar_url,
-            self.args.sodar_api_token,
-            self.args.assay_uuid,
-            self.args.project_uuid,
+            self.args
         ).perform()
+        self.args.assay_uuid = remote_files_dict.get_assay_uuid()
 
         # Filter based on identifiers and file type
         filtered_remote_files_dict = self.filter_irods_collection(
@@ -226,13 +150,13 @@ class PullProcessedDataCommand(PullDataCommon):
         path_pair_list = self.pair_ipath_with_outdir(
             remote_files_dict=filtered_remote_files_dict,
             output_dir=self.args.output_directory,
-            assay_uuid=self.args.assay_uuid or assay_uuid,
+            assay_uuid=self.args.assay_uuid,
             retrieve_all=self.args.download_all_versions,
         )
 
         # Retrieve files from iRODS
         self.get_irods_files(
-            irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite
+            irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite, sodar_profile=self.args.config_profile
         )
 
         logger.info("All done. Have a nice day!")

@@ -10,7 +10,7 @@ import typing
 from loguru import logger
 
 #: config files
-CONFIGS = dict(DE="DE_config.yaml", mapping="mapping_config.yaml")
+CONFIGS = {"DE":"DE_config.yaml", "mapping":"mapping_config.yaml"}
 
 CLUSTER_CONFIG = "cluster_config.json"
 
