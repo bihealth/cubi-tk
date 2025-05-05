@@ -19,7 +19,7 @@ from cubi_tk.sodar_api import SodarApi
 
 from ..common import execute_checksum_files_fix, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
-from ..irods_common import TransferJob, iRODSCommon, iRODSTransfer
+from ..irods_common import TransferJob, iRODSTransfer
 from ..snappy.itransfer_common import SnappyItransferCommandBase
 
 # for testing
@@ -341,10 +341,13 @@ class SodarIngestData(SnappyItransferCommandBase):
         val = column_match[sample_name]
         if not isinstance(val, list):
             return val
-        #needs further matching with tumor and conservation method
+        #needs further matching with conservation method and if existent tumor
         conservation_col_name = None
         conservation = m.groupdict(default=None)["conservation"]
         tissue = m.groupdict(default=None)["tissue"]
+        if conservation is None and tissue is None:
+            logger.error("Couldnt extract conservation and tissue from name, returning first")
+            return val[0][0]
         for col_col_name, col_sample_name, col_conservation in val:
             col_tissue = col_sample_name.split("-")[-1][0]
             tissue_match = tissue =="tumor" and col_tissue =="T" or tissue == "normal" and col_tissue  == "N"
@@ -361,7 +364,7 @@ class SodarIngestData(SnappyItransferCommandBase):
         if conservation_col_name is not None:
             logger.info("Couldnt match to tissue, returning conservation match")
             return conservation_col_name
-        logger.info("Couldnt match to conservation and/or tissue, returning first")
+        logger.warning("Couldnt match to conservation and/or tissue, returning first")
         return val[0][0]
 
 
@@ -396,7 +399,9 @@ class SodarIngestData(SnappyItransferCommandBase):
                 real_path = os.path.realpath(path)
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
-                if real_path.endswith((".md5", ".md5sum", ".sha256")):
+                #dragen generates .md5sum, this prevents generation of eg .md5sum.sha256 or .md5sum.md5
+                #TODO: add list of skippable endings as cmd-line option (default [.md5sum]) and use that variable here
+                if real_path.endswith((hash_ending, ".md5sum")):
                     continue  # skip, will be added automatically
 
                 if not os.path.exists(real_path):  # pragma: nocover
@@ -434,12 +439,6 @@ class SodarIngestData(SnappyItransferCommandBase):
                         logger.error(msg)
                         raise ParameterException(msg) from KeyError
 
-                    # This was the original code, but there is no need to change the remote file names once they are
-                    # mapped to the correct collections:
-                    # remote_file = str(remote_file)
-                    # for m_pat, r_pat in self.args.remote_dir_mapping:
-                    #     remote_file = re.sub(m_pat, r_pat, remote_file)
-
                     for ext in ("", hash_ending):
                         transfer_jobs.append(
                             TransferJob(
@@ -458,7 +457,8 @@ class SodarIngestData(SnappyItransferCommandBase):
 
         logger.info("Starting cubi-tk sodar {}", self.command_name)
         print_args(self.args)
-        irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
+        itransfer = iRODSTransfer(None, ask=not self.args.yes, sodar_profile=self.args.config_profile)
+        irods_hash_scheme = itransfer.irods_hash_scheme()
         irods_hash_ending = "."+irods_hash_scheme.lower()
         lz_uuid, transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
@@ -474,7 +474,7 @@ class SodarIngestData(SnappyItransferCommandBase):
 
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.num_parallel_transfers)
         # Final go from user & transfer
-        itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes, sodar_profile=self.args.config_profile)
+        itransfer.jobs = transfer_jobs
         logger.info("Planning to transfer the following files:")
         for job in transfer_jobs:
             logger.info(job.path_local)

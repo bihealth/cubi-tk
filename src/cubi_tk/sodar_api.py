@@ -19,53 +19,23 @@ from .exceptions import ParameterException, SodarApiException
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"
 
-
-def get_user_input_study(study_uuids: list[str], studies:dict[str, api_models.Study]) -> UUID:
-    """Display available study UUIDS and let User choose which one to use.
-
-    :param assays: Assays UUIDs as found in Studies.
-    :type assays: list
+def get_user_input_assay_study(assay_study_uuids: list[str], assays_studies:dict[str, api_models.Study|api_models.Assay],string :str = "Assays") -> UUID:
+    """Display available assay or study UUIDS and let User choose which one to use.
     """
-    logger.warning("Multiple studies present, which one do you want to choose?")
-    i = 0
-    while i < len(study_uuids):
-        study_name = studies[study_uuids[i]].file_name
-        logger.warning("{}: {}", i+1, study_name)
-        i+=1
-    study_num = 0
-    while (study_num<= 0 or study_num> len(study_uuids)):
-        study_num = input("Please enter the index of the Study (e.g 2):")
-        study_num =int(study_num)
-    study_uuid = study_uuids[study_num-1]
-    logger.info("Chosen Study: {}", studies[study_uuid].file_name)
-    return study_uuid
-
-def get_user_input_assay_uuid(assay_uuids:list[str], assays: dict[str, api_models.Assay]) -> UUID:
-    """Display available assay UUIDS and let User choose which one to use.
-
-    :param assays: Assays UUIDs as found in Studies.
-    :type assays: list
-    """
-    logger.warning("No --assay-uuid specified but multiple assays present, which assay do you want to choose?")
-    i = 0
-    while i < len(assay_uuids):
-        assay_name = assays[assay_uuids[i]].file_name
-        logger.warning("{}: {}", i+1, assay_name)
-        i+=1
-    assay_num = 0
-    while (assay_num<= 0 or assay_num> len(assay_uuids)):
-        assay_num = input("Please enter the index of the Assay (e.g 2):")
-        assay_num =int(assay_num)
-    assay_uuid = assay_uuids[assay_num-1]
-    logger.info("Chosen Assay: {}", assays[assay_uuid].file_name)
-    return assay_uuid
-
+    logger.warning(f"Multiple {string} present, which one do you want to choose?")
+    for i, content_uuid in enumerate(assay_study_uuids):
+        content_name = assays_studies[content_uuid].file_name
+        logger.warning("{}: {}", i+1, content_name)
+    content_num = 0
+    while (content_num<= 0 or content_num> len(assay_study_uuids)):
+        content_num = input("Please enter the index of the Assay/Study (e.g 2):")
+        content_num =int(content_num)
+    content_uuid = assay_study_uuids[content_num-1]
+    logger.info("Chosen Assay/Study: {}", assays_studies[content_uuid].file_name)
+    return content_uuid
 
 def multi_assay_study_warning(content:dict, string :str = "Assays") -> None:
-    """Display warning for multi-assay study.
-
-    :param assays: Assays UUIDs as found in Studies.
-    :type assays: list
+    """Display warning for multi-assays or studies.
     """
     multi_assay_str = "\n".join(content)
     logger.warning(
@@ -320,7 +290,7 @@ class SodarApi:
         if(len(studies) > 1 and not self.assay_uuid):
             study_keys =list(investigation.studies.keys())
             if not self.yes:
-                study_uuid = get_user_input_study(study_keys, investigation.studies)
+                study_uuid = get_user_input_assay_study(study_keys, investigation.studies, string="studies")
                 studies = [investigation.studies[study_uuid]]
             else:
                 multi_assay_study_warning(study_keys, string="studies")
@@ -343,7 +313,7 @@ class SodarApi:
                         multi_assay_study_warning(assays=assays_)
                     return assay, study
                 # multiple assays and interactive, print uuids and ask for which
-                self.assay_uuid = get_user_input_assay_uuid(assays_, study.assays)
+                self.assay_uuid = get_user_input_assay_study(assays_, study.assays)
                 assay = study.assays[self.assay_uuid]
                 return assay, study
         if self.assay_uuid is not None:

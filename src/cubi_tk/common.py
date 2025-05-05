@@ -42,8 +42,11 @@ def compute_checksum(filename, hash_scheme, buffer_size=1_048_576, verbose=True)
     with open(filename, "rb") as f:
         if hash_scheme.lower() == "md5":
             the_hash = hashlib.md5()
-        else: #currently only md5 and SHA256 supported
+        elif hash_scheme.lower() == "sha256": #currently only md5 and SHA256 supported
             the_hash= hashlib.sha256()
+        else:
+            logger.error(f"Hashscheme {hash_scheme} not supported, contact cubi-tk admin")
+            sys.exit(1)
         chunk = f.read(buffer_size)
         while chunk:
             the_hash.update(chunk)

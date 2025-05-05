@@ -101,7 +101,7 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     mocker.patch("cubi_tk.sea_snap.itransfer_results.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.sea_snap.itransfer_results.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
 
     # --- run tests

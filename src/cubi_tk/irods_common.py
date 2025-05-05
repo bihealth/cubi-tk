@@ -144,15 +144,25 @@ class iRODSTransfer(iRODSCommon):
     :type jobs: Union[list,tuple,dict,set]
     """
 
-    def __init__(self, jobs: Iterable[TransferJob], **kwargs):
+    def __init__(self, jobs: Iterable[TransferJob]|None, **kwargs):
         super().__init__(**kwargs)
         self.__jobs = jobs
-        self.__total_bytes = sum([job.bytes for job in self.__jobs])
-        self.__destinations = [job.path_remote for job in self.__jobs]
+        if jobs is not None:
+            self.__total_bytes = sum([job.bytes for job in self.__jobs])
+            self.__destinations = [job.path_remote for job in self.__jobs]
+        else:
+            self.__total_bytes = None
+            self.__destinations = None
 
     @property
     def jobs(self):
         return self.__jobs
+
+    @jobs.setter
+    def jobs(self, jobs:Iterable[TransferJob]):
+        self.__jobs = jobs
+        self.__total_bytes = sum([job.bytes for job in self.__jobs])
+        self.__destinations = [job.path_remote for job in self.__jobs]
 
     @property
     def size(self):

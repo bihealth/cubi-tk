@@ -2,7 +2,7 @@
 
 This tool searches recursively for all files with associated checksums files in a given directory (or PWD)
 and compares them against files linked to a given SODAR project/irods directory, also the checksums
-recorded in local checksum files can be rechecked. No hash format other than md5 and sha256is currently supported.
+recorded in local checksum files can be rechecked. No hash format other than md5 and sha256 is currently supported.
 Comparison is done based (first) on file names and then (unless disabled) on checksums,
 therefore wiles with different names but the same checksum will not be matched.
 File are sorted into:
@@ -14,11 +14,13 @@ import argparse
 from collections import defaultdict
 import os
 from pathlib import Path
+import re
 import typing
 
 import attr
 from loguru import logger
 
+from cubi_tk.irods_common import HASH_SCHEMES
 from cubi_tk.parsers import print_args
 
 from ..common import compute_checksum
@@ -75,7 +77,7 @@ class FindLocalChecksumFiles:
                 checksum = f.readline()
                 # Expected format example:
                 # `459db8f7cb0d3a23a38fdc98286a9a9b  out.vcf.gz`
-                checksum = checksum.split(" ")[0]
+                checksum = re.search(HASH_SCHEMES[self.hash_scheme]["regex"], checksum).group(0)
 
             # Check that checksum in local file is correct, this is slow so don't make it default
             if self.recheck_checksum:

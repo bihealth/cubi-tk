@@ -277,7 +277,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
     # requests mock
     return_value = {
@@ -431,7 +431,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
 
     # requests mock
