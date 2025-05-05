@@ -146,7 +146,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     mock_value = mock.MagicMock()
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.snappy.itransfer_common.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
     # Actually exercise code and perform test.
     parser, _subparsers = setup_argparse()
