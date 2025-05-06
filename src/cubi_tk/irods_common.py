@@ -107,6 +107,7 @@ class iRODSCommon:
         try:
             #check if irodsfile exists
             irodsA_path = self.irods_env_path.parent.joinpath(".irodsA")
+            ##check path of last authorized irods_environment.json
             last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
             if (irodsA_path.exists()):
                 self.irodsA_file_found = True
@@ -114,7 +115,7 @@ class iRODSCommon:
                     with open(last_profile_path) as last_profile_file:
                         last_used_env = json.load(last_profile_file)["last_used_env"]
                         overwrite = last_used_env != str(self.irods_env_path) #overwrite irodsA file if last authenticated profile is different to current
-                elif not str(self.irods_env_path).endswith("irods_environment.json"):
+                elif not self.irods_env_path.name == "irods_environment.json":
                     overwrite = True #overwrite if other profile than global is used and no last_profile exists
 
             write_irods_file = not self.irodsA_file_found or overwrite
