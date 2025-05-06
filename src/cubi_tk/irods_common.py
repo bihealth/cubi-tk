@@ -84,12 +84,13 @@ class iRODSCommon:
 
     def _init_irods(self) -> iRODSSession:
         """Connect to iRODS. Login if needed."""
-        self._check_and_gen_irods_files()
+
         count_tries = 1
         while True:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
                 session.connection_timeout = 600
+                self._check_and_gen_irods_files()
                 return session
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
@@ -106,13 +107,22 @@ class iRODSCommon:
         try:
             #check if irodsfile exists
             irodsA_path = self.irods_env_path.parent.joinpath(".irodsA")
+            last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
             if (irodsA_path.exists()):
                 self.irodsA_file_found = True
+                if last_profile_path.exists():
+                    with open(last_profile_path) as last_profile_file:
+                        last_used_env = json.load(last_profile_file)["last_used_env"]
+                        overwrite = last_used_env != str(self.irods_env_path) #overwrite irodsA file if last authenticated profile is different to current
+                elif not str(self.irods_env_path).endswith("irods_environment.json"):
+                    overwrite = True #overwrite if other profile than global is used and no last_profile exists
 
             write_irods_file = not self.irodsA_file_found or overwrite
             if self.ask and write_irods_file :
-                write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '), overwrite=overwrite)
+                write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '), overwrite=overwrite, irods_env_file=self.irods_env_path)
                 self.irodsA_file_found = True
+                with open(last_profile_path, mode="w") as last_profile_file:
+                    json.dump({"last_used_env" : str(self.irods_env_path)}, last_profile_file)
             elif not self.ask and write_irods_file:
                 logger.error("Password for irods conenction needs to be entered, please switch to interactive mode")
 
