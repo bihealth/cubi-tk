@@ -180,7 +180,7 @@ class iRODSTransfer(iRODSCommon):
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
             allow_overwrite = False
-            kw_options = {DEST_RESC_NAME_KW:'cephfs-2'}
+            kw_options = {DEST_RESC_NAME_KW:'cephfs-1'}
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
