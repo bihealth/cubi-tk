@@ -38,6 +38,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         super().__init__(ask= getattr(args, "yes", False), irods_env_path= irods_env_path, sodar_profile = getattr(args, "config_profile", "global"))
         self.sodar_api = SodarApi(args, with_dest=True)
         self.assay_path = None
+        self.assay_uuid = None
 
     def perform(self) -> Dict[str, List[iRODSDataObject]]:
         """Perform class routines."""
@@ -46,6 +47,7 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         # Get assay iRODS path
         assay, _study = self.sodar_api.get_assay_from_uuid()
         self.assay_path = assay.irods_path
+        self.assay_uuid = assay.sodar_uuid
 
         # Get iRODS collection
         irods_collection_dict = {}
