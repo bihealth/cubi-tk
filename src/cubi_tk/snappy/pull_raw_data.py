@@ -115,11 +115,11 @@ class PullRawDataCommand(PullDataCommon):
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
 
         # Find all remote files (iRODS) and get assay UUID if not provided
-        remote_files_dict = RetrieveSodarCollection(
+        sodar_coll = RetrieveSodarCollection(
             self.args
-        ).perform()
-
-        self.args.assay_uuid = remote_files_dict.get_assay_uuid()
+        )
+        remote_files_dict = sodar_coll.perform()
+        self.args.assay_uuid = sodar_coll.get_assay_uuid()
         # Filter based on identifiers and file type
         if self.args.use_library_name:
             filtered_remote_files_dict = self.filter_irods_collection_by_library_name_in_path(
