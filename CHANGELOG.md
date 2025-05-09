@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/bihealth/cubi-tk/compare/v0.6.0...v0.7.0) (2025-05-09)
+
+
+### Features
+
+* major cubi-tk refactoring ([#283](https://github.com/bihealth/cubi-tk/issues/283)) ([1a5397d](https://github.com/bihealth/cubi-tk/commit/1a5397dc04f890b2cbf74666e6c1c3731ae25158))
+
+
+### Bug Fixes
+
+* call altamisa with typer, fixes [#249](https://github.com/bihealth/cubi-tk/issues/249) ([#279](https://github.com/bihealth/cubi-tk/issues/279)) ([70f8667](https://github.com/bihealth/cubi-tk/commit/70f8667e5d8f07a6394d3c8ea24b68bdec4845ef))
+* get assay UUID pull data ([#285](https://github.com/bihealth/cubi-tk/issues/285)) ([f121236](https://github.com/bihealth/cubi-tk/commit/f121236c61c3238c57da58350fff8ae0abec96ad))
+* replaced deprecated logger with loguru ([#273](https://github.com/bihealth/cubi-tk/issues/273)) ([d065ae9](https://github.com/bihealth/cubi-tk/commit/d065ae9be57b6fc3fe308f5b493aed1e11a1cb8a))
+* switch sodar profile with different irods_env ([#284](https://github.com/bihealth/cubi-tk/issues/284)) ([cf73749](https://github.com/bihealth/cubi-tk/commit/cf73749b9f6e2cb0f3d9b53ef7c88b4556ce9ce1))
+
 ## [0.6.0](https://github.com/bihealth/cubi-tk/compare/v0.5.2...v0.6.0) (2025-02-24)
 
 
