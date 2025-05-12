@@ -290,6 +290,7 @@ class SnappyVarFishUploadCommand:
                         )
                     ):  # must treat .ped as special case
                         found[file_name] = file_path
+        return found
 
 
 def run(
