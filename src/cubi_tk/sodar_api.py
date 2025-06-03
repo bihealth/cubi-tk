@@ -170,7 +170,7 @@ class SodarApi:
         files_dict: dict[str, tuple[str, str]],
     ) -> int:
         logger.debug("Posting samplesheet..")
-        for key, value in files_dict:
+        for key, value in files_dict.items():
             files_dict[key] = (*value, "text/plain")
         try:
             ret_val = self._api_call(
