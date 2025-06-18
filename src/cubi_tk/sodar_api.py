@@ -94,8 +94,12 @@ class SodarApi:
             for part in (self.sodar_server_url, api, "api", action, dest_uuid)
         ]
         url = reduce(urlparse.urljoin, base_url_parts)[:-1]
-        if params:
+        if params and method == "get":
             url += "?" + urlparse.urlencode(params)
+        elif params and method == "post":
+            # For POST requests, params are sent in the body, not as query parameters
+            data = data or {}
+            data.update(params)
 
         if method == "get":
             logger.debug(f"HTTP GET request to {url} with headers {self.sodar_headers[api]}")
@@ -229,7 +233,7 @@ class SodarApi:
 
         return landingzones
 
-    def post_landingzone_create(self, create_colls:bool = True, restrict_colls:bool = True)-> api_models.LandingZone | None:
+    def post_landingzone_create(self, create_colls: bool = True, restrict_colls: bool = True) -> api_models.LandingZone | None:
         logger.debug("Creating new Landing Zone...")
         if not self.assay_uuid:
             self.get_assay_from_uuid()
