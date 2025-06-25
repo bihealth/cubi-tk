@@ -346,7 +346,7 @@ class SodarIngestData(SnappyItransferCommandBase):
             raise KeyError
         #needs further matching with tumor
         tissue = m.groupdict(default=None)["tissue"]
-        for col_col_name, col_sample_name in val:
+        for col_col_name, col_sample_name, _ in val:
             col_tissue = col_sample_name.split("-")[-1][0]
             tissue_match = (tissue == "tumor" and col_tissue == "T") or ( (tissue == "normal" or tissue is None) and col_tissue  == "N")
             if tissue_match:
