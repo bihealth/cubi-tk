@@ -55,10 +55,9 @@ SRC_REGEX_PRESETS = {
         r".+\.(bam|pod5|txt|json)"
     ),
     "onk_analysis":(
-        r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+))"
-        r"_(?P<conservation>(FF|FFPE))(\.|_)"
-        r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"
-        r"\.?(bam|.*bed$|.*bed.gz|txt|json|.*vcf|.*counts|.*maf)"
+        r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+(_WGS|_CGP)))"
+        r"(?:_(?P<tissue>(tumor|normal)))?" #r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"#backlog possible other regex: r"(?:(.*?)?(?P<tissue>(tumor|normal)))"
+        r"\.?(bam|.*bed$|.*bed.gz|txt|.*json|.*vcf|.*counts|.*maf|.*cnv_metrics.csv|.*wgs_overall_mean_cov|cnv.tsv|sv.tsv|snv.tsv)"
     )
 }
 
@@ -338,32 +337,20 @@ class SodarIngestData(SnappyItransferCommandBase):
     def find_collection_name(self, sample_name, column_match, m):
         if column_match is None:
             return sample_name
-        val = column_match[sample_name]
+        val = column_match[str(sample_name)]
+        logger.debug(val)
         if not isinstance(val, list):
             return val
-        #needs further matching with conservation method and if existent tumor
-        conservation_col_name = None
-        conservation = m.groupdict(default=None)["conservation"]
+        if not self.args.preset == "onk_analysis" :
+            logger.error("preset onk_analysis needs to be set, please check your input parameters")
+            raise KeyError
+        #needs further matching with tumor
         tissue = m.groupdict(default=None)["tissue"]
-        if conservation is None and tissue is None:
-            logger.error("Couldnt extract conservation and tissue from name, returning first")
-            return val[0][0]
-        for col_col_name, col_sample_name, col_conservation in val:
+        for col_col_name, col_sample_name in val:
             col_tissue = col_sample_name.split("-")[-1][0]
-            tissue_match = tissue =="tumor" and col_tissue =="T" or tissue == "normal" and col_tissue  == "N"
-            conservation_match = conservation == col_conservation or (conservation == "FF" and col_conservation == "fresh frozen")
-            if conservation_match:
-                #for rare case that name is e.g. FFPE..._normal.bed, but no normal sample with FFPE exists, find tumor FFPE sample
-                conservation_col_name = col_col_name
-            if conservation is not None and tissue is not None and tissue_match and conservation_match:
+            tissue_match = (tissue == "tumor" and col_tissue == "T") or ( (tissue == "normal" or tissue is None) and col_tissue  == "N")
+            if tissue_match:
                 return col_col_name
-            elif conservation is not None and tissue is None and conservation_match:
-                return col_col_name
-            elif tissue is not None and conservation is None and tissue_match:
-                return col_col_name
-        if conservation_col_name is not None:
-            logger.info("Couldnt match to tissue, returning conservation match")
-            return conservation_col_name
         logger.warning("Couldnt match to conservation and/or tissue, returning first")
         return val[0][0]
 
@@ -431,6 +418,10 @@ class SodarIngestData(SnappyItransferCommandBase):
                             collection_name=collection_name,
                             **match_wildcards,
                         )
+                        #if onko and germline analysisdata change analysis to germline_analysis
+                        #TODO: maybe set as commandline/option in presets
+                        if self.args.preset == "onk_analysis" and "DragenGermline" in path:
+                            remote_file.replace("analysis", "germline_analysis")
                     except KeyError:
                         msg = (
                             f"Could not match extracted sample value '{sample_name}' to any value in the "
