@@ -341,11 +341,14 @@ class SodarIngestData(SnappyItransferCommandBase):
         logger.debug(val)
         if not isinstance(val, list):
             return val
+        if not self.args.preset == "onk_analysis" :
+            logger.error("preset onk_analysis needs to be set, please check your input parameters")
+            raise KeyError
         #needs further matching with tumor
         tissue = m.groupdict(default=None)["tissue"]
         for col_col_name, col_sample_name in val:
             col_tissue = col_sample_name.split("-")[-1][0]
-            tissue_match = tissue =="tumor" and col_tissue =="T" or (tissue == "normal" or tissue is None) and col_tissue  == "N"
+            tissue_match = (tissue == "tumor" and col_tissue == "T") or ( (tissue == "normal" or tissue is None) and col_tissue  == "N")
             if tissue_match:
                 return col_col_name
         logger.warning("Couldnt match to conservation and/or tissue, returning first")
@@ -416,6 +419,7 @@ class SodarIngestData(SnappyItransferCommandBase):
                             **match_wildcards,
                         )
                         #if onko and germline analysisdata change analysis to germline_analysis
+                        #TODO: maybe set as commandline/option in presets
                         if self.args.preset == "onk_analysis" and "DragenGermline" in path:
                             remote_file.replace("analysis", "germline_analysis")
                     except KeyError:
