@@ -57,7 +57,7 @@ SRC_REGEX_PRESETS = {
     "onk_analysis":(
         r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+(_WGS|_CGP)))"
         r"(?:_(?P<tissue>(tumor|normal)))?" #r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"#backlog possible other regex: r"(?:(.*?)?(?P<tissue>(tumor|normal)))"
-        r"\.?(bam|.*bed$|.*bed.gz|txt|.*json|.*vcf|.*counts|.*maf|.*cnv_metrics.csv|.*wgs_overall_mean_cov|cnv.tsv|sv.tsv|snv.tsv)"
+        r"\.?(bam|.*bed$|.*bed.gz|txt|.*json|.*vcf|.*report.html|.*counts|.*maf|.*hla.tsv|.*cnv_metrics.csv|.*wgs_overall_mean_cov|.*wgs_coverage_metrics|.*mapping_metrics.csv|.*tmb.metrics.csv|cnv.tsv|snv.tsv|fus.tsv|ig_sv.tsv)"
     )
 }
 
@@ -345,14 +345,16 @@ class SodarIngestData(SnappyItransferCommandBase):
             logger.error("preset onk_analysis needs to be set, please check your input parameters")
             raise KeyError
         #needs further matching with tumor
+        matched_col_name = val[0][0] #setting to first
         tissue = m.groupdict(default=None)["tissue"]
         for col_col_name, col_sample_name, _ in val:
             col_tissue = col_sample_name.split("-")[-1][0]
             tissue_match = (tissue == "tumor" and col_tissue == "T") or ( (tissue == "normal" or tissue is None) and col_tissue  == "N")
             if tissue_match:
-                return col_col_name
+                #if multiple present use last one
+                matched_col_name = col_col_name
         logger.warning("Couldnt match to conservation and/or tissue, returning first")
-        return val[0][0]
+        return matched_col_name
 
 
     def build_jobs(self, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
