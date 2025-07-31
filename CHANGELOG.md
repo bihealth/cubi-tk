@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.7.0](https://github.com/bihealth/cubi-tk/compare/v0.6.0...v0.7.0) (2025-07-31)
+
+
+### Features
+
+* changes for onko data upload ([#289](https://github.com/bihealth/cubi-tk/issues/289)) ([f20401c](https://github.com/bihealth/cubi-tk/commit/f20401c7822da0226f045f0c7145678f8f58fcc0))
+* major cubi-tk refactoring ([#283](https://github.com/bihealth/cubi-tk/issues/283)) ([1a5397d](https://github.com/bihealth/cubi-tk/commit/1a5397dc04f890b2cbf74666e6c1c3731ae25158))
+
+
+### Bug Fixes
+
+* (Sodar)API POST calls need to use the data field, not params ([#288](https://github.com/bihealth/cubi-tk/issues/288)) ([ce7388b](https://github.com/bihealth/cubi-tk/commit/ce7388bc9d333734da896c7d066e05032c9acaae))
+* bug fix val in feat removed thats needed ([#290](https://github.com/bihealth/cubi-tk/issues/290)) ([971c12f](https://github.com/bihealth/cubi-tk/commit/971c12f00a392782d1103236f4541a3bad95c72b))
+* call altamisa with typer, fixes [#249](https://github.com/bihealth/cubi-tk/issues/249) ([#279](https://github.com/bihealth/cubi-tk/issues/279)) ([70f8667](https://github.com/bihealth/cubi-tk/commit/70f8667e5d8f07a6394d3c8ea24b68bdec4845ef))
+* dict needs items keyword ([#287](https://github.com/bihealth/cubi-tk/issues/287)) ([fa2333d](https://github.com/bihealth/cubi-tk/commit/fa2333d095ee55b322d1bae9a73f6bf8277d649b))
+* dont gen checksum for checksums ([#293](https://github.com/bihealth/cubi-tk/issues/293)) ([1d8fe5b](https://github.com/bihealth/cubi-tk/commit/1d8fe5bb8b175a6ea42f213f44d768607d3c94fd))
+* get assay UUID pull data ([#285](https://github.com/bihealth/cubi-tk/issues/285)) ([f121236](https://github.com/bihealth/cubi-tk/commit/f121236c61c3238c57da58350fff8ae0abec96ad))
+* refactored function didn't retrun anything ([#286](https://github.com/bihealth/cubi-tk/issues/286)) ([01c849b](https://github.com/bihealth/cubi-tk/commit/01c849b9e02b4b7a9cd922b5b0adb19fe0d62674))
+* replaced deprecated logger with loguru ([#273](https://github.com/bihealth/cubi-tk/issues/273)) ([d065ae9](https://github.com/bihealth/cubi-tk/commit/d065ae9be57b6fc3fe308f5b493aed1e11a1cb8a))
+* retrun last found match col ([#292](https://github.com/bihealth/cubi-tk/issues/292)) ([1655670](https://github.com/bihealth/cubi-tk/commit/16556709a8b3dd899d551364392896f69a13d247))
+* switch sodar profile with different irods_env ([#284](https://github.com/bihealth/cubi-tk/issues/284)) ([cf73749](https://github.com/bihealth/cubi-tk/commit/cf73749b9f6e2cb0f3d9b53ef7c88b4556ce9ce1))
+
 ## [0.6.0](https://github.com/bihealth/cubi-tk/compare/v0.5.2...v0.6.0) (2025-02-24)
 
 
