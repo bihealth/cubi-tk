@@ -345,7 +345,7 @@ class SodarIngestData(SnappyItransferCommandBase):
             logger.error("preset onk_analysis needs to be set, please check your input parameters")
             raise KeyError
         #needs further matching with tumor
-        matched_col_name = val[0][0] #setting to first
+        matched_col_name = None
         tissue = m.groupdict(default=None)["tissue"]
         for col_col_name, col_sample_name, _ in val:
             col_tissue = col_sample_name.split("-")[-1][0]
@@ -353,7 +353,9 @@ class SodarIngestData(SnappyItransferCommandBase):
             if tissue_match:
                 #if multiple present use last one
                 matched_col_name = col_col_name
-        logger.warning("Couldnt match to conservation and/or tissue, returning first")
+        if matched_col_name is None:
+            logger.warning("Couldnt match to conservation and/or tissue, returning first")
+            matched_col_name = val[0][0] #setting to first
         return matched_col_name
 
 
@@ -390,7 +392,7 @@ class SodarIngestData(SnappyItransferCommandBase):
                     continue  # skip if did not resolve to file
                 #dragen generates .md5sum, this prevents generation of eg .md5sum.sha256 or .md5sum.md5
                 #TODO: add list of skippable endings as cmd-line option (default [.md5sum]) and use that variable here
-                if real_path.endswith((hash_ending, ".md5sum")):
+                if real_path.endswith((".md5", ".sha256", ".md5sum")):
                     continue  # skip, will be added automatically
 
                 if not os.path.exists(real_path):  # pragma: nocover
