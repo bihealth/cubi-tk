@@ -80,7 +80,7 @@ class LandingZone:
     #: Status of the landing zone.
     status: str
 
-    status_locked:bool
+    status_locked: bool
 
     #: UUID of the containing project.
     project: str
