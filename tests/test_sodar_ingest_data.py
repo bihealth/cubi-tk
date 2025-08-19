@@ -25,7 +25,7 @@ from cubi_tk.sodar.ingest_data import (
     SodarIngestData,
 )
 
-from .conftest import my_get_sodar_info, my_sodar_api_export
+from .conftest import my_get_lz_info, my_sodar_api_export
 from .factories import InvestigationFactory
 
 
@@ -255,8 +255,12 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     # --- mock modules
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
-        my_get_sodar_info,
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        my_get_lz_info,
+    )
+    mocker.patch(
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_project_uuid",
+        mock.MagicMock(return_value="123e4567-e89b-12d3-a456-426655440000"),
     )
 
     mock_check_output = mock.MagicMock(return_value=0)
@@ -409,8 +413,12 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     # --- mock modules
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
-        my_get_sodar_info,
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        my_get_lz_info,
+    )
+    mocker.patch(
+        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_project_uuid",
+        mock.MagicMock(return_value="123e4567-e89b-12d3-a456-426655440000"),
     )
 
     mock_check_output = mock.MagicMock(return_value=0)

@@ -10,9 +10,9 @@ from cubi_tk.sodar_api import SodarApi
 
 
 @patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.build_base_dir_glob_pattern")
-@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info")
-def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, fs):
-    mock_sodar_info.return_value = "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info")
+def test_snappy_itransfer_common_build_jobs(mock_lz_info, mock_glob_pattern, fs):
+    mock_lz_info.return_value = "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
     mock_glob_pattern.return_value = "basedir", "**/*.txt"
 
     # Setup some fake files & expected output
@@ -33,7 +33,7 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
     parser = argparse.ArgumentParser(parents=[
         get_snappy_itransfer_parser(),
         get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
-    args = parser.parse_args(["--sodar-api-token", "XXXX" ,"466ab946-ce6a-4c78-9981-19b79e7bbe86"])
+    args = parser.parse_args(["--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
     sodar_api = SodarApi(args, set_default=True)
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
