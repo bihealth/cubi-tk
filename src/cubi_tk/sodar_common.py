@@ -80,18 +80,11 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
 class selectLandingzoneMixin:
     """Mixin to select the landing zone for iRODS transfers."""
 
-    def __init__(self, *args, **kwargs):
-
+    def __init__(self, argparse_args: Namespace, *args, **kwargs):
         # FIXME / NOTE:
         # - consider using a self.sodar_api and/or using the same approach as RetrieveSodarCollection
         # - this would allow to define self.project_uuid, self.lz_path, self.lz_uuid as @property
-        if 'args' or 'argparse_args' in kwargs:
-            self.args = kwargs['args'] if 'args' in kwargs else kwargs['argparse_args']
-        elif len(args) >= 1 and isinstance(args[0], Namespace):
-            self.args = args[0]
-        else:
-            raise ValueError("No args or argparse_args provided to selectLandingzoneMixin.")
-
+        self.args = argparse_args
         self._project_uuid = None
         self._lz_path = None
         self._lz_uuid = None
@@ -100,7 +93,7 @@ class selectLandingzoneMixin:
             # Update sodar info
             self._project_uuid, self._lz_uuid, self._lz_path = self._get_sodar_info(sodar_api)
 
-        return self.lz_uuid, self._lz_path
+        return self._lz_uuid, self._lz_path
 
     def get_project_uuid(self, sodar_api) -> str:
         """Get Project UUID.
