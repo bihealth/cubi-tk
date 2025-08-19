@@ -363,7 +363,7 @@ class SodarIngestData(SnappyItransferCommandBase):
         """Build file transfer jobs."""
         sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
         try:
-            lz_uuid, lz_irods_path = self.get_sodar_info(sodar_api)
+            lz_uuid, lz_irods_path = self.get_lz_info(sodar_api)
         except ParameterException as e:
             logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
             sys.exit(1)

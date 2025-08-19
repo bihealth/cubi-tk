@@ -119,7 +119,7 @@ snappy_itransfer_group.add_argument(
     "--select-lz",
     default=False,
     action="store_true",
-    help="Do not use latest landingzone but ask from the avalibale ones. Note: `--yes` overrides this option.",
+    help="Ask which available Landing zone to use. Note: `--yes` overrides this option.",
 )
 snappy_itransfer_group.add_argument(
     "--validate-and-move",
