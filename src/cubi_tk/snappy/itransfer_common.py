@@ -40,7 +40,7 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
 
     def __init__(self, argparse_args, *args):
         #: Command line arguments.
-        super(SnappyItransferCommandBase, self).__init__(*args)
+        super(SnappyItransferCommandBase, self).__init__(argparse_args, *args)
         self.args = argparse_args
         self.step_name = self.__class__.step_name
 
