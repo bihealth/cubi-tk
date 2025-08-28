@@ -140,10 +140,6 @@ def test_run_snappy_itransfer_step_smoke_test(
         "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
         my_get_lz_info,
     )
-    mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_project_uuid",
-        mock.MagicMock(return_value=sodar_uuid),
-    )
 
     fake_os = fake_filesystem.FakeOsModule(fs)
     mocker.patch("glob.os", fake_os)

@@ -39,7 +39,7 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
 
 def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     # --- setup arguments
-    dest_path = "/irods/dest"
+    dest_path = "/sodarZone/projects/466ab946-ce6a-4c78-9981-19b79e7bbe86/irods/dest"
     fake_base_path = "/base/path"
     blueprint_path = os.path.join(os.path.dirname(__file__), "data", "test_blueprint.txt")
 
@@ -47,10 +47,14 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
         "--verbose",
         "sea-snap",
         "itransfer-results",
+        "--num-parallel-transfers",
+        0,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
+        "--sodar-api-token",
+        "XXXX",
         blueprint_path,
         dest_path,
-        "--num-parallel-transfers",
-        0
     ]
 
     parser, subparsers = setup_argparse()

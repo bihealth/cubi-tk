@@ -110,6 +110,8 @@ def test_run_snappy_itransfer_sv_calling_no_sv_step(fs):
         "itransfer-sv-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         sodar_uuid,
@@ -138,6 +140,8 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
         "itransfer-sv-calling",
         "--base-path",
         fake_base_path,
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         sodar_uuid,
@@ -242,10 +246,6 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     mocker.patch(
         "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
         my_get_lz_info,
-    )
-    mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_project_uuid",
-        mock.MagicMock(return_value=sodar_uuid),
     )
 
     fake_os = fake_filesystem.FakeOsModule(fs)

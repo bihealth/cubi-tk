@@ -12,7 +12,6 @@ from unittest import mock
 
 import cattr
 
-from cubi_tk.sodar_api import SodarApi
 from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
@@ -161,10 +160,9 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "Folder3": "Sample3-N1-DNA1-WES1",
     }
     args.project_uuid = project_uuid
-    sodar_api = SodarApi(args, set_default=True, with_dest= True)
-    assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
+    assert expected == ingestfastq.get_match_to_collection_mapping("Folder name")
     assert expected == ingestfastq.get_match_to_collection_mapping(
-        sodar_api, "Folder name", "Library Name"
+        "Folder name", "Library Name"
     )
 
     # Test for alternative collection column
@@ -174,12 +172,12 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "Folder3": "Sample3-N1-DNA1",
     }
     assert expected2 == ingestfastq.get_match_to_collection_mapping(
-        sodar_api, "Folder name", "Extract Name"
+        "Folder name", "Extract Name"
     )
 
     # Test for missing column
     with unittest.TestCase.assertRaises(unittest.TestCase, ParameterException):
-        ingestfastq.get_match_to_collection_mapping(sodar_api, "Typo-Column")
+        ingestfastq.get_match_to_collection_mapping("Typo-Column")
 
     # Test with additional assay
     requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
@@ -189,7 +187,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
     assay_uuid = list(retval.studies[study_key].assays.keys())[0]
     ingestfastq.args.assay_uuid = assay_uuid
 
-    assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
+    assert expected == ingestfastq.get_match_to_collection_mapping("Folder name")
 
 
 def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
@@ -258,11 +256,6 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
         my_get_lz_info,
     )
-    mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_project_uuid",
-        mock.MagicMock(return_value="123e4567-e89b-12d3-a456-426655440000"),
-    )
-
     mock_check_output = mock.MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
@@ -416,10 +409,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
         my_get_lz_info,
     )
-    mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_project_uuid",
-        mock.MagicMock(return_value="123e4567-e89b-12d3-a456-426655440000"),
-    )
+
 
     mock_check_output = mock.MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)

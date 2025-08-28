@@ -29,18 +29,13 @@ DEFAULT_NUM_TRANSFERS = 8
 @attr.s(frozen=True, auto_attribs=True)
 class TransferJob:
     """Encodes a transfer job from the local file system to the remote iRODS collection."""
-
     #: Source path.
     path_src: str
-
     #: Destination path.
     path_dest: str
-
     #: Number of bytes to transfer.
     bytes: int
-
     command: str | None = None
-
     def to_oneline(self):
         return ("{} -> {} ({}) [{}]".format(self.path_src, self.path_dest, self.bytes, self.command))
 
@@ -112,7 +107,6 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         # Check presence of icommands when not testing.
         if "pytest" not in sys.modules:  # pragma: nocover
             check_irods_icommands(warn_only=False)
-
         return 0
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
@@ -127,9 +121,7 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         if "/" in self.args.destination:
             lz_irods_path = self.args.destination
         else:
-
             sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
-
             lz = sodar_api.get_landingzone_retrieve(self.args.destination)
             if lz is not None:
                 lz_irods_path = lz.irods_path

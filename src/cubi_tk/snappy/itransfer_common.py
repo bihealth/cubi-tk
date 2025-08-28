@@ -10,7 +10,6 @@ from biomedsheets import shortcuts
 from loguru import logger
 
 from cubi_tk.parsers import print_args
-from cubi_tk.sodar_api import SodarApi
 
 from ..common import execute_checksum_files_fix, sizeof_fmt
 from ..irods_common import TransferJob, iRODSCommon, iRODSTransfer
@@ -57,21 +56,17 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
             res = 1
-
         return res
 
-    def build_base_dir_glob_pattern(
-        self, library_name: str
-    ) -> tuple[str, str]:  # pragma: nocover
+    def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:  # pragma: nocover
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names, sodar_api, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:
+    def build_jobs(self, library_names, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:
         """Build file transfer jobs."""
-
         # Get path to iRODS directory
         try:
-            lz_uuid, lz_irods_path = self.get_lz_info(sodar_api)
+            lz_uuid, lz_irods_path = self.get_lz_info()
         except ParameterException as e:
             logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
             sys.exit(1)
@@ -111,7 +106,6 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
         """Execute the transfer."""
         # Validate arguments
         res = self.check_args(self.args)
-        sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
         if res:  # pragma: nocover
             return res
 
@@ -124,7 +118,7 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
             self.step_name = self.args.step
 
         # Find biomedsheet file
-        project_uuid = self.get_project_uuid(sodar_api)
+        project_uuid = self.sodar_api.project_uuid
         biomedsheet_tsv = get_biomedsheet_path(
             start_path=self.args.base_path, uuid=project_uuid
         )
@@ -139,7 +133,7 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
         logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
         irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
         hash_ending = "."+irods_hash_scheme.lower()
-        lz_uuid, transfer_jobs = self.build_jobs(library_names, sodar_api, hash_ending)
+        lz_uuid, transfer_jobs = self.build_jobs(library_names, hash_ending)
         # logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme)
@@ -164,13 +158,13 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
                 "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
                 lz_uuid
             )
-            uuid = sodar_api.post_landingzone_submit_move(lz_uuid)
+            uuid = self.sodar_api.post_landingzone_submit_move(lz_uuid)
             if uuid is None:
                 logger.error("something went wrong during lz move")
                 return
             logger.info("done.")
         else:
-            logger.info("Transferred files will \033[1mnot\033[0m be automatically moved in SODAR.")
+            logger.info("Transferred files will not be automatically moved in SODAR.")
 
         logger.info("All done")
         return None

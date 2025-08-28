@@ -15,7 +15,6 @@ from loguru import logger
 import tqdm
 
 from cubi_tk.parsers import print_args
-from cubi_tk.sodar_api import SodarApi
 
 from ..common import execute_checksum_files_fix, sizeof_fmt
 from ..exceptions import MissingFileException, ParameterException, UserCanceledException
@@ -206,11 +205,11 @@ class SodarIngestData(SnappyItransferCommandBase):
         )
 
     def get_match_to_collection_mapping(
-        self, sodar_api: SodarApi, in_column: str, out_column: typing.Optional[str] = None
+        self, in_column: str, out_column: typing.Optional[str] = None
     ) -> dict[str, str]:
         """Return a dict that matches all values from a specific `ìn_column` of the assay table
         to a corresponding `out_column` (default if not defined: last Material column)."""
-        isa_dict = sodar_api.get_samplesheet_export()
+        isa_dict = self.sodar_api.get_samplesheet_export()
         in_column_dict = None
         out_column_dict= None
 
@@ -361,17 +360,18 @@ class SodarIngestData(SnappyItransferCommandBase):
 
     def build_jobs(self, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
         """Build file transfer jobs."""
-        sodar_api = SodarApi(self.args, with_dest=True, dest_string="destination")
         try:
-            lz_uuid, lz_irods_path = self.get_lz_info(sodar_api)
+            lz_uuid, lz_irods_path = self.get_lz_info()
         except ParameterException as e:
             logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
             sys.exit(1)
+        except UserCanceledException as e:
+            logger.error(f"User cancelled: {e}")
+            sys.exit(1)
 
-        sodar_api.get_landingzone_retrieve(lz_uuid=lz_uuid) #sets project uuid in sodar_api
         if self.args.match_column is not None:
             column_match = self.get_match_to_collection_mapping(
-                sodar_api, self.args.match_column, self.args.collection_column
+                self.args.match_column, self.args.collection_column
             )
         else:
             column_match = None
