@@ -93,7 +93,7 @@ class selectLandingzoneMixin:
 
         :return: (project_uuid, lz_uuid, lz_irods_path)
         """
-        if self.sodar_api.lz_path is None or self._lz_uuid is None:
+        if self._lz_uuid is None:
             #lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
             if self.sodar_api.lz_path is not None:
                 existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
