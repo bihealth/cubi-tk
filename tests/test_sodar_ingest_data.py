@@ -142,6 +142,8 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "ingest-data",
         "--num-parallel-transfers",
         "0",
+        "--sodar-server-url",
+        "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
