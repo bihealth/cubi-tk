@@ -6,8 +6,8 @@ import cattr
 import pytest
 from unittest.mock import patch, MagicMock
 
-from cubi_tk.sodar_api import SodarApi
-from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH
+from cubi_tk.api_models import iRODSDataObject
+from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH, SodarApi
 from cubi_tk.exceptions import SodarApiException
 from tests.factories import InvestigationFactory
 
@@ -62,7 +62,7 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
     out = sodar_api_instance._api_call("samplesheets", "test")
     mock_get.assert_called_with(
         "https://sodar.bihealth.org/samplesheets/api/test/123e4567-e89b-12d3-a456-426655440000",
-        headers={"Authorization": "token token123",  'Accept': 'application/vnd.bihealth.sodar.samplesheets+json; version=1.0'},
+        headers={"Authorization": "token token123",  'Accept': 'application/vnd.bihealth.sodar.samplesheets+json; version=1.1'},
     )
     assert out == {"test": "test"}
 
@@ -71,7 +71,7 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
     out = sodar_api_instance._api_call("samplesheets", "test", params={"test": "test"})
     mock_get.assert_called_with(
         "https://sodar.bihealth.org/samplesheets/api/test/123e4567-e89b-12d3-a456-426655440000?test=test",
-        headers={"Authorization": "token token123", 'Accept': 'application/vnd.bihealth.sodar.samplesheets+json; version=1.0'},
+        headers={"Authorization": "token token123", 'Accept': 'application/vnd.bihealth.sodar.samplesheets+json; version=1.1'},
     )
 
     # Test request with error
@@ -120,3 +120,44 @@ def test_sodar_api_get_samplesheet_export(requests_mock, sodar_api_instance):
     requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000", json= cattr.unstructure(InvestigationFactory()), status_code= 200)
     assert expected == sodar_api_instance.get_samplesheet_export()
 
+def test_sodar_api_get_samplesheet_file_list(requests_mock, sodar_api_instance):
+    ret_json = [
+        {
+            'name': "File name",
+            'type': 'file',
+            'path': "collection/File Name",
+            'size': '10',
+            'modify_time': "2025-01-01 00:00:00",
+            'checksum': '1234567890'
+        },
+        {
+            'name': "collection",
+            'type': 'obj',
+            'path': "collection",
+            'size': '1',
+            'modify_time': "2025-01-01 00:00:00",
+            'checksum': '000000'
+        }
+    ]
+    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/file/list/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code=200)
+
+    expected = [
+        iRODSDataObject(
+            name="File name",
+            type="file",
+            path="collection/File Name",
+            size=10,
+            modify_time="2025-01-01 00:00:00",
+            checksum="1234567890"
+        ),
+        iRODSDataObject(
+            name="collection",
+            type="obj",
+            path="collection",
+            size=1,
+            modify_time="2025-01-01 00:00:00",
+            checksum="000000"
+        )
+    ]
+
+    assert expected == sodar_api_instance.get_samplesheet_file_list()

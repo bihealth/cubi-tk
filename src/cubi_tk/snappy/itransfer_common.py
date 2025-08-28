@@ -127,7 +127,7 @@ class SnappyItransferCommandBase(ParseSampleSheet):
         lz_uuid = None
         # Check if provided UUID is associated with a Project (we have access to)
         #FIXME: sodar_api.get_samplesheet_retrieve() should probably not log an error message here
-        dest_is_project_uuid = is_uuid(self.args.destination) and sodar_api.get_samplesheet_retrieve() is not None
+        dest_is_project_uuid = is_uuid(self.args.destination) and sodar_api.get_samplesheet_investigation_retrieve() is not None
 
         # Project UUID provided by user
         if dest_is_project_uuid:

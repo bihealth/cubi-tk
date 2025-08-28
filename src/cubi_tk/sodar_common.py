@@ -1,74 +1,39 @@
 from argparse import Namespace
-from pathlib import Path
-from typing import Dict, List
+from collections import defaultdict
 
-from irods.data_object import iRODSDataObject
-from loguru import logger
+from cubi_tk.api_models import iRODSDataObject as iRODSDataObject
+from cubi_tk.irods_common import iRODSCommon
 from cubi_tk.sodar_api import SodarApi
 
 
-from .irods_common import iRODSRetrieveCollection
+# API based drop-in replacement for what used to build on the `iRODSRetrieveCollection` class (to be deprecated)
+class RetrieveSodarCollection(SodarApi):
 
+    def __init__(self, argparse: Namespace, **kwargs):
+        super().__init__(argparse, **kwargs)
+        irods_hash_scheme = iRODSCommon(sodar_profile=argparse.config_profile).irods_hash_scheme()
+        self.hash_ending = "." + irods_hash_scheme.lower()
 
-class RetrieveSodarCollection(iRODSRetrieveCollection):
-    def __init__(
-        self,
-        args: Namespace,
-        irods_env_path: Path = None,
-    ):
-        """Constructor.
-        :param sodar_server_url: SODAR url.
-        :type sodar_server_url: str
+    def perform(self, include_hash_files=False) -> dict[str, list[iRODSDataObject]]:
 
-        :param sodar_api_token: SODAR API token.
-        :type sodar_api_token: str
+        filelist = self.get_samplesheet_file_list()
 
-        :param assay_uuid: Assay UUID.
-        :type assay_uuid: str
+        output_dict = defaultdict(list)
 
-        :param project_uuid: Project UUID.
-        :type project_uuid: str
+        for obj in filelist:
+            if obj.type == 'file' and obj.name.endswith(self.hash_ending) and not include_hash_files:
+                continue
+            output_dict[obj.name].append(obj)
 
-        :param ask: Confirm with user before certain actions.
-        :type ask: bool, optional
-
-        :param irods_env_path: Path to irods_environment.json
-        :type irods_env_path: pathlib.Path, optional
-        """
-        super().__init__(ask= getattr(args, "yes", False), irods_env_path= irods_env_path, sodar_profile = getattr(args, "config_profile", "global"))
-        self.sodar_api = SodarApi(args, with_dest=True)
-        self.assay_path = None
-        self.assay_uuid = self.sodar_api.assay_uuid
-
-    def perform(self) -> Dict[str, List[iRODSDataObject]]:
-        """Perform class routines."""
-        logger.info("Starting remote files search ...")
-
-        # Get assay iRODS path
-        assay, _study = self.sodar_api.get_assay_from_uuid()
-        self.assay_path = assay.irods_path
-        self.assay_uuid = assay.sodar_uuid
-
-        # Get iRODS collection
-        irods_collection_dict = {}
-        if self.assay_path:
-            irods_collection_dict = self.retrieve_irods_data_objects(irods_path=self.assay_path)
-
-        logger.info("... done with remote files search.")
-        return irods_collection_dict
+        return output_dict
 
     def get_assay_uuid(self):
-        return self.assay_uuid
+        if self.assay_uuid:
+            return self.assay_uuid
 
+        assay, _ = self.get_assay_from_uuid()
+        return assay.sodar_uuid
 
     def get_assay_irods_path(self):
-        """Get Assay iRODS path.
-
-        :param assay_uuid: Assay UUID.
-        :type assay_uuid: str [optional]
-
-        :return: Returns Assay iRODS path - extracted via SODAR API.
-        """
-        return self.assay_path
-
-
+        assay, _ = self.get_assay_from_uuid()
+        return assay.irods_path
