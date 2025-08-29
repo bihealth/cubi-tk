@@ -75,62 +75,67 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         return self.assay_path
 
 
-class selectLandingzoneMixin:
-    """Mixin to select the landing zone for iRODS transfers."""
-    def __init__(self, argparse_args: Namespace, *args, **kwargs):
-        self.select_lz = getattr(argparse_args, "select_lz", True)
-        self.sodar_api = SodarApi(argparse_args, with_dest=True, dest_string="destination")
-        self._lz_uuid = None
+class SodarIngestBase:
+    """Base class for iRODS transfers to Sodar.
+    Includes methods for proper (study, assay &) landing zone selection/creation.
+    Should always be used with argparse base parser `get_sodar_parser(with_dest=True, with_assay_uuid=True, dest_string="destination")
+    """
+    def __init__(self, args: Namespace):
+        self.args = args
+        self.select_lz = getattr(args, "select_lz", True)
+        self.sodar_api = SodarApi(args, with_dest=True, dest_string="destination")
+        self.lz_uuid, self.lz_irods_path = self._get_lz_info()
+
 
     def get_lz_info(self) -> tuple[str, str]:
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
-        1. User provides UUID:
+        1. User provide LZ path (set in SodarAPI as lz_path): fetch lz uuid
+        2. User provides UUID (set in SodarAPI as project_uuid):
             i.UUID is LZ UUID: fetch path and use it.
             ii.UUID is Project UUID: get or create LZs
-        2. User privide LZ path: fetch lzuuid
         3. Data provided by user is neither an iRODS path nor a valid UUID. Report error and throw exception.
 
         :return: (project_uuid, lz_uuid, lz_irods_path)
         """
-        if self._lz_uuid is None:
-            #lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
-            if self.sodar_api.lz_path is not None:
-                existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
-                if existing_lzs is not None and len(existing_lzs) == 1: #lz exists
-                    self._lz_uuid = existing_lzs[0].sodar_uuid
-                else:
-                    msg = "Unable to identify UUID of given LZ Path{0}.".format(self.sodar_api.lz_path)
-                    raise ParameterException(msg)
-            #either projectuuid or lz uuid
-            elif self.sodar_api.project_uuid is not None:
-                lz = self.sodar_api.get_landingzone_retrieve(log_error=False)
-                # if succees given uuid is lz, everything set up, sodarapi will set project uui and lz path
-                if lz is not None:
-                    self._lz_uuid = lz.sodar_uuid
-                #if None: projectuuid is possibly given
-                #check if projectuuid is valid and start lz selection
-                elif self.sodar_api.get_samplesheet_retrieve(log_error=False) is not None:
-                    try:
-                       self._lz_uuid, self.sodar_api.lz_path = self._get_landing_zone(latest=not self.select_lz)
-                    except UserCanceledException as e:
-                        raise e
-                #neither project nor lz uuid
-                else:
-                    msg = "Provided UUID ({}) could neither be associated with a project nor with a Landing Zone.".format(
-                        self.sodar_api.project_uuid
-                    )
-                    raise ParameterException(msg)
-            #invalid input
+        #lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
+        if self.sodar_api.lz_path is not None:
+            lz_path = self.sodar_api.lz_path
+            existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
+            if existing_lzs is not None and len(existing_lzs) == 1: #lz exists
+                lz_uuid = existing_lzs[0].sodar_uuid
             else:
-                msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
-                    self.args.destination
+                msg = "Unable to identify UUID of given LZ Path{0}.".format(self.sodar_api.lz_path)
+                raise ParameterException(msg)
+        #either projectuuid or lz uuid
+        elif self.sodar_api.project_uuid is not None:
+            lz = self.sodar_api.get_landingzone_retrieve(log_error=False)
+            # if succees given uuid is lz, everything set up, sodarapi will set project uui and lz path
+            if lz is not None:
+                lz_uuid = lz.sodar_uuid
+                lz_path = lz.irods_path
+            #if None: projectuuid is possibly given
+            #check if projectuuid is valid and start lz selection
+            elif self.sodar_api.get_samplesheet_retrieve(log_error=False) is not None:
+                try:
+                   lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
+                except UserCanceledException as e:
+                    raise e
+            #neither project nor lz uuid
+            else:
+                msg = "Provided UUID ({}) could neither be associated with a project nor with a Landing Zone.".format(
+                    self.sodar_api.project_uuid
                 )
                 raise ParameterException(msg)
-            # Log
-            logger.info("Target iRODS path: {}", self.sodar_api.lz_path)
-            return self._lz_uuid, self.sodar_api.lz_path
-        return self._lz_uuid, self.sodar_api.lz_path
+        #invalid input
+        else:
+            msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
+                self.args.destination
+            )
+            raise ParameterException(msg)
+        # Log
+        logger.info("Target iRODS path: {}", lz_path)
+        return lz_uuid, lz_path
 
     def _create_lz(self) -> tuple[str, str]:
         """

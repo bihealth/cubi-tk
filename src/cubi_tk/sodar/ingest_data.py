@@ -358,16 +358,8 @@ class SodarIngestData(SnappyItransferCommandBase):
         return matched_col_name
 
 
-    def build_jobs(self, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:  # noqa: C901
+    def build_jobs(self, hash_ending) -> tuple[TransferJob, ...]:  # noqa: C901
         """Build file transfer jobs."""
-        try:
-            lz_uuid, lz_irods_path = self.get_lz_info()
-        except ParameterException as e:
-            logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
-            sys.exit(1)
-        except UserCanceledException as e:
-            logger.error(f"User cancelled: {e}")
-            sys.exit(1)
 
         if self.args.match_column is not None:
             column_match = self.get_match_to_collection_mapping(
@@ -415,7 +407,7 @@ class SodarIngestData(SnappyItransferCommandBase):
                     try:
                         collection_name = self.find_collection_name(sample_name, column_match, m)
                         logger.debug(f"sample-name: {sample_name}, collection_name: {collection_name}")
-                        remote_file = pathlib.Path(lz_irods_path) / self.remote_dir_pattern.format(
+                        remote_file = pathlib.Path(self.lz_irods_path) / self.remote_dir_pattern.format(
                             # Removed the `+ self.args.add_suffix` here, since adding anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
                             date=self.args.remote_dir_date,
@@ -442,7 +434,7 @@ class SodarIngestData(SnappyItransferCommandBase):
                             )
                         )
 
-        return lz_irods_path, tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
+        return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
 
     def execute(self) -> typing.Optional[int]:
         """Execute the transfer."""
@@ -455,7 +447,7 @@ class SodarIngestData(SnappyItransferCommandBase):
         itransfer = iRODSTransfer(None, ask=not self.args.yes, sodar_profile=self.args.config_profile)
         irods_hash_scheme = itransfer.irods_hash_scheme()
         irods_hash_ending = "."+irods_hash_scheme.lower()
-        lz_uuid, transfer_jobs = self.build_jobs(irods_hash_ending)
+        transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
         # Exit early if no files were found/matched
         if not transfer_jobs:
@@ -487,10 +479,10 @@ class SodarIngestData(SnappyItransferCommandBase):
         # Behaviour: If flag is True and lz uuid is not None*,
         # it will ask SODAR to validate and move transferred files.
         # (*) It can be None if user provided path
-        if lz_uuid and self.args.validate_and_move:
-            self.move_landing_zone(lz_uuid=lz_uuid)
+        if self.lz_uuid and self.args.validate_and_move:
+            self.move_landing_zone(lz_uuid=self.lz_uuid)
         else:
-            logger.info("Transferred files will \033[1mnot\033[0m be automatically moved in SODAR.")
+            logger.info("Transferred files will not be automatically moved in SODAR.")
 
         logger.info("All done")
         return None

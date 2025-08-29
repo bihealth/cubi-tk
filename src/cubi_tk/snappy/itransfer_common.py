@@ -13,7 +13,7 @@ from cubi_tk.parsers import print_args
 
 from ..common import execute_checksum_files_fix, sizeof_fmt
 from ..irods_common import TransferJob, iRODSCommon, iRODSTransfer
-from ..sodar_common import selectLandingzoneMixin
+from ..sodar_common import SodarIngestBase
 from ..exceptions import MissingFileException, ParameterException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
@@ -27,7 +27,7 @@ def check_args(args):
     _ = args
 
 
-class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
+class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
     """Base class for itransfer commands."""
 
     #: The command name.
@@ -62,14 +62,14 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names, hash_ending) -> tuple[str, tuple[TransferJob, ...]]:
+    def build_jobs(self, library_names, hash_ending) -> tuple[TransferJob, ...]:
         """Build file transfer jobs."""
-        # Get path to iRODS directory
-        try:
-            lz_uuid, lz_irods_path = self.get_lz_info()
-        except ParameterException as e:
-            logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
-            sys.exit(1)
+        # # Get path to iRODS directory
+        # try:
+        #     lz_uuid, lz_irods_path = self.get_lz_info()
+        # except ParameterException as e:
+        #     logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
+        #     sys.exit(1)
 
         transfer_jobs = []
         for library_name in library_names:
@@ -84,7 +84,7 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
                 if not os.path.isfile(real_result):
                     continue  # skip if did not resolve to file
                 remote_dir = os.path.join(
-                    lz_irods_path,
+                    self.lz_irods_path,
                     self.args.remote_dir_pattern.format(
                         library_name=library_name,
                         step=self.step_name,
@@ -100,7 +100,7 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-        return lz_uuid, tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
+        return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
 
     def execute(self) -> int | None:
         """Execute the transfer."""
@@ -133,7 +133,7 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
         logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
         irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
         hash_ending = "."+irods_hash_scheme.lower()
-        lz_uuid, transfer_jobs = self.build_jobs(library_names, hash_ending)
+        transfer_jobs = self.build_jobs(library_names, hash_ending)
         # logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
 
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme)
@@ -153,12 +153,12 @@ class SnappyItransferCommandBase(selectLandingzoneMixin, ParseSampleSheet):
         # Behaviour: If flag is True and lz uuid is not None*,
         # it will ask SODAR to validate and move transferred files.
         # (*) It can be None if user provided path
-        if lz_uuid and self.args.validate_and_move:
+        if self.lz_uuid and self.args.validate_and_move:
             logger.info(
                 "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
-                lz_uuid
+                self.lz_uuid
             )
-            uuid = self.sodar_api.post_landingzone_submit_move(lz_uuid)
+            uuid = self.sodar_api.post_landingzone_submit_move(self.lz_uuid)
             if uuid is None:
                 logger.error("something went wrong during lz move")
                 return
