@@ -58,7 +58,7 @@ information.
 
 import argparse
 
-from cubi_tk.parsers import get_basic_parser, get_sodar_parser
+from cubi_tk.parsers import get_basic_parser, get_sodar_parser, get_sodar_ingest_parser
 
 from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
@@ -82,14 +82,14 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     sodar_parser_project_uuid = get_sodar_parser(with_dest= True)
     sodar_parser_project_uuid_assay_uuid = get_sodar_parser(with_dest= True, with_assay_uuid=True)
     sodar_parser_destination = get_sodar_parser(with_dest= True, dest_string="destination", dest_help_string="UUID from Landing Zone or Project - where files will be moved to.")
-    sodar_parser_destination_assay_uuid = get_sodar_parser(with_dest= True, dest_string="destination", dest_help_string="UUID from Landing Zone or Project - where files will be moved to.", with_assay_uuid=True)
+    sodar_ingest_parser = get_sodar_ingest_parser()
     sodar_parser_lz_uuid= get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", dest_help_string="UUID of Landing Zone to move.")
 
 
     subparsers = parser.add_subparsers(dest="sodar_cmd")
 
     setup_argparse_add_ped(
-        subparsers.add_parser("add-ped", parents=[basic_parser,sodar_parser_project_uuid], help="Augment sample sheet from PED file")
+        subparsers.add_parser("add-ped", parents=[basic_parser, sodar_parser_project_uuid], help="Augment sample sheet from PED file")
     )
     setup_argparse_update_samplesheet(
         subparsers.add_parser("update-samplesheet", parents=[basic_parser, get_sodar_parser(with_dest=True)], help="Update sample sheet")
@@ -118,7 +118,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_ingest_data(
         subparsers.add_parser(
-            "ingest-data", parents=[basic_parser, sodar_parser_destination_assay_uuid], help="Upload files to SODAR project"
+            "ingest-data", parents=[basic_parser, sodar_ingest_parser], help="Upload files to SODAR project"
         )
     )
     setup_argparse_ingest_collection(
@@ -128,7 +128,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_check_remote(
         subparsers.add_parser(
-            "check-remote", parents=[basic_parser,sodar_parser_project_uuid_assay_uuid], help="Compare local files with checksum against SODAR/iRODS"
+            "check-remote", parents=[basic_parser, sodar_parser_project_uuid_assay_uuid], help="Compare local files with checksum against SODAR/iRODS"
         )
     )
 

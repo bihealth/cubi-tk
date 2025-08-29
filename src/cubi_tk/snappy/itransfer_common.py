@@ -4,7 +4,6 @@ import argparse
 import glob
 import os
 import sys
-import typing
 
 from biomedsheets import shortcuts
 from loguru import logger
@@ -30,10 +29,9 @@ def check_args(args):
 class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
     """Base class for itransfer commands."""
 
-    #: The command name.
-    command_name: typing.Optional[str] = None
+    cubitk_section = "snappy"
     #: The step folder name to create.
-    step_name: typing.Optional[str] = None
+    step_name: str | None = None
     #: Whether to look into largest start batch in family.
     start_batch_in_family: bool = False
 
@@ -42,13 +40,6 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
         super(SnappyItransferCommandBase, self).__init__(argparse_args, *args)
         self.args = argparse_args
         self.step_name = self.__class__.step_name
-
-    @classmethod
-    def run(
-        cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-    ) -> typing.Optional[int]:
-        """Entry point into the command."""
-        return cls(args).execute()
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
@@ -62,14 +53,26 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
         """Build base dir and glob pattern to append."""
         raise NotImplementedError("Abstract method called!")
 
-    def build_jobs(self, library_names, hash_ending) -> tuple[TransferJob, ...]:
+    def get_sample_names(self) -> list[str]:
+        # Find biomedsheet file
+        project_uuid = self.sodar_api.project_uuid
+        biomedsheet_tsv = get_biomedsheet_path(
+            start_path=self.args.base_path, uuid=project_uuid
+        )
+
+        # Extract library names from sample sheet
+        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
+        library_names = list(
+            self.yield_ngs_library_names(
+                sheet=sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
+            )
+        )
+        logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
+        return library_names
+
+    def build_jobs(self, hash_ending) -> tuple[TransferJob, ...]:
         """Build file transfer jobs."""
-        # # Get path to iRODS directory
-        # try:
-        #     lz_uuid, lz_irods_path = self.get_lz_info()
-        # except ParameterException as e:
-        #     logger.error(f"Couldn't find LZ UUID and LZ iRods Path: {e}")
-        #     sys.exit(1)
+        library_names = self.get_sample_names()
 
         transfer_jobs = []
         for library_name in library_names:
@@ -102,72 +105,6 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
                     )
         return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
 
-    def execute(self) -> int | None:
-        """Execute the transfer."""
-        # Validate arguments
-        res = self.check_args(self.args)
-        if res:  # pragma: nocover
-            return res
-
-        # Logger
-        logger.info("Starting cubi-tk snappy {}", self.command_name)
-        print_args(self.args)
-
-        # Fix for ngs_mapping & variant_calling vs step
-        if self.step_name is None:
-            self.step_name = self.args.step
-
-        # Find biomedsheet file
-        project_uuid = self.sodar_api.project_uuid
-        biomedsheet_tsv = get_biomedsheet_path(
-            start_path=self.args.base_path, uuid=project_uuid
-        )
-
-        # Extract library names from sample sheet
-        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
-        library_names = list(
-            self.yield_ngs_library_names(
-                sheet=sheet, min_batch=self.args.first_batch, max_batch=self.args.last_batch
-            )
-        )
-        logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
-        irods_hash_scheme = iRODSCommon(sodar_profile=self.args.config_profile).irods_hash_scheme()
-        hash_ending = "."+irods_hash_scheme.lower()
-        transfer_jobs = self.build_jobs(library_names, hash_ending)
-        # logger.debug("Transfer jobs:\n{}", "\n".join(map(lambda x: x.to_oneline(), transfer_jobs)))
-
-        transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme)
-
-        # Final go from user & transfer
-        itransfer = iRODSTransfer(transfer_jobs, ask=not self.args.yes, sodar_profile=self.args.config_profile)
-        logger.info("Planning to transfer the following files:")
-        for job in transfer_jobs:
-            logger.info(job.path_local)
-        logger.info(f"With a total size of {sizeof_fmt(itransfer.size)}")
-
-        # This does support "num_parallel_transfers" (but it may autimatically use multiple transfer threads?)
-        itransfer.put(recursive=True, sync=self.args.overwrite_remote)
-        logger.info("File transfer complete.")
-
-        # Validate and move transferred files
-        # Behaviour: If flag is True and lz uuid is not None*,
-        # it will ask SODAR to validate and move transferred files.
-        # (*) It can be None if user provided path
-        if self.lz_uuid and self.args.validate_and_move:
-            logger.info(
-                "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
-                self.lz_uuid
-            )
-            uuid = self.sodar_api.post_landingzone_submit_move(self.lz_uuid)
-            if uuid is None:
-                logger.error("something went wrong during lz move")
-                return
-            logger.info("done.")
-        else:
-            logger.info("Transferred files will not be automatically moved in SODAR.")
-
-        logger.info("All done")
-        return None
 
 
 class IndexLibrariesOnlyMixin:

@@ -51,6 +51,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
     mock_transfer_obj.size = 1000
     mock_transfer_obj.put = MagicMock()
     mock_transfer.return_value = mock_transfer_obj
+    mock_transfer.put = MagicMock()
 
     fake_base_path = "/base/path"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -64,6 +65,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
         "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
+        "--yes",
         sodar_uuid,
     ]
 
@@ -122,7 +124,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
     # Set Mocker
     mocker.patch("pathlib.Path.exists", my_exists)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
         my_get_lz_info,
     )
     fake_os = fake_filesystem.FakeOsModule(fs)
@@ -143,8 +145,9 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
     # Actually exercise code and perform test.
     res = main(argv)
     assert not res
-    mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile = "global")
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    # The object is now created without jobs, then updated
+    #mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile="global")
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1

@@ -46,7 +46,7 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
         logger.debug("Using prefix {}".format(prefix))
         return (
             os.path.join(
-                self.args.base_path, self.step_name, "output", prefix + "." + library_name
+                self.args.base_path, self.args.step, "output", prefix + "." + library_name
             ),
             "**",
         )

@@ -85,13 +85,6 @@ class SeasnapItransferMappingResultsCommand(SnappyItransferCommandBase):
         parser.add_argument(
             "--hidden-cmd", dest="sea_snap_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-
-        parser.add_argument(
-            "--num-parallel-transfers",
-            type=int,
-            default=DEFAULT_NUM_TRANSFERS,
-            help="Number of parallel transfers, defaults to %s" % DEFAULT_NUM_TRANSFERS,
-        )
         parser.add_argument(
             "transfer_blueprint",
             type=argparse.FileType("rt"),

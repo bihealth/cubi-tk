@@ -272,13 +272,12 @@ class SodarApi:
             logger.error(f"Failed to create Landingzone:\n{e}")
             return None
 
-
-    def post_landingzone_submit_move(self, lz_uuid : UUID)-> UUID | None:
+    def post_landingzone_submit_move(self, lz_uuid : UUID) -> UUID | None:
         logger.debug("Moving landing zone with the given UUID")
         try:
             ret_val = self._api_call("landingzones", "submit/move", method="post", dest_uuid=lz_uuid)
             new_uuid = ret_val["sodar_uuid"]
-            logger.info("Landingzone with UUID {} moved successfully.", new_uuid)
+            logger.info("Landingzone with UUID {} successfully submitted for move.", new_uuid)
             return new_uuid
         except SodarApiException as e:
             if e.status_code == 503:
@@ -286,12 +285,12 @@ class SodarApi:
             logger.error(f"Failed to move Landingzone:\n{e}")
             return None
 
-    def post_landingzone_submit_validate(self, lz_uuid: UUID)-> UUID | None:
+    def post_landingzone_submit_validate(self, lz_uuid: UUID) -> UUID | None:
         logger.debug("Validating landing zone with the given UUID")
         try:
             ret_val = self._api_call("landingzones", "submit/validate", method="post", dest_uuid=lz_uuid)
             new_uuid = ret_val["sodar_uuid"]
-            logger.info("Landingzone with UUID {} valiated successfully.", new_uuid)
+            logger.info("Landingzone with UUID {} successfully submitted for validation.", new_uuid)
             return new_uuid
         except SodarApiException as e:
             if e.status_code == 503:

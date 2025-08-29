@@ -30,6 +30,7 @@ def test_run_snappy_itransfer_step_help(capsys):
     assert not res.err
 
 
+@patch("cubi_tk.snappy.itransfer_step.SnappyItransferStepCommand._get_lz_info", my_get_lz_info)
 def test_run_snappy_itransfer_step_nostep(capsys):
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = ["snappy", "itransfer-step", "--sodar-api-token", "XXXX","--sodar-server-url",
@@ -80,6 +81,7 @@ def test_run_snappy_itransfer_step_smoke_test(
         sodar_uuid,
         "--tool",
         "bwa",
+        "--yes",
     ]
 
     parser, subparsers = setup_argparse()
@@ -137,7 +139,7 @@ def test_run_snappy_itransfer_step_smoke_test(
     # Set Mocker
     mocker.patch("pathlib.Path.exists", my_exists)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
         my_get_lz_info,
     )
 
@@ -162,7 +164,7 @@ def test_run_snappy_itransfer_step_smoke_test(
 
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile = "global")
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1

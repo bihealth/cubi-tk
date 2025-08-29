@@ -19,6 +19,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from irods.client_init import write_pam_irodsA_file
+from cubi_tk.exceptions import UserCanceledException
 
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
@@ -155,8 +156,9 @@ class iRODSTransfer(iRODSCommon):
     :type jobs: Union[list,tuple,dict,set]
     """
 
-    def __init__(self, jobs: Iterable[TransferJob]|None, **kwargs):
+    def __init__(self, jobs: Iterable[TransferJob]|None, dry_run: bool = False, **kwargs):
         super().__init__(**kwargs)
+        self.dry_run = dry_run
         self.__jobs = jobs
         if jobs is not None:
             self.__total_bytes = sum([job.bytes for job in self.__jobs])
@@ -188,7 +190,19 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, sync: bool = False):
+    def put(self, recursive: bool = False, sync: bool = False, no_list: bool = False):
+
+        # Log all actions before doing them
+        if self.dry_run or not no_list:
+            logger.info("The following actions would be performed:")
+            for n, job in enumerate(self.__jobs):
+                logger.info(f" - Upload file {job.path_local} to {job.path_remote}")
+        if self.dry_run:
+            return None
+        if self.ask and not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+            logger.info("Aborting at your request.")
+            raise UserCanceledException
+
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -237,6 +251,7 @@ class iRODSTransfer(iRODSCommon):
                     logger.error(f"Problem during transfer of {job.path_local}")
                     logger.error(self.get_irods_error(e))
             t.clear()
+            logger.info("File transfer complete.")
 
     def chksum(self):
         """Compute remote checksums for all jobs."""

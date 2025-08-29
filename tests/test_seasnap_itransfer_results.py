@@ -5,12 +5,14 @@ We only run some smoke tests here.
 
 import os
 from unittest import mock
+from unittest.mock import patch
 
 from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
 
+from .conftest import my_get_lz_info
 
 def test_run_seasnap_itransfer_results_help(capsys):
     parser, _subparsers = setup_argparse()
@@ -37,6 +39,7 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
+@patch("cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._get_lz_info", my_get_lz_info)
 def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
     # --- setup arguments
     dest_path = "/sodarZone/projects/466ab946-ce6a-4c78-9981-19b79e7bbe86/irods/dest"
@@ -47,7 +50,7 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
         "--verbose",
         "sea-snap",
         "itransfer-results",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         0,
         "--sodar-server-url",
         "https://sodar.bihealth.org/",

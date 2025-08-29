@@ -7,12 +7,16 @@ from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_parser
 from cubi_tk.snappy.itransfer_common import SnappyItransferCommandBase
 from cubi_tk.irods_common import TransferJob
 
+from .conftest import my_get_lz_info
+
 
 @patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.build_base_dir_glob_pattern")
-@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info")
-def test_snappy_itransfer_common_build_jobs(mock_lz_info, mock_glob_pattern, fs):
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase._get_lz_info")
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sample_names")
+def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock_glob_pattern, fs):
     mock_lz_info.return_value = "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
     mock_glob_pattern.return_value = "basedir", "**/*.txt"
+    mock_get_samples.return_value = ["dummy_name"]
 
     # Setup some fake files & expected output
     expected = []
@@ -36,13 +40,14 @@ def test_snappy_itransfer_common_build_jobs(mock_lz_info, mock_glob_pattern, fs)
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
 
-    assert ("466ab946-ce6a-4c78-9981-19b79e7bbe86", expected) == SIC.build_jobs(["dummy_name"], ".md5")
+    assert expected == SIC.build_jobs(".md5")
 
 
 # Need to patch multiprocessing & subprocess functions
 @patch("cubi_tk.common.Value")
 @patch("cubi_tk.common.check_call")
-def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_value, fs):
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase._get_lz_info", my_get_lz_info)
+def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mock_value, fs):
     mock_check_call.return_value = "dummy-md5-sum dummy/file/name"
 
     parser = argparse.ArgumentParser(parents=[

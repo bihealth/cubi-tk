@@ -63,6 +63,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
         "https://sodar.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
+        "--yes",
         sodar_uuid,
     ]
 
@@ -107,7 +108,7 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     # Set Mocker
     mocker.patch("pathlib.Path.exists", my_exists)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
         my_get_lz_info,
     )
 
@@ -132,4 +133,4 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     res = main(argv)
     assert not res
     mock_transfer.assert_called_with(expected_tfj, ask=not args.yes, sodar_profile = "global")
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.overwrite_remote)
+    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)

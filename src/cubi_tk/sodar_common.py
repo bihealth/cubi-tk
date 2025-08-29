@@ -7,7 +7,10 @@ from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
+from cubi_tk.common import execute_checksum_files_fix, sizeof_fmt
+from cubi_tk.irods_common import TransferJob, iRODSTransfer
 from cubi_tk.sodar_api import SodarApi
+from cubi_tk.parsers import print_args
 
 from .exceptions import CubiTkException, ParameterException, UserCanceledException
 from .irods_common import iRODSRetrieveCollection
@@ -80,14 +83,16 @@ class SodarIngestBase:
     Includes methods for proper (study, assay &) landing zone selection/creation.
     Should always be used with argparse base parser `get_sodar_parser(with_dest=True, with_assay_uuid=True, dest_string="destination")
     """
+    command_name: str | None = None
+    cubitk_section: str = 'sodar'
+
     def __init__(self, args: Namespace):
         self.args = args
         self.select_lz = getattr(args, "select_lz", True)
         self.sodar_api = SodarApi(args, with_dest=True, dest_string="destination")
         self.lz_uuid, self.lz_irods_path = self._get_lz_info()
 
-
-    def get_lz_info(self) -> tuple[str, str]:
+    def _get_lz_info(self) -> tuple[str, str]:
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
         1. User provide LZ path (set in SodarAPI as lz_path): fetch lz uuid
@@ -202,3 +207,67 @@ class SodarIngestBase:
                             input_valid = True
                 lz = existing_lzs[user_input - 1]
         return lz.sodar_uuid, lz.irods_path
+
+    @classmethod
+    def run(cls, args, _parser: Namespace, _subparser: Namespace) -> int | None:
+        """Entry point into the command."""
+        return cls(args).execute()
+
+    def check_args(self, args) -> int | None:
+        """Called for checking arguments, override to change behaviour."""
+        res = 0
+        return res
+
+    def build_jobs(self, hash_ending) -> tuple[TransferJob, ...]:
+        """Build file transfer jobs."""
+        raise NotImplementedError("Abstract method called!")
+
+    def _no_files_found_warning(self, transfer_jobs):
+        if not transfer_jobs:
+            logger.warning("No files for upload were found!")
+            return 1
+        else:
+            return 0
+
+    def execute(self) -> int | None:
+        """Execute the transfer."""
+        # Check arguments & print to log
+        res = self.check_args(self.args)
+        if res:  # pragma: nocover
+            return res
+        logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
+        print_args(self.args)
+        # Get iRODS hash scheme, build list of transfer
+        itransfer = iRODSTransfer(
+            None, ask=not self.sodar_api.yes, sodar_profile=self.args.config_profile, dry_run=self.args.dry_run
+        )
+        irods_hash_scheme = itransfer.irods_hash_scheme()
+        irods_hash_ending = "."+irods_hash_scheme.lower()
+        transfer_jobs = self.build_jobs(irods_hash_ending)
+        transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
+        # Exit early if no files were found/matched
+        res = self._no_files_found_warning(transfer_jobs)
+        # CHeck for md5 files and add jobs if needed
+        transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
+        # Final go from user & transfer
+        itransfer.jobs = transfer_jobs
+        itransfer.put(recursive=True, sync=self.args.sync)
+
+        # Validate and move transferred files
+        # Behaviour: If flag is True and lz uuid is not None*,
+        # it will ask SODAR to validate and move transferred files.
+        # (*) It can be None if user provided path
+        if self.lz_uuid and self.args.validate_and_move:
+            logger.info(
+                "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
+                self.lz_uuid
+            )
+            uuid = self.sodar_api.post_landingzone_submit_move(self.lz_uuid)
+            if uuid is None:
+                logger.error("Could not submit LZ for asynchronous moving")
+                return None
+        else:
+            logger.info("Transferred files will not be automatically moved in SODAR.")
+
+        logger.info("All done")
+        return None

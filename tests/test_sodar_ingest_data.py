@@ -8,7 +8,7 @@ import json
 import os
 import re
 import unittest
-from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import cattr
 
@@ -128,6 +128,7 @@ def test_run_sodar_ingest_fastq_ont_preset_regex():
             assert groups["subfolder"] is None
 
 
+@patch("cubi_tk.sodar.ingest_data.SodarIngestData._get_lz_info", my_get_lz_info)
 def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
     # Patched sodar API call
     requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
@@ -140,7 +141,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "--verbose",
         "sodar",
         "ingest-data",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
         "https://sodar.bihealth.org/",
@@ -201,7 +202,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "--verbose",
         "sodar",
         "ingest-data",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
         "https://sodar.bihealth.org/",
@@ -255,13 +256,13 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     # --- mock modules
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
         my_get_lz_info,
     )
-    mock_check_output = mock.MagicMock(return_value=0)
+    mock_check_output = MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
-    mock_check_call = mock.MagicMock(return_value=0)
+    mock_check_call = MagicMock(return_value=0)
     mocker.patch("cubi_tk.common.check_call", mock_check_call)
 
     mocker.patch("cubi_tk.sodar.ingest_data.pathlib", fake_pl)
@@ -272,11 +273,11 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     mocker.patch("cubi_tk.sodar.ingest_data.open", fake_open)
 
     # necessary because independent test fail
-    mock_value = mock.MagicMock()
+    mock_value = MagicMock()
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5"))
 
     # requests mock
     return_value = {
@@ -316,7 +317,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     ingestdata = SodarIngestData(args)
     ingestdata.check_args(args)
     assert ingestdata.remote_dir_pattern == DEST_PATTERN_PRESETS["fastq"]
-    lz, actual = ingestdata.build_jobs(".md5")
+    actual = ingestdata.build_jobs(".md5")
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote
     )
@@ -343,7 +344,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "--verbose",
         "sodar",
         "ingest-data",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
         "https://sodar.bihealth.org/",
@@ -408,15 +409,15 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     # --- mock modules
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_lz_info",
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
         my_get_lz_info,
     )
 
 
-    mock_check_output = mock.MagicMock(return_value=0)
+    mock_check_output = MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
-    mock_check_call = mock.MagicMock(return_value=0)
+    mock_check_call = MagicMock(return_value=0)
     mocker.patch("cubi_tk.common.check_call", mock_check_call)
 
     mocker.patch("cubi_tk.sodar.ingest_data.pathlib", fake_pl)
@@ -427,11 +428,11 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     mocker.patch("cubi_tk.sodar.ingest_data.open", fake_open)
 
     # necessary because independent test fail
-    mock_value = mock.MagicMock()
+    mock_value = MagicMock()
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5"))
 
 
     # requests mock
@@ -469,7 +470,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestdata = SodarIngestData(args)
-    lz, actual = ingestdata.build_jobs(".md5")
+    actual = ingestdata.build_jobs(".md5")
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote
     )
