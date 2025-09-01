@@ -42,7 +42,7 @@ def del_req_args():
         project_uuid="1234",
         assay_uuid="992dc872-0033-4c3b-817b-74b324327e7d",
         description='Test deletion request',
-        collections=list(),
+        collections=[],
         irods_paths=['basecol1/file.txt', '/irods/project-assay/basecol1/subcol/file1.txt'],
     )
 
