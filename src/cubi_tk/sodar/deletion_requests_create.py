@@ -28,7 +28,7 @@ class SodarDeletionRequestsCommand:
             ),
         )
         parser.add_argument(
-            '-c'
+            '-c',
             "--collections",
             nargs='?',
             help=(
@@ -36,7 +36,7 @@ class SodarDeletionRequestsCommand:
             ),
         )
         parser.add_argument(
-            '-d'
+            '-d',
             "--description",
             default=None,
             help=(
