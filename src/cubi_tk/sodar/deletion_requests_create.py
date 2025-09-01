@@ -20,7 +20,11 @@ class SodarDeletionRequestsCommand:
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup arguments for ``check-remote`` command."""
         parser.add_argument(
-            "irods-paths",
+            "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
+        )
+
+        parser.add_argument(
+            "irods_paths",
             nargs='+',
             help=(
                 "Paths to files or collections in irods that should get a deletion request. Relative paths will be "

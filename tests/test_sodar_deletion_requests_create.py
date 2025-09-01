@@ -1,11 +1,12 @@
 """Tests for ``cubi_tk.sodar.deletion_requests_create``."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from argparse import Namespace
 import pytest
 
-from cubi_tk.__main__ import setup_argparse
+import cubi_tk.sodar.deletion_requests_create
+from cubi_tk.__main__ import main, setup_argparse
 from cubi_tk.sodar.deletion_requests_create import SodarDeletionRequestsCommand
 
 def test_run_sodar_deletion_requests_help(capsys):
@@ -46,11 +47,9 @@ def del_req_args():
         irods_paths=['basecol1/file.txt', '/irods/project-assay/basecol1/subcol/file1.txt'],
     )
 
-
-def test_sodar_deletion_requests_gather_deletion_request_paths(del_req_args):
-    """Test the gather_deletion_request_paths method of SodarDeletionRequestsCommand."""
-
-    fake_irods_objs = [
+@pytest.fixture
+def fake_irods_objs():
+    return [
         MagicMock(path='/irods/project-assay/basecol1'),
         MagicMock(path='/irods/project-assay/basecol1/file.txt'),
         MagicMock(path='/irods/project-assay/basecol1/subcol'),
@@ -67,6 +66,9 @@ def test_sodar_deletion_requests_gather_deletion_request_paths(del_req_args):
         MagicMock(path='/irods/project-assay/basecol2/subcol2/file1.txt'),
         MagicMock(path='/irods/project-assay/basecol2/subcol2/file1.idx'),
     ]
+
+def test_sodar_deletion_requests_gather_deletion_request_paths(fake_irods_objs, del_req_args):
+    """Test the gather_deletion_request_paths method of SodarDeletionRequestsCommand."""
 
     def get_actual(irods_path_args):
         del_req_args.irods_paths = irods_path_args
@@ -104,4 +106,28 @@ def test_sodar_deletion_requests_gather_deletion_request_paths(del_req_args):
     assert ['/irods/project-assay/basecol1/subcol', '/irods/project-assay/basecol2/subcol'] == get_actual(['*/subcol'])
     del_req_args.collections = ['basecol1']
     assert ['/irods/project-assay/basecol1/subcol'] == get_actual(['*/subcol'])
+
+
+@patch('cubi_tk.sodar.deletion_requests_create.SodarApi')
+def test_sodar_deletion_requests_smoke_test(mockapi, fake_irods_objs):
+    mockapi_obj = MagicMock()
+    mockapi_obj.get_assay_from_uuid = MagicMock(return_value=(MagicMock(irods_path="992dc872-0033-4c3b-817b-74b324327e7d"), 'study'))
+    mockapi_obj.get_samplesheet_file_list = MagicMock(return_value=fake_irods_objs)
+    mockapi_obj.post_samplesheet_request_create = MagicMock(return_value=0)
+    mockapi.return_value = mockapi_obj
+
+    argv = [
+        "sodar",
+        "deletion-requests",
+        "--sodar-server-url",
+        "sodar_server_url",
+        "--sodar-api-token",
+        "token",
+        "-c", "basecol1", "dummycol2",
+        '--',
+        "project-uuid",
+        "*/subcol",
+    ]
+
+    assert 0 == main(argv)
 
