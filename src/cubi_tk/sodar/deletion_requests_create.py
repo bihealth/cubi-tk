@@ -21,7 +21,7 @@ class SodarDeletionRequestsCommand:
         """Setup arguments for ``check-remote`` command."""
         parser.add_argument(
             "irods-paths",
-            nargs='?',
+            nargs='+',
             help=(
                 "Paths to files or collections in irods that should get a deletion request. Relative paths will be "
                 "taken in relation to the assay base path. Non-recursive wildcards (?/*) can be used, if literal strings are given."
@@ -30,7 +30,7 @@ class SodarDeletionRequestsCommand:
         parser.add_argument(
             '-c',
             "--collections",
-            nargs='?',
+            nargs='+',
             help=(
                 "White list of base collections (samples), all files not matching these will not get a deletion request."
             ),
