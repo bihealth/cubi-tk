@@ -42,6 +42,7 @@ def del_req_args():
         project_uuid="1234",
         assay_uuid="992dc872-0033-4c3b-817b-74b324327e7d",
         description='Test deletion request',
+        collections=list(),
         irods_paths=['basecol1/file.txt', '/irods/project-assay/basecol1/subcol/file1.txt'],
     )
 
@@ -97,3 +98,10 @@ def test_sodar_deletion_requests_gather_deletion_request_paths(del_req_args):
                '/irods/project-assay/basecol1/subcol2/file1.txt',
                '/irods/project-assay/basecol2/subcol2/file1.txt'
            ] == get_actual(['*/subcol2/*.txt', '*/*.txt'])
+
+    # Test collection whitelist
+    del_req_args.collections = ['basecol1', 'basecol2']
+    assert ['/irods/project-assay/basecol1/subcol', '/irods/project-assay/basecol2/subcol'] == get_actual(['*/subcol'])
+    del_req_args.collections = ['basecol1']
+    assert ['/irods/project-assay/basecol1/subcol'] == get_actual(['*/subcol'])
+

@@ -24,7 +24,15 @@ class SodarDeletionRequestsCommand:
             nargs='?',
             help=(
                 "Paths to files or collections in irods that should get a deletion request. Relative paths will be "
-                "taken in relation to the assay base path. Wildcards (?/*/**) can be used, if literal strings are given."
+                "taken in relation to the assay base path. Non-recursive wildcards (?/*) can be used, if literal strings are given."
+            ),
+        )
+        parser.add_argument(
+            '-c'
+            "--collections",
+            nargs='?',
+            help=(
+                "White list of base collections (samples), all files not matching these will not get a deletion request."
             ),
         )
         parser.add_argument(
@@ -103,6 +111,12 @@ class SodarDeletionRequestsCommand:
             matches = {pp for pp in existing_object_paths if pp.match(pattern)}
             existing_object_paths -= matches
             matched_objects |= matches
+
+        # apply collection whitelist, if given
+        if self.args.collections:
+            matched_objects = {pp for pp in matched_objects if any(
+                pp.is_relative_to(PurePosixPath(assay_path) / coll) for coll in self.args.collections
+            )}
 
         return sorted(map(str, matched_objects))
 
