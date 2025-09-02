@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 from argparse import Namespace
 import pytest
 
-import cubi_tk.sodar.deletion_requests_create
 from cubi_tk.__main__ import main, setup_argparse
 from cubi_tk.sodar.deletion_requests_create import SodarDeletionRequestsCommand
 
@@ -102,7 +101,7 @@ def test_sodar_deletion_requests_gather_deletion_request_paths(fake_irods_objs, 
                '/irods/project-assay/basecol1/subcol2/file1.txt',
                '/irods/project-assay/basecol2/subcol2/file1.txt'
            ] == get_actual(['*/subcol2/*.txt', '*/*.txt'])
-    
+
     # Test that also nested collections without dirct files in them can be found
     assert ['/irods/project-assay/basecol3'] == get_actual(['basecol3'])
 
