@@ -104,10 +104,15 @@ class SodarDeletionRequestsCommand:
             )
 
 
-        # Deletion requests can be made equally for files and collectons, so we do not need to distinguish
-        existing_object_paths = {
-            PurePosixPath(obj.path) for obj in irods_files
-        }
+        # Deletion requests can be made equally for files and collectons, so we need to add collections to API file output (1.1)
+        existing_object_paths = set()
+        for obj in irods_files:
+            pp = PurePosixPath(obj.path)
+            existing_object_paths.add(pp)
+            # Files should never be in the root assay path, but just in case, avoid adding it
+            if str(pp.parent) != assay_path:
+                existing_object_paths.add(pp.parent)
+
         matched_objects = set()
 
         for pattern in given_path_patterns:

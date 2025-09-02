@@ -21,7 +21,7 @@ class RetrieveSodarCollection(SodarApi):
         output_dict = defaultdict(list)
 
         for obj in filelist:
-            if obj.type == 'file' and obj.name.endswith(self.hash_ending) and not include_hash_files:
+            if obj.type == 'obj' and obj.name.endswith(self.hash_ending) and not include_hash_files:
                 continue
             output_dict[obj.name].append(obj)
 

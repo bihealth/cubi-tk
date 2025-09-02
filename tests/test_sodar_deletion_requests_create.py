@@ -49,20 +49,21 @@ def del_req_args():
 
 @pytest.fixture
 def fake_irods_objs():
+    #Sodar API ONLY returns file paths, not collection paths!
     return [
-        MagicMock(path='/irods/project-assay/basecol1'),
+        #MagicMock(path='/irods/project-assay/basecol1'),
         MagicMock(path='/irods/project-assay/basecol1/file.txt'),
-        MagicMock(path='/irods/project-assay/basecol1/subcol'),
+        #MagicMock(path='/irods/project-assay/basecol1/subcol'),
         MagicMock(path='/irods/project-assay/basecol1/subcol/file1.txt'),
         MagicMock(path='/irods/project-assay/basecol1/subcol/file2.txt'),
-        MagicMock(path='/irods/project-assay/basecol1/subcol2'),
+        #MagicMock(path='/irods/project-assay/basecol1/subcol2'),
         MagicMock(path='/irods/project-assay/basecol1/subcol2/file1.txt'),
         MagicMock(path='/irods/project-assay/basecol1/subcol2/file1.idx'),
-        MagicMock(path='/irods/project-assay/basecol2'),
-        MagicMock(path='/irods/project-assay/basecol2/subcol'),
+        #MagicMock(path='/irods/project-assay/basecol2'),
+        #MagicMock(path='/irods/project-assay/basecol2/subcol'),
         MagicMock(path='/irods/project-assay/basecol2/subcol/file1.txt'),
         MagicMock(path='/irods/project-assay/basecol2/subcol/file2.txt'),
-        MagicMock(path='/irods/project-assay/basecol2/subcol2'),
+        #MagicMock(path='/irods/project-assay/basecol2/subcol2'),
         MagicMock(path='/irods/project-assay/basecol2/subcol2/file1.txt'),
         MagicMock(path='/irods/project-assay/basecol2/subcol2/file1.idx'),
     ]
