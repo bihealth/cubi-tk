@@ -102,7 +102,7 @@ class SodarDeletionRequestsCommand:
             logger.warning(
                 "The recusrive '**' wildcard is not supported will behave like a '*' instead (non-recursive)."
             )
-
+        logger.debug(f'Path patterns: {", ".join(given_path_patterns)}')
 
         # Deletion requests can be made equally for files and collectons, so we need to add collections to API file output (1.1)
         existing_object_paths = set()
@@ -112,20 +112,22 @@ class SodarDeletionRequestsCommand:
             # Files should never be in the root assay path, but just in case, avoid adding it
             if str(pp.parent) != assay_path:
                 existing_object_paths.add(pp.parent)
+        #logger.debug(f'Found irods paths: {", ".join(map(str, existing_object_paths))}')
 
         matched_objects = set()
-
         for pattern in given_path_patterns:
             # Note: from py3.13 could also use pathlib.PurePath.full_match here, which supports recursive **
             matches = {pp for pp in existing_object_paths if pp.match(pattern)}
             existing_object_paths -= matches
             matched_objects |= matches
+        logger.debug(f'Matched irods paths: {", ".join(matched_objects)}')
 
         # apply collection whitelist, if given
         if self.args.collections:
             matched_objects = {pp for pp in matched_objects if any(
                 pp.is_relative_to(PurePosixPath(assay_path) / coll) for coll in self.args.collections
             )}
+            logger.debug(f'Filtered irods paths: {", ".join(matched_objects)}')
 
         return sorted(map(str, matched_objects))
 
