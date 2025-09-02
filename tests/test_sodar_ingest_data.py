@@ -131,7 +131,7 @@ def test_run_sodar_ingest_fastq_ont_preset_regex():
 @patch("cubi_tk.sodar.ingest_data.SodarIngestData._get_lz_info", my_get_lz_info)
 def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
     # Patched sodar API call
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
 
     # Instantiate SodarIngestData (seems to require args?)
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -144,7 +144,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -183,9 +183,9 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         ingestfastq.get_match_to_collection_mapping("Typo-Column")
 
     # Test with additional assay
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
     retval = InvestigationFactory()
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86", json= cattr.unstructure(retval), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86", json= cattr.unstructure(retval), status_code= 200)
     study_key = list(retval.studies.keys())[0]
     assay_uuid = list(retval.studies[study_key].assays.keys())[0]
     ingestfastq.args.assay_uuid = assay_uuid
@@ -205,7 +205,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -296,7 +296,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "user":  "",
     }
 
-    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    url = os.path.join("https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
     # --- run tests
     res = main(argv)
@@ -347,7 +347,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -451,7 +451,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "title": "",
         "user": "",
     }
-    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    url = os.path.join("https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
     # --- run tests

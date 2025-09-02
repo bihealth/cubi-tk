@@ -34,7 +34,7 @@ def MV_ped_samples():
 @patch("cubi_tk.sodar_api.SodarApi._api_call")
 def mock_isa_data(API_call, MV_isa_json):
     API_call.return_value = MV_isa_json
-    parser_args = argparse.Namespace(config = None, sodar_server_url="https://sodar.bihealth.org/", sodar_api_token="1234", project_uuid="123e4567-e89b-12d3-a456-426655440000")
+    parser_args = argparse.Namespace(config = None, sodar_server_url="https://sodar-staging.bihealth.org/", sodar_api_token="1234", project_uuid="123e4567-e89b-12d3-a456-426655440000")
     api = SodarApi(parser_args)
     isa_data = api.get_samplesheet_export()
     investigation = isa_data["investigation"]["tsv"]
@@ -681,7 +681,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
             "--sodar-api-token",
             "1234",
             "--sodar-server-url",
-            "https://sodar.bihealth.org/",
+            "https://sodar-staging.bihealth.org/",
             "-s",
             "FAM_01",
             "Ana_01",
@@ -725,7 +725,7 @@ def test_execute(mock_api_call, mock_upload_isa, MV_isa_json, sample_df):
             "--sodar-api-token",
             "1234",
             "--sodar-server-url",
-            "https://sodar.bihealth.org/",
+            "https://sodar-staging.bihealth.org/",
             "-d",
             "MV",
             "-s",

@@ -119,7 +119,7 @@ def mock_toml_config():
     return textwrap.dedent(
         """
         [global]
-        sodar_server_url = "https://sodar.bihealth.org/"
+        sodar_server_url = "https://sodar-staging.bihealth.org/"
         sodar_api_token = "token123"
         """
     ).lstrip()

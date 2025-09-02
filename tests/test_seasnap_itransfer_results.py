@@ -53,7 +53,7 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
         "--parallel-checksum-jobs",
         0,
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         blueprint_path,

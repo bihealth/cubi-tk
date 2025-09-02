@@ -70,7 +70,7 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     fs.add_real_file(target_file)
 
     # --- mock modules
-    url = "https://sodar.bihealth.org/samplesheets/api/remote/get/466ab946-ce6a-4c78-9981-19b79e7bbe86?isa=1"
+    url = "https://sodar-staging.bihealth.org/samplesheets/api/remote/get/466ab946-ce6a-4c78-9981-19b79e7bbe86?isa=1"
     requests_mock.get(url, text=json_text)
 
     # --- run as end-to-end test

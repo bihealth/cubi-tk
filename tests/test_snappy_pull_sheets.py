@@ -96,8 +96,8 @@ def test_build_sheet_cancer_multiassay(requests_mock):
     path = pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_cancer.tsv"
     with open(path, "r") as file:
         expected = "".join(file.readlines())
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/1234", json=load_isa_dict("isa_dict_cancer_multiassay.txt"), status_code= 200)
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/1234", json= cattr.unstructure(return_api_investigation_mock()), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/1234", json=load_isa_dict("isa_dict_cancer_multiassay.txt"), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/1234", json= cattr.unstructure(return_api_investigation_mock()), status_code= 200)
 
     actual = build_sheet(args=args, project_uuid="", sodar_api=SodarApi(args, set_default=True))
     assert actual == expected

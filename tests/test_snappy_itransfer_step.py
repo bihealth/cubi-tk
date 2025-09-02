@@ -34,7 +34,7 @@ def test_run_snappy_itransfer_step_help(capsys):
 def test_run_snappy_itransfer_step_nostep(capsys):
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = ["snappy", "itransfer-step", "--sodar-api-token", "XXXX","--sodar-server-url",
-        "https://sodar.bihealth.org/", sodar_uuid, "--tool", "bwa"]
+        "https://sodar-staging.bihealth.org/", sodar_uuid, "--tool", "bwa"]
 
     parser, subparsers = setup_argparse()
 
@@ -75,7 +75,7 @@ def test_run_snappy_itransfer_step_smoke_test(
         "--base-path",
         fake_base_path,
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         sodar_uuid,
