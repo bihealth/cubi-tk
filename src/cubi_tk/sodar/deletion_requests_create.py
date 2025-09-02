@@ -112,7 +112,8 @@ class SodarDeletionRequestsCommand:
             # Files should never be in the root assay path, but just in case, avoid adding it
             if str(pp.parent) != assay_path:
                 existing_object_paths.add(pp.parent)
-        #logger.debug(f'Found irods paths: {", ".join(map(str, existing_object_paths))}')
+                #logger.debug(f'added parent: {pp.parent}')
+        logger.debug(f'Matching {len(existing_object_paths)} paths from {len(irods_files)} irods files')
 
         matched_objects = set()
         for pattern in given_path_patterns:
