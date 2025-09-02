@@ -66,6 +66,7 @@ def fake_irods_objs():
         #MagicMock(path='/irods/project-assay/basecol2/subcol2'),
         MagicMock(path='/irods/project-assay/basecol2/subcol2/file1.txt'),
         MagicMock(path='/irods/project-assay/basecol2/subcol2/file1.idx'),
+        MagicMock(path='/irods/project-assay/basecol3/othersubcol/file1.abc'),
     ]
 
 def test_sodar_deletion_requests_gather_deletion_request_paths(fake_irods_objs, del_req_args):
@@ -101,6 +102,9 @@ def test_sodar_deletion_requests_gather_deletion_request_paths(fake_irods_objs, 
                '/irods/project-assay/basecol1/subcol2/file1.txt',
                '/irods/project-assay/basecol2/subcol2/file1.txt'
            ] == get_actual(['*/subcol2/*.txt', '*/*.txt'])
+    
+    # Test that also nested collections without dirct files in them can be found
+    assert ['/irods/project-assay/basecol3'] == get_actual(['basecol3'])
 
     # Test collection whitelist
     del_req_args.collections = ['basecol1', 'basecol2']
@@ -112,7 +116,7 @@ def test_sodar_deletion_requests_gather_deletion_request_paths(fake_irods_objs, 
 @patch('cubi_tk.sodar.deletion_requests_create.SodarApi')
 def test_sodar_deletion_requests_smoke_test(mockapi, fake_irods_objs):
     mockapi_obj = MagicMock()
-    mockapi_obj.get_assay_from_uuid = MagicMock(return_value=(MagicMock(irods_path="992dc872-0033-4c3b-817b-74b324327e7d"), 'study'))
+    mockapi_obj.get_assay_from_uuid = MagicMock(return_value=(MagicMock(irods_path="/irods/project-assay"), 'study'))
     mockapi_obj.get_samplesheet_file_list = MagicMock(return_value=fake_irods_objs)
     mockapi_obj.post_samplesheet_request_create = MagicMock(return_value=0)
     mockapi.return_value = mockapi_obj

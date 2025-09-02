@@ -83,7 +83,7 @@ class SodarDeletionRequestsCommand:
             if self.args.dry_run:
                 logger.info(f'DRY-RUN: Would create irods deletion request: {path}')
                 continue
-            res = sodar_api.post_samplesheet_request_create(path, self.args.descritpion)
+            res = sodar_api.post_samplesheet_request_create(path, self.args.description)
             #UNSURE: break or continue on error?
             if res:
                 logger.debug(f'Project UUID: {sodar_api.project_uuid}; Assay UUID: {sodar_api.assay_uuid}')
@@ -104,15 +104,20 @@ class SodarDeletionRequestsCommand:
             )
         logger.debug(f'Path patterns: {", ".join(given_path_patterns)}')
 
-        # Deletion requests can be made equally for files and collectons, so we need to add collections to API file output (1.1)
         existing_object_paths = set()
         for obj in irods_files:
             pp = PurePosixPath(obj.path)
+            if not pp.is_relative_to(assay_path):
+                raise CubiTkException(
+                    f'Got irods file path "{pp}" that is not in the assay path "{assay_path}". This should not happen.'
+                )
             existing_object_paths.add(pp)
-            # Files should never be in the root assay path, but just in case, avoid adding it
-            if str(pp.parent) != assay_path:
+            # Deletion requests can be made equally for files and collectons
+            # So we need to add *all* sub-collections up to the sample collections to the API file output (1.1)
+            while str(pp.parent) != assay_path:
+                # logger.debug(f'added parent: {pp.parent}')
                 existing_object_paths.add(pp.parent)
-                #logger.debug(f'added parent: {pp.parent}')
+                pp = pp.parent
         logger.debug(f'Matching {len(existing_object_paths)} paths from {len(irods_files)} irods files')
 
         matched_objects = set()
@@ -121,14 +126,14 @@ class SodarDeletionRequestsCommand:
             matches = {pp for pp in existing_object_paths if pp.match(pattern)}
             existing_object_paths -= matches
             matched_objects |= matches
-        logger.debug(f'Matched irods paths: {", ".join(matched_objects)}')
+        logger.debug(f'Matched irods paths: {", ".join(map(str, matched_objects))}')
 
         # apply collection whitelist, if given
         if self.args.collections:
             matched_objects = {pp for pp in matched_objects if any(
                 pp.is_relative_to(PurePosixPath(assay_path) / coll) for coll in self.args.collections
             )}
-            logger.debug(f'Filtered irods paths: {", ".join(matched_objects)}')
+            logger.debug(f'Filtered irods paths: {", ".join(map(str, matched_objects))}')
 
         return sorted(map(str, matched_objects))
 
