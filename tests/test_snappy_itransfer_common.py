@@ -31,7 +31,7 @@ def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = tuple(sorted(expected, key=lambda x: x.path_local))
+    expected = sorted(expected, key=lambda x: x.path_local)
 
     parser = argparse.ArgumentParser(parents=[
         get_snappy_itransfer_parser(),
@@ -53,7 +53,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mock_va
     parser = argparse.ArgumentParser(parents=[
         get_snappy_itransfer_parser(),
         get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
-    args = parser.parse_args(["--sodar-server-url","https://sodar-staging.bihealth.org/",  "--sodar-api-token", "XXXX",  "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
+    args = parser.parse_args(["--sodar-server-url", "https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
@@ -71,7 +71,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mock_va
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = tuple(sorted(expected, key=lambda x: x.path_local))
+    expected = sorted(expected, key=lambda x: x.path_local)
 
     execute_checksum_files_fix(expected, "MD5", parallel_jobs=0)
     assert mock_check_call.call_count == 2

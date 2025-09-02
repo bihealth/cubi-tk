@@ -20,7 +20,7 @@ from cubi_tk.snappy.itransfer_sv_calling import (
 )
 from cubi_tk.irods_common import TransferJob
 
-from .conftest import my_exists, my_get_lz_info
+from .conftest import my_get_lz_info, my_iRODS_transfer, setup_snappy_itransfer_mocks
 
 
 def fake_config(n_tools=1):
@@ -115,6 +115,8 @@ def test_run_snappy_itransfer_sv_calling_no_sv_step(fs):
         "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
+        "--parallel-checksum-jobs",
+        "0",
         sodar_uuid,
     ]
 
@@ -146,6 +148,8 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
         "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
+        "--parallel-checksum-jobs",
+        "0",
         sodar_uuid,
     ]
 
@@ -162,14 +166,21 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
     with pytest.raises(SnappyStepNotFoundException):
         SnappyItransferSvCallingCommand(args)
 
-
-@patch("cubi_tk.snappy.itransfer_common.iRODSTransfer")
-def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germline_trio_sheet_tsv):
-    mock_transfer_obj = MagicMock()
-    mock_transfer_obj.size = 1000
-    mock_transfer_obj.put = MagicMock()
+@patch('cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._no_files_found_warning')
+@patch("cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info", my_get_lz_info)
+@patch("cubi_tk.sodar_common.iRODSTransfer")
+def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mock_filecheck, mocker, germline_trio_sheet_tsv):
+    # Setup transfer mock, for assertion
+    mock_transfer_obj = my_iRODS_transfer()
     mock_transfer.return_value = mock_transfer_obj
+    # Set up mock for _no_files_found_warning, allows asserting it was called with properly built transfer_job list
+    mock_filecheck.return_value = 0
 
+    # Mock check_call for md5sum creation, allows assertion of call count
+    mock_check_call = MagicMock(return_value=0)
+    mocker.patch("cubi_tk.common.check_call", mock_check_call)
+
+    # Set up command line arguments
     fake_base_path = "/base/path"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
@@ -183,6 +194,8 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
         "--sodar-api-token",
         "XXXX",
         "--yes",
+        "--parallel-checksum-jobs",
+        "0",
         # tsv_path,
         sodar_uuid,
     ]
@@ -211,14 +224,10 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
             fs.create_file(fake_file_paths[-1])
     # Create sample sheet in fake file system
     sample_sheet_path = fake_base_path + "/.snappy_pipeline/sheet.tsv"
-    fs.create_file(sample_sheet_path, contents=germline_trio_sheet_tsv, create_missing_dirs=True)
+    fs.create_file(sample_sheet_path, contents=germline_trio_sheet_tsv)
     # Create config in fake file system
     config_path = fake_base_path + "/.snappy_pipeline/config.yaml"
-    fs.create_file(config_path, contents=fake_config(), create_missing_dirs=True)
-
-    # Print path to all created files
-    print(fake_config())
-    print("\n".join(fake_file_paths + [sample_sheet_path, config_path]))
+    fs.create_file(config_path, contents=fake_config())
 
     # Create expected transfer jobs
     today = datetime.date.today().strftime("%Y-%m-%d")
@@ -236,37 +245,17 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
         )
         for f in fake_file_paths
     ]
-    expected_manta = tuple(sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local))
-    # expected_gcnv = list(
-    #     sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
-    # )
+    expected_manta = sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
+    # expected_gcnv = sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
 
     # Set Mocker
-    mocker.patch("pathlib.Path.exists", my_exists)
-    mocker.patch(
-        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
-        my_get_lz_info,
-    )
-
-    fake_os = fake_filesystem.FakeOsModule(fs)
-    mocker.patch("glob.os", fake_os)
-    mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
-    mocker.patch("cubi_tk.snappy.itransfer_variant_calling.os", fake_os)
-    mocker.patch("cubi_tk.common.os", fake_os)
-
+    setup_snappy_itransfer_mocks(mocker, fs, "sv_calling")
+    # sv_calling also reads config on initialization
     fake_open = fake_filesystem.FakeFileOpen(fs)
     mocker.patch("cubi_tk.snappy.itransfer_sv_calling.open", fake_open)
-    mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
-    mocker.patch("cubi_tk.snappy.common.open", fake_open)
-    mocker.patch("cubi_tk.common.open", fake_open)
-
-    mock_check_call = mock.mock_open()
-    mocker.patch("cubi_tk.common.check_call", mock_check_call)
-
-    mocker.patch("cubi_tk.snappy.itransfer_common.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
 
     # Actually exercise code and perform test.
     parser, _subparsers = setup_argparse()
@@ -275,8 +264,8 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mocker, germl
     assert not res
     assert mock_transfer.call_count == 2
     # No easy way to check two calls
-    # mock_transfer.assert_called_with(expected_gcnv, ask=not args.yes)
-    mock_transfer.assert_called_with(expected_manta, ask=not args.yes, sodar_profile = "global")
+    # mock_filecheck.assert_called_with(expected_gcnv)
+    mock_filecheck.assert_called_with(expected_manta)
     assert mock_transfer_obj.put.call_count == 2
     mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
 

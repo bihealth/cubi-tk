@@ -3,6 +3,9 @@
 import io
 import textwrap
 
+from unittest.mock import MagicMock
+from pyfakefs import fake_filesystem
+
 from biomedsheets.io_tsv import read_germline_tsv_sheet, read_cancer_tsv_sheet
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from biomedsheets.shortcuts import GermlineCaseSheet, CancerCaseSheet
@@ -124,6 +127,28 @@ def mock_toml_config():
         """
     ).lstrip()
 
+
+def setup_snappy_itransfer_mocks(mocker, fs, step):
+    # For finding snappy root
+    mocker.patch("pathlib.Path.exists", my_exists)
+    # Mocking fs for finding local input files, but not biomedsheet functions
+    fake_os = fake_filesystem.FakeOsModule(fs)
+    mocker.patch("glob.os", fake_os)
+    mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
+    mocker.patch(f"cubi_tk.snappy.itransfer_{step}.os", fake_os)
+    mocker.patch("cubi_tk.common.os", fake_os)
+    fake_open = fake_filesystem.FakeFileOpen(fs)
+    mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
+    mocker.patch("cubi_tk.snappy.common.open", fake_open)
+    mocker.patch("cubi_tk.common.open", fake_open)
+
+
+def my_iRODS_transfer():
+    return MagicMock(
+        size=1000,
+        irods_hash_scheme=MagicMock(return_value="MD5"),
+        put=MagicMock()
+    )
 
 def my_exists(self):
     """Method is used to patch pathlib.Path.exists"""

@@ -25,7 +25,7 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
                 "Name of the snappy pipeline step (step name must be identical to step directory)."
                 "Steps names are available from the snappy command snappy-start-step --help"
             ),
-            default=None,
+            required=True,
         )
         parser.add_argument(
             "--tool",
@@ -43,7 +43,7 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         prefix = ".".join(self.args.tool)
-        logger.debug("Using prefix {}".format(prefix))
+        logger.debug(f"Using step {self.args.step} and prefix {prefix}")
         return (
             os.path.join(
                 self.args.base_path, self.args.step, "output", prefix + "." + library_name
@@ -58,6 +58,9 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
         if self.step_name is None and self.args.step is None:
             logger.error("Snappy step is not defined")
             return 1
+        elif self.step_name is None:
+            self.step_name = self.args.step
+        # --step is set to required, so other options can not happen
 
         return res
 

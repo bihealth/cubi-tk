@@ -247,7 +247,7 @@ class SodarIngestBase:
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
         # Exit early if no files were found/matched
         res = self._no_files_found_warning(transfer_jobs)
-        # CHeck for md5 files and add jobs if needed
+        # Check for md5 files and add jobs if needed
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
         # Final go from user & transfer
         itransfer.jobs = transfer_jobs

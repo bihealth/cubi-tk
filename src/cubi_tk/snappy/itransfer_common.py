@@ -8,18 +8,11 @@ import sys
 from biomedsheets import shortcuts
 from loguru import logger
 
-from cubi_tk.parsers import print_args
-
-from ..common import execute_checksum_files_fix, sizeof_fmt
-from ..irods_common import TransferJob, iRODSCommon, iRODSTransfer
+from ..irods_common import TransferJob
 from ..sodar_common import SodarIngestBase
 from ..exceptions import MissingFileException, ParameterException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
-
-#: Default number of parallel transfers.
-DEFAULT_NUM_TRANSFERS = 8
-
 
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
@@ -32,7 +25,7 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
     cubitk_section = "snappy"
     #: The step folder name to create.
     step_name: str | None = None
-    #: Whether to look into largest start batch in family.
+    #: Whether to look into the largest start batch in family.
     start_batch_in_family: bool = False
 
     def __init__(self, argparse_args, *args):
@@ -70,7 +63,7 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
         logger.info("Libraries in sheet:\n{}", "\n".join(sorted(library_names)))
         return library_names
 
-    def build_jobs(self, hash_ending) -> tuple[TransferJob, ...]:
+    def build_jobs(self, hash_ending) -> list[TransferJob]:
         """Build file transfer jobs."""
         library_names = self.get_sample_names()
 
@@ -103,7 +96,8 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-        return tuple(sorted(transfer_jobs, key=lambda x: x.path_local))
+
+        return sorted(transfer_jobs, key=lambda x: x.path_local)
 
 
 

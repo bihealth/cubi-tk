@@ -46,6 +46,8 @@ def test_run_seasnap_write_sample_info_smoke_test(capsys, requests_mock, fs):
     argv = [
         "sea-snap",
         "write-sample-info",
+        "--sodar-server-url",
+        "https://sodar-staging.bihealth.org",
         "--sodar-api-token",
         "XXX",
         "--project_uuid",
