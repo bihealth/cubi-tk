@@ -190,12 +190,12 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, sync: bool = False, no_list: bool = False):
+    def put(self, recursive: bool = False, sync: bool = False, no_list: bool = False): #noqa: C901
 
         # Log all actions before doing them
         if self.dry_run or not no_list:
             logger.info("The following actions would be performed:")
-            for n, job in enumerate(self.__jobs):
+            for _, job in enumerate(self.__jobs):
                 logger.info(f" - Upload file {job.path_local} to {job.path_remote}")
         if self.dry_run:
             return None

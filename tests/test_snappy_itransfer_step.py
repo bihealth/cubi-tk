@@ -38,10 +38,8 @@ def test_run_snappy_itransfer_step_nostep(capsys):
         "https://sodar-staging.bihealth.org/", "--tool", "bwa", sodar_uuid,
     ]
 
-    parser, subparsers = setup_argparse()
-
     with pytest.raises(SystemExit) as e:
-        res = main(argv)
+        main(argv)
 
     assert e.value.code == 2
 

@@ -1,26 +1,13 @@
 """``cubi-tk sea-snap itransfer-ngs-mapping``: transfer ngs_mapping results into iRODS landing zone."""
 
 import argparse
-import typing
-import attr
-from ctypes import c_ulonglong
-from multiprocessing import Value
-from multiprocessing.pool import ThreadPool
 import os
 import pathlib
 import re
-from subprocess import STDOUT, SubprocessError, check_call, check_output
-from retrying import retry
-import sys
 
-from loguru import logger
-import tqdm
 
-from cubi_tk.irods_common import iRODSCommon, TransferJob
-from cubi_tk.parsers import print_args
-from cubi_tk.sodar_api import SodarApi
+from cubi_tk.irods_common import TransferJob
 
-from ..common import check_irods_icommands, sizeof_fmt
 from ..sodar_common import SodarIngestBase
 
 class SeasnapItransferMappingResultsCommand(SodarIngestBase):

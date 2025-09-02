@@ -6,7 +6,6 @@ We only run some smoke tests here.
 import datetime
 import os
 import re
-from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from pyfakefs import fake_filesystem

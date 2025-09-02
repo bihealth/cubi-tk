@@ -5,10 +5,8 @@ We only run some smoke tests here.
 
 import datetime
 import os
-import re
 from unittest.mock import ANY, patch, MagicMock
 
-from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
@@ -97,8 +95,6 @@ def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck,
     fs.remove(fake_file_paths[3])
 
     # Create expected transfer jobs
-    today = datetime.date.today().strftime("%Y-%m-%d")
-    sample_name_pattern = re.compile("[^-./]+-N1-RNA1-RNA-Seq1")
     expected_tfj = [
         TransferJob(
             path_local=f,

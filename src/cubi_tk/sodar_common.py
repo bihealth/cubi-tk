@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
-from cubi_tk.common import execute_checksum_files_fix, sizeof_fmt
+from cubi_tk.common import execute_checksum_files_fix
 from cubi_tk.irods_common import TransferJob, iRODSTransfer
 from cubi_tk.sodar_api import SodarApi
 from cubi_tk.parsers import print_args

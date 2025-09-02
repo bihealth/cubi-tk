@@ -7,7 +7,6 @@ import datetime
 import os
 import re
 import textwrap
-from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
 
 from pyfakefs import fake_filesystem

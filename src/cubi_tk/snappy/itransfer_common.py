@@ -1,16 +1,14 @@
 """Common code for ``cubi-tk snappy itransfer-*`` commands."""
 
-import argparse
 import glob
 import os
-import sys
 
 from biomedsheets import shortcuts
 from loguru import logger
 
 from ..irods_common import TransferJob
 from ..sodar_common import SodarIngestBase
-from ..exceptions import MissingFileException, ParameterException
+from ..exceptions import MissingFileException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 
