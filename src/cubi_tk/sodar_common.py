@@ -4,6 +4,7 @@ import os
 from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List
+from uuid import UUID
 
 from irods.data_object import iRODSDataObject
 from loguru import logger
@@ -23,20 +24,8 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         irods_env_path: Path = None,
     ):
         """Constructor.
-        :param sodar_server_url: SODAR url.
-        :type sodar_server_url: str
-
-        :param sodar_api_token: SODAR API token.
-        :type sodar_api_token: str
-
-        :param assay_uuid: Assay UUID.
-        :type assay_uuid: str
-
-        :param project_uuid: Project UUID.
-        :type project_uuid: str
-
-        :param ask: Confirm with user before certain actions.
-        :type ask: bool, optional
+        :param args: argparse object, should be created with `get_sodar_parser` (or a derivative)
+        :type args: Namespace
 
         :param irods_env_path: Path to irods_environment.json
         :type irods_env_path: pathlib.Path, optional
@@ -63,16 +52,12 @@ class RetrieveSodarCollection(iRODSRetrieveCollection):
         logger.info("... done with remote files search.")
         return irods_collection_dict
 
-    def get_assay_uuid(self):
+    def get_assay_uuid(self) -> UUID:
         return self.assay_uuid
 
 
     def get_assay_irods_path(self):
         """Get Assay iRODS path.
-
-        :param assay_uuid: Assay UUID.
-        :type assay_uuid: str [optional]
-
         :return: Returns Assay iRODS path - extracted via SODAR API.
         """
         return self.assay_path
@@ -90,9 +75,13 @@ class SodarIngestBase:
         self.args = args
         self.select_lz = getattr(args, "select_lz", True)
         self.sodar_api = SodarApi(args, with_dest=True, dest_string="destination")
+        # Check arguments & print to log
+        self.check_args(self.args)
+        logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
+        print_args(self.args)
         self.lz_uuid, self.lz_irods_path = self._get_lz_info()
 
-    def _get_lz_info(self) -> tuple[str, str]:
+    def _get_lz_info(self) -> tuple[UUID, str]:
         """Method evaluates user input to extract or create iRODS path. Use cases:
 
         1. User provide LZ path (set in SodarAPI as lz_path): fetch lz uuid
@@ -103,7 +92,7 @@ class SodarIngestBase:
 
         :return: (project_uuid, lz_uuid, lz_irods_path)
         """
-        #lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
+        # lz path given, project-uuid set up, lz set up, check if valid and get lz_uuid
         if self.sodar_api.lz_path is not None:
             lz_path = self.sodar_api.lz_path
             existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
@@ -112,27 +101,27 @@ class SodarIngestBase:
             else:
                 msg = "Unable to identify UUID of given LZ Path{0}.".format(self.sodar_api.lz_path)
                 raise ParameterException(msg)
-        #either projectuuid or lz uuid
+        # either project-uuid or lz uuid
         elif self.sodar_api.project_uuid is not None:
             lz = self.sodar_api.get_landingzone_retrieve(log_error=False)
             # if succees given uuid is lz, everything set up, sodarapi will set project uui and lz path
             if lz is not None:
                 lz_uuid = lz.sodar_uuid
                 lz_path = lz.irods_path
-            #if None: projectuuid is possibly given
-            #check if projectuuid is valid and start lz selection
+            # if None: project-uuid is possibly given
+            # check if project-uuid is valid and start lz selection
             elif self.sodar_api.get_samplesheet_retrieve(log_error=False) is not None:
                 try:
-                   lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
+                    lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
                 except UserCanceledException as e:
                     raise e
-            #neither project nor lz uuid
+            # neither project nor lz uuid
             else:
                 msg = "Provided UUID ({}) could neither be associated with a project nor with a Landing Zone.".format(
                     self.sodar_api.project_uuid
                 )
                 raise ParameterException(msg)
-        #invalid input
+        # invalid input
         else:
             msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
                 self.args.destination
@@ -142,11 +131,10 @@ class SodarIngestBase:
         logger.info("Target iRODS path: {}", lz_path)
         return lz_uuid, lz_path
 
-    def _create_lz(self) -> tuple[str, str]:
+    def _create_lz(self) -> tuple[UUID, str]:
         """
         Create a new landing zone (asking for user confirmation unless --yes is given) and check that is usable.
-        :param sodar_api: sodar_api object from cubi-tk.sodar_api
-        :return: (project_uuid, lz_uuid, lz_irods_path)
+        :return: (lz_uuid, lz_irods_path)
         """
         if self.sodar_api.yes or (
             input("Can the process create a new landing zone? [yN] ").lower().startswith("y")
@@ -160,11 +148,10 @@ class SodarIngestBase:
             msg = "Not possible to continue the process without a landing zone path. Breaking..."
             raise UserCanceledException(msg)
 
-    def _get_landing_zone(self, latest=True) -> tuple[str, str]:
+    def _get_landing_zone(self, latest=True) -> tuple[UUID, str]:
         """
         Selection of landing zone to use for transfer. If --yes is given will use latest active landing zone
         or create a new one. With latest=False will ask user to select one of the available landing zones.
-        :param sodar_api: sodar_api object from cubi-tk.sodar_api
         :param latest: boolean
         :return: (project_uuid, lz_uuid, lz_irods_path)
         """
@@ -231,12 +218,6 @@ class SodarIngestBase:
 
     def execute(self) -> int | None:
         """Execute the transfer."""
-        # Check arguments & print to log
-        res = self.check_args(self.args)
-        if res:  # pragma: nocover
-            return res
-        logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
-        print_args(self.args)
         # Get iRODS hash scheme, build list of transfer
         itransfer = iRODSTransfer(
             None, ask=not self.sodar_api.yes, sodar_profile=self.args.config_profile, dry_run=self.args.dry_run
@@ -246,7 +227,7 @@ class SodarIngestBase:
         transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
         # Exit early if no files were found/matched
-        res = self._no_files_found_warning(transfer_jobs)
+        self._no_files_found_warning(transfer_jobs)
         # Check for md5 files and add jobs if needed
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
         # Final go from user & transfer
