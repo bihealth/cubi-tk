@@ -4,9 +4,9 @@ In some cases, ``typing.Optional[str]`` is used for the ``sodar_uuid`` attribute
 the UUID as an attribute.
 """
 
-import attr
 import typing
-from uuid import UUID
+
+import attr
 
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -18,7 +18,7 @@ class OntologyTermRef:
 
 @attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class Assay:
-    sodar_uuid: UUID | None
+    sodar_uuid: typing.Optional[str] = None
     file_name: str
     irods_path: str
     technology_platform: str
@@ -29,7 +29,7 @@ class Assay:
 
 @attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class Study:
-    sodar_uuid: UUID | None
+    sodar_uuid: typing.Optional[str] = None
     identifier: str
     file_name: str
     irods_path: str
@@ -41,7 +41,7 @@ class Study:
 
 @attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class Investigation:
-    sodar_uuid: UUID | None
+    sodar_uuid: typing.Optional[str] = None
     archive_name: str
     comments: typing.Any
     description: str
@@ -59,7 +59,7 @@ class User:
     """Represents a user in the SODAR API."""
 
     #: UUID of the user
-    sodar_uuid: UUID
+    sodar_uuid: str
     #: Username of the user
     username: str
     #: Real name of the user
@@ -73,7 +73,7 @@ class LandingZone:
     """Represent a landing zone in the SODAR API."""
 
     #: UUID of the landing zone.
-    sodar_uuid: UUID | None
+    sodar_uuid: typing.Optional[str] = None
     #: Date of last modification.
     date_modified: str
 
