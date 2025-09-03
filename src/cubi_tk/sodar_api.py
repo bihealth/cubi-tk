@@ -210,7 +210,7 @@ class SodarApi:
             logger.error(f"Failed to upload ISA-tab:\n{e}")
             return 1
 
-    def post_samplesheet_request_create(self, path, description=None) -> int:
+    def post_samplesheet_deletion_request_create(self, path, description=None) -> int:
         params = {'path': path}
         if description:
             params.update({'description': description})
@@ -218,7 +218,7 @@ class SodarApi:
         try:
             ret_val = self._api_call(
                 "samplesheets",
-                "request/create",
+                "irods/request/create",
                 method="post",
                 params=params,
             )

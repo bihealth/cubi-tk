@@ -83,7 +83,7 @@ class SodarDeletionRequestsCommand:
             if self.args.dry_run:
                 logger.info(f'DRY-RUN: Would create irods deletion request: {path}')
                 continue
-            res = sodar_api.post_samplesheet_request_create(path, self.args.description)
+            res = sodar_api.post_samplesheet_deletion_request_create(path, self.args.description)
             #UNSURE: break or continue on error?
             if res:
                 logger.debug(f'Project UUID: {sodar_api.project_uuid}; Assay UUID: {sodar_api.assay_uuid}')
