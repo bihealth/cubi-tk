@@ -117,7 +117,7 @@ def test_sodar_deletion_requests_smoke_test(mockapi, fake_irods_objs):
     mockapi_obj = MagicMock()
     mockapi_obj.get_assay_from_uuid = MagicMock(return_value=(MagicMock(irods_path="/irods/project-assay"), 'study'))
     mockapi_obj.get_samplesheet_file_list = MagicMock(return_value=fake_irods_objs)
-    mockapi_obj.post_samplesheet_request_create = MagicMock(return_value=0)
+    mockapi_obj.post_samplesheet_deletion_request_create = MagicMock(return_value=0)
     mockapi.return_value = mockapi_obj
 
     argv = [
