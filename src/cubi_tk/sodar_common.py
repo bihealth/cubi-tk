@@ -90,6 +90,10 @@ class SodarIngestBase:
         self.args = args
         self.select_lz = getattr(args, "select_lz", True)
         self.sodar_api = SodarApi(args, with_dest=True, dest_string="destination")
+        # Check arguments & print to log
+        self.check_args(self.args)
+        logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
+        print_args(self.args)
         self.lz_uuid, self.lz_irods_path = self._get_lz_info()
 
     def _get_lz_info(self) -> tuple[str, str]:
@@ -231,12 +235,6 @@ class SodarIngestBase:
 
     def execute(self) -> int | None:
         """Execute the transfer."""
-        # Check arguments & print to log
-        res = self.check_args(self.args)
-        if res:  # pragma: nocover
-            return res
-        logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
-        print_args(self.args)
         # Get iRODS hash scheme, build list of transfer
         itransfer = iRODSTransfer(
             None, ask=not self.sodar_api.yes, sodar_profile=self.args.config_profile, dry_run=self.args.dry_run
@@ -246,7 +244,7 @@ class SodarIngestBase:
         transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
         # Exit early if no files were found/matched
-        res = self._no_files_found_warning(transfer_jobs)
+        self._no_files_found_warning(transfer_jobs)
         # Check for md5 files and add jobs if needed
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
         # Final go from user & transfer

@@ -14,6 +14,11 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
     command_name = "itransfer-step"
     step_name = None
 
+    def __init__(self, args):
+        if self.step_name is None:
+            self.step_name = args.step
+        super().__init__(args)
+
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -58,9 +63,6 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
         if self.step_name is None and self.args.step is None:
             logger.error("Snappy step is not defined")
             return 1
-        elif self.step_name is None:
-            self.step_name = self.args.step
-        # --step is set to required, so other options can not happen
 
         return res
 

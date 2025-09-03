@@ -3,7 +3,7 @@ import datetime
 from unittest.mock import patch
 
 from cubi_tk.common import execute_checksum_files_fix
-from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_parser
+from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_parser, get_snappy_cmd_basic_parser
 from cubi_tk.snappy.itransfer_common import SnappyItransferCommandBase
 from cubi_tk.irods_common import TransferJob
 
@@ -34,6 +34,7 @@ def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock
     expected = sorted(expected, key=lambda x: x.path_local)
 
     parser = argparse.ArgumentParser(parents=[
+        get_snappy_cmd_basic_parser(),
         get_snappy_itransfer_parser(),
         get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
     args = parser.parse_args(["--sodar-server-url","https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
@@ -51,6 +52,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mock_va
     mock_check_call.return_value = "dummy-md5-sum dummy/file/name"
 
     parser = argparse.ArgumentParser(parents=[
+        get_snappy_cmd_basic_parser(),
         get_snappy_itransfer_parser(),
         get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
     args = parser.parse_args(["--sodar-server-url", "https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])

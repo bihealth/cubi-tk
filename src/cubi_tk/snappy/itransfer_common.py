@@ -26,11 +26,13 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
     #: Whether to look into the largest start batch in family.
     start_batch_in_family: bool = False
 
-    def __init__(self, argparse_args, *args):
+    def __init__(self, args):
         #: Command line arguments.
-        super(SnappyItransferCommandBase, self).__init__(argparse_args, *args)
-        self.args = argparse_args
-        self.step_name = self.__class__.step_name
+        super(SnappyItransferCommandBase, self).__init__(args)
+        self.args = args
+        # Allow setting this before running super.__init__ in subclasses
+        if not self.step_name:
+            self.step_name = self.__class__.step_name
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
