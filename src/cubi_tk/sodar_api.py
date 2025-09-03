@@ -226,7 +226,7 @@ class SodarApi:
                 for warning in ret_val["sodar_warnings"]:
                     logger.warning(f"SODAR warning: {warning}")
             else:
-                logger.info("Sodar deletion request created successfully.")
+                logger.info(f"Sodar deletion request created successfully: {path}.")
             return 0
         except SodarApiException as e:
             logger.error(f"Failed to create Sodar deletion request:\n{e}")
