@@ -1,5 +1,6 @@
 
 import os
+import sys
 
 from argparse import Namespace
 from pathlib import Path
@@ -94,7 +95,15 @@ class SodarIngestBase:
         self.check_args(self.args)
         logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
         print_args(self.args)
+        # Set / select (study, assay & ) landing zone
         self.lz_uuid, self.lz_irods_path = self._get_lz_info()
+        # Init itransfer class, check that irods_environment.json exists
+        self.itransfer = iRODSTransfer(
+            None, ask=not self.sodar_api.yes, sodar_profile=self.args.config_profile, dry_run=self.args.dry_run
+        )
+        if not self.itransfer.irods_env_path.exists():
+            logger.error(f"Expected json config for irods ({self.itransfer.irods_env_path}) does not exist")
+            sys.exit(1)
 
     def _get_lz_info(self) -> tuple[str, str]:
         """Method evaluates user input to extract or create iRODS path. Use cases:
@@ -105,7 +114,7 @@ class SodarIngestBase:
             ii.UUID is Project UUID: get or create LZs
         3. Data provided by user is neither an iRODS path nor a valid UUID. Report error and throw exception.
 
-        :return: (project_uuid, lz_uuid, lz_irods_path)
+        :return: lz_uuid, lz_irods_path
         """
         #lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
         if self.sodar_api.lz_path is not None:
@@ -149,8 +158,7 @@ class SodarIngestBase:
     def _create_lz(self) -> tuple[str, str]:
         """
         Create a new landing zone (asking for user confirmation unless --yes is given) and check that is usable.
-        :param sodar_api: sodar_api object from cubi-tk.sodar_api
-        :return: (project_uuid, lz_uuid, lz_irods_path)
+        :return: lz_uuid, lz_irods_path
         """
         if self.sodar_api.yes or (
             input("Can the process create a new landing zone? [yN] ").lower().startswith("y")
@@ -168,9 +176,8 @@ class SodarIngestBase:
         """
         Selection of landing zone to use for transfer. If --yes is given will use latest active landing zone
         or create a new one. With latest=False will ask user to select one of the available landing zones.
-        :param sodar_api: sodar_api object from cubi-tk.sodar_api
         :param latest: boolean
-        :return: (project_uuid, lz_uuid, lz_irods_path)
+        :return: lz_uuid, lz_irods_path
         """
         # Get existing LZs from API
         existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
@@ -222,13 +229,13 @@ class SodarIngestBase:
         res = 0
         return res
 
-    def build_jobs(self, hash_ending) -> tuple[TransferJob, ...]:
+    def build_jobs(self, hash_ending) -> tuple[TransferJob]:
         """Build file transfer jobs."""
         raise NotImplementedError("Abstract method called!")
 
     def _no_files_found_warning(self, transfer_jobs):
         if not transfer_jobs:
-            logger.warning("No files for upload were found!")
+            logger.error("No files for upload were found!")
             return 1
         else:
             return 0
@@ -236,10 +243,7 @@ class SodarIngestBase:
     def execute(self) -> int | None:
         """Execute the transfer."""
         # Get iRODS hash scheme, build list of transfer
-        itransfer = iRODSTransfer(
-            None, ask=not self.sodar_api.yes, sodar_profile=self.args.config_profile, dry_run=self.args.dry_run
-        )
-        irods_hash_scheme = itransfer.irods_hash_scheme()
+        irods_hash_scheme = self.itransfer.irods_hash_scheme()
         irods_hash_ending = "."+irods_hash_scheme.lower()
         transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
@@ -248,8 +252,13 @@ class SodarIngestBase:
         # Check for md5 files and add jobs if needed
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
         # Final go from user & transfer
-        itransfer.jobs = transfer_jobs
-        itransfer.put(recursive=True, sync=self.args.sync)
+        self.itransfer.jobs = transfer_jobs
+        self.itransfer.put(recursive=True, sync=self.args.sync)
+
+        # Compute server-side checksums
+        if self.args.remote_checksums:  # pragma: no cover
+            logger.info("Computing server-side checksums.")
+            self.itransfer.chksum()
 
         # Validate and move transferred files
         # Behaviour: If flag is True and lz uuid is not None*,

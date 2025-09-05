@@ -81,9 +81,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     basic_parser = get_basic_parser()
     sodar_parser_project_uuid = get_sodar_parser(with_dest= True)
     sodar_parser_project_uuid_assay_uuid = get_sodar_parser(with_dest= True, with_assay_uuid=True)
-    sodar_parser_destination = get_sodar_parser(with_dest= True, dest_string="destination", dest_help_string="UUID from Landing Zone or Project - where files will be moved to.")
     sodar_ingest_parser = get_sodar_ingest_parser()
-    sodar_parser_lz_uuid= get_sodar_parser(with_dest= True, dest_string="landing_zone_uuid", dest_help_string="UUID of Landing Zone to move.")
+    sodar_ingest_parser_no_dest = get_sodar_ingest_parser(include_dest=False)
+    sodar_parser_lz_uuid = get_sodar_parser(with_dest=True, dest_string="landing_zone_uuid", dest_help_string="UUID of Landing Zone to move.")
 
 
     subparsers = parser.add_subparsers(dest="sodar_cmd")
@@ -123,7 +123,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_ingest_collection(
         subparsers.add_parser(
-            "ingest-collection", parents=[basic_parser, sodar_parser_destination], help="Upload a set of arbitrary files to a single iRODS colelction from SODAR"
+            "ingest-collection", parents=[basic_parser, sodar_ingest_parser_no_dest], help="Upload a set of arbitrary files to a single iRODS colelction from SODAR"
         )
     )
     setup_argparse_check_remote(

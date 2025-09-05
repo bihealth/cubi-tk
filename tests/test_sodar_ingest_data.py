@@ -9,6 +9,7 @@ import os
 import re
 import unittest
 from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 import cattr
 
@@ -28,7 +29,7 @@ from .conftest import my_get_lz_info, my_sodar_api_export
 from .factories import InvestigationFactory
 
 
-def test_run_sodar_ingest_fastq_help(capsys):
+def test_run_sodar_ingest_data_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sodar", "ingest-data", "--help"])
@@ -40,7 +41,7 @@ def test_run_sodar_ingest_fastq_help(capsys):
     assert not res.err
 
 
-def test_run_sodar_ingest_fastq_nothing(capsys):
+def test_run_sodar_ingest_data_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
@@ -53,7 +54,7 @@ def test_run_sodar_ingest_fastq_nothing(capsys):
     assert res.err
 
 
-def test_run_sodar_ingest_fastq_preset_definitions():
+def test_run_sodar_ingest_data_preset_definitions():
     regexes = SRC_REGEX_PRESETS.keys()
     patterns = DEST_PATTERN_PRESETS.keys()
 
@@ -66,7 +67,7 @@ def test_run_sodar_ingest_fastq_preset_definitions():
         assert DEST_PATTERN_PRESETS[preset]
 
 
-def test_run_sodar_ingest_fastq_default_preset_regex():
+def test_run_sodar_ingest_data_default_preset_regex():
     ## Test default regex
     # Collection of example filenames and the expected {sample} value the regex should capture
     test_filenames = {
@@ -80,7 +81,7 @@ def test_run_sodar_ingest_fastq_default_preset_regex():
         assert res.groupdict()["sample"] == expected_sample
 
 
-def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
+def test_run_sodar_ingest_data_digestiflow_preset_regex():
     ## Test default regex
     # Collection of example filenames and the expected {sample} value the regex should capture
     pattern = "240101_XY01234_0000_B{flowcell}/A0000_{sample}/{flowcell}/{lane}/A0000_{sample}_S1_{lane}_R1_001.fastq.gz"
@@ -101,7 +102,7 @@ def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
         assert res.groupdict()["flowcell"] == expected[1]
 
 
-def test_run_sodar_ingest_fastq_ont_preset_regex():
+def test_run_sodar_ingest_data_ont_preset_regex():
     test_filenames = {
         "fake_base_path/20240101_A0000_sample1/20240101_0000_A1_AB12345_000xyz/bam_fail/"
         "AB12345_000xyz_pass_1c1234_0.bam": (
@@ -129,7 +130,7 @@ def test_run_sodar_ingest_fastq_ont_preset_regex():
 
 
 @patch("cubi_tk.sodar.ingest_data.SodarIngestData._get_lz_info", my_get_lz_info)
-def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
+def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock):
     # Patched sodar API call
     requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
 
@@ -193,7 +194,7 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
     assert expected == ingestfastq.get_match_to_collection_mapping("Folder name")
 
 
-def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
+def test_run_sodar_ingest_data_smoke_test(mocker, requests_mock, fs):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -249,6 +250,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
                     path_remote=f"/irods/dest/{member}-N1-DNA1-WES1/raw_data/{date}/{member}-N1-DNA1-WES1.fq.gz{ext}",
                 )
             )
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -335,7 +337,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     assert ingestdata.remote_dir_pattern == remote_pattern
 
 
-def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs):
+def test_run_sodar_ingest_data_smoke_test_ont_preset(mocker, requests_mock, fs):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -359,6 +361,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
 
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
+
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
     # break biomedsheets.

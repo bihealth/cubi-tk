@@ -1,9 +1,10 @@
 import argparse
 import datetime
 from unittest.mock import patch
+from pathlib import Path
 
 from cubi_tk.common import execute_checksum_files_fix
-from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_parser, get_snappy_cmd_basic_parser
+from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_ingest_parser, get_snappy_cmd_basic_parser
 from cubi_tk.snappy.itransfer_common import SnappyItransferCommandBase
 from cubi_tk.irods_common import TransferJob
 
@@ -17,6 +18,7 @@ def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock
     mock_lz_info.return_value = "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
     mock_glob_pattern.return_value = "basedir", "**/*.txt"
     mock_get_samples.return_value = ["dummy_name"]
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Setup some fake files & expected output
     expected = []
@@ -36,7 +38,8 @@ def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock
     parser = argparse.ArgumentParser(parents=[
         get_snappy_cmd_basic_parser(),
         get_snappy_itransfer_parser(),
-        get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
+        get_sodar_ingest_parser()
+    ])
     args = parser.parse_args(["--sodar-server-url","https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
@@ -50,11 +53,13 @@ def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock
 @patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase._get_lz_info", my_get_lz_info)
 def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mock_value, fs):
     mock_check_call.return_value = "dummy-md5-sum dummy/file/name"
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     parser = argparse.ArgumentParser(parents=[
         get_snappy_cmd_basic_parser(),
         get_snappy_itransfer_parser(),
-        get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
+        get_sodar_ingest_parser()
+    ])
     args = parser.parse_args(["--sodar-server-url", "https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)

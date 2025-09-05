@@ -8,6 +8,7 @@ import os
 import re
 import textwrap
 from unittest.mock import ANY, MagicMock, patch
+from pathlib import Path
 
 from pyfakefs import fake_filesystem
 import pytest
@@ -126,6 +127,7 @@ def test_run_snappy_itransfer_sv_calling_no_sv_step(fs):
         contents=no_sv_config,
         create_missing_dirs=True,
     )
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
@@ -159,6 +161,7 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
         contents=no_sv_config,
         create_missing_dirs=True,
     )
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
@@ -245,7 +248,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mock_filechec
         for f in fake_file_paths
     ]
     expected_manta = sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
-    # expected_gcnv = sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
+    expected_gcnv = sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -261,10 +264,8 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mock_filechec
     args = parser.parse_args(argv)
     res = main(argv)
     assert not res
-    assert mock_transfer.call_count == 2
-    # No easy way to check two calls
-    # mock_filecheck.assert_called_with(expected_gcnv)
-    mock_filecheck.assert_called_with(expected_manta)
+    mock_filecheck.assert_any_call(expected_gcnv)
+    mock_filecheck.assert_any_call(expected_manta)
     assert mock_transfer_obj.put.call_count == 2
     mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
 

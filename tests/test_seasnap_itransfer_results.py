@@ -38,19 +38,20 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert not res.out
     assert res.err
 
+
+@patch("cubi_tk.common.check_call")
 @patch('cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._no_files_found_warning')
 @patch("cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._get_lz_info", my_get_lz_info)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 @patch("cubi_tk.common.Value", MagicMock())
-def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck, mocker, fs):
+def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck, mock_check_call, fs):
     # Setup transfer mock, for assertion
     mock_transfer_obj = my_iRODS_transfer()
     mock_transfer.return_value = mock_transfer_obj
     # Set up mock for _no_files_found_warning, allows asserting it was called with properly built transfer_job list
     mock_filecheck.return_value = 0
     # Mock check_call for md5sum creation, allows assertion of call count
-    mock_check_call = MagicMock(return_value=0)
-    mocker.patch("cubi_tk.common.check_call", mock_check_call)
+    mock_check_call.return_value = 0
 
     # --- setup arguments
     dest_path = "/irods/dest"
@@ -68,8 +69,8 @@ def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck,
         "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
-        sodar_uuid,
         blueprint_path,
+        sodar_uuid,
     ]
 
     # --- add test files
