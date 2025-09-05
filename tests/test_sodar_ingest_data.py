@@ -130,9 +130,11 @@ def test_run_sodar_ingest_data_ont_preset_regex():
 
 
 @patch("cubi_tk.sodar.ingest_data.SodarIngestData._get_lz_info", my_get_lz_info)
-def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock):
+def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock, fs):
     # Patched sodar API call
     requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
+
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Instantiate SodarIngestData (seems to require args?)
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
