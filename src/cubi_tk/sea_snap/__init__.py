@@ -38,7 +38,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Main entry point for isa-tpl command."""
     basic_parser = get_basic_parser()
     sodar_parser = get_sodar_parser()
-    sodar_ingest_parser = get_sodar_ingest_parser()
+    sodar_ingest_parser_no_dest = get_sodar_ingest_parser(include_dest=False)
     subparsers = parser.add_subparsers(dest="sea_snap_cmd")
 
     setup_argparse_itransfer_raw_data(
@@ -47,7 +47,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     setup_argparse_itransfer_mapping_results(
         subparsers.add_parser(
-            "itransfer-results", parents=[basic_parser, sodar_ingest_parser], help="Transfer mapping results into iRODS landing zone"
+            "itransfer-results", parents=[basic_parser, sodar_ingest_parser_no_dest], help="Transfer mapping results into iRODS landing zone"
         )
     )
     setup_argparse_working_dir(

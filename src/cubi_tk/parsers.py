@@ -62,12 +62,14 @@ def get_sodar_parser(
         )
     return sodar_config_parser
 
-def get_sodar_ingest_parser():
+# Defining destionation via parent-parses locks it as the first positional arguemtn, which is not backwards compatible
+# with all previous commands
+def get_sodar_ingest_parser(include_dest=True):
     sodar_ingest_parser = get_sodar_parser(
-        with_dest=True,
+        with_dest=include_dest,
         with_assay_uuid=True,
         dest_string="destination",
-        dest_help_string="Sodar porject UUID, landing zone irods path or UUID to upload to."
+        dest_help_string="Sodar project UUID, landing-zone (irods) path or UUID to upload to."
     )
     ingest_group = sodar_ingest_parser.add_argument_group("Sodar upload options")
     ingest_group.add_argument(
@@ -80,6 +82,13 @@ def get_sodar_ingest_parser():
         "--sync",
         action="store_true",
         help="Skip upload of files already present in remote collection.",
+    )
+    ingest_group.add_argument(
+        "-K",
+        "--remote-checksums",
+        default=False,
+        action="store_true",
+        help="Trigger checksum computation on the iRODS side.",
     )
     ingest_group.add_argument(
         "--yes",

@@ -29,6 +29,9 @@ class SeasnapItransferMappingResultsCommand(SodarIngestBase):
             "files with iRODS. Blocks of commands separated by an empty line will be "
             "executed together in one thread.",
         )
+        parser.add_argument(
+            "destination", help="Sodar project UUID, landing-zone (irods) path or UUID to upload to."
+        )
 
     def build_jobs(self, hash_ending) -> list[TransferJob]:
         """Build file transfer jobs."""
