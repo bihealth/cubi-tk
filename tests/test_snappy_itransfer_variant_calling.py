@@ -136,7 +136,7 @@ def test_run_snappy_itransfer_variant_calling_smoke_test(
     assert not res
 
     mock_filecheck.assert_called_with(expected_tfj)
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
+    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite=args.overwrite)
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1
     mock_check_call.assert_called_once_with(

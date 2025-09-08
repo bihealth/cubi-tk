@@ -77,11 +77,13 @@ def get_sodar_ingest_parser(include_dest=True):
         action="store_true",
         help="Perform a dry-run, i.e. no actual upload.",
     )
+    #TODO: keep support for --sync flag ?
     ingest_group.add_argument(
-        "-s",
-        "--sync",
-        action="store_true",
-        help="Skip upload of files already present in remote collection.",
+        "--overwrite",
+        choices=['sync', 'always', 'never', 'ask'],
+        default="sync",
+        help="Determine when to overwrite exising remote files. Default (sync) is to only do so when file sizes "
+             "don't match. Alternatively, overwrite always, never or ask for individual files.",
     )
     ingest_group.add_argument(
         "-K",

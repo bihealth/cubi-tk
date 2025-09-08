@@ -80,32 +80,53 @@ def test_irods_transfer_init(jobs):
 
 @patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
 @patch("cubi_tk.irods_common.iRODSTransfer._create_collections")
-def test_irods_transfer_put(mockrecursive, mocksession, jobs):
+def test_irods_transfer_put(mock_createcolls, mocksession, jobs):
     mockput = MagicMock()
-    mockexists = MagicMock(return_value=True)
+    mockexists = MagicMock(return_value=False)
     mockobj = MagicMock()
     mockobj.put = mockput
     mockobj.exists = mockexists
+    mockobj.get.return_value = MagicMock(size=123)
 
     # fit for context management
     mocksession.return_value.__enter__.return_value.data_objects = mockobj
     itransfer = iRODSTransfer(jobs)
 
-    # put
+    # expected calls
+    calls_no_ov = [call(j.path_local, j.path_remote) for j in jobs]
+    calls_w_ov = [call(j.path_local, j.path_remote, forceFlag=None) for j in jobs]
+    calls_sync = [calls_w_ov[1]]
+
+    # put, no options, no remote files
     itransfer.put()
-    calls = [call(j.path_local, j.path_remote, forceFlag=None) for j in jobs]
-    mockput.assert_has_calls(calls)
+    mockput.assert_has_calls(calls_no_ov)
 
     # recursive
     itransfer.put(recursive=True)
     calls = [call(j) for j in jobs]
-    mockrecursive.assert_has_calls(calls)
+    mock_createcolls.assert_has_calls(calls)
 
-    # sync
+    # overwrite behaviour with existing files
+    mockexists.return_value = True
+    # overwrite: sync (w/ exiting files)
     mockput.reset_mock()
-    itransfer.put(sync=True)
+    itransfer.put(overwrite='sync')
+    mockput.assert_has_calls(calls_sync)
+    # overwrite: always
+    mockput.reset_mock()
+    itransfer.put(overwrite='always')
+    mockput.assert_has_calls(calls_w_ov)
+    # overwrite: never
+    mockput.reset_mock()
+    itransfer.put(overwrite='never')
     mockput.assert_not_called()
-    mockexists.assert_called()
+    # overwrite: ask
+    mockput.reset_mock()
+    itransfer.ask = True
+    with patch("builtins.input", side_effect=["y", "y", "n"]):
+        itransfer.put(overwrite='ask')
+        mockput.assert_has_calls([calls_w_ov[0]])
+
 
 
 @patch("cubi_tk.irods_common.iRODSTransfer._init_irods")

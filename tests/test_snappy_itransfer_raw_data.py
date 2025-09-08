@@ -124,4 +124,4 @@ def test_run_snappy_itransfer_raw_data_smoke_test(
     res = main(argv)
     assert not res
     mock_filecheck.assert_called_with(expected_tfj)
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
+    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite=args.overwrite)

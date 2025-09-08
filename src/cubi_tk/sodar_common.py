@@ -253,7 +253,7 @@ class SodarIngestBase:
         transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
         # Final go from user & transfer
         self.itransfer.jobs = transfer_jobs
-        self.itransfer.put(recursive=True, sync=self.args.sync)
+        self.itransfer.put(recursive=True, overwrite=self.args.overwrite)
 
         # Compute server-side checksums
         if self.args.remote_checksums:  # pragma: no cover

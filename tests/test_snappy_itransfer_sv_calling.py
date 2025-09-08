@@ -267,7 +267,7 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mock_filechec
     mock_filecheck.assert_any_call(expected_gcnv)
     mock_filecheck.assert_any_call(expected_manta)
     assert mock_transfer_obj.put.call_count == 2
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
+    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite=args.overwrite)
 
     assert fs.exists(fake_file_paths[3])
     assert mock_check_call.call_count == 1

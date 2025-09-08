@@ -133,7 +133,7 @@ def test_run_snappy_itransfer_ngs_mapping_smoke_test(
 
     # Expected jobs (itransfer_common will always add the md5 jobs as well)
     mock_filecheck.assert_called_with(expected_tfj)
-    mock_transfer_obj.put.assert_called_with(recursive=True, sync=args.sync)
+    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite=args.overwrite)
 
     # Check that the missing md5 file was created
     assert fs.exists(fake_file_paths[3])
