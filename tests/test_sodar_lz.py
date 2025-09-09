@@ -29,7 +29,7 @@ def test_validate(mockapi_post, mockapi_get, caplog):
     })
     argv = [
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "token",
         "466ab946-ce6a-4c78-9981-19b79e7bbe86",
@@ -43,7 +43,7 @@ def test_validate(mockapi_post, mockapi_get, caplog):
     args = parser.parse_args(argv)
     ValidateLandingZoneCommand(args).execute()
     mockapi_post.assert_called_with(
-        'https://sodar.bihealth.org/landingzones/api/submit/validate/466ab946-ce6a-4c78-9981-19b79e7bbe86', headers={'Authorization': 'token token', 'Accept': 'application/vnd.bihealth.sodar.landingzones+json; version=1.0'}, files=None, data=None)
+        'https://sodar-staging.bihealth.org/landingzones/api/submit/validate/466ab946-ce6a-4c78-9981-19b79e7bbe86', headers={'Authorization': 'token token', 'Accept': 'application/vnd.bihealth.sodar.landingzones+json; version=1.0'}, files=None, data=None)
 
     # TODO: rewrite formattest and caplog check
     # assert '"sodar_uuid": "466ab946-ce6a-4c78-9981-19b79e7bbe86"' in caplog.messages

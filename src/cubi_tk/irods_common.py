@@ -4,8 +4,7 @@ import json
 import os.path
 from pathlib import Path
 import re
-import sys
-from typing import Iterable, Union
+from typing import Iterable, Literal, Union
 import warnings
 
 import attrs
@@ -20,6 +19,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from irods.client_init import write_pam_irodsA_file
+from cubi_tk.exceptions import UserCanceledException
 
 
 #: Default hash scheme. Although iRODS provides alternatives, the whole of `snappy` pipeline uses MD5.
@@ -156,8 +156,9 @@ class iRODSTransfer(iRODSCommon):
     :type jobs: Union[list,tuple,dict,set]
     """
 
-    def __init__(self, jobs: Iterable[TransferJob]|None, **kwargs):
+    def __init__(self, jobs: Iterable[TransferJob]|None, dry_run: bool = False, **kwargs):
         super().__init__(**kwargs)
+        self.dry_run = dry_run
         self.__jobs = jobs
         if jobs is not None:
             self.__total_bytes = sum([job.bytes for job in self.__jobs])
@@ -189,7 +190,22 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, sync: bool = False):
+    def put(self, recursive: bool = False, no_list: bool = False, overwrite: Literal['sync', 'never', 'always', 'ask'] = 'sync'): #noqa: C901
+
+        # Log all actions before doing them
+        if self.dry_run or not no_list:
+            logger.info("The following actions would be performed:")
+            for _, job in enumerate(self.__jobs):
+                logger.info(f" - Upload file {job.path_local} to {job.path_remote}")
+        if self.dry_run:
+            return None
+        if self.ask and not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
+            logger.info("Aborting at your request.")
+            raise UserCanceledException
+
+        if not self.ask and overwrite == 'ask':
+            logger.warning("Both `overwrite: 'ask'` and `ask: False` given. Falling back to `overwrite: 'sync'`")
+
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -201,8 +217,8 @@ class iRODSTransfer(iRODSCommon):
             ) as t,
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
-            allow_overwrite = False
-            kw_options = {}
+            kw_incl_overwrite = {FORCE_FLAG_KW: None}
+            kw_excl_overwrite = {}
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
@@ -212,32 +228,42 @@ class iRODSTransfer(iRODSCommon):
 
                         if recursive:
                             self._create_collections(job)
-                        if session.data_objects.exists(job.path_remote):
-                            if sync:
-                                t.update(job.bytes)
-                                continue
-                            #only show warning/ ask once
-                            elif not allow_overwrite:
-                                #set overwrite options
-                                allow_overwrite = True
-                                kw_options = {FORCE_FLAG_KW: None}
-                                print("\n")
-                                msg = "The file is already present, this and all following present files in irodscollection will get overwritten."
-                                #show warning
-                                if not self.ask:
-                                    logger.warning(msg)
-                                #ask user
-                                else:
-                                    logger.info(msg)
-                                    if not input("Is this OK? [y/N] ").lower().startswith("y"):  # pragma: no cover
-                                        logger.info("Aborting at your request.")
-                                        sys.exit(0)
+
+                        remote_exists = session.data_objects.exists(job.path_remote)
+                        logger.debug(f'Remote file {job.path_remote} exists: {remote_exists}')
+                        # never / file not present yet
+                        if overwrite == 'never' or not remote_exists:
+                            kw_options = kw_excl_overwrite
+                        elif overwrite == 'always':
+                            kw_options = kw_incl_overwrite
+                        #ask: user decides for every file, with --yes default back to sync
+                        elif self.ask and overwrite == 'ask':
+                            print("\n")
+                            if input("This file is already present, should it be overwritten? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                                kw_options = kw_incl_overwrite
+                                logger.info(f"Overwriting: {job.path_local}")
+                            else:
+                                kw_options = kw_excl_overwrite
+                                logger.info(f"NOT overwriting: {job.path_local}")
+                        # sync (or --yes and 'ask'): Check if file size is identical, if yes skip upload
+                        else:
+                            obj = session.data_objects.get(job.path_remote)
+                            if obj.size != job.bytes:
+                                kw_options = kw_incl_overwrite
+                            else:
+                                kw_options = kw_excl_overwrite
+
+                        # kw_options will be {} if no overwrite should be done
+                        if remote_exists and not kw_options:
+                            t.update(job.bytes)
+                            continue
                         session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
                     logger.error(self.get_irods_error(e))
             t.clear()
+            logger.info("File transfer complete.")
 
     def chksum(self):
         """Compute remote checksums for all jobs."""

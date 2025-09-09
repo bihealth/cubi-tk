@@ -1,19 +1,24 @@
 import argparse
 import datetime
 from unittest.mock import patch
+from pathlib import Path
 
 from cubi_tk.common import execute_checksum_files_fix
-from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_parser
+from cubi_tk.parsers import get_snappy_itransfer_parser, get_sodar_ingest_parser, get_snappy_cmd_basic_parser
 from cubi_tk.snappy.itransfer_common import SnappyItransferCommandBase
 from cubi_tk.irods_common import TransferJob
-from cubi_tk.sodar_api import SodarApi
+
+from .conftest import my_get_lz_info
 
 
 @patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.build_base_dir_glob_pattern")
-@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info")
-def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, fs):
-    mock_sodar_info.return_value = "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase._get_lz_info")
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sample_names")
+def test_snappy_itransfer_common_build_jobs(mock_get_samples, mock_lz_info, mock_glob_pattern, fs):
+    mock_lz_info.return_value = "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
     mock_glob_pattern.return_value = "basedir", "**/*.txt"
+    mock_get_samples.return_value = ["dummy_name"]
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Setup some fake files & expected output
     expected = []
@@ -28,29 +33,34 @@ def test_snappy_itransfer_common_build_jobs(mock_sodar_info, mock_glob_pattern, 
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = tuple(sorted(expected, key=lambda x: x.path_local))
+    expected = sorted(expected, key=lambda x: x.path_local)
 
     parser = argparse.ArgumentParser(parents=[
+        get_snappy_cmd_basic_parser(),
         get_snappy_itransfer_parser(),
-        get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
-    args = parser.parse_args(["--sodar-api-token", "XXXX" ,"466ab946-ce6a-4c78-9981-19b79e7bbe86"])
-    sodar_api = SodarApi(args, set_default=True)
+        get_sodar_ingest_parser()
+    ])
+    args = parser.parse_args(["--sodar-server-url","https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
 
-    assert ("466ab946-ce6a-4c78-9981-19b79e7bbe86", expected) == SIC.build_jobs(["dummy_name"], sodar_api, ".md5")
+    assert expected == SIC.build_jobs(".md5")
 
 
 # Need to patch multiprocessing & subprocess functions
 @patch("cubi_tk.common.Value")
 @patch("cubi_tk.common.check_call")
-def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_value, fs):
+@patch("cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase._get_lz_info", my_get_lz_info)
+def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mock_value, fs):
     mock_check_call.return_value = "dummy-md5-sum dummy/file/name"
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     parser = argparse.ArgumentParser(parents=[
+        get_snappy_cmd_basic_parser(),
         get_snappy_itransfer_parser(),
-        get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project")])
-    args = parser.parse_args(["466ab946-ce6a-4c78-9981-19b79e7bbe86"])
+        get_sodar_ingest_parser()
+    ])
+    args = parser.parse_args(["--sodar-server-url", "https://sodar-staging.bihealth.org/", "--sodar-api-token", "XXXX", "466ab946-ce6a-4c78-9981-19b79e7bbe86"])
 
     SIC = SnappyItransferCommandBase(args)
     SIC.step_name = "dummy_step"
@@ -68,7 +78,7 @@ def test_snappy_itransfer_common__execute_md5_files_fix(mock_check_call, mack_va
                     path_remote=f"/irods/dest/dummy_name/dummy_step/{today}/subfolder/file{i}.txt{f_end}",
                 )
             )
-    expected = tuple(sorted(expected, key=lambda x: x.path_local))
+    expected = sorted(expected, key=lambda x: x.path_local)
 
     execute_checksum_files_fix(expected, "MD5", parallel_jobs=0)
     assert mock_check_call.call_count == 2

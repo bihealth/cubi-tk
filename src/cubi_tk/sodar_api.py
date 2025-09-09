@@ -1,6 +1,7 @@
 import argparse
 from functools import reduce
 import sys
+import time
 from typing import List, Literal
 import urllib.parse as urlparse
 from uuid import UUID
@@ -149,13 +150,14 @@ class SodarApi:
         logger.debug("Returning all samplesheet with single assay and study : {}", small_samplesheet)
         return small_samplesheet
 
-    def get_samplesheet_investigation_retrieve(self) -> api_models.Investigation | None:
+    def get_samplesheet_investigation_retrieve(self, log_error = True) -> api_models.Investigation | None:
         logger.debug("Get investigation information.")
         try:
             investigationJson = self._api_call("samplesheets", "investigation/retrieve")
             investigation = cattr.structure(investigationJson, api_models.Investigation)
         except SodarApiException as e:
-            logger.error(f"Failed to retrieve investigation information:\n{e}")
+            if log_error:
+                logger.error(f"Failed to retrieve investigation information:\n{e}")
             return None
         logger.debug(f"Got investigation: {investigation}")
         return investigation
@@ -234,17 +236,19 @@ class SodarApi:
 
 
     # landingzone Api calls
-    def get_landingzone_retrieve(self, lz_uuid: UUID = None) -> api_models.LandingZone | None:
+    def get_landingzone_retrieve(self, lz_uuid: UUID = None, log_error = True) -> api_models.LandingZone | None:
         logger.debug("Retrieving Landing Zone ...")
         try:
             landingzone = self._api_call("landingzones", "retrieve", dest_uuid=lz_uuid) #if None: assume projectuuid is lz_uuid
             landingzone = cattr.structure(landingzone, api_models.LandingZone)
             self.project_uuid = landingzone.project
+            self.lz_path = landingzone.irods_path
             if not self.assay_uuid:
                 self.assay_uuid = landingzone.assay
             return landingzone
         except SodarApiException as e:
-            logger.error(f"Failed to retrieve Landingzone:\n{e}")
+            if log_error:
+                logger.error(f"Failed to retrieve Landingzone:\n{e}")
             return None
 
     # maybe use status_locked of lz and only retrun not locked if wanted (instead of filter_for_state filter_for_not_locked:bool)
@@ -269,10 +273,9 @@ class SodarApi:
             landingzones = list(filter(lambda lz: lz.irods_path == self.lz_path, landingzones))
         # Get the lzs with allowed state
         landingzones = list(filter(lambda lz: lz.status in filter_for_state, landingzones))
-
         return landingzones
 
-    def post_landingzone_create(self, create_colls: bool = True, restrict_colls: bool = True) -> api_models.LandingZone | None:
+    def post_landingzone_create(self, wait_until_ready = False, create_colls: bool = True, restrict_colls: bool = True) -> api_models.LandingZone | None:
         logger.debug("Creating new Landing Zone...")
         if not self.assay_uuid:
             self.get_assay_from_uuid()
@@ -286,21 +289,34 @@ class SodarApi:
                 for warning in ret_val["sodar_warnings"]:
                     logger.warning(f"SODAR warning: {warning}")
             else:
-                logger.info("Landingzone created successfully.")
-            return cattr.structure(ret_val, api_models.LandingZone)
+                logger.info("Landingzone creation triggered successfully.")
+            lz = cattr.structure(ret_val, api_models.LandingZone)
+            self.lz_path = lz.irods_path
+            logged = False
+            while wait_until_ready:
+                # check that async LZ creation task is done
+                if not logged:
+                    logger.info("Waiting for end of landingzone creation.")
+                    logged = True
+                lzs = self.get_landingzone_list(filter_for_state=["ACTIVE"])
+                if len(lzs) == 1:
+                    wait_until_ready = False
+                logger.debug("Waiting 5 seconds for LZ {} to become usable...", lz.sodar_uuid)
+                time.sleep(5)  # wait and ask API again
+            return lz
+
         except SodarApiException as e:
             if e.status_code == 503:
                 logger.error("Investigation for the project is not found or project iRODS collections have not been created")
             logger.error(f"Failed to create Landingzone:\n{e}")
             return None
 
-
-    def post_landingzone_submit_move(self, lz_uuid : UUID)-> UUID | None:
+    def post_landingzone_submit_move(self, lz_uuid : UUID) -> UUID | None:
         logger.debug("Moving landing zone with the given UUID")
         try:
             ret_val = self._api_call("landingzones", "submit/move", method="post", dest_uuid=lz_uuid)
             new_uuid = ret_val["sodar_uuid"]
-            logger.info("Landingzone with UUID {} moved successfully.", new_uuid)
+            logger.info("Landingzone with UUID {} successfully submitted for move.", new_uuid)
             return new_uuid
         except SodarApiException as e:
             if e.status_code == 503:
@@ -308,12 +324,12 @@ class SodarApi:
             logger.error(f"Failed to move Landingzone:\n{e}")
             return None
 
-    def post_landingzone_submit_validate(self, lz_uuid: UUID)-> UUID | None:
+    def post_landingzone_submit_validate(self, lz_uuid: UUID) -> UUID | None:
         logger.debug("Validating landing zone with the given UUID")
         try:
             ret_val = self._api_call("landingzones", "submit/validate", method="post", dest_uuid=lz_uuid)
             new_uuid = ret_val["sodar_uuid"]
-            logger.info("Landingzone with UUID {} valiated successfully.", new_uuid)
+            logger.info("Landingzone with UUID {} successfully submitted for validation.", new_uuid)
             return new_uuid
         except SodarApiException as e:
             if e.status_code == 503:

@@ -16,7 +16,7 @@ from tests.factories import InvestigationFactory
 def sodar_api_args():
     return {
         "config": None,
-        "sodar_server_url": "https://sodar.bihealth.org/",
+        "sodar_server_url": "https://sodar-staging.bihealth.org/",
         "sodar_api_token": "token123",
         "project_uuid": "123e4567-e89b-12d3-a456-426655440000",
     }
@@ -38,7 +38,7 @@ def test_sodar_api_check_args(sodar_api_args, mock_toml_config, fs):
     args["sodar_server_url"] = ""
     with pytest.raises(SystemExit):
         SodarApi(Namespace(**args))
-    args["sodar_server_url"] = "https://sodar.bihealth.org/"
+    args["sodar_server_url"] = "https://sodar-staging.bihealth.org/"
     args["sodar_api_token"] = ""
     with pytest.raises(SystemExit):
         SodarApi(Namespace(**args))
@@ -85,7 +85,7 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
         "landingzones", "fake/upload", method="post", data={"test": "test2"}
     )
     mock_post.assert_called_once_with(
-        "https://sodar.bihealth.org/landingzones/api/fake/upload/123e4567-e89b-12d3-a456-426655440000",
+        "https://sodar-staging.bihealth.org/landingzones/api/fake/upload/123e4567-e89b-12d3-a456-426655440000",
         headers={"Authorization": "token token123", 'Accept': 'application/vnd.bihealth.sodar.landingzones+json; version=1.0'},
         files=None,
         data={"test": "test2"},
@@ -98,7 +98,7 @@ def test_sodar_api_get_samplesheet_export(requests_mock, sodar_api_instance):
         "assays": {"a_name_0": {"tsv": ""}},
         "date_modified": "2021-09-01T12:00:00Z",
         }
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
     expected = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
@@ -111,13 +111,13 @@ def test_sodar_api_get_samplesheet_export(requests_mock, sodar_api_instance):
         "assays": {"a_name_0": {"tsv": ""}, "a_name_1": {"tsv": ""}},
         "date_modified": "2021-09-01T12:00:00Z",
         }
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code= 200)
     expected = {
         "investigation": {"path": "i_Investigation.txt", "tsv": ""},
         "studies": {"s_Study_0.txt": {"tsv": ""}},
         "assays": {"a_name_0": {"tsv": ""}},
     }
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000", json= cattr.unstructure(InvestigationFactory()), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000", json= cattr.unstructure(InvestigationFactory()), status_code= 200)
     assert expected == sodar_api_instance.get_samplesheet_export()
 
 def test_sodar_api_get_samplesheet_file_list(requests_mock, sodar_api_instance):
