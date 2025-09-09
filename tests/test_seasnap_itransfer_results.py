@@ -3,14 +3,16 @@
 We only run some smoke tests here.
 """
 
+import datetime
 import os
-from unittest import mock
+from unittest.mock import ANY, patch, MagicMock
 
-from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
+from cubi_tk.irods_common import TransferJob
 
+from .conftest import my_get_lz_info, my_iRODS_transfer
 
 def test_run_seasnap_itransfer_results_help(capsys):
     parser, _subparsers = setup_argparse()
@@ -37,28 +39,39 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
     assert res.err
 
 
-def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
+@patch("cubi_tk.common.check_call")
+@patch('cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._no_files_found_warning')
+@patch("cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._get_lz_info", my_get_lz_info)
+@patch("cubi_tk.sodar_common.iRODSTransfer")
+@patch("cubi_tk.common.Value", MagicMock())
+def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck, mock_check_call, fs):
+    # Setup transfer mock, for assertion
+    mock_transfer_obj = my_iRODS_transfer()
+    mock_transfer.return_value = mock_transfer_obj
+    # Set up mock for _no_files_found_warning, allows asserting it was called with properly built transfer_job list
+    mock_filecheck.return_value = 0
+    # Mock check_call for md5sum creation, allows assertion of call count
+    mock_check_call.return_value = 0
+
     # --- setup arguments
     dest_path = "/irods/dest"
+    sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     fake_base_path = "/base/path"
     blueprint_path = os.path.join(os.path.dirname(__file__), "data", "test_blueprint.txt")
 
     argv = [
-        "--verbose",
         "sea-snap",
         "itransfer-results",
+        "--verbose",
+        "--parallel-checksum-jobs",
+        "0",
+        "--sodar-server-url",
+        "https://sodar-staging.bihealth.org/",
+        "--sodar-api-token",
+        "XXXX",
         blueprint_path,
-        dest_path,
-        "--num-parallel-transfers",
-        0
+        sodar_uuid,
     ]
-
-    parser, subparsers = setup_argparse()
-
-    # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
-    # break biomedsheets.
-    fake_os = fake_filesystem.FakeOsModule(fs)
-    fake_pl = fake_pathlib.FakePathlibModule(fs)
 
     # --- add test files
     fake_file_paths = []
@@ -75,53 +88,44 @@ def test_run_seasnap_itransfer_results_smoke_test(mocker, fs):
             )
             fs.create_file(fake_file_paths[-1])
 
-    fs.add_real_file(blueprint_path)
-    fake_pl.Path(blueprint_path).touch()
+    # Add blueprint file, and update the (copied) mtime, so it is always "newer" than the fake test files
+    bp_file = fs.add_real_file(blueprint_path)
+    bp_file.st_mtime = datetime.datetime.now().timestamp()
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
 
-    # --- mock modules
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.pathlib", fake_pl)
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.os", fake_os)
-    mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
+    # Create expected transfer jobs
+    expected_tfj = [
+        TransferJob(
+            path_local=f,
+            path_remote=os.path.join(
+                dest_path,
+                # test_blueprint.txt has always the same destination path
+                'fakedest' + ('.md5' if f.endswith('.md5') else ''),
+            ),
 
-    mock_check_output = mock.mock_open()
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.check_output", mock_check_output)
-
-    mock_check_call = mock.mock_open()
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.check_call", mock_check_call)
-
-    fake_open = fake_filesystem.FakeFileOpen(fs)
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.open", fake_open)
-    mocker.patch("cubi_tk.snappy.itransfer_common.open", fake_open)
-
-    # necessary because independent test fail
-    mock_value = mock.MagicMock()
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.Value", mock_value)
-    mocker.patch("cubi_tk.common.Value", mock_value)
-
-    mocker.patch("cubi_tk.sea_snap.itransfer_results.iRODSCommon.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
-
+        )
+        for f in fake_file_paths
+    ]
+    expected_tfj = sorted(expected_tfj, key=lambda x: x.path_local)
 
     # --- run tests
     res = main(argv)
-
-    print(mock_check_output.call_args_list)
-
     assert not res
+
+    # Expected jobs (itransfer_common will always add the md5 jobs as well)
+    mock_filecheck.assert_called_with(expected_tfj)
+    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite='sync')
+
+    # Check that the missing md5 file was created
+    assert fs.exists(fake_file_paths[3])
+    assert mock_check_call.call_count == 1
+    mock_check_call.assert_called_once_with(
+        ["md5sum", "star.sample1-N1-RNA1-RNA-Seq1.log"],
+        cwd=os.path.dirname(fake_file_paths[3]),
+        stdout=ANY,
+    )
 
     assert fs.exists(fake_file_paths[3])
 
-    assert mock_check_call.call_count == 1
-    assert mock_check_call.call_args[0] == (["md5sum", "star.sample1-N1-RNA1-RNA-Seq1.log"],)
-
-    assert mock_check_output.call_count == len(fake_file_paths) * 3
-    remote_path = os.path.join(dest_path, "fakedest")
-
-    for path in fake_file_paths:
-        # expected_mkdir_argv = f"imkdir -p {dest_path}"
-        ext = ".md5" if path.split(".")[-1] == "md5" else ""
-        expected_irsync_argv = f"irsync -a -K {path} {('i:%s' + ext) % remote_path}"
-        # assert mock.call(expected_mkdir_argv.split()) in mock_check_output.call_args_list
-        assert mock.call(expected_irsync_argv.split()) in mock_check_output.call_args_list

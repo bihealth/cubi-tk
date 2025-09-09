@@ -20,7 +20,7 @@ def pull_raw_data():
     """Returns instantiated PullRawDataCommand"""
     args_dict = {
         "verbose": False,
-        "sodar_server_url": "https://sodar.bihealth.org/",
+        "sodar_server_url": "https://sodar-staging.bihealth.org/",
         "sodar_api_token": "__secret__",
         "base_path": ".",
         "dry_run": False,

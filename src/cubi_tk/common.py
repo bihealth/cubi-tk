@@ -81,8 +81,8 @@ def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, ha
             pass  # swallow, pyfakefs and multiprocessing don't lik each other
 
 def execute_checksum_files_fix(
-        transfer_jobs: typing.Tuple[TransferJob, ...], hash_scheme, parallel_jobs: int = 8,
-    ) -> typing.Tuple[TransferJob, ...]:
+        transfer_jobs: [TransferJob], hash_scheme, parallel_jobs: int = 8,
+    ) -> [TransferJob]:
         """Create missing checksum files."""
         ok_jobs = []
         todo_jobs = []

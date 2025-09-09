@@ -8,11 +8,11 @@ import json
 import os
 import re
 import unittest
-from unittest import mock
+from unittest.mock import MagicMock, patch
+from pathlib import Path
 
 import cattr
 
-from cubi_tk.sodar_api import SodarApi
 from pyfakefs import fake_filesystem, fake_pathlib
 import pytest
 
@@ -25,11 +25,11 @@ from cubi_tk.sodar.ingest_data import (
     SodarIngestData,
 )
 
-from .conftest import my_get_sodar_info, my_sodar_api_export
+from .conftest import my_get_lz_info, my_sodar_api_export
 from .factories import InvestigationFactory
 
 
-def test_run_sodar_ingest_fastq_help(capsys):
+def test_run_sodar_ingest_data_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
         parser.parse_args(["sodar", "ingest-data", "--help"])
@@ -41,7 +41,7 @@ def test_run_sodar_ingest_fastq_help(capsys):
     assert not res.err
 
 
-def test_run_sodar_ingest_fastq_nothing(capsys):
+def test_run_sodar_ingest_data_nothing(capsys):
     parser, _subparsers = setup_argparse()
 
     with pytest.raises(SystemExit) as e:
@@ -54,7 +54,7 @@ def test_run_sodar_ingest_fastq_nothing(capsys):
     assert res.err
 
 
-def test_run_sodar_ingest_fastq_preset_definitions():
+def test_run_sodar_ingest_data_preset_definitions():
     regexes = SRC_REGEX_PRESETS.keys()
     patterns = DEST_PATTERN_PRESETS.keys()
 
@@ -67,7 +67,7 @@ def test_run_sodar_ingest_fastq_preset_definitions():
         assert DEST_PATTERN_PRESETS[preset]
 
 
-def test_run_sodar_ingest_fastq_default_preset_regex():
+def test_run_sodar_ingest_data_default_preset_regex():
     ## Test default regex
     # Collection of example filenames and the expected {sample} value the regex should capture
     test_filenames = {
@@ -81,7 +81,7 @@ def test_run_sodar_ingest_fastq_default_preset_regex():
         assert res.groupdict()["sample"] == expected_sample
 
 
-def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
+def test_run_sodar_ingest_data_digestiflow_preset_regex():
     ## Test default regex
     # Collection of example filenames and the expected {sample} value the regex should capture
     pattern = "240101_XY01234_0000_B{flowcell}/A0000_{sample}/{flowcell}/{lane}/A0000_{sample}_S1_{lane}_R1_001.fastq.gz"
@@ -102,7 +102,7 @@ def test_run_sodar_ingest_fastq_digestiflow_preset_regex():
         assert res.groupdict()["flowcell"] == expected[1]
 
 
-def test_run_sodar_ingest_fastq_ont_preset_regex():
+def test_run_sodar_ingest_data_ont_preset_regex():
     test_filenames = {
         "fake_base_path/20240101_A0000_sample1/20240101_0000_A1_AB12345_000xyz/bam_fail/"
         "AB12345_000xyz_pass_1c1234_0.bam": (
@@ -129,9 +129,12 @@ def test_run_sodar_ingest_fastq_ont_preset_regex():
             assert groups["subfolder"] is None
 
 
-def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
+@patch("cubi_tk.sodar.ingest_data.SodarIngestData._get_lz_info", my_get_lz_info)
+def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock, fs):
     # Patched sodar API call
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
+
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Instantiate SodarIngestData (seems to require args?)
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -141,8 +144,10 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "--verbose",
         "sodar",
         "ingest-data",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         "0",
+        "--sodar-server-url",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -161,10 +166,9 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "Folder3": "Sample3-N1-DNA1-WES1",
     }
     args.project_uuid = project_uuid
-    sodar_api = SodarApi(args, set_default=True, with_dest= True)
-    assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
+    assert expected == ingestfastq.get_match_to_collection_mapping("Folder name")
     assert expected == ingestfastq.get_match_to_collection_mapping(
-        sodar_api, "Folder name", "Library Name"
+        "Folder name", "Library Name"
     )
 
     # Test for alternative collection column
@@ -174,25 +178,25 @@ def test_run_sodar_ingest_fastq_get_match_to_collection_mapping(requests_mock):
         "Folder3": "Sample3-N1-DNA1",
     }
     assert expected2 == ingestfastq.get_match_to_collection_mapping(
-        sodar_api, "Folder name", "Extract Name"
+        "Folder name", "Extract Name"
     )
 
     # Test for missing column
     with unittest.TestCase.assertRaises(unittest.TestCase, ParameterException):
-        ingestfastq.get_match_to_collection_mapping(sodar_api, "Typo-Column")
+        ingestfastq.get_match_to_collection_mapping("Typo-Column")
 
     # Test with additional assay
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
     retval = InvestigationFactory()
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86", json= cattr.unstructure(retval), status_code= 200)
+    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86", json= cattr.unstructure(retval), status_code= 200)
     study_key = list(retval.studies.keys())[0]
     assay_uuid = list(retval.studies[study_key].assays.keys())[0]
     ingestfastq.args.assay_uuid = assay_uuid
 
-    assert expected == ingestfastq.get_match_to_collection_mapping(sodar_api, "Folder name")
+    assert expected == ingestfastq.get_match_to_collection_mapping("Folder name")
 
 
-def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
+def test_run_sodar_ingest_data_smoke_test(mocker, requests_mock, fs):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -201,10 +205,10 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "--verbose",
         "sodar",
         "ingest-data",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -248,6 +252,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
                     path_remote=f"/irods/dest/{member}-N1-DNA1-WES1/raw_data/{date}/{member}-N1-DNA1-WES1.fq.gz{ext}",
                 )
             )
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])
@@ -255,14 +260,13 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     # --- mock modules
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
-        my_get_sodar_info,
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
+        my_get_lz_info,
     )
-
-    mock_check_output = mock.MagicMock(return_value=0)
+    mock_check_output = MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
-    mock_check_call = mock.MagicMock(return_value=0)
+    mock_check_call = MagicMock(return_value=0)
     mocker.patch("cubi_tk.common.check_call", mock_check_call)
 
     mocker.patch("cubi_tk.sodar.ingest_data.pathlib", fake_pl)
@@ -273,11 +277,11 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     mocker.patch("cubi_tk.sodar.ingest_data.open", fake_open)
 
     # necessary because independent test fail
-    mock_value = mock.MagicMock()
+    mock_value = MagicMock()
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5"))
 
     # requests mock
     return_value = {
@@ -296,7 +300,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
         "user":  "",
     }
 
-    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    url = os.path.join("https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
     # --- run tests
     res = main(argv)
@@ -317,7 +321,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     ingestdata = SodarIngestData(args)
     ingestdata.check_args(args)
     assert ingestdata.remote_dir_pattern == DEST_PATTERN_PRESETS["fastq"]
-    lz, actual = ingestdata.build_jobs(".md5")
+    actual = ingestdata.build_jobs(".md5")
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote
     )
@@ -335,7 +339,7 @@ def test_run_sodar_ingest_fastq_smoke_test(mocker, requests_mock, fs):
     assert ingestdata.remote_dir_pattern == remote_pattern
 
 
-def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs):
+def test_run_sodar_ingest_data_smoke_test_ont_preset(mocker, requests_mock, fs):
     # --- setup arguments
     irods_path = "/irods/dest"
     landing_zone_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -344,10 +348,10 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "--verbose",
         "sodar",
         "ingest-data",
-        "--num-parallel-transfers",
+        "--parallel-checksum-jobs",
         "0",
         "--sodar-server-url",
-        "https://sodar.bihealth.org/",
+        "https://sodar-staging.bihealth.org/",
         "--sodar-api-token",
         "XXXX",
         "--yes",
@@ -359,6 +363,8 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
 
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
+
+    fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
     # Setup fake file system but only patch selected modules.  We cannot use the Patcher approach here as this would
     # break biomedsheets.
@@ -409,14 +415,15 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     # --- mock modules
     mocker.patch("cubi_tk.snappy.itransfer_common.os", fake_os)
     mocker.patch(
-        "cubi_tk.snappy.itransfer_common.SnappyItransferCommandBase.get_sodar_info",
-        my_get_sodar_info,
+        "cubi_tk.sodar_common.SodarIngestBase._get_lz_info",
+        my_get_lz_info,
     )
 
-    mock_check_output = mock.MagicMock(return_value=0)
+
+    mock_check_output = MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
-    mock_check_call = mock.MagicMock(return_value=0)
+    mock_check_call = MagicMock(return_value=0)
     mocker.patch("cubi_tk.common.check_call", mock_check_call)
 
     mocker.patch("cubi_tk.sodar.ingest_data.pathlib", fake_pl)
@@ -427,11 +434,11 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     mocker.patch("cubi_tk.sodar.ingest_data.open", fake_open)
 
     # necessary because independent test fail
-    mock_value = mock.MagicMock()
+    mock_value = MagicMock()
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.sodar.ingest_data.iRODSTransfer.irods_hash_scheme", mock.MagicMock(return_value="MD5"))
+    mocker.patch("cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5"))
 
 
     # requests mock
@@ -450,7 +457,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
         "title": "",
         "user": "",
     }
-    url = os.path.join("https://sodar.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    url = os.path.join("https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
     # --- run tests
@@ -469,7 +476,7 @@ def test_run_sodar_ingest_fastq_smoke_test_ont_preset(mocker, requests_mock, fs)
     parser, _subparsers = setup_argparse()
     args = parser.parse_args(argv)
     ingestdata = SodarIngestData(args)
-    lz, actual = ingestdata.build_jobs(".md5")
+    actual = ingestdata.build_jobs(".md5")
     assert sorted(actual, key=lambda x: x.path_remote) == sorted(
         fake_dest_paths, key=lambda x: x.path_remote
     )

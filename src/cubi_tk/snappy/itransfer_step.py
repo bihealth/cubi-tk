@@ -14,6 +14,11 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
     command_name = "itransfer-step"
     step_name = None
 
+    def __init__(self, args):
+        if self.step_name is None:
+            self.step_name = args.step
+        super().__init__(args)
+
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -25,7 +30,7 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
                 "Name of the snappy pipeline step (step name must be identical to step directory)."
                 "Steps names are available from the snappy command snappy-start-step --help"
             ),
-            default=None,
+            required=True,
         )
         parser.add_argument(
             "--tool",
@@ -43,10 +48,10 @@ class SnappyItransferStepCommand(SnappyItransferCommandBase):
 
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         prefix = ".".join(self.args.tool)
-        logger.debug("Using prefix {}".format(prefix))
+        logger.debug(f"Using step {self.args.step} and prefix {prefix}")
         return (
             os.path.join(
-                self.args.base_path, self.step_name, "output", prefix + "." + library_name
+                self.args.base_path, self.args.step, "output", prefix + "." + library_name
             ),
             "**",
         )

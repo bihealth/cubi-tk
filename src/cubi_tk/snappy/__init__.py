@@ -39,7 +39,10 @@ More Information
 
 import argparse
 
-from cubi_tk.parsers import get_basic_parser, get_snappy_cmd_basic_parser, get_snappy_itransfer_parser, get_snappy_pull_data_parser, get_sodar_parser
+from cubi_tk.parsers import (
+    get_basic_parser, get_snappy_cmd_basic_parser, get_snappy_itransfer_parser,
+    get_snappy_pull_data_parser, get_sodar_parser, get_sodar_ingest_parser
+)
 
 from ..common import run_nocmd
 from .check_local import setup_argparse as setup_argparse_check_local
@@ -65,7 +68,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="snappy_cmd")
 
     basic_parser = get_basic_parser()
-    sodar_parser_itransfer = get_sodar_parser(with_dest = True, dest_string="destination", dest_help_string="Landing zone path or UUID from Landing Zone or Project", with_assay_uuid=True)
+    sodar_parser_itransfer = get_sodar_ingest_parser()
     sodar_parser_assay_uuid = get_sodar_parser(with_assay_uuid=True)
     snappy_parser = get_snappy_cmd_basic_parser()
     snappy_itransfer_parser = get_snappy_itransfer_parser()
