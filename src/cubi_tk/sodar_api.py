@@ -174,14 +174,13 @@ class SodarApi:
         logger.debug(f"Got samplesheet: {samplesheet}")
         return samplesheet
 
-    def get_samplesheet_file_list(self) -> list[api_models.iRODSDataObject]:
+    def get_samplesheet_file_list(self) -> list[api_models.iRODSDataObject] | None:
         logger.debug("Getting irods file list")
         try:
             json_filelist = self._api_call("samplesheets", "file/list")
         except SodarApiException as e:
             logger.error(f"Failed to retrieve Sodar file list:\n{e}")
             return None
-
         filelist = [cattr.structure(obj, api_models.iRODSDataObject) for obj in json_filelist]
 
         return filelist

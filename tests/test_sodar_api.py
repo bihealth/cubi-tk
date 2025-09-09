@@ -61,7 +61,7 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
     # Test simple request
     out = sodar_api_instance._api_call("samplesheets", "test")
     mock_get.assert_called_with(
-        "https://sodar.bihealth.org/samplesheets/api/test/123e4567-e89b-12d3-a456-426655440000",
+        "https://sodar-staging.bihealth.org/samplesheets/api/test/123e4567-e89b-12d3-a456-426655440000",
         headers={"Authorization": "token token123",  'Accept': 'application/vnd.bihealth.sodar.samplesheets+json; version=1.1'},
     )
     assert out == {"test": "test"}
@@ -70,7 +70,7 @@ def test_sodar_api_api_call(mock_post, mock_get, sodar_api_instance):
     # FIXME: also test proper URL encoding of params?
     out = sodar_api_instance._api_call("samplesheets", "test", params={"test": "test"})
     mock_get.assert_called_with(
-        "https://sodar.bihealth.org/samplesheets/api/test/123e4567-e89b-12d3-a456-426655440000?test=test",
+        "https://sodar-staging.bihealth.org/samplesheets/api/test/123e4567-e89b-12d3-a456-426655440000?test=test",
         headers={"Authorization": "token token123", 'Accept': 'application/vnd.bihealth.sodar.samplesheets+json; version=1.1'},
     )
 
@@ -139,7 +139,10 @@ def test_sodar_api_get_samplesheet_file_list(requests_mock, sodar_api_instance):
             'checksum': '000000'
         }
     ]
-    requests_mock.register_uri("GET", "https://sodar.bihealth.org/samplesheets/api/file/list/123e4567-e89b-12d3-a456-426655440000", json=ret_json, status_code=200)
+    requests_mock.register_uri(
+        "GET", "https://sodar-staging.bihealth.org/samplesheets/api/file/list/123e4567-e89b-12d3-a456-426655440000",
+        json=ret_json, status_code=200
+    )
 
     expected = [
         iRODSDataObject(

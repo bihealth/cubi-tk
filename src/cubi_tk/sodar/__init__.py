@@ -103,7 +103,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     )
     setup_argparse_ingest_data(
         subparsers.add_parser(
-            "ingest-data", parents=[basic_parser, sodar_parser_destination_assay_uuid], help="Upload files to SODAR project"
+            "ingest-data", parents=[basic_parser, sodar_ingest_parser], help="Upload files to SODAR project"
         )
     )
     setup_argparse_ingest_collection(

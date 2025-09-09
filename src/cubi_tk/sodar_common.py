@@ -4,16 +4,13 @@ import sys
 
 from argparse import Namespace
 from collections import defaultdict
-from pathlib import Path
-from typing import Dict, List
 
-from irods.data_object import iRODSDataObject
 from loguru import logger
 
 from cubi_tk.api_models import iRODSDataObject
 from cubi_tk.common import execute_checksum_files_fix
 from cubi_tk.exceptions import CubiTkException, ParameterException, UserCanceledException
-from cubi_tk.irods_common import TransferJob, iRODSTransfer, iRODSCommon, iRODSRetrieveCollection
+from cubi_tk.irods_common import TransferJob, iRODSTransfer, iRODSCommon
 from cubi_tk.sodar_api import SodarApi
 from cubi_tk.parsers import print_args
 

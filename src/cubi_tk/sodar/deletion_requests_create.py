@@ -92,7 +92,7 @@ class SodarDeletionRequestsCommand:
         logger.info("All done.")
         return 0
 
-    def gather_deletion_request_paths(self, irods_files: list[iRODSDataObject], assay_path: str) -> list[str]:
+    def gather_deletion_request_paths(self, irods_files: list[iRODSDataObject] | None, assay_path: str) -> list[str]:
         """Gather all paths for which deletion requests should be created."""
 
         given_path_patterns = [
@@ -100,7 +100,7 @@ class SodarDeletionRequestsCommand:
         ]
         if any('**' in p for p in given_path_patterns):
             logger.warning(
-                "The recusrive '**' wildcard is not supported will behave like a '*' instead (non-recursive)."
+                "The recursive '**' wildcard is not supported will behave like a '*' instead (non-recursive)."
             )
         logger.debug(f'Path patterns: {", ".join(given_path_patterns)}')
 
