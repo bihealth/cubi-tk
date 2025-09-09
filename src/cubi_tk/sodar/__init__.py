@@ -3,20 +3,30 @@
 Sub Commands
 ------------
 
+``add-ped``
+    Download sample sheet, add rows from PED file, and re-upload.
+
+``check-remote``
+    Check if or which local files with checksums are already deposited in iRODs/Sodar
+
+``deletion-requests``
+    Create deletion requests for files in SODAR/iRODs
+
 ``download-sheet``
     Download ISA-tab sheet from SODAR.
 
-``upload-sheet`` (planned)
-    Upload ISA-tab sheet to SODAR.
+``ingest-collection``
+    Upload arbitrary files to a single collection in SODAR
 
-``landing-zone-list``
-    Create a landing zone.
+``ingest-data``
+    Upload files to SODAR and match them to collections
+    (defaults for fastq files).
 
-``landing-zone-details`` (planned)
-    Show details for landing zone.
+``create-landingzone``
+    Create a landing zone for a SODAR Project.
 
-``landing-zone-create``
-    Create a landing zone.
+``list-landingzone``
+    List existing landing zones for a SODAR Project.
 
 ``landing-zone-validate``
     Validate a landing zone.
@@ -24,30 +34,18 @@ Sub Commands
 ``landing-zone-move``
     Move a landing zone.
 
-``landing-zone-delete`` (planned)
-    Delete a landing zone.
-
-``add-ped``
-    Download sample sheet, add rows from PED file, and re-upload.
-
-``update-samplesheet``
-    Directly update ISA sample sheet (without intermediate files), based on ped file &/ command line specified data.
-
 ``pull-data``
     Download data from iRODS.
 
 ``pull-raw-data``
     DEPRECATING! Download raw data from iRODS for samples from the sample sheet.
 
-``ingest-fastq``
-    Upload external files to SODAR
-    (defaults for fastq files).
+``update-samplesheet``
+    Directly update ISA sample sheet (without intermediate files), based on ped file &/ command line specified data.
 
-``ingest``
-    Upload arbitrary files to SODAR
+``upload-sheet``
+    Upload ISA-tab sheet to SODAR.
 
-``check-remote``
-    Check if or which local files with checksums are already deposited in iRODs/Sodar
 
 More Information
 ----------------
@@ -63,6 +61,7 @@ from cubi_tk.parsers import get_basic_parser, get_sodar_parser, get_sodar_ingest
 from ..common import run_nocmd
 from .add_ped import setup_argparse as setup_argparse_add_ped
 from .check_remote import setup_argparse as setup_argparse_check_remote
+from .deletion_requests_create import setup_argparse as setup_argparse_deletion_requests
 from .download_sheet import setup_argparse as setup_argparse_download_sheet
 from .ingest_collection import setup_argparse as setup_argparse_ingest_collection
 from .ingest_data import setup_argparse as setup_argparse_ingest_data
@@ -91,15 +90,29 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_add_ped(
         subparsers.add_parser("add-ped", parents=[basic_parser, sodar_parser_project_uuid], help="Augment sample sheet from PED file")
     )
-    setup_argparse_update_samplesheet(
-        subparsers.add_parser("update-samplesheet", parents=[basic_parser, get_sodar_parser(with_dest=True)], help="Update sample sheet")
+    setup_argparse_check_remote(
+        subparsers.add_parser(
+            "check-remote", parents=[basic_parser, sodar_parser_project_uuid_assay_uuid], help="Compare local files with checksum against SODAR/iRODS"
+        )
     )
-    setup_argparse_download_sheet(subparsers.add_parser("download-sheet", parents=[basic_parser, sodar_parser_project_uuid], help="Download ISA-tab"))
-    setup_argparse_upload_sheet(
-        subparsers.add_parser("upload-sheet", parents=[basic_parser, sodar_parser_project_uuid], help="Upload and replace ISA-tab")
+    setup_argparse_download_sheet(
+        subparsers.add_parser("download-sheet", parents=[basic_parser, sodar_parser_project_uuid], help="Download ISA-tab")
+    )
+    setup_argparse_deletion_requests(
+        subparsers.add_parser("deletion-requests", parents=[basic_parser, sodar_parser_project_uuid_assay_uuid], help="Create deletion reuqests for SODAR/iRODS")
+    )
+    setup_argparse_ingest_data(
+        subparsers.add_parser(
+            "ingest-data", parents=[basic_parser, sodar_ingest_parser], help="Upload files to SODAR project"
+        )
+    )
+    setup_argparse_ingest_collection(
+        subparsers.add_parser(
+            "ingest-collection", parents=[basic_parser, sodar_ingest_parser_no_dest], help="Upload a set of arbitrary files to a single iRODS colelction from SODAR"
+        )
     )
     setup_argparse_pull_data(
-        subparsers.add_parser("pull-data", parents=[basic_parser,sodar_parser_project_uuid_assay_uuid], help="Download data from iRODS")
+        subparsers.add_parser("pull-data", parents=[basic_parser, sodar_parser_project_uuid_assay_uuid], help="Download data from iRODS")
     )
     setup_argparse_pull_raw_data(
         subparsers.add_parser("pull-raw-data", parents=[basic_parser, sodar_parser_project_uuid_assay_uuid], help="DEPRECATING! Download raw data from iRODS")
@@ -116,21 +129,13 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_lz_validate(
         subparsers.add_parser("landing-zone-validate", parents=[basic_parser, sodar_parser_lz_uuid], help="Submit given landing zone for validation")
     )
-    setup_argparse_ingest_data(
-        subparsers.add_parser(
-            "ingest-data", parents=[basic_parser, sodar_ingest_parser], help="Upload files to SODAR project"
-        )
+    setup_argparse_update_samplesheet(
+        subparsers.add_parser("update-samplesheet", parents=[basic_parser, get_sodar_parser(with_dest=True)], help="Update sample sheet")
     )
-    setup_argparse_ingest_collection(
-        subparsers.add_parser(
-            "ingest-collection", parents=[basic_parser, sodar_ingest_parser_no_dest], help="Upload a set of arbitrary files to a single iRODS colelction from SODAR"
-        )
+    setup_argparse_upload_sheet(
+        subparsers.add_parser("upload-sheet", parents=[basic_parser, sodar_parser_project_uuid], help="Upload and replace ISA-tab")
     )
-    setup_argparse_check_remote(
-        subparsers.add_parser(
-            "check-remote", parents=[basic_parser, sodar_parser_project_uuid_assay_uuid], help="Compare local files with checksum against SODAR/iRODS"
-        )
-    )
+
 
 
 def run(args, parser, subparser):

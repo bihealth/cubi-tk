@@ -96,7 +96,6 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
                             path_remote=str(os.path.join(remote_dir, rel_result + ext))
                         )
                     )
-
         return sorted(transfer_jobs, key=lambda x: x.path_local)
 
 

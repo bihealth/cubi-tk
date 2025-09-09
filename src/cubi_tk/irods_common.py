@@ -5,6 +5,7 @@ import os.path
 from pathlib import Path
 import re
 from typing import Iterable, Literal, Union
+import warnings
 
 import attrs
 from irods.collection import iRODSCollection
@@ -343,6 +344,10 @@ class iRODSRetrieveCollection(iRODSCommon):
         :type irods_env_path: pathlib.Path, optional
         """
         super().__init__(**kwargs)
+        warnings.warn(
+            "iRODSRetrieveCollection will be deprecated. Please use SodarAPI.get_samplesheet_file_list instead.",
+            DeprecationWarning, stacklevel=2
+        )
 
     def retrieve_irods_data_objects(self, irods_path: str) -> dict[str, list[iRODSDataObject]]:
         """Retrieve data objects from iRODS.

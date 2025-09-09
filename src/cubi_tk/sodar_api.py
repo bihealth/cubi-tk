@@ -44,10 +44,12 @@ def multi_assay_study_warning(content:dict, string :str = "Assays") -> None:
         f"All available UUIDs:\n{multi_assay_str}"
     )
 
-SODAR_API_VERSION_SAMPLESHEETS=1.0
-SODAR_API_VERSION_LANDINGZONES=1.0
+
+SODAR_API_VERSION_SAMPLESHEETS = 1.1
+SODAR_API_VERSION_LANDINGZONES = 1.0
 
 LANDING_ZONE_STATES = ["ACTIVE", "FAILED", "VALIDATING"]
+
 
 class SodarApi:
     """
@@ -56,24 +58,26 @@ class SodarApi:
     if set_default is true, default values will be set, otherwise an error will be thrown if required params are missing (serverurl and api token)
     if with_dest is true the destination will be checked and sodarapi set up accordingly, can be project_uuid, destination (project_uuid, lz_path or lz_uuid) or landing_zone_uuid
     """
-    def __init__(self, args: argparse.Namespace, set_default:bool = False, with_dest:bool = False, dest_string:str = "project_uuid"):
-       any_error, args= self.setup_sodar_params(args, set_default = set_default, with_dest=with_dest, dest_string= dest_string)
-       if any_error:
+    def __init__(self, args: argparse.Namespace, set_default: bool = False, with_dest: bool = False, dest_string: str = "project_uuid"):
+        any_error, args = self.setup_sodar_params(args, set_default=set_default, with_dest=with_dest, dest_string=dest_string)
+        if any_error:
             sys.exit(1)
-       self.sodar_server_url = args.sodar_server_url
-       self.project_uuid = args.project_uuid
-       self.assay_uuid = getattr(args, "assay_uuid", None)
-       self.lz_path = getattr(args, "destination", None) #if destiantion exists and destination is lz path (!= project_uuid), set lz_path
-       if self.lz_path == self.project_uuid:
-           self.lz_path = None
-       self.yes = getattr(args, "yes", False)
-       self.sodar_headers = {
-           "samplesheets": {
-               "Authorization": "token {}".format(args.sodar_api_token),
-                'Accept': f'application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION_SAMPLESHEETS}'},
+        self.sodar_server_url = args.sodar_server_url
+        self.project_uuid = args.project_uuid
+        self.assay_uuid = getattr(args, "assay_uuid", None)
+        self.lz_path = getattr(args, "destination", None) #if destiantion exists and destination is lz path (!= project_uuid), set lz_path
+        if self.lz_path == self.project_uuid:
+            self.lz_path = None
+        self.yes = getattr(args, "yes", False)
+        self.sodar_headers = {
+            "samplesheets": {
+                "Authorization": "token {}".format(args.sodar_api_token),
+                'Accept': f'application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION_SAMPLESHEETS}'
+            },
             "landingzones": {
-               "Authorization": "token {}".format(args.sodar_api_token),
-                'Accept': f'application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION_LANDINGZONES}'},
+                "Authorization": "token {}".format(args.sodar_api_token),
+                'Accept': f'application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION_LANDINGZONES}'
+            },
         }
 
     def _api_call(
@@ -146,7 +150,7 @@ class SodarApi:
         logger.debug("Returning all samplesheet with single assay and study : {}", small_samplesheet)
         return small_samplesheet
 
-    def get_samplesheet_retrieve(self, log_error = True) -> api_models.Investigation | None:
+    def get_samplesheet_investigation_retrieve(self, log_error = True) -> api_models.Investigation | None:
         logger.debug("Get investigation information.")
         try:
             investigationJson = self._api_call("samplesheets", "investigation/retrieve")
@@ -169,6 +173,17 @@ class SodarApi:
             return None
         logger.debug(f"Got samplesheet: {samplesheet}")
         return samplesheet
+
+    def get_samplesheet_file_list(self) -> list[api_models.iRODSDataObject] | None:
+        logger.debug("Getting irods file list")
+        try:
+            json_filelist = self._api_call("samplesheets", "file/list")
+        except SodarApiException as e:
+            logger.error(f"Failed to retrieve Sodar file list:\n{e}")
+            return None
+        filelist = [cattr.structure(obj, api_models.iRODSDataObject) for obj in json_filelist]
+
+        return filelist
 
 
     def post_samplesheet_import(
@@ -195,6 +210,29 @@ class SodarApi:
         except SodarApiException as e:
             logger.error(f"Failed to upload ISA-tab:\n{e}")
             return 1
+
+    def post_samplesheet_deletion_request_create(self, path, description=None) -> int:
+        params = {'path': path}
+        if description:
+            params.update({'description': description})
+
+        try:
+            ret_val = self._api_call(
+                "samplesheets",
+                "irods/request/create",
+                method="post",
+                params=params,
+            )
+            if "sodar_warnings" in ret_val:
+                for warning in ret_val["sodar_warnings"]:
+                    logger.warning(f"SODAR warning: {warning}")
+            else:
+                logger.info(f"Sodar deletion request created successfully: {path}.")
+            return 0
+        except SodarApiException as e:
+            logger.error(f"Failed to create Sodar deletion request:\n{e}")
+            return 1
+
 
     # landingzone Api calls
     def get_landingzone_retrieve(self, lz_uuid: UUID = None, log_error = True) -> api_models.LandingZone | None:
@@ -300,15 +338,15 @@ class SodarApi:
 
     # helper functions
     def get_assay_from_uuid(self)-> (tuple[None, None] | tuple[api_models.Assay, api_models.Study]):
-        investigation = self.get_samplesheet_retrieve()
+        investigation = self.get_samplesheet_investigation_retrieve()
         if investigation is None:
             return None, None
         studies = investigation.studies.values()
         # if assay_uuid given and multiple studies iterate through all studies and find assay
         # if mulitple studies and yes, iterate through first study
         # if multiple studies, no asssay uuid and not yes, let user decide which study to use
-        if(len(studies) > 1 and not self.assay_uuid):
-            study_keys =list(investigation.studies.keys())
+        if len(studies) > 1 and not self.assay_uuid:
+            study_keys = list(investigation.studies.keys())
             if not self.yes:
                 study_uuid = get_user_input_assay_study(study_keys, investigation.studies, string="studies")
                 studies = [investigation.studies[study_uuid]]
