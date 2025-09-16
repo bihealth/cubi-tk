@@ -317,7 +317,7 @@ class SodarIngestData(SodarIngestBase):
         tissue = m.groupdict(default=None)["tissue"]
         for col_col_name, col_sample_name, _ in val:
             col_tissue = col_sample_name.split("-")[-1][0]
-            tissue_match = (tissue == "tumor" and col_tissue == "T") or ( (tissue == "normal" or tissue is None) and col_tissue  == "N")
+            tissue_match = (tissue is not None and col_tissue == "T") or (tissue is None and col_tissue  == "N")
             if tissue_match:
                 #if multiple present use last one
                 matched_col_name = col_col_name
