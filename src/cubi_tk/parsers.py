@@ -123,7 +123,6 @@ snappy_basic_group = snappy_cmd_basic_parser.add_argument_group("Snappy Configur
 snappy_basic_group.add_argument(
     "--base-path",
     default=os.getcwd(),
-    required=False,
     help=(
         "Base path of project (contains '.snappy_pipeline/' etc.), spiders up from current "
         "work directory and falls back to current working directory by default."
@@ -142,7 +141,7 @@ biomedsheet_group_spec.add_argument(
     "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
 )
 biomedsheet_group_spec.add_argument(
-    "--last-batch", type=int, required=False, help="Last batch to be transferred."
+    "--last-batch", type=int, help="Last batch to be transferred."
 )
 
 
@@ -185,7 +184,6 @@ snappy_pull_data_group.add_argument(
 snappy_pull_data_group.add_argument(
     "--output-directory",
     default=None,
-    required=True,
     help="Output directory, where downloaded files will be stored.",
 )
 snappy_pull_data_group.add_argument(
