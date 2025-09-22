@@ -54,10 +54,10 @@ class ValidateLandingZoneCommand:
         values = cattr.unstructure(landing_zone)
         if self.args.format_string:
             logger.info("Formatted server response:")
-            logger.info(self.args.format_string.replace(r"\t", "\t") % values)
+            print(self.args.format_string.replace(r"\t", "\t") % values)
         else:
             logger.info("Server response:")
-            logger.info(json.dumps(values))
+            print(json.dumps(values, indent=4))
         return 0
 
 

@@ -25,14 +25,6 @@ class ListLandingZoneCommand:
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
         parser.add_argument(
-            "--unless-exists",
-            default=False,
-            dest="unless_exists",
-            action="store_true",
-            help="If there already is a landing zone in the current project then use this one",
-        )
-
-        parser.add_argument(
             "--dry-run",
             "-n",
             default=False,
@@ -78,7 +70,7 @@ class ListLandingZoneCommand:
             if self.args.format_string:
                 print(self.args.format_string.replace(r"\t", "\t") % values)
             else:
-                print(json.dumps(values))
+                print(json.dumps(values, indent=4))
 
         return 0
 

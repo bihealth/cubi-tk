@@ -62,7 +62,7 @@ class MoveLandingZoneCommand:
         if self.args.format_string:
             print(self.args.format_string.replace(r"\t", "\t") % values)
         else:
-            print(json.dumps(values))
+            print(json.dumps(values, indent=4))
 
         return 0
 
