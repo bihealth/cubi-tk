@@ -103,7 +103,7 @@ class SodarIngestBase:
                 lz_path = lz.irods_path
             #if None: projectuuid is possibly given
             #check if projectuuid is valid and start lz selection
-            elif self.sodar_api.get_samplesheet_retrieve(log_error=False) is not None:
+            elif self.sodar_api.get_samplesheet_investigation_retrieve(log_error=False) is not None:
                 try:
                    lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
                 except UserCanceledException as e:
