@@ -42,8 +42,10 @@ def test_run_snappy_itransfer_raw_data_nothing(capsys):
     assert res.err
 
 
-@patch('cubi_tk.snappy.itransfer_raw_data.SnappyItransferRawDataCommand._no_files_found_warning')
-@patch("cubi_tk.snappy.itransfer_raw_data.SnappyItransferRawDataCommand._get_lz_info", my_get_lz_info)
+@patch("cubi_tk.snappy.itransfer_raw_data.SnappyItransferRawDataCommand._no_files_found_warning")
+@patch(
+    "cubi_tk.snappy.itransfer_raw_data.SnappyItransferRawDataCommand._get_lz_info", my_get_lz_info
+)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 def test_run_snappy_itransfer_raw_data_smoke_test(
     mock_transfer, mock_filecheck, mocker, minimal_config, germline_trio_sheet_tsv

@@ -42,25 +42,45 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="sea_snap_cmd")
 
     setup_argparse_itransfer_raw_data(
-        subparsers.add_parser("itransfer-raw-data", parents=[basic_parser, sodar_parser], help="Transfer FASTQs into iRODS landing zone")
+        subparsers.add_parser(
+            "itransfer-raw-data",
+            parents=[basic_parser, sodar_parser],
+            help="Transfer FASTQs into iRODS landing zone",
+        )
     )
 
     setup_argparse_itransfer_mapping_results(
         subparsers.add_parser(
-            "itransfer-results", parents=[basic_parser, sodar_ingest_parser_no_dest], help="Transfer mapping results into iRODS landing zone"
+            "itransfer-results",
+            parents=[basic_parser, sodar_ingest_parser_no_dest],
+            help="Transfer mapping results into iRODS landing zone",
         )
     )
     setup_argparse_working_dir(
-        subparsers.add_parser("working-dir", parents=[basic_parser,], help="Create working directory")
+        subparsers.add_parser(
+            "working-dir",
+            parents=[
+                basic_parser,
+            ],
+            help="Create working directory",
+        )
     )
 
     setup_argparse_write_sample_info(
-        subparsers.add_parser("write-sample-info", parents=[basic_parser, sodar_parser], help="Generate sample info file")
+        subparsers.add_parser(
+            "write-sample-info",
+            parents=[basic_parser, sodar_parser],
+            help="Generate sample info file",
+        )
     )
 
     setup_argparse_check_irods(
         subparsers.add_parser(
-            "check-irods", parents=[basic_parser,], help="DEPRECATING! Check consistency of sample info, blueprint and files on SODAR"
+            "check-irods",
+            parents=[
+                basic_parser,
+            ],
+            help="DEPRECATING! Check consistency of sample info, blueprint and files on SODAR",
         )
     )
 

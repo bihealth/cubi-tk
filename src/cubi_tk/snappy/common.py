@@ -1,4 +1,5 @@
 """Common functionality for SNAPPY."""
+
 import pathlib
 import typing
 

@@ -12,11 +12,14 @@ from cubi_tk.sodar_api import SodarApi
 from ..common import overwrite_helper
 from ..exceptions import OverwriteRefusedException
 
+
 class DownloadSheetCommand:
     """Implementation of the ``download-sheet`` command."""
+
     def __init__(self, args):
         #: Command line arguments.
         self.args = args
+
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
@@ -71,7 +74,6 @@ class DownloadSheetCommand:
         return cls(argparse.Namespace(**args)).execute()
 
     def execute(self) -> typing.Optional[int]:
-
         """Execute the transfer."""
         logger.info("Starting cubi-tk sodar download-sheet")
         sodar_api = SodarApi(self.args, with_dest=True)
@@ -118,9 +120,7 @@ class DownloadSheetCommand:
             raise OverwriteRefusedException(
                 "Refusing to overwrite without --overwrite: %s" % out_path
             )
-        logger.info(
-            "{} {}", "Not writing (dry-run)" if self.args.dry_run else "Writing", out_path
-        )
+        logger.info("{} {}", "Not writing (dry-run)" if self.args.dry_run else "Writing", out_path)
         overwrite_helper(
             out_path,
             text,

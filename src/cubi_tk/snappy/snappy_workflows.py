@@ -10,7 +10,7 @@ import yaml
 
 
 def get_workflow_snakefile_object_name(
-    snakefile_path: typing.Union[str, pathlib.Path]
+    snakefile_path: typing.Union[str, pathlib.Path],
 ) -> typing.Optional[str]:
     """Find the Workflow implementation object name.
 

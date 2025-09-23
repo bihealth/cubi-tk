@@ -9,7 +9,13 @@ from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 from biomedsheets.shortcuts import GermlineCaseSheet, CancerCaseSheet, CancerCaseSheetOptions
 import pytest
 
-from cubi_tk.snappy.check_local import CancerSheetChecker, GermlineSheetChecker, PedFileCheck, VcfFileCheck
+from cubi_tk.snappy.check_local import (
+    CancerSheetChecker,
+    GermlineSheetChecker,
+    PedFileCheck,
+    VcfFileCheck,
+)
+
 
 # Test Setup Cancer =============================================================================================
 @pytest.fixture
@@ -28,6 +34,7 @@ def header_sheet_tsv_cancer():
         [Data]
         """
 
+
 @pytest.fixture
 def sheet_tsv_missing_tumor(header_sheet_tsv_cancer):
     """Return contents for cancer TSV file"""
@@ -39,6 +46,7 @@ def sheet_tsv_missing_tumor(header_sheet_tsv_cancer):
         patient2\tT1\tDNA\tWES\tpatient2-T1-DNA1-WES1\tY\tAgilent SureSelect Human All Exon V8
         """
     ).lstrip()
+
 
 @pytest.fixture
 def sheet_tsv_missing_normal(header_sheet_tsv_cancer):
@@ -53,6 +61,7 @@ def sheet_tsv_missing_normal(header_sheet_tsv_cancer):
         """
     ).lstrip()
 
+
 def create_cancer_sheet_object(sheet_tsv):
     """Create Cancer Sheet
 
@@ -66,8 +75,9 @@ def create_cancer_sheet_object(sheet_tsv):
     options = CancerCaseSheetOptions(allow_missing_normal=True, allow_missing_tumor=True)
     return CancerCaseSheet(
         sheet=read_cancer_tsv_sheet(cancer_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID),
-        options=options
+        options=options,
     )
+
 
 # Test Setup Germline ===========================================================================================
 @pytest.fixture
@@ -158,21 +168,27 @@ def create_germline_sheet_object(sheet_tsv):
         sheet=read_germline_tsv_sheet(germline_sheet_io, naming_scheme=NAMING_ONLY_SECONDARY_ID)
     )
 
+
 # Tests CancerSheetChecker =============================================================================================
+
 
 def test_cancer_sheet_checker_sanity_check(cancer_sheet_object):
     """Tests CancerSheetChecker.run_checks() - sanity check, sheet correctly set"""
     assert CancerSheetChecker([cancer_sheet_object]).run_checks()
+
 
 def test_cancer_sheet_checker_missing_tumor(sheet_tsv_missing_tumor):
     """Tests CancerSheetChecker.run_checks() - patient is missing tumor sample"""
     sheet = create_cancer_sheet_object(sheet_tsv=sheet_tsv_missing_tumor)
     assert not CancerSheetChecker([sheet]).run_checks()
 
+
 def test_cancer_sheet_checker_missing_normal(sheet_tsv_missing_normal):
     """Tests CancerSheetChecker.run_checks() - patient is missing normal sample"""
     sheet = create_cancer_sheet_object(sheet_tsv=sheet_tsv_missing_normal)
     assert not CancerSheetChecker([sheet]).run_checks()
+
+
 # Tests GermlineSheetChecker ===========================================================================================
 
 

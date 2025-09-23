@@ -1,5 +1,4 @@
-"""``cubi-tk sodar landing-zone-validate`` command line program
-"""
+"""``cubi-tk sodar landing-zone-validate`` command line program"""
 
 import argparse
 import json
@@ -10,7 +9,6 @@ from loguru import logger
 
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
-
 
 
 class ValidateLandingZoneCommand:
@@ -39,7 +37,6 @@ class ValidateLandingZoneCommand:
     ) -> typing.Optional[int]:
         """Entry point into the command."""
         return cls(args).execute()  # pragma: nocover
-
 
     def execute(self) -> typing.Optional[int]:
         """Execute the landing zone validation."""

@@ -5,51 +5,68 @@ import factory
 
 from cubi_tk import api_models
 
+
 def return_api_investigation_mock():
     investigation = api_models.Investigation(
-    sodar_uuid="c339b4de-23a9-4cc3-8801-5f65b4739680",
-    archive_name="None",
-    comments={"Created With Configuration": "/path/to/isa-configurations/bih_studies/bih_cancer", "Last Opened With Configuration": "bih_cancer"},
-    description="",
-    file_name="i_Investigation.txt",
-    identifier="",
-    irods_status=True,
-    parser_version="0.2.9",
-    project="ad002ac2-b06c-4012-9dc4-8c2ade3e7378",
-    studies={
-        "7b5f6a28-92d0-4871-8cba-8c74db8ee298":
-        api_models.Study(
-            sodar_uuid="7b5f6a28-92d0-4871-8cba-8c74db8ee298",
-            identifier="investigation_title",
-            file_name="s_investigation_title.txt",
-            irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298",
-            title="Investigation Title",
-            description="",
-            comments={"Study Grant Number": "", "Study Funding Agency": ""},
-            assays={
-                "992dc872-0033-4c3b-817b-74b324327e7d":
-                api_models.Assay(
-                    sodar_uuid="992dc872-0033-4c3b-817b-74b324327e7d",
-                    file_name="a_investigation_title_exome_sequencing_second.txt",
-                    irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298/assay_992dc872-0033-4c3b-817b-74b324327e7d",
-                    technology_platform="Illumina",
-                    technology_type=api_models.OntologyTermRef(name="nucleotide sequencing", accession="http://purl.obolibrary.org/obo/OBI_0000626", ontology_name="OBI"),
-                    measurement_type=api_models.OntologyTermRef(name="exome sequencing", accession=None, ontology_name=None), comments={}
+        sodar_uuid="c339b4de-23a9-4cc3-8801-5f65b4739680",
+        archive_name="None",
+        comments={
+            "Created With Configuration": "/path/to/isa-configurations/bih_studies/bih_cancer",
+            "Last Opened With Configuration": "bih_cancer",
+        },
+        description="",
+        file_name="i_Investigation.txt",
+        identifier="",
+        irods_status=True,
+        parser_version="0.2.9",
+        project="ad002ac2-b06c-4012-9dc4-8c2ade3e7378",
+        studies={
+            "7b5f6a28-92d0-4871-8cba-8c74db8ee298": api_models.Study(
+                sodar_uuid="7b5f6a28-92d0-4871-8cba-8c74db8ee298",
+                identifier="investigation_title",
+                file_name="s_investigation_title.txt",
+                irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298",
+                title="Investigation Title",
+                description="",
+                comments={"Study Grant Number": "", "Study Funding Agency": ""},
+                assays={
+                    "992dc872-0033-4c3b-817b-74b324327e7d": api_models.Assay(
+                        sodar_uuid="992dc872-0033-4c3b-817b-74b324327e7d",
+                        file_name="a_investigation_title_exome_sequencing_second.txt",
+                        irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298/assay_992dc872-0033-4c3b-817b-74b324327e7d",
+                        technology_platform="Illumina",
+                        technology_type=api_models.OntologyTermRef(
+                            name="nucleotide sequencing",
+                            accession="http://purl.obolibrary.org/obo/OBI_0000626",
+                            ontology_name="OBI",
+                        ),
+                        measurement_type=api_models.OntologyTermRef(
+                            name="exome sequencing", accession=None, ontology_name=None
+                        ),
+                        comments={},
                     ),
-                "bd3e98a0-e2a9-48ad-b2bc-d10d407307f2":
-                api_models.Assay(
-                    sodar_uuid="bd3e98a0-e2a9-48ad-b2bc-d10d407307f2",
-                    file_name="a_investigation_title_exome_sequencing.txt",
-                    irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298/assay_bd3e98a0-e2a9-48ad-b2bc-d10d407307f2",
-                    technology_platform="Illumina", technology_type=api_models.OntologyTermRef(name="nucleotide sequencing", accession="http://purl.obolibrary.org/obo/OBI_0000626", ontology_name="OBI"),
-                    measurement_type=api_models.OntologyTermRef(name="exome sequencing", accession=None, ontology_name=None), comments={}
-                    )
-                }
+                    "bd3e98a0-e2a9-48ad-b2bc-d10d407307f2": api_models.Assay(
+                        sodar_uuid="bd3e98a0-e2a9-48ad-b2bc-d10d407307f2",
+                        file_name="a_investigation_title_exome_sequencing.txt",
+                        irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298/assay_bd3e98a0-e2a9-48ad-b2bc-d10d407307f2",
+                        technology_platform="Illumina",
+                        technology_type=api_models.OntologyTermRef(
+                            name="nucleotide sequencing",
+                            accession="http://purl.obolibrary.org/obo/OBI_0000626",
+                            ontology_name="OBI",
+                        ),
+                        measurement_type=api_models.OntologyTermRef(
+                            name="exome sequencing", accession=None, ontology_name=None
+                        ),
+                        comments={},
+                    ),
+                },
             )
         },
-    title="Investigation Title"
+        title="Investigation Title",
     )
     return investigation
+
 
 class UserFactory(factory.Factory):
     class Meta:

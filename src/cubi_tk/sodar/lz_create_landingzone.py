@@ -1,5 +1,4 @@
-"""``cubi-tk sodar create-landingzone`` command line program
-"""
+"""``cubi-tk sodar create-landingzone`` command line program"""
 
 import argparse
 import json
@@ -48,6 +47,7 @@ class CreateLandingZoneCommand:
             default=None,
             help="Format string for printing, e.g. %%(uuid)s",
         )
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -62,7 +62,7 @@ class CreateLandingZoneCommand:
         sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
-        existing_lzs = sodar_api.get_landingzone_list(filter_for_state = ["ACTIVE"])
+        existing_lzs = sodar_api.get_landingzone_list(filter_for_state=["ACTIVE"])
         if existing_lzs and self.args.unless_exists:
             lz = existing_lzs[-1]
         else:

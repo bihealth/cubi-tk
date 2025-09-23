@@ -16,3 +16,9 @@ lint:
 .PHONY: pytest
 pytest:
 	uv run pytest
+
+.PHONY: sphinx-check
+sphinx-check:
+	@TMPDIR=$$(mktemp -d); \
+	trap 'rm -rf "$$TMPDIR"' EXIT; \
+	uv run sphinx-build --fail-on-warning --show-traceback --keep-going -D language=de docs_manual "$$TMPDIR"

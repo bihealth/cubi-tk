@@ -1,4 +1,3 @@
-
 import os
 import sys
 
@@ -17,20 +16,18 @@ from cubi_tk.parsers import print_args
 
 # API based drop-in replacement for what used to build on the `iRODSRetrieveCollection` class (to be deprecated)
 class RetrieveSodarCollection(SodarApi):
-
     def __init__(self, argparse: Namespace, **kwargs):
         super().__init__(argparse, **kwargs)
         irods_hash_scheme = iRODSCommon(sodar_profile=argparse.config_profile).irods_hash_scheme()
         self.hash_ending = "." + irods_hash_scheme.lower()
 
     def perform(self, include_hash_files=False) -> dict[str, list[iRODSDataObject]]:
-
         filelist = self.get_samplesheet_file_list()
 
         output_dict = defaultdict(list)
 
         for obj in filelist:
-            if obj.type == 'obj' and obj.name.endswith(self.hash_ending) and not include_hash_files:
+            if obj.type == "obj" and obj.name.endswith(self.hash_ending) and not include_hash_files:
                 continue
             output_dict[obj.name].append(obj)
 
@@ -53,8 +50,9 @@ class SodarIngestBase:
     Includes methods for proper (study, assay &) landing zone selection/creation.
     Should always be used with argparse base parser `get_sodar_parser(with_dest=True, with_assay_uuid=True, dest_string="destination")
     """
+
     command_name: str | None = None
-    cubitk_section: str = 'sodar'
+    cubitk_section: str = "sodar"
 
     def __init__(self, args: Namespace):
         self.args = args
@@ -68,10 +66,15 @@ class SodarIngestBase:
         self.lz_uuid, self.lz_irods_path = self._get_lz_info()
         # Init itransfer class, check that irods_environment.json exists
         self.itransfer = iRODSTransfer(
-            None, ask=not self.sodar_api.yes, sodar_profile=self.args.config_profile, dry_run=self.args.dry_run
+            None,
+            ask=not self.sodar_api.yes,
+            sodar_profile=self.args.config_profile,
+            dry_run=self.args.dry_run,
         )
         if not self.itransfer.irods_env_path.exists():
-            logger.error(f"Expected json config for irods ({self.itransfer.irods_env_path}) does not exist")
+            logger.error(
+                f"Expected json config for irods ({self.itransfer.irods_env_path}) does not exist"
+            )
             sys.exit(1)
 
     def _get_lz_info(self) -> tuple[str, str]:
@@ -85,40 +88,47 @@ class SodarIngestBase:
 
         :return: lz_uuid, lz_irods_path
         """
-        #lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
+        # lz path given, projectuuid set up, lz set up, check if valid and get lz_uuid
         if self.sodar_api.lz_path is not None:
             lz_path = self.sodar_api.lz_path
-            existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
-            if existing_lzs is not None and len(existing_lzs) == 1: #lz exists
+            existing_lzs = self.sodar_api.get_landingzone_list(
+                sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"]
+            )
+            if existing_lzs is not None and len(existing_lzs) == 1:  # lz exists
                 lz_uuid = existing_lzs[0].sodar_uuid
                 assay_uuid = existing_lzs[0].assay
-                if self.sodar_api.assay_uuid is not None and assay_uuid != self.sodar_api.assay_uuid:
-                    logger.warning(f"Different assay_uuid set than parsed from given lz, using the lz one: {assay_uuid} ")
+                if (
+                    self.sodar_api.assay_uuid is not None
+                    and assay_uuid != self.sodar_api.assay_uuid
+                ):
+                    logger.warning(
+                        f"Different assay_uuid set than parsed from given lz, using the lz one: {assay_uuid} "
+                    )
                 self.sodar_api.assay_uuid = assay_uuid
             else:
                 msg = "Unable to identify UUID of given LZ Path{0}.".format(self.sodar_api.lz_path)
                 raise ParameterException(msg)
-        #either projectuuid or lz uuid
+        # either projectuuid or lz uuid
         elif self.sodar_api.project_uuid is not None:
             lz = self.sodar_api.get_landingzone_retrieve(log_error=False)
             # if succees given uuid is lz, everything set up, sodarapi will set project uui and lz path
             if lz is not None:
                 lz_uuid = lz.sodar_uuid
                 lz_path = lz.irods_path
-            #if None: projectuuid is possibly given
-            #check if projectuuid is valid and start lz selection
+            # if None: projectuuid is possibly given
+            # check if projectuuid is valid and start lz selection
             elif self.sodar_api.get_samplesheet_investigation_retrieve(log_error=False) is not None:
                 try:
-                   lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
+                    lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
                 except UserCanceledException as e:
                     raise e
-            #neither project nor lz uuid
+            # neither project nor lz uuid
             else:
                 msg = "Provided UUID ({}) could neither be associated with a project nor with a Landing Zone.".format(
                     self.sodar_api.project_uuid
                 )
                 raise ParameterException(msg)
-        #invalid input
+        # invalid input
         else:
             msg = "Data provided by user is not a valid UUID or LZ path. Please review input: {0}".format(
                 self.args.destination
@@ -136,7 +146,7 @@ class SodarIngestBase:
         if self.sodar_api.yes or (
             input("Can the process create a new landing zone? [yN] ").lower().startswith("y")
         ):
-            lz = self.sodar_api.post_landingzone_create(wait_until_ready = True)
+            lz = self.sodar_api.post_landingzone_create(wait_until_ready=True)
             if lz:
                 return lz.sodar_uuid, lz.irods_path
             else:
@@ -153,18 +163,26 @@ class SodarIngestBase:
         :return: lz_uuid, lz_irods_path
         """
         # Get existing LZs from API
-        existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
+        existing_lzs = self.sodar_api.get_landingzone_list(
+            sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"]
+        )
         if not existing_lzs:
             # No active landing zones available
             logger.info("No active Landing Zone available.")
             return self._create_lz()
         logger.info(
-            "Found {} active landing zone{}.".format(len(existing_lzs), 's' if len(existing_lzs) > 1 else "")
+            "Found {} active landing zone{}.".format(
+                len(existing_lzs), "s" if len(existing_lzs) > 1 else ""
+            )
         )
-        if not self.sodar_api.yes and not latest and (
-            not input("Should the process use an existing landing zone? [yN] ")
-            .lower()
-            .startswith("y")
+        if (
+            not self.sodar_api.yes
+            and not latest
+            and (
+                not input("Should the process use an existing landing zone? [yN] ")
+                .lower()
+                .startswith("y")
+            )
         ):
             return self._create_lz()
         if len(existing_lzs) == 1:
@@ -181,7 +199,9 @@ class SodarIngestBase:
                 input_valid = False
                 input_message = "####################\nPlease choose target landing zone:\n"
                 for index, lz in enumerate(existing_lzs):
-                    input_message += f"{index + 1}) {os.path.basename(lz.irods_path)} ({lz.sodar_uuid})\n"
+                    input_message += (
+                        f"{index + 1}) {os.path.basename(lz.irods_path)} ({lz.sodar_uuid})\n"
+                    )
                 input_message += "Select by number: "
                 while not input_valid:
                     user_input = input(input_message)
@@ -217,13 +237,15 @@ class SodarIngestBase:
         """Execute the transfer."""
         # Get iRODS hash scheme, build list of transfer
         irods_hash_scheme = self.itransfer.irods_hash_scheme()
-        irods_hash_ending = "."+irods_hash_scheme.lower()
+        irods_hash_ending = "." + irods_hash_scheme.lower()
         transfer_jobs = self.build_jobs(irods_hash_ending)
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
         # Exit early if no files were found/matched
         self._no_files_found_warning(transfer_jobs)
         # Check for md5 files and add jobs if needed
-        transfer_jobs = execute_checksum_files_fix(transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs)
+        transfer_jobs = execute_checksum_files_fix(
+            transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs
+        )
         # Final go from user & transfer
         self.itransfer.jobs = transfer_jobs
         self.itransfer.put(recursive=True, overwrite=self.args.overwrite)
@@ -240,7 +262,7 @@ class SodarIngestBase:
         if self.lz_uuid and self.args.validate_and_move:
             logger.info(
                 "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
-                self.lz_uuid
+                self.lz_uuid,
             )
             uuid = self.sodar_api.post_landingzone_submit_move(self.lz_uuid)
             if uuid is None:
@@ -251,4 +273,3 @@ class SodarIngestBase:
 
         logger.info("All done")
         return None
-

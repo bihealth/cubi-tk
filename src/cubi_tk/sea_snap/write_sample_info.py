@@ -504,12 +504,12 @@ def write_sample_info(args, sample_info_file) -> typing.Optional[int]:
     return None
 
 
-
 def show_line(line):
     if hasattr(sys.stdout, "buffer"):
         sys.stdout.buffer.write(line.encode("utf-8"))
     else:
         sys.stdout.write(line)
+
 
 def show_diff(args, sample_info_file):
     old_lines = []

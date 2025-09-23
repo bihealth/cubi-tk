@@ -185,7 +185,8 @@ class UpdateSamplesheetCommand:
             metavar=("PED_COLUMN", "SAMPLE_FIELD"),
             help="Manually define how ped columns are mapped to sample data fields or ISA columns. "
             "The following ped names columns should be used: "
-            ", ".join(sheet_default_config["ped_defaults"].keys()) + "\n"
+            ", ".join(sheet_default_config["ped_defaults"].keys())
+            + "\n"
             "Overwrites value set for 'name' by `--defaults`. "
             "SAMPLE_FIELD can also be a column name of the ISA samplesheet.",
         )
@@ -267,7 +268,9 @@ class UpdateSamplesheetCommand:
         sample_fields_mapping = self.parse_sampledata_args(isa_names)
 
         # Collect ped & sample data, check that they can be combined
-        samples = self.collect_sample_data(isa_names, sample_fields_mapping, self.args.snappy_compatible)
+        samples = self.collect_sample_data(
+            isa_names, sample_fields_mapping, self.args.snappy_compatible
+        )
 
         # add metadata values to samples
         if self.args.metadata_all:
@@ -306,9 +309,7 @@ class UpdateSamplesheetCommand:
             "file_study": (study_key, study_tsv),
             "file_assay": (assay_key, assay_tsv),
         }
-        ret = sodar_api.post_samplesheet_import(
-            files_dict
-        )
+        ret = sodar_api.post_samplesheet_import(files_dict)
         return ret
 
     def parse_sampledata_args(self, isa_names: IsaColumnDetails) -> dict[str, str]:
@@ -329,10 +330,7 @@ class UpdateSamplesheetCommand:
 
         if self.args.sample_fields:
             sample_field_mapping.update(
-                {
-                    k: (v or k)
-                    for (k, _, v) in (s.partition("=") for s in self.args.sample_fields)
-                }
+                {k: (v or k) for (k, _, v) in (s.partition("=") for s in self.args.sample_fields)}
             )
             n_fields = len(self.args.sample_fields)
         else:
@@ -368,7 +366,9 @@ class UpdateSamplesheetCommand:
         study_cols = study.columns.tolist()
         assay_cols = assay.columns.tolist()
 
-        isa_short_names = [orig_col_name(isa_regex.sub(r"\2", x)) for x in (study_cols + assay_cols)]
+        isa_short_names = [
+            orig_col_name(isa_regex.sub(r"\2", x)) for x in (study_cols + assay_cols)
+        ]
         isa_long_names = list(map(orig_col_name, study_cols + assay_cols))
         isa_names_unique = study_cols + assay_cols
         isa_table = ["study"] * len(study_cols) + ["assay"] * len(assay_cols)
@@ -428,7 +428,6 @@ class UpdateSamplesheetCommand:
         sample_field_mapping: dict[str, str],
         snappy_compatible: bool = False,
     ) -> pd.DataFrame:
-
         ped_mapping = self.get_ped_mapping(isa_names, sample_field_mapping)
         ped_data = self.get_ped_data(ped_mapping)
         sample_data = self.get_sample_data()
@@ -444,11 +443,15 @@ class UpdateSamplesheetCommand:
         dynamic_cols = self.get_dynamic_columns(samples.columns, isa_names)
         for col_name, format_str in dynamic_cols.items():
             if col_name in samples.columns:
-                logger.warning(f'Ignoring dynamic column defintion for "{col_name}", as it is already defined.')
+                logger.warning(
+                    f'Ignoring dynamic column defintion for "{col_name}", as it is already defined.'
+                )
                 continue
             # MAYBE: allow dynamic columns to change based on fill order?
             # i.e. first Extract name = -DNA1, then -DNA1-WXS1
-            samples[col_name] = samples.apply(lambda row, format_str= format_str: format_str.format(**row), axis=1)
+            samples[col_name] = samples.apply(
+                lambda row, format_str=format_str: format_str.format(**row), axis=1
+            )
 
         return samples
 
@@ -475,8 +478,8 @@ class UpdateSamplesheetCommand:
                 for donor in parse_ped(inputf):
                     donor_dict = {}
                     for attr_name, field in ped_mapping.items():
-                        donor_dict[field] =  getattr(donor, attr_name)
-                    ped_dicts.append( donor_dict)
+                        donor_dict[field] = getattr(donor, attr_name)
+                    ped_dicts.append(donor_dict)
                 ped_data = pd.DataFrame(ped_dicts)
         else:
             ped_data = pd.DataFrame()

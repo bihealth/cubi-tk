@@ -28,7 +28,6 @@ class SeasnapItransferRawDataCommand(SnappyItransferCommandBase):
         )
 
 
-
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk sea-snap itransfer-raw-data``."""
     return SeasnapItransferRawDataCommand.setup_argparse(parser)

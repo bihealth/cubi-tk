@@ -126,6 +126,7 @@ class GermlineSheetChecker:
 
         return ok
 
+
 class CancerSheetChecker:
     """Helper class that implements the consistency checks within cancer sheets."""
 
@@ -139,7 +140,7 @@ class CancerSheetChecker:
         results = []
         for sheet in self.sheets:
             results += [
-                #self._check_patient_sex(sheet),
+                # self._check_patient_sex(sheet),
                 self._check_tumor_and_normal(sheet),
             ]
         return all(results)
@@ -147,7 +148,7 @@ class CancerSheetChecker:
     @staticmethod
     def _check_patient_sex(sheet: shortcuts.CancerCaseSheet):
         """Check whether sex is consistent."""
-        #TODO: add sex to cancer biomedsheet and shortcut functions
+        # TODO: add sex to cancer biomedsheet and shortcut functions
         logger.info("Checking for consistency of sex for patient samples (if sex exists)..")
         ok = True
         return ok
@@ -155,7 +156,7 @@ class CancerSheetChecker:
     @staticmethod
     def _check_tumor_and_normal(sheet: shortcuts.CancerCaseSheet):
         """Check whether there are tumor and normal samples."""
-         #TODO: Maybe add allow_missing_tumor and allow_missing_normal to argpars and use here if needed
+        # TODO: Maybe add allow_missing_tumor and allow_missing_normal to argpars and use here if needed
         logger.info("Checking for at least one tumor and normal sample per patient...")
         ok = True
         for donor in sheet.donors:
@@ -166,9 +167,9 @@ class CancerSheetChecker:
                     has_normal = True
                 elif sample.startswith("T"):
                     has_tumor = True
-            if(not has_normal):
+            if not has_normal:
                 logger.warning("Patient {} is missing normal sample", donor.bio_entity.name)
-            if(not has_tumor):
+            if not has_tumor:
                 logger.warning("Patient {} is missing tumor sample", donor.bio_entity.name)
             ok = ok and has_normal and has_tumor
         return ok
@@ -412,7 +413,7 @@ class VcfFileCheck(FileCheckBase):
                             f"shared:     {', '.join(sorted(vcf_names & pedigree_names)) or '(none)'}\n"
                             f"VCF only:   {', '.join(sorted(vcf_names - pedigree_names)) or '(none)'}\n"
                             f"sheet only: {', '.join(sorted(pedigree_names - vcf_names)) or '(none)'}\n"
-                            f"VCF path:   { os.path.relpath(vcf_path, self.base_dir)}\n"
+                            f"VCF path:   {os.path.relpath(vcf_path, self.base_dir)}\n"
                         )
                     )
                     return False
@@ -440,12 +441,16 @@ class SnappyCheckLocalCommand:
         if self.args.tsv_shortcut == "germline":
             self.shortcut_sheets = [shortcuts.GermlineCaseSheet(sheet) for sheet in self.sheets]
         elif self.args.tsv_shortcut == "cancer":
-            options = shortcuts.CancerCaseSheetOptions(allow_missing_normal=True, allow_missing_tumor=True)
-            self.shortcut_sheets = [shortcuts.CancerCaseSheet(sheet, options= options) for sheet in self.sheets]
+            options = shortcuts.CancerCaseSheetOptions(
+                allow_missing_normal=True, allow_missing_tumor=True
+            )
+            self.shortcut_sheets = [
+                shortcuts.CancerCaseSheet(sheet, options=options) for sheet in self.sheets
+            ]
         else:
-            raise ParameterException("tsv shortcut not supported, valid values are 'cancer' and 'germline'")
-
-
+            raise ParameterException(
+                "tsv shortcut not supported, valid values are 'cancer' and 'germline'"
+            )
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -507,17 +512,19 @@ class SnappyCheckLocalCommand:
 
         if self.args.tsv_shortcut == "germline":
             results = [
-            GermlineSheetChecker(self.shortcut_sheets).run_checks(),
-            PedFileCheck(self.shortcut_sheets, self.args.base_path).run_checks(),
-            VcfFileCheck(self.shortcut_sheets, self.args.base_path).run_checks(),
+                GermlineSheetChecker(self.shortcut_sheets).run_checks(),
+                PedFileCheck(self.shortcut_sheets, self.args.base_path).run_checks(),
+                VcfFileCheck(self.shortcut_sheets, self.args.base_path).run_checks(),
             ]
         elif self.args.tsv_shortcut == "cancer":
             results = [
-            CancerSheetChecker(self.shortcut_sheets).run_checks(),
-            #TODO: VcfFileCheck if needed
+                CancerSheetChecker(self.shortcut_sheets).run_checks(),
+                # TODO: VcfFileCheck if needed
             ]
         else:
-            raise ParameterException("tsv shortcut not supported, valid values are 'cancer' and 'germline'")
+            raise ParameterException(
+                "tsv shortcut not supported, valid values are 'cancer' and 'germline'"
+            )
 
         logger.info("All done")
         return int(not all(results))

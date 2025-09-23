@@ -65,10 +65,10 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
 
     parser.add_argument(
         "--library-types",
-        nargs= "*",
-        choices=( "WES", "WGS", "Panel_seq"),
+        nargs="*",
+        choices=("WES", "WGS", "Panel_seq"),
         default=[],
-        help="Library type(s) to use passed like '--library-types WES Panel_seq', default is to use all."
+        help="Library type(s) to use passed like '--library-types WES Panel_seq', default is to use all.",
     )
 
     parser.add_argument(
@@ -91,10 +91,9 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         help="The shortcut TSV schema to use; default: 'germline'.",
     )
 
+
 def build_sheet(
-    args : argparse.Namespace,
-    project_uuid: typing.Union[str, UUID],
-    sodar_api : SodarApi
+    args: argparse.Namespace, project_uuid: typing.Union[str, UUID], sodar_api: SodarApi
 ) -> str:
     """Build sheet TSV file."""
 
@@ -105,7 +104,9 @@ def build_sheet(
     isa = isa_dict_to_isa_data(isa_dict, assay_txt=assay_key, study_txt=study_key)
     if args.tsv_shortcut == "germline":
         builder = SampleSheetBuilderGermline()
-        builder.set_germline_specific_values(args.library_types, project_uuid, args.first_batch, args.last_batch)
+        builder.set_germline_specific_values(
+            args.library_types, project_uuid, args.first_batch, args.last_batch
+        )
     else:
         builder = SampleSheetBuilderCancer()
     iwalker = InvestigationTraversal(isa.investigation, isa.studies, isa.assays)
@@ -129,8 +130,10 @@ def run(
     config_path = args.base_path / ".snappy_pipeline"
     datasets = load_datasets(config_path / "config.yaml")
     logger.info("Pulling for {} datasets", len(datasets))
-    if(len(datasets) >1 and args.assay_uuid is not None):
-        logger.warning("Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID")
+    if len(datasets) > 1 and args.assay_uuid is not None:
+        logger.warning(
+            "Assay_uuid defined but multiple projects present, this programm will only work properly for the project with the given UUID"
+        )
     for dataset in datasets.values():
         if dataset.sodar_uuid:
             args.project_uuid = dataset.sodar_uuid
@@ -138,9 +141,7 @@ def run(
             print_args(args)
             overwrite_helper(
                 config_path / dataset.sheet_file,
-                build_sheet(
-                    args, dataset.sodar_uuid, sodar_api
-                ),
+                build_sheet(args, dataset.sodar_uuid, sodar_api),
                 do_write=not args.dry_run,
                 show_diff=True,
                 show_diff_side_by_side=args.show_diff_side_by_side,

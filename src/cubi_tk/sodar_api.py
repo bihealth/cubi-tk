@@ -20,24 +20,28 @@ from .exceptions import ParameterException, SodarApiException
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"
 
-def get_user_input_assay_study(assay_study_uuids: list[str], assays_studies:dict[str, api_models.Study|api_models.Assay],string :str = "Assays") -> UUID:
-    """Display available assay or study UUIDS and let User choose which one to use.
-    """
+
+def get_user_input_assay_study(
+    assay_study_uuids: list[str],
+    assays_studies: dict[str, api_models.Study | api_models.Assay],
+    string: str = "Assays",
+) -> UUID:
+    """Display available assay or study UUIDS and let User choose which one to use."""
     logger.warning(f"Multiple {string} present, which one do you want to choose?")
     for i, content_uuid in enumerate(assay_study_uuids):
         content_name = assays_studies[content_uuid].file_name
-        logger.warning("{}: {}", i+1, content_name)
+        logger.warning("{}: {}", i + 1, content_name)
     content_num = 0
-    while (content_num<= 0 or content_num> len(assay_study_uuids)):
+    while content_num <= 0 or content_num > len(assay_study_uuids):
         content_num = input("Please enter the index of the Assay/Study (e.g 2):")
-        content_num =int(content_num)
-    content_uuid = assay_study_uuids[content_num-1]
+        content_num = int(content_num)
+    content_uuid = assay_study_uuids[content_num - 1]
     logger.info("Chosen Assay/Study: {}", assays_studies[content_uuid].file_name)
     return content_uuid
 
-def multi_assay_study_warning(content:dict, string :str = "Assays") -> None:
-    """Display warning for multi-assays or studies.
-    """
+
+def multi_assay_study_warning(content: dict, string: str = "Assays") -> None:
+    """Display warning for multi-assays or studies."""
     multi_assay_str = "\n".join(content)
     logger.warning(
         f"Project contains multiple {string}, will only consider UUID '{content[0]}'.\n"
@@ -58,25 +62,36 @@ class SodarApi:
     if set_default is true, default values will be set, otherwise an error will be thrown if required params are missing (serverurl and api token)
     if with_dest is true the destination will be checked and sodarapi set up accordingly, can be project_uuid, destination (project_uuid, lz_path or lz_uuid) or landing_zone_uuid
     """
-    def __init__(self, args: argparse.Namespace, set_default: bool = False, with_dest: bool = False, dest_string: str = "project_uuid"):
-        any_error, args = self.setup_sodar_params(args, set_default=set_default, with_dest=with_dest, dest_string=dest_string)
+
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        set_default: bool = False,
+        with_dest: bool = False,
+        dest_string: str = "project_uuid",
+    ):
+        any_error, args = self.setup_sodar_params(
+            args, set_default=set_default, with_dest=with_dest, dest_string=dest_string
+        )
         if any_error:
             sys.exit(1)
         self.sodar_server_url = args.sodar_server_url
         self.project_uuid = args.project_uuid
         self.assay_uuid = getattr(args, "assay_uuid", None)
-        self.lz_path = getattr(args, "destination", None) #if destiantion exists and destination is lz path (!= project_uuid), set lz_path
+        self.lz_path = getattr(
+            args, "destination", None
+        )  # if destiantion exists and destination is lz path (!= project_uuid), set lz_path
         if self.lz_path == self.project_uuid:
             self.lz_path = None
         self.yes = getattr(args, "yes", False)
         self.sodar_headers = {
             "samplesheets": {
                 "Authorization": "token {}".format(args.sodar_api_token),
-                'Accept': f'application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION_SAMPLESHEETS}'
+                "Accept": f"application/vnd.bihealth.sodar.samplesheets+json; version={SODAR_API_VERSION_SAMPLESHEETS}",
             },
             "landingzones": {
                 "Authorization": "token {}".format(args.sodar_api_token),
-                'Accept': f'application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION_LANDINGZONES}'
+                "Accept": f"application/vnd.bihealth.sodar.landingzones+json; version={SODAR_API_VERSION_LANDINGZONES}",
             },
         }
 
@@ -88,7 +103,7 @@ class SodarApi:
         params: dict = None,
         data: dict = None,
         files: dict = None,
-        dest_uuid: UUID = None
+        dest_uuid: UUID = None,
     ) -> dict:
         # need to add trailing slashes to all parts of the URL for urljoin to work correctly
         # afterward remove the final trailing slash from the joined URL
@@ -110,13 +125,18 @@ class SodarApi:
             logger.debug(f"HTTP GET request to {url} with headers {self.sodar_headers[api]}")
             response = requests.get(url, headers=self.sodar_headers[api])
         elif method == "post":
-            logger.debug(f"HTTP POST request to {url} with headers {self.sodar_headers[api]}, files {files}, and data {data}")
+            logger.debug(
+                f"HTTP POST request to {url} with headers {self.sodar_headers[api]}, files {files}, and data {data}"
+            )
             response = requests.post(url, headers=self.sodar_headers[api], files=files, data=data)
         else:
             raise ValueError("Unknown HTTP method.")
 
         if response.status_code != 200 and response.status_code != 201:
-            raise SodarApiException(response.status_code, f"API response: {response.text} and status code: {response.status_code}")
+            raise SodarApiException(
+                response.status_code,
+                f"API response: {response.text} and status code: {response.status_code}",
+            )
 
         return response.json()
 
@@ -137,20 +157,24 @@ class SodarApi:
         if len(samplesheet["studies"]) > 1 or len(samplesheet["assays"]) > 1:
             assay, study = self.get_assay_from_uuid()
             assay_name = assay.file_name
-            study_name= study.file_name
+            study_name = study.file_name
 
-        small_samplesheet={
+        small_samplesheet = {
             "investigation": {
                 "path": samplesheet["investigation"]["path"],
                 "tsv": samplesheet["investigation"]["tsv"],
             },
-            "studies": {study_name : samplesheet["studies"][study_name]},
-            "assays": {assay_name : samplesheet["assays"][assay_name]},
+            "studies": {study_name: samplesheet["studies"][study_name]},
+            "assays": {assay_name: samplesheet["assays"][assay_name]},
         }
-        logger.debug("Returning all samplesheet with single assay and study : {}", small_samplesheet)
+        logger.debug(
+            "Returning all samplesheet with single assay and study : {}", small_samplesheet
+        )
         return small_samplesheet
 
-    def get_samplesheet_investigation_retrieve(self, log_error = True) -> api_models.Investigation | None:
+    def get_samplesheet_investigation_retrieve(
+        self, log_error=True
+    ) -> api_models.Investigation | None:
         logger.debug("Get investigation information.")
         try:
             investigationJson = self._api_call("samplesheets", "investigation/retrieve")
@@ -162,12 +186,12 @@ class SodarApi:
         logger.debug(f"Got investigation: {investigation}")
         return investigation
 
-    #Todo: remove/refactor write_sampleinfo sea snap
+    # Todo: remove/refactor write_sampleinfo sea snap
     def get_samplesheet_remote(self) -> dict | None:
         logger.debug("Get remote samplesheet isa information.")
-        #valid Uri?
+        # valid Uri?
         try:
-            samplesheet = self._api_call("samplesheets", "remote/get", params={"isa" : 1})
+            samplesheet = self._api_call("samplesheets", "remote/get", params={"isa": 1})
         except SodarApiException as e:
             logger.error(f"Failed to retrieve samplesheets information:\n{e}")
             return None
@@ -184,7 +208,6 @@ class SodarApi:
         filelist = [cattr.structure(obj, api_models.iRODSDataObject) for obj in json_filelist]
 
         return filelist
-
 
     def post_samplesheet_import(
         self,
@@ -212,9 +235,9 @@ class SodarApi:
             return 1
 
     def post_samplesheet_deletion_request_create(self, path, description=None) -> int:
-        params = {'path': path}
+        params = {"path": path}
         if description:
-            params.update({'description': description})
+            params.update({"description": description})
 
         try:
             ret_val = self._api_call(
@@ -233,12 +256,15 @@ class SodarApi:
             logger.error(f"Failed to create Sodar deletion request:\n{e}")
             return 1
 
-
     # landingzone Api calls
-    def get_landingzone_retrieve(self, lz_uuid: UUID = None, log_error = True) -> api_models.LandingZone | None:
+    def get_landingzone_retrieve(
+        self, lz_uuid: UUID = None, log_error=True
+    ) -> api_models.LandingZone | None:
         logger.debug("Retrieving Landing Zone ...")
         try:
-            landingzone = self._api_call("landingzones", "retrieve", dest_uuid=lz_uuid) #if None: assume projectuuid is lz_uuid
+            landingzone = self._api_call(
+                "landingzones", "retrieve", dest_uuid=lz_uuid
+            )  # if None: assume projectuuid is lz_uuid
             landingzone = cattr.structure(landingzone, api_models.LandingZone)
             self.project_uuid = landingzone.project
             self.lz_path = landingzone.irods_path
@@ -251,7 +277,9 @@ class SodarApi:
             return None
 
     # maybe use status_locked of lz and only retrun not locked if wanted (instead of filter_for_state filter_for_not_locked:bool)
-    def get_landingzone_list(self, sort_reverse:bool = False, filter_for_state :list[str]=LANDING_ZONE_STATES) -> List[api_models.LandingZone]|None:
+    def get_landingzone_list(
+        self, sort_reverse: bool = False, filter_for_state: list[str] = LANDING_ZONE_STATES
+    ) -> List[api_models.LandingZone] | None:
         logger.debug("Get list of Landing Zones...")
         try:
             landingzones_json = self._api_call("landingzones", "list")
@@ -259,28 +287,29 @@ class SodarApi:
         except SodarApiException as e:
             logger.error(f"Failed to retrieve Landingzone:\n{e}")
             return None
-        landingzones = sorted(
-                landingzones,
-                key=lambda lz: lz.date_modified,
-                reverse=sort_reverse
-            )
-        #if assay_uuid filter for assay_uuid
+        landingzones = sorted(landingzones, key=lambda lz: lz.date_modified, reverse=sort_reverse)
+        # if assay_uuid filter for assay_uuid
         if self.assay_uuid:
             landingzones = list(filter(lambda lz: lz.assay == self.assay_uuid, landingzones))
-        #if lz path filter for irods path
+        # if lz path filter for irods path
         if self.lz_path is not None:
             landingzones = list(filter(lambda lz: lz.irods_path == self.lz_path, landingzones))
         # Get the lzs with allowed state
         landingzones = list(filter(lambda lz: lz.status in filter_for_state, landingzones))
         return landingzones
 
-    def post_landingzone_create(self, wait_until_ready = False, create_colls: bool = True, restrict_colls: bool = True) -> api_models.LandingZone | None:
+    def post_landingzone_create(
+        self, wait_until_ready=False, create_colls: bool = True, restrict_colls: bool = True
+    ) -> api_models.LandingZone | None:
         logger.debug("Creating new Landing Zone...")
         if not self.assay_uuid:
             self.get_assay_from_uuid()
         try:
-            ret_val = self._api_call("landingzones", "create", method="post",
-                params={"create_colls" : create_colls, "restrict_colls": restrict_colls},
+            ret_val = self._api_call(
+                "landingzones",
+                "create",
+                method="post",
+                params={"create_colls": create_colls, "restrict_colls": restrict_colls},
                 data={"assay": self.assay_uuid},
             )
             if "sodar_warnings" in ret_val:
@@ -306,14 +335,18 @@ class SodarApi:
 
         except SodarApiException as e:
             if e.status_code == 503:
-                logger.error("Investigation for the project is not found or project iRODS collections have not been created")
+                logger.error(
+                    "Investigation for the project is not found or project iRODS collections have not been created"
+                )
             logger.error(f"Failed to create Landingzone:\n{e}")
             return None
 
-    def post_landingzone_submit_move(self, lz_uuid : UUID) -> UUID | None:
+    def post_landingzone_submit_move(self, lz_uuid: UUID) -> UUID | None:
         logger.debug("Moving landing zone with the given UUID")
         try:
-            ret_val = self._api_call("landingzones", "submit/move", method="post", dest_uuid=lz_uuid)
+            ret_val = self._api_call(
+                "landingzones", "submit/move", method="post", dest_uuid=lz_uuid
+            )
             new_uuid = ret_val["sodar_uuid"]
             logger.info("Landingzone with UUID {} successfully submitted for move.", new_uuid)
             return new_uuid
@@ -326,7 +359,9 @@ class SodarApi:
     def post_landingzone_submit_validate(self, lz_uuid: UUID) -> UUID | None:
         logger.debug("Validating landing zone with the given UUID")
         try:
-            ret_val = self._api_call("landingzones", "submit/validate", method="post", dest_uuid=lz_uuid)
+            ret_val = self._api_call(
+                "landingzones", "submit/validate", method="post", dest_uuid=lz_uuid
+            )
             new_uuid = ret_val["sodar_uuid"]
             logger.info("Landingzone with UUID {} successfully submitted for validation.", new_uuid)
             return new_uuid
@@ -337,7 +372,7 @@ class SodarApi:
             return None
 
     # helper functions
-    def get_assay_from_uuid(self)-> (tuple[None, None] | tuple[api_models.Assay, api_models.Study]):
+    def get_assay_from_uuid(self) -> tuple[None, None] | tuple[api_models.Assay, api_models.Study]:
         investigation = self.get_samplesheet_investigation_retrieve()
         if investigation is None:
             return None, None
@@ -348,7 +383,9 @@ class SodarApi:
         if len(studies) > 1 and not self.assay_uuid:
             study_keys = list(investigation.studies.keys())
             if not self.yes:
-                study_uuid = get_user_input_assay_study(study_keys, investigation.studies, string="studies")
+                study_uuid = get_user_input_assay_study(
+                    study_keys, investigation.studies, string="studies"
+                )
                 studies = [investigation.studies[study_uuid]]
             else:
                 multi_assay_study_warning(study_keys, string="studies")
@@ -380,7 +417,13 @@ class SodarApi:
             raise ParameterException(msg)
         return None, None
 
-    def setup_sodar_params(self, args : argparse.Namespace, set_default : bool = False, with_dest : bool = False, dest_string :str= "project_uuid")->tuple[bool, argparse.Namespace] : # noqa: C901
+    def setup_sodar_params(  # noqa: C901
+        self,
+        args: argparse.Namespace,
+        set_default: bool = False,
+        with_dest: bool = False,
+        dest_string: str = "project_uuid",
+    ) -> tuple[bool, argparse.Namespace]:
         any_error = False
 
         # If SODAR info not provided, fetch from user's toml file
@@ -388,10 +431,16 @@ class SodarApi:
         if toml_config:
             profile = getattr(args, "config_profile", "global")
             if profile not in toml_config:
-                logger.error(f"Profile {profile} is not in toml_config, present vals are: {toml_config.keys()}")
+                logger.error(
+                    f"Profile {profile} is not in toml_config, present vals are: {toml_config.keys()}"
+                )
                 any_error = True
-            args.sodar_server_url = args.sodar_server_url or toml_config.get(profile, {}).get("sodar_server_url")
-            args.sodar_api_token = args.sodar_api_token or toml_config.get(profile, {}).get("sodar_api_token")
+            args.sodar_server_url = args.sodar_server_url or toml_config.get(profile, {}).get(
+                "sodar_server_url"
+            )
+            args.sodar_api_token = args.sodar_api_token or toml_config.get(profile, {}).get(
+                "sodar_api_token"
+            )
 
         # Check presence of SODAR URL and auth token.
         if not args.sodar_api_token:  # pragma: nocover
@@ -400,7 +449,7 @@ class SodarApi:
             )
             any_error = True
         if not args.sodar_server_url:  # pragma: nocover
-            args.sodar_server_url="https://sodar.bihealth.org/"
+            args.sodar_server_url = "https://sodar.bihealth.org/"
             msg = "SODAR URL not given on command line and not found in toml config files. Please specify using --sodar-server-url, or set in config."
             if not set_default:
                 logger.error(msg)
@@ -419,19 +468,23 @@ class SodarApi:
                 if len(uuids) != 1 or not dest.startswith("/"):
                     logger.error("{} is not a valid UUID or Path.", dest_string)
                     any_error = True
-            #destiantion is UUID
+            # destiantion is UUID
             else:
                 args.project_uuid = dest
         elif getattr(args, "project_uuid", None) is None:
-            args.project_uuid = None #init project_uuid to none if not already in args for some snappy commands where project uuid is in config
+            args.project_uuid = None  # init project_uuid to none if not already in args for some snappy commands where project uuid is in config
         return any_error, args
 
     def load_toml_config(self, config):
-    # Load configuration from TOML cubitkrc file, if any.
+        # Load configuration from TOML cubitkrc file, if any.
         if config:
-            config_paths = [config,]
+            config_paths = [
+                config,
+            ]
         else:
-            config_paths = [GLOBAL_CONFIG_PATH, ]
+            config_paths = [
+                GLOBAL_CONFIG_PATH,
+            ]
         for config_path in config_paths:
             config_path = os.path.expanduser(os.path.expandvars(config_path))
             if os.path.exists(config_path):
@@ -439,5 +492,3 @@ class SodarApi:
                     return toml.load(tomlf)
         logger.warning("Could not find any of the global configuration files {}.", config_paths)
         return None
-
-

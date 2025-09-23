@@ -23,8 +23,7 @@ class PullDataCommand:
 
     presets = {
         "dragen": [
-            "**/*_FAM_dragen.fam.hard-filtered.vcf.gz"
-            "**/*_FAM_dragen.fam.hard-filtered.vcf.gz.tbi",
+            "**/*_FAM_dragen.fam.hard-filtered.vcf.gz**/*_FAM_dragen.fam.hard-filtered.vcf.gz.tbi",
             "**/*_FAM_dragen.fam.cnv.vcf.gz",
             "**/*_FAM_dragen.fam.cnv.vcf.gz.tbi",
             "**/*_FAM_dragen.fam.sv.vcf.gz",
@@ -181,9 +180,7 @@ class PullDataCommand:
             samples = None
 
         # Find all remote files (iRODS)
-        filesearcher = RetrieveSodarCollection(
-            self.args
-        )
+        filesearcher = RetrieveSodarCollection(self.args)
 
         remote_files_dict = filesearcher.perform()
         assay_path = filesearcher.get_assay_irods_path()
@@ -210,7 +207,9 @@ class PullDataCommand:
         )
 
         # Retrieve files from iRODS
-        iRODSTransfer(transfer_jobs, sodar_profile=self.args.config_profile).get(self.args.overwrite)
+        iRODSTransfer(transfer_jobs, sodar_profile=self.args.config_profile).get(
+            self.args.overwrite
+        )
 
         logger.info("All done. Have a nice day!")
         return 0

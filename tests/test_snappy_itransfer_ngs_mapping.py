@@ -16,6 +16,7 @@ from cubi_tk.irods_common import TransferJob
 
 from .conftest import my_get_lz_info, my_iRODS_transfer, setup_snappy_itransfer_mocks
 
+
 def test_run_snappy_itransfer_ngs_mapping_help(capsys):
     parser, subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
@@ -41,8 +42,13 @@ def test_run_snappy_itransfer_ngs_mapping_nothing(capsys):
     assert res.err
 
 
-@patch('cubi_tk.snappy.itransfer_ngs_mapping.SnappyItransferNgsMappingCommand._no_files_found_warning')
-@patch("cubi_tk.snappy.itransfer_ngs_mapping.SnappyItransferNgsMappingCommand._get_lz_info", my_get_lz_info)
+@patch(
+    "cubi_tk.snappy.itransfer_ngs_mapping.SnappyItransferNgsMappingCommand._no_files_found_warning"
+)
+@patch(
+    "cubi_tk.snappy.itransfer_ngs_mapping.SnappyItransferNgsMappingCommand._get_lz_info",
+    my_get_lz_info,
+)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 def test_run_snappy_itransfer_ngs_mapping_smoke_test(
     mock_transfer, mock_filecheck, mocker, germline_trio_sheet_tsv, minimal_config

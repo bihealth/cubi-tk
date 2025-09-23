@@ -71,8 +71,7 @@ class SeasnapCheckIrodsCommand(IrodsCheckCommand):
     def execute(self):
         """Execute checks."""
         warnings.warn(
-            "The `check-irods` function will be deprecated",
-            DeprecationWarning, stacklevel=2
+            "The `check-irods` function will be deprecated", DeprecationWarning, stacklevel=2
         )
 
         res = self.check_args(self.args)
