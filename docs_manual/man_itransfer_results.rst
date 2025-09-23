@@ -25,48 +25,8 @@ The basic usage is:
 
     $ cubi-tk sea-snap itransfer-results BLUEPRINT DESTINATION
 
-where each ``BLUEPRINT`` is the blueprint file mentioned above (probably "SODAR_export_blueprint.txt") and ``DESTINATION`` is either an iRODS path to a *landing zone* in SODAR or the UUID of that *landing zone*.
-
---------------------
-SODAR authentication
---------------------
-
-To use this command, which internally executes iRODS icommands, you need to authenticate with iRODS by running:
-
-.. code-block:: bash
-
-    $ iinit
-
-To be able to access the SODAR API (which is only required, if you specify a landing zone UUID instead of an iRODS path), you also need an API token.
-For token management for SODAR, the following docs can be used:
-
-- https://sodar.bihealth.org/manual/ui_user_menu.html
-- https://sodar.bihealth.org/manual/ui_api_tokens.html
-
-There are three options how to supply the token.
-Only one is needed.
-The options are the following:
-
-1. configure ``~/.cubitkrc.toml``.
-
-    .. code-block:: toml
-
-        [global]
-
-        sodar_server_url = "https://sodar.bihealth.org/"
-        sodar_api_token = "<your API token here>"
-
-2. pass via command line.
-
-    .. code-block:: bash
-
-        $ cubi-tk sodar ingest-fastq --sodar-url "https://sodar.bihealth.org/" --sodar-api-token "<your API token here>"
-
-3. set as environment variable.
-
-    .. code-block:: bash
-
-        $ SODAR_API_TOKEN="<your API token here>"
+where each ``BLUEPRINT`` is the blueprint file mentioned above (probably "SODAR_export_blueprint.txt") and ``DESTINATION``
+is either an iRODS path to a *landing zone* in SODAR, the UUID of that *landing zone* or a SODAR project UUID.
 
 ----------------
 More Information
