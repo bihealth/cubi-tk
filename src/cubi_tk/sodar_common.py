@@ -93,7 +93,7 @@ class SodarIngestBase:
                 lz_uuid = existing_lzs[0].sodar_uuid
                 assay_uuid = existing_lzs[0].assay
                 if self.sodar_api.assay_uuid is not None and assay_uuid != self.sodar_api.assay_uuid:
-                    logger.warning("different assay_uuid set than parsed from given lz")
+                    logger.warning(f"Different assay_uuid set than parsed from given lz, using the lz one: {assay_uuid} ")
                 self.sodar_api.assay_uuid = assay_uuid
             else:
                 msg = "Unable to identify UUID of given LZ Path{0}.".format(self.sodar_api.lz_path)
