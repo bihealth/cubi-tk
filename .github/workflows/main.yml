@@ -66,6 +66,10 @@ jobs:
           message: 'Please check your code via `make lint` and `make format-check`.'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check sphinx build
+        run: |
+          make sphinx-check
+
   testing:
     runs-on: ubuntu-latest
     strategy:
