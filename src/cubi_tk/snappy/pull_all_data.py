@@ -7,6 +7,7 @@ More Information
 """
 
 import argparse
+import os
 import typing
 
 from loguru import logger
@@ -56,6 +57,9 @@ class PullAllDataCommand:
 
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
+        if self.args.output_directory is None:
+            logger.info('No --output-directory given, defaulting to CWD!')
+            self.args.output_directory = os.getcwd()
         logger.info("=> will download to {}", self.args.output_directory)
         self.args.output_dir = self.args.output_directory
         logger.info("Using cubi-tk sodar pull-raw-data to actually download data")

@@ -88,6 +88,10 @@ class PullProcessedDataCommand(PullDataCommon):
             logger.error(f"Base path does not exist: {args.base_path}")
             res = 1
 
+        if self.args.output_directory is None:
+            logger.info('No --output-directory given, defaulting to CWD!')
+            self.args.output_directory = os.getcwd()
+
         # Validate output directory path
         if not (
             os.path.exists(args.output_directory) and os.access(args.output_directory, os.W_OK)
