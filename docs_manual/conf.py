@@ -57,7 +57,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "cubi-tk"
-copyright = "2020-2021, Berlin Institute of Health"  # pylint:disable=redefined-builtin
+copyright = "2020-2025, Berlin Institute of Health"  # pylint:disable=redefined-builtin
 author = "Core Unit Bioinformatics"
 
 # The version info for the project you're documenting, acts as replacement

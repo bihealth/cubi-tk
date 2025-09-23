@@ -417,13 +417,13 @@ class SodarApi:
             raise ParameterException(msg)
         return None, None
 
-    def setup_sodar_params(
+    def setup_sodar_params(  # noqa: C901
         self,
         args: argparse.Namespace,
         set_default: bool = False,
         with_dest: bool = False,
         dest_string: str = "project_uuid",
-    ) -> tuple[bool, argparse.Namespace]:  # noqa: C901
+    ) -> tuple[bool, argparse.Namespace]:
         any_error = False
 
         # If SODAR info not provided, fetch from user's toml file

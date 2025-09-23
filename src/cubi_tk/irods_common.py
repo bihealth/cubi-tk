@@ -202,12 +202,12 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(
+    def put(  # noqa: C901
         self,
         recursive: bool = False,
         no_list: bool = False,
         overwrite: Literal["sync", "never", "always", "ask"] = "sync",
-    ):  # noqa: C901
+    ):
         # Log all actions before doing them
         if self.dry_run or not no_list:
             logger.info("The following actions would be performed:")
