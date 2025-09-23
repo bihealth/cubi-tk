@@ -57,12 +57,13 @@ jobs:
       - name: Run linting tools
         run: |
           make lint
+          make format-check
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && failure()
         uses: marocchino/sticky-pull-request-comment@v1.1.0
         with:
-          message: 'Please check your code via `make lint`.'
+          message: 'Please check your code via `make lint` and `make format-check`.'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   testing:
