@@ -91,6 +91,7 @@ class SodarIngestBase:
             existing_lzs = self.sodar_api.get_landingzone_list(sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"])
             if existing_lzs is not None and len(existing_lzs) == 1: #lz exists
                 lz_uuid = existing_lzs[0].sodar_uuid
+                self.sodar_api.assay_uuid = existing_lzs[0].assay
             else:
                 msg = "Unable to identify UUID of given LZ Path{0}.".format(self.sodar_api.lz_path)
                 raise ParameterException(msg)
