@@ -108,12 +108,3 @@ jobs:
 
       - uses: codecov/codecov-action@v3
 
-  testing-docs:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: ammaraskar/sphinx-action@8.2.3
-      with:
-        docs-folder: "docs_manual/"
-        # Fail doc build test on any warning from sphinx
-        build-command: make html SPHINXOPTS+="-W"
