@@ -19,6 +19,12 @@ conda activate cubi-tk
 cd cubi-tk
 ```
 
+To update an existing environment use:
+```bash
+conda activate cubi-tk
+conda env update -f environment.yaml --prune
+```
+
 Install the package using pip:
 ```bash
 $ pip install -e .
@@ -29,9 +35,9 @@ Or using `uv`:
 # if not using conda: `uv python install 3.12`
 uv python pin 3.12
 uv sync
+# For full development install use:
+# uv sync --all-extras --all-groups --all-packages
 uv pip install -e .
-# alternatively, if you need snappy kickoff:
-# GIT_LFS_SKIP_SMUDGE=1 uv pip install -e '.[snappy]'
 ```
 
 ## Building the Manual

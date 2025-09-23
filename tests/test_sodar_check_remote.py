@@ -48,15 +48,21 @@ def test_findlocalmd5_run():
     expected_all.update(expected_1)
     expected_all.update(expected_2)
 
-    actual_1 = FindLocalChecksumFiles(test_dir_path / "test1", hash_scheme="MD5", recheck_checksum=False).run()
+    actual_1 = FindLocalChecksumFiles(
+        test_dir_path / "test1", hash_scheme="MD5", recheck_checksum=False
+    ).run()
     assert actual_1 == expected_1
 
-    actual_2 = FindLocalChecksumFiles(test_dir_path / "test2", hash_scheme="MD5",recheck_checksum=False).run()
+    actual_2 = FindLocalChecksumFiles(
+        test_dir_path / "test2", hash_scheme="MD5", recheck_checksum=False
+    ).run()
     assert actual_2 == expected_2
 
     empty_dir = test_dir_path / "empty_test"
     empty_dir.mkdir()
-    actual_empty = FindLocalChecksumFiles(empty_dir, hash_scheme="MD5",recheck_checksum=False).run()
+    actual_empty = FindLocalChecksumFiles(
+        empty_dir, hash_scheme="MD5", recheck_checksum=False
+    ).run()
     assert actual_empty == {}
     empty_dir.rmdir()
 

@@ -11,7 +11,6 @@ from cubi_tk.sodar_api import SodarApi
 
 
 class SodarDeletionRequestsCommand:
-
     def __init__(self, args):
         # Command line arguments.
         self.args = args
@@ -25,27 +24,25 @@ class SodarDeletionRequestsCommand:
 
         parser.add_argument(
             "irods_paths",
-            nargs='+',
+            nargs="+",
             help=(
                 "Paths to files or collections in irods that should get a deletion request. Relative paths will be "
                 "taken in relation to the assay base path. Non-recursive wildcards (?/*) can be used, if literal strings are given."
             ),
         )
         parser.add_argument(
-            '-c',
+            "-c",
             "--collections",
-            nargs='+',
+            nargs="+",
             help=(
                 "White list of base collections (samples), all files not matching these will not get a deletion request."
             ),
         )
         parser.add_argument(
-            '-d',
+            "-d",
             "--description",
             default=None,
-            help=(
-                "Text description to be added to the deletion requests"
-            ),
+            help=("Text description to be added to the deletion requests"),
         )
         parser.add_argument(
             "--dry-run",
@@ -66,8 +63,8 @@ class SodarDeletionRequestsCommand:
         """Execute the SodarAPI calls to ."""
 
         res = 0
-        #res = self.check_args(self.args)
-        #if res:  # pragma: nocover
+        # res = self.check_args(self.args)
+        # if res:  # pragma: nocover
         #    return res
 
         logger.info("Starting cubi-tk sodar deletion-requests-create")
@@ -81,28 +78,32 @@ class SodarDeletionRequestsCommand:
         deletion_request_paths = self.gather_deletion_request_paths(irods_files, assay.irods_path)
         for path in deletion_request_paths:
             if self.args.dry_run:
-                logger.info(f'DRY-RUN: Would create irods deletion request: {path}')
+                logger.info(f"DRY-RUN: Would create irods deletion request: {path}")
                 continue
             res = sodar_api.post_samplesheet_deletion_request_create(path, self.args.description)
-            #UNSURE: break or continue on error?
+            # UNSURE: break or continue on error?
             if res:
-                logger.debug(f'Project UUID: {sodar_api.project_uuid}; Assay UUID: {sodar_api.assay_uuid}')
-                raise CubiTkException(f'Could not create irods deletion request: {path}')
+                logger.debug(
+                    f"Project UUID: {sodar_api.project_uuid}; Assay UUID: {sodar_api.assay_uuid}"
+                )
+                raise CubiTkException(f"Could not create irods deletion request: {path}")
 
         logger.info("All done.")
         return 0
 
-    def gather_deletion_request_paths(self, irods_files: list[iRODSDataObject] | None, assay_path: str) -> list[str]:
+    def gather_deletion_request_paths(
+        self, irods_files: list[iRODSDataObject] | None, assay_path: str
+    ) -> list[str]:
         """Gather all paths for which deletion requests should be created."""
 
         given_path_patterns = [
-            p if p.startswith('/') else os.path.join(assay_path, p) for p in self.args.irods_paths
+            p if p.startswith("/") else os.path.join(assay_path, p) for p in self.args.irods_paths
         ]
-        if any('**' in p for p in given_path_patterns):
+        if any("**" in p for p in given_path_patterns):
             logger.warning(
                 "The recursive '**' wildcard is not supported will behave like a '*' instead (non-recursive)."
             )
-        logger.debug(f'Path patterns: {", ".join(given_path_patterns)}')
+        logger.debug(f"Path patterns: {', '.join(given_path_patterns)}")
 
         existing_object_paths = set()
         for obj in irods_files:
@@ -118,7 +119,9 @@ class SodarDeletionRequestsCommand:
                 # logger.debug(f'added parent: {pp.parent}')
                 existing_object_paths.add(pp.parent)
                 pp = pp.parent
-        logger.debug(f'Matching {len(existing_object_paths)} paths from {len(irods_files)} irods files')
+        logger.debug(
+            f"Matching {len(existing_object_paths)} paths from {len(irods_files)} irods files"
+        )
 
         matched_objects = set()
         for pattern in given_path_patterns:
@@ -126,14 +129,19 @@ class SodarDeletionRequestsCommand:
             matches = {pp for pp in existing_object_paths if pp.match(pattern)}
             existing_object_paths -= matches
             matched_objects |= matches
-        logger.debug(f'Matched irods paths: {", ".join(map(str, matched_objects))}')
+        logger.debug(f"Matched irods paths: {', '.join(map(str, matched_objects))}")
 
         # apply collection whitelist, if given
         if self.args.collections:
-            matched_objects = {pp for pp in matched_objects if any(
-                pp.is_relative_to(PurePosixPath(assay_path) / coll) for coll in self.args.collections
-            )}
-            logger.debug(f'Filtered irods paths: {", ".join(map(str, matched_objects))}')
+            matched_objects = {
+                pp
+                for pp in matched_objects
+                if any(
+                    pp.is_relative_to(PurePosixPath(assay_path) / coll)
+                    for coll in self.args.collections
+                )
+            }
+            logger.debug(f"Filtered irods paths: {', '.join(map(str, matched_objects))}")
 
         return sorted(map(str, matched_objects))
 

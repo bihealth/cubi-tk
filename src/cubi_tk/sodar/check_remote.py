@@ -10,6 +10,7 @@ File are sorted into:
 - those present both locally and in the remote directory
 - those present only in the remote directory
 """
+
 import argparse
 from collections import defaultdict
 import os
@@ -47,7 +48,7 @@ class FindLocalChecksumFiles:
 
         self.searchpath = Path(base_path)
         self.recheck_checksum = recheck_checksum
-        self.hash_scheme=hash_scheme
+        self.hash_scheme = hash_scheme
 
     # Adapted from snappy check remote
     def run(self):
@@ -62,7 +63,7 @@ class FindLocalChecksumFiles:
         rawdata_structure_dict = defaultdict(list)
 
         # Find all chcksum files
-        checksum_files = self.searchpath.rglob("*."+ self.hash_scheme.lower())
+        checksum_files = self.searchpath.rglob("*." + self.hash_scheme.lower())
 
         # Check that corresponding files exist
         for checksumfile in checksum_files:
@@ -90,7 +91,9 @@ class FindLocalChecksumFiles:
                     raise FileChecksumMismatchException
 
             rawdata_structure_dict[datafile.parent].append(
-                FileDataObject(file_name=datafile.name, file_path=str(datafile), file_checksum=checksum)
+                FileDataObject(
+                    file_name=datafile.name, file_path=str(datafile), file_checksum=checksum
+                )
             )
 
         logger.info("... done with raw data files search.")
@@ -265,7 +268,9 @@ class FileComparisonChecker:
         # Convert entries to text
         def make_file_block(folder, files):
             files_str = "\n".join(
-                "    " + f.file_name + ("" if not include_checksum else "  (" + f.file_checksum[:8] + ")")
+                "    "
+                + f.file_name
+                + ("" if not include_checksum else "  (" + f.file_checksum[:8] + ")")
                 for f in sorted(files, key=lambda o: o.file_name)
             )
             return str(folder) + ":\n" + files_str
@@ -369,16 +374,16 @@ class SodarCheckRemoteCommand:
         print_args(self.args)
 
         # Find all remote files (iRODS)
-        irodscollector = RetrieveSodarCollection(
-            self.args
-        )
+        irodscollector = RetrieveSodarCollection(self.args)
         hash_scheme = irodscollector.irods_hash_scheme()
         remote_files_dict = irodscollector.perform()
         assay_path = irodscollector.get_assay_irods_path()
 
         # Find all local files with checksum
         local_files_dict = FindLocalChecksumFiles(
-            base_path=self.args.base_path, hash_scheme=hash_scheme, recheck_checksum=self.args.recheck_checksum
+            base_path=self.args.base_path,
+            hash_scheme=hash_scheme,
+            recheck_checksum=self.args.recheck_checksum,
         ).run()
 
         # Run checks

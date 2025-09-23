@@ -34,7 +34,7 @@ def setup_argparse_only():  # pragma: nocover
 def setup_argparse():
     """Create argument parser."""
     # Construct argument parser and set global options.
-    basic_parser =get_basic_parser()
+    basic_parser = get_basic_parser()
     parser = argparse.ArgumentParser(prog="cubi-tk", parents=[basic_parser])
     parser.add_argument("--version", action="version", version="%%(prog)s %s" % __version__)
 
@@ -72,11 +72,14 @@ def main(argv=None):
     # Setup logging verbosity.
     logger.remove()
     if args.verbose:  # pragma: no cover
-        #will use default formatter "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
+        # will use default formatter "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
         logger.add(sys.stdout, level="DEBUG")
     else:
-        logger.add(sys.stdout, format="<level>{level:1.1}</level> - <green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{message}</level> ", level="INFO")
-
+        logger.add(
+            sys.stdout,
+            format="<level>{level:1.1}</level> - <green>{time:DD.MM.YYYY HH:mm:ss}</green> - <level>{message}</level> ",
+            level="INFO",
+        )
 
     # Handle the actual command line.
     cmds = {

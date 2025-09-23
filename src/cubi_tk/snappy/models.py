@@ -68,6 +68,6 @@ def load_datasets(path: pathlib.Path) -> typing.Dict[str, DataSet]:
     logger.info("Loaded {} data sets, {} with SODAR UUID", len(data_sets), len(filtered))
 
     for _key, ds in sorted(filtered.items()):
-        logger.debug("  - {}{}", ds.sodar_uuid, ": {}" , ds.sodar_title if ds.sodar_title else "")
+        logger.debug("  - {}{}", ds.sodar_uuid, ": {}", ds.sodar_title if ds.sodar_title else "")
 
     return filtered

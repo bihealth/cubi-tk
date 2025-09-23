@@ -16,8 +16,6 @@ from cubi_tk.sodar_api import SodarApi
 from .. import isa_support
 
 
-
-
 class UploadSheetCommand:
     """Implementation of the ``upload-sheet`` command."""
 
@@ -61,7 +59,7 @@ class UploadSheetCommand:
             file_paths.append(i_path.parent / name)
 
         logger.info("Uploading files: \n{}", "\n".join(map(str, file_paths)))
-        files_dict={}
+        files_dict = {}
         with contextlib.ExitStack() as stack:
             for no, path in enumerate(file_paths):
                 p = pathlib.Path(path)

@@ -136,9 +136,7 @@ class AddPedCommand:
             tmp_path = pathlib.Path(str(tmpdir))
 
             logger.info("-- downloading sample sheet --")
-            dl_res = DownloadSheetCommand(
-                self.args
-            ).execute()
+            dl_res = DownloadSheetCommand(self.args).execute()
             if dl_res != 0:
                 logger.error("-- downloading sheet failed --")
                 return 1
@@ -149,9 +147,7 @@ class AddPedCommand:
             self.args["input_investigation_file"] = str(tmp_path / next(tmp_path.glob("i_*")))
             print_args(self.args)
 
-            add_res = AddPedIsaTabCommand(
-                self.args
-            ).execute()
+            add_res = AddPedIsaTabCommand(self.args).execute()
             if add_res != 0:
                 logger.error("-- updating sheet failed --")
                 return 1
@@ -159,9 +155,7 @@ class AddPedCommand:
                 logger.info("-- updating sheet succeeded --")
 
             logger.info("-- uploading sample sheet --")
-            ul_res = UploadSheetCommand(
-                self.args
-            ).execute()
+            ul_res = UploadSheetCommand(self.args).execute()
             if ul_res != 0:
                 logger.error("-- uploading sheet failed --")
                 return 1

@@ -1,4 +1,5 @@
 """Common code to parse BioMedSheets"""
+
 import typing
 from loguru import logger
 
@@ -9,6 +10,7 @@ from ..isa_support import (
 from biomedsheets import io_tsv
 from biomedsheets.naming import NAMING_ONLY_SECONDARY_ID
 import attr
+
 
 class ParseSampleSheet:
     """Class contains methods to parse BioMedSheet"""
@@ -285,7 +287,7 @@ class SampleSheetBuilder(IsaNodeVisitor):
         logger.debug("building sheet")
 
     def get_libtype(self, splitted_lib, library):
-        #get libtype
+        # get libtype
         lib_type_string = splitted_lib[-1]
         if lib_type_string.startswith("WGS"):
             library_type = "WGS"
@@ -328,7 +330,14 @@ HEADER_TPL_GERMLINE = (
 MAPPING_SEX_GERMLNE = {"female": "F", "male": "M", "unknown": "U", None: "."}
 
 #: Mapping from disease status to sample sheet status.
-MAPPING_STATUS_GERMLINE = {"affected": "Y", "carrier": "Y", "unaffected": "N", "unknown": ".", None: "."}
+MAPPING_STATUS_GERMLINE = {
+    "affected": "Y",
+    "carrier": "Y",
+    "unaffected": "N",
+    "unknown": ".",
+    None: ".",
+}
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class SourceGermline:
@@ -350,6 +359,7 @@ class SampleGermline:
     folder_name: str
     seq_platform: str
     library_kit: str
+
 
 class SampleSheetBuilderGermline(SampleSheetBuilder):
     def __init__(self):
@@ -456,9 +466,10 @@ class SampleSheetBuilderGermline(SampleSheetBuilder):
         )
         return result
 
+
 ####Cancer specific Classes, Templates and Constants
 
-HEADER_TPL_CANCER= (
+HEADER_TPL_CANCER = (
     "[Metadata]",
     "schema\tcancer_matched",
     "schema_version\tv1",
@@ -469,10 +480,9 @@ HEADER_TPL_CANCER= (
     "libraryKit\tngsLibrary\texome enrichment kit\tstring\t.\t.\t.\t.\t.",
     "",
     "[Data]",
-    (
-        "patientName\tsampleName\textractionType\tlibraryType\tfolderName\tisTumor\tlibraryKit"
-    ),
+    ("patientName\tsampleName\textractionType\tlibraryType\tfolderName\tisTumor\tlibraryKit"),
 )
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class SourceCancer:
@@ -485,11 +495,12 @@ class SourceCancer:
 class SampleCancer:
     source: SourceCancer
     extraction_type: str
-    sample_name_biomed :str
+    sample_name_biomed: str
     library_name: str
     library_type: str
     folder_name: str
     library_kit: str
+
 
 class SampleSheetBuilderCancer(SampleSheetBuilder):
     def __init__(self):
@@ -503,11 +514,11 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
             sample = material
             characteristics_material = {c.name: c for c in material.characteristics}
             comments = {c.name: c for c in source.comments}
-            tumor =characteristics_material.get("Is tumor", comments.get("Is tumor"))
+            tumor = characteristics_material.get("Is tumor", comments.get("Is tumor"))
             self.sources[material.name] = SourceCancer(
                 source_name=source.name,
                 sample_name=sample.name,
-                is_tumor=tumor.value[0] if tumor else None
+                is_tumor=tumor.value[0] if tumor else None,
             )
         elif material.type == "Library Name" or (
             material.type == "Extract Name"
@@ -518,16 +529,16 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
             splitted_lib = library.name.split("-")
             library_type = self.get_libtype(splitted_lib, library)
 
-            #get extractiontype
+            # get extractiontype
             extr_type_string = splitted_lib[-2]
             if extr_type_string.startswith("DNA"):
-                extraction_type="DNA"
+                extraction_type = "DNA"
             elif extr_type_string.startswith("RNA"):
-                extraction_type="RNA"
+                extraction_type = "RNA"
             else:
                 raise Exception("Cannot infer exctraction type from %s" % library.name)
 
-            #get sample name for biomedsheet
+            # get sample name for biomedsheet
             sample_name_biomed = splitted_lib[-3]
 
             folder_name = first_value("Folder name", node_path)
@@ -536,8 +547,8 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
 
             self.samples[sample.name] = SampleCancer(
                 source=self.sources[sample.name],
-                sample_name_biomed = sample_name_biomed,
-                extraction_type= extraction_type,
+                sample_name_biomed=sample_name_biomed,
+                extraction_type=extraction_type,
                 library_name=library.name,
                 folder_name=folder_name,
                 library_type=library_type,
@@ -550,16 +561,14 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
         material_path = [x for x in node_path if hasattr(x, "type")]
         sample = material_path[0]
         if process.protocol_ref.startswith("Nucleic acid sequencing"):
-            self.samples[sample.name] = attr.evolve(
-                self.samples[sample.name]
-            )
+            self.samples[sample.name] = attr.evolve(self.samples[sample.name])
 
     def generateSheet(self):
         super().generateSheet()
         result = []
-        #for sample_name, source in self.sources.items():
-            #sample = self.samples.get(sample_name, None)
-            #if sample:
+        # for sample_name, source in self.sources.items():
+        # sample = self.samples.get(sample_name, None)
+        # if sample:
         for sample_name, sample in self.samples.items():
             source = self.sources.get(sample_name, None)
             row = [
@@ -572,9 +581,5 @@ class SampleSheetBuilderCancer(SampleSheetBuilder):
                 sample.library_kit or "." if sample else ".",
             ]
             result.append("\t".join([c.strip() for c in row]))
-        result = (
-            list(HEADER_TPL_CANCER)
-            + list(result)
-            + [""]
-        )
+        result = list(HEADER_TPL_CANCER) + list(result) + [""]
         return result

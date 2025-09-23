@@ -52,18 +52,23 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras --all-groups
 
       - name: Run linting tools
         run: |
           make lint
+          make format-check
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && failure()
         uses: marocchino/sticky-pull-request-comment@v1.1.0
         with:
-          message: 'Please check your code via `make lint`.'
+          message: 'Please check your code via `make lint` and `make format-check`.'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check sphinx build
+        run: |
+          make sphinx-check
 
   testing:
     runs-on: ubuntu-latest
@@ -96,9 +101,10 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --all-extras --all-groups
 
       - name: Run tests
         run: uv run pytest
 
       - uses: codecov/codecov-action@v3
+

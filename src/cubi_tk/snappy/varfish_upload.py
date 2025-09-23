@@ -284,10 +284,7 @@ class SnappyVarFishUploadCommand:
                         key = f"{step}: {file_name}"
                         found[key] = file_path
                     elif file_name not in found and any(
-                        (
-                            file_name.endswith(".ped") or file_name.startswith(p)
-                            for p in PREFIXES
-                        )
+                        (file_name.endswith(".ped") or file_name.startswith(p) for p in PREFIXES)
                     ):  # must treat .ped as special case
                         found[file_name] = file_path
         return found

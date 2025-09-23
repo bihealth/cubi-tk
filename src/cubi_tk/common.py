@@ -1,4 +1,5 @@
 """Common code."""
+
 import contextlib
 from ctypes import c_ulonglong
 import difflib
@@ -42,8 +43,8 @@ def compute_checksum(filename, hash_scheme, buffer_size=1_048_576, verbose=True)
     with open(filename, "rb") as f:
         if hash_scheme.lower() == "md5":
             the_hash = hashlib.md5()
-        elif hash_scheme.lower() == "sha256": #currently only md5 and SHA256 supported
-            the_hash= hashlib.sha256()
+        elif hash_scheme.lower() == "sha256":  # currently only md5 and SHA256 supported
+            the_hash = hashlib.sha256()
         else:
             logger.error(f"Hashscheme {hash_scheme} not supported, contact cubi-tk admin")
             sys.exit(1)
@@ -53,13 +54,14 @@ def compute_checksum(filename, hash_scheme, buffer_size=1_048_576, verbose=True)
             chunk = f.read(buffer_size)
     return the_hash.hexdigest()
 
-def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, hash_scheme) -> None: # type: ignore
+
+def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, hash_scheme) -> None:  # type: ignore
     """Compute checksum with ``md5sum`` or ``sha256sum``command."""
-    hash_ending = "."+hash_scheme.lower()
+    hash_ending = "." + hash_scheme.lower()
     dirname = os.path.dirname(job.path_local)
     filename = os.path.basename(job.path_local)[: -len(hash_ending)]
     path_checksum = job.path_local
-    checksum_argv = [hash_scheme.lower()+"sum", filename]
+    checksum_argv = [hash_scheme.lower() + "sum", filename]
     logger.debug("Computing checksum {} > {}", " ".join(checksum_argv), filename + hash_ending)
     try:
         with open(path_checksum, "wt") as checksumfile:
@@ -80,47 +82,52 @@ def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, ha
         except TypeError:
             pass  # swallow, pyfakefs and multiprocessing don't lik each other
 
+
 def execute_checksum_files_fix(
-        transfer_jobs: [TransferJob], hash_scheme, parallel_jobs: int = 8,
-    ) -> [TransferJob]:
-        """Create missing checksum files."""
-        ok_jobs = []
-        todo_jobs = []
-        for job in transfer_jobs:
-            if not os.path.exists(job.path_local):
-                todo_jobs.append(job)
-            else:
-                ok_jobs.append(job)
+    transfer_jobs: [TransferJob],
+    hash_scheme,
+    parallel_jobs: int = 8,
+) -> [TransferJob]:
+    """Create missing checksum files."""
+    ok_jobs = []
+    todo_jobs = []
+    for job in transfer_jobs:
+        if not os.path.exists(job.path_local):
+            todo_jobs.append(job)
+        else:
+            ok_jobs.append(job)
 
-        total_bytes = sum([os.path.getsize(j.path_local[: -len("."+hash_scheme.lower())]) for j in todo_jobs])
-        logger.info(
-            "Computing checksum sums for {} files of {} with up to {} processes",
-            len(todo_jobs),
-            sizeof_fmt(total_bytes),
-            parallel_jobs,
+    total_bytes = sum(
+        [os.path.getsize(j.path_local[: -len("." + hash_scheme.lower())]) for j in todo_jobs]
+    )
+    logger.info(
+        "Computing checksum sums for {} files of {} with up to {} processes",
+        len(todo_jobs),
+        sizeof_fmt(total_bytes),
+        parallel_jobs,
+    )
+    logger.info("Missing checksum files:\n{}", "\n".join(j.path_local for j in todo_jobs))
+    counter = Value(c_ulonglong, 0)
+    with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
+        if parallel_jobs == 0:  # pragma: nocover
+            for job in todo_jobs:
+                compute_checksum_parallel(job, counter, t, hash_scheme)
+        else:
+            pool = ThreadPool(processes=parallel_jobs)
+            for job in todo_jobs:
+                pool.apply_async(compute_checksum_parallel, args=(job, counter, t, hash_scheme))
+            pool.close()
+            pool.join()
+
+    # Finally, determine file sizes after done.
+    done_jobs = [
+        TransferJob(
+            path_local=j.path_local,
+            path_remote=j.path_remote,
         )
-        logger.info("Missing checksum files:\n{}", "\n".join( j.path_local for j in todo_jobs))
-        counter = Value(c_ulonglong, 0)
-        with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
-            if parallel_jobs == 0:  # pragma: nocover
-                for job in todo_jobs:
-                    compute_checksum_parallel(job, counter, t, hash_scheme)
-            else:
-                pool = ThreadPool(processes=parallel_jobs)
-                for job in todo_jobs:
-                    pool.apply_async(compute_checksum_parallel, args=(job, counter, t, hash_scheme))
-                pool.close()
-                pool.join()
-
-        # Finally, determine file sizes after done.
-        done_jobs = [
-            TransferJob(
-                path_local=j.path_local,
-                path_remote=j.path_remote,
-            )
-            for j in todo_jobs
-        ]
-        return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
+        for j in todo_jobs
+    ]
+    return tuple(sorted(done_jobs + ok_jobs, key=lambda x: x.path_local))
 
 
 def execute_shell_commands(cmds, verbose=True, check=True):
@@ -235,7 +242,7 @@ def check_irods_icommands(warn_only=True):  # disabled when testing  # pragma: n
     if missing:
         msg = "Could not find irods-icommands executables: %s", ", ".join(missing)
         if warn_only:
-            logger.warning(msg)#warnings.warn(msg, IrodsIcommandsUnavailableWarning)
+            logger.warning(msg)  # warnings.warn(msg, IrodsIcommandsUnavailableWarning)
         else:
             raise IrodsIcommandsUnavailableException(msg)
 
@@ -305,6 +312,7 @@ def overwrite_helper(
                     with out_path_obj.open("wt") as output_file:
                         shutil.copyfileobj(sheet_file, output_file)
 
+
 def print_line(line):
     line = line[:-1]
     if line.startswith(("+++", "---")):
@@ -353,7 +361,7 @@ def _overwrite_helper_show_diff(
                 out_file.write(line)
     out_file.flush()
     if not lines:
-        logger.info("File {} not changed, no diff...", out_path )
+        logger.info("File {} not changed, no diff...", out_path)
     return lines
 
 
@@ -412,7 +420,3 @@ class UnionFind:
             self._id[j] = i
 
         self._sz[i] += self._sz[j]
-
-
-
-

@@ -233,17 +233,17 @@ def _append_study_line_annotating_column(attr_name, col, config, curr, donor, pr
             "batch": str(config.batch_no),
             "family": donor.family_id,
             "organism": OntologyTermRef(
-                    name="Homo sapiens",
-                    accession="http://purl.bioontology.org/ontology/NCBITAXON/9606",
-                    ontology_name="NCBITAXON",
-                ),
+                name="Homo sapiens",
+                accession="http://purl.bioontology.org/ontology/NCBITAXON/9606",
+                ontology_name="NCBITAXON",
+            ),
             "father": donor.father_name,
             "mother": donor.mother_name,
             "sex": donor.sex,
-            "disease status": donor.disease
+            "disease status": donor.disease,
         }
         key = col.label.lower()
-        if key== "external links" and curr["type"] == SOURCE_NAME:
+        if key == "external links" and curr["type"] == SOURCE_NAME:
             # TODO: hacky, would need original donor ID here
             value = "x-charite-medgen-blood-book-id:%s" % donor.name.replace("_", "-")
         elif key in study_line_mapping.keys():
@@ -402,18 +402,20 @@ def _append_assay_line_annotating_column(
 
 def _append_assay_line_annotating_column_label(col, config, donor_name, value):
     label_value_mapping = {
-        "library source":"GENOMIC",
+        "library source": "GENOMIC",
         "library strategy": {"WES": "WXS"}.get(config.library_type, config.library_type),
-        "library selection": {"WES": "Hybrid Selection", "WGS": "RANDOM", "Panel_seq": "Hybrid Selection"}.get(
-            config.library_type
-        ),
+        "library selection": {
+            "WES": "Hybrid Selection",
+            "WGS": "RANDOM",
+            "Panel_seq": "Hybrid Selection",
+        }.get(config.library_type),
         "library layout": "PAIRED",
         "library kit": config.library_kit,
         "library kit catalogue id": config.library_kit_catalogue_id,
-        "folder name": donor_name.replace("_", "-"), # TODO: hacky, actually need real donor ID
+        "folder name": donor_name.replace("_", "-"),  # TODO: hacky, actually need real donor ID
         "platform": config.platform,
         "instrument model": config.instrument_model,
-        "base quality encoding":"Phred+33",
+        "base quality encoding": "Phred+33",
     }
     key = col.label.lower()
     if key in label_value_mapping.keys():

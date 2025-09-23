@@ -31,7 +31,7 @@ class IsaData:
     assays: typing.Dict[str, Assay]
 
 
-def load_investigation(i_path: typing.Union[str, Path], assay_txt=None, study_txt = None) -> IsaData:
+def load_investigation(i_path: typing.Union[str, Path], assay_txt=None, study_txt=None) -> IsaData:
     """Load investigation information from investigation files.
 
     Study and assay files are expected to be next to the investigation file.
@@ -44,7 +44,7 @@ def load_investigation(i_path: typing.Union[str, Path], assay_txt=None, study_tx
 
     studies = {}
     assays = {}
-    if(study_txt):
+    if study_txt:
         with (i_path.parent / study_txt).open() as s_file:
             studies[study_txt] = StudyReader.from_stream(
                 study_id=study_txt, input_file=s_file
@@ -61,14 +61,14 @@ def load_investigation(i_path: typing.Union[str, Path], assay_txt=None, study_tx
     return IsaData(investigation, str(i_path), studies, assays)
 
 
-def read_assay(i_path, assays, study, study_path, assay_txt = None):
+def read_assay(i_path, assays, study, study_path, assay_txt=None):
     if assay_txt:
         with (i_path.parent / assay_txt).open() as a_file:
-                assays[assay_txt] = AssayReader.from_stream(
-                    study_id=study_path,
-                    assay_id=assay_txt,
-                    input_file=a_file,
-                ).read()
+            assays[assay_txt] = AssayReader.from_stream(
+                study_id=study_path,
+                assay_id=assay_txt,
+                input_file=a_file,
+            ).read()
     else:
         for assay in study.assays:
             with (i_path.parent / assay.path).open() as a_file:
@@ -79,7 +79,7 @@ def read_assay(i_path, assays, study, study_path, assay_txt = None):
                 ).read()
 
 
-def isa_dict_to_isa_data(isa_dict, assay_txt=None, study_txt = None):
+def isa_dict_to_isa_data(isa_dict, assay_txt=None, study_txt=None):
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         i_path = Path(isa_dict["investigation"]["path"])
@@ -88,7 +88,7 @@ def isa_dict_to_isa_data(isa_dict, assay_txt=None, study_txt = None):
         if study_txt:
             tsv = isa_dict["studies"][study_txt]
             with (tmp_path / study_txt).open("wt") as out_f:
-                    out_f.write(tsv["tsv"])
+                out_f.write(tsv["tsv"])
         else:
             if len(isa_dict["studies"].keys()) > 1:
                 logger.warning("More than one Study present")
@@ -98,14 +98,17 @@ def isa_dict_to_isa_data(isa_dict, assay_txt=None, study_txt = None):
         if assay_txt:
             tsv = isa_dict["assays"][assay_txt]
             with (tmp_path / assay_txt).open("wt") as out_f:
-                    out_f.write(tsv["tsv"])
+                out_f.write(tsv["tsv"])
         else:
             if len(isa_dict["assays"].keys()) > 1:
-                logger.warning("More than one Assay present, maybe specify the assay you need with --assay-uuid")
+                logger.warning(
+                    "More than one Assay present, maybe specify the assay you need with --assay-uuid"
+                )
             for path, tsv in isa_dict["assays"].items():
                 with (tmp_path / path).open("wt") as out_f:
                     out_f.write(tsv["tsv"])
         return load_investigation(tmp_path / i_path.name, assay_txt, study_txt)
+
 
 #: Constant representing materials.
 TYPE_MATERIAL = "MATERIAL"

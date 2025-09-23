@@ -17,6 +17,14 @@ Checkout the repository and create a conda environment:
     conda activate cubi-tk
     cd cubi-tk
 
+Or to update an existing environment use:
+
+.. code-block:: bash
+
+    conda activate cubi-tk
+    conda env update -f environment.yaml --prune
+
+
 Install the package using pip:
 
 .. code-block:: bash

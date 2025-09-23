@@ -75,9 +75,14 @@ class PullRawDataCommand(PullDataCommon):
         logger.info("Loading configuration file and look for dataset")
 
         # Find download path
-        if(self.args.output_directory):
-            if not (os.path.exists(self.args.output_directory) and os.access(self.args.output_directory, os.W_OK)):
-                logger.error(f"Output directory path either does not exist or it is not writable: {self.args.base_path}")
+        if self.args.output_directory:
+            if not (
+                os.path.exists(self.args.output_directory)
+                and os.access(self.args.output_directory, os.W_OK)
+            ):
+                logger.error(
+                    f"Output directory path either does not exist or it is not writable: {self.args.base_path}"
+                )
                 return 1
             download_path = self.args.output_directory
         else:
@@ -115,9 +120,7 @@ class PullRawDataCommand(PullDataCommon):
         selected_identifiers = [pair[0] for pair in selected_identifiers_tuples]
 
         # Find all remote files (iRODS) and get assay UUID if not provided
-        sodar_coll = RetrieveSodarCollection(
-            self.args
-        )
+        sodar_coll = RetrieveSodarCollection(self.args)
         remote_files_dict = sodar_coll.perform()
         self.args.assay_uuid = sodar_coll.get_assay_uuid()
         # Filter based on identifiers and file type
@@ -155,7 +158,9 @@ class PullRawDataCommand(PullDataCommon):
         # Retrieve files from iRODS or print
         if not self.args.dry_run:
             self.get_irods_files(
-                irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite, sodar_profile=self.args.config_profile
+                irods_local_path_pairs=path_pair_list,
+                force_overwrite=self.args.overwrite,
+                sodar_profile=self.args.config_profile,
             )
         else:
             self._report_files(

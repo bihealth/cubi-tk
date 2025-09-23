@@ -64,10 +64,16 @@ class iRODSCommon:
     :type irods_env_path: pathlib.Path, optional
     """
 
-    def __init__(self, ask: bool = False, irods_env_path: Path = None, sodar_profile: str = "global"):
+    def __init__(
+        self, ask: bool = False, irods_env_path: Path = None, sodar_profile: str = "global"
+    ):
         # Path to iRODS environment file
         if irods_env_path is None:
-            irods_env_name = "irods_environment.json" if sodar_profile == "global" else "irods_environment_" + sodar_profile +".json"
+            irods_env_name = (
+                "irods_environment.json"
+                if sodar_profile == "global"
+                else "irods_environment_" + sodar_profile + ".json"
+            )
             self.irods_env_path = Path.home().joinpath(".irods", irods_env_name)
         else:
             self.irods_env_path = Path(irods_env_path)
@@ -75,7 +81,6 @@ class iRODSCommon:
         self.irodsA_file_found = False
         self.ask = ask
         self.hash_scheme = DEFAULT_HASH_SCHEME
-
 
     @staticmethod
     def get_irods_error(e: Exception):
@@ -96,39 +101,46 @@ class iRODSCommon:
             except Exception as e:  # pragma: no cover
                 logger.error(f"iRODS connection failed: {self.get_irods_error(e)}")
                 self._check_and_gen_irods_files(overwrite=True)
-                count_tries+=1
-                if count_tries >3:
+                count_tries += 1
+                if count_tries > 3:
                     raise e
 
-
-    def _check_and_gen_irods_files(self, overwrite = False):
+    def _check_and_gen_irods_files(self, overwrite=False):
         """check if irodsA exists and generate it"""
         if self.irodsA_file_found is True and not overwrite:
             return
         try:
-            #check if irodsfile exists
+            # check if irodsfile exists
             irodsA_path = self.irods_env_path.parent.joinpath(".irodsA")
             ##check path of last authorized irods_environment.json
             last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
-            if (irodsA_path.exists()):
+            if irodsA_path.exists():
                 self.irodsA_file_found = True
                 if last_profile_path.exists():
                     with open(last_profile_path) as last_profile_file:
                         last_used_env = json.load(last_profile_file)["last_used_env"]
-                        overwrite = last_used_env != str(self.irods_env_path) #overwrite irodsA file if last authenticated profile is different to current
+                        overwrite = (
+                            last_used_env != str(self.irods_env_path)
+                        )  # overwrite irodsA file if last authenticated profile is different to current
                 elif not self.irods_env_path.name == "irods_environment.json":
-                    overwrite = True #overwrite if other profile than global is used and no last_profile exists
+                    overwrite = True  # overwrite if other profile than global is used and no last_profile exists
 
             write_irods_file = not self.irodsA_file_found or overwrite
-            if self.ask and write_irods_file :
-                write_pam_irodsA_file(getpass.getpass('Enter current PAM password -> '), overwrite=overwrite, irods_env_file=self.irods_env_path)
+            if self.ask and write_irods_file:
+                write_pam_irodsA_file(
+                    getpass.getpass("Enter current PAM password -> "),
+                    overwrite=overwrite,
+                    irods_env_file=self.irods_env_path,
+                )
                 self.irodsA_file_found = True
                 with open(last_profile_path, mode="w") as last_profile_file:
-                    json.dump({"last_used_env" : str(self.irods_env_path)}, last_profile_file)
+                    json.dump({"last_used_env": str(self.irods_env_path)}, last_profile_file)
             elif not self.ask and write_irods_file:
-                logger.error("Password for irods conenction needs to be entered, please switch to interactive mode")
+                logger.error(
+                    "Password for irods conenction needs to be entered, please switch to interactive mode"
+                )
 
-            #read hashscheme vom irods env file
+            # read hashscheme vom irods env file
             with open(self.irods_env_path) as irods_env_data:
                 irods_env_json = json.load(irods_env_data)
                 self.hash_scheme = irods_env_json["irods_default_hash_scheme"]
@@ -156,7 +168,7 @@ class iRODSTransfer(iRODSCommon):
     :type jobs: Union[list,tuple,dict,set]
     """
 
-    def __init__(self, jobs: Iterable[TransferJob]|None, dry_run: bool = False, **kwargs):
+    def __init__(self, jobs: Iterable[TransferJob] | None, dry_run: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.dry_run = dry_run
         self.__jobs = jobs
@@ -172,7 +184,7 @@ class iRODSTransfer(iRODSCommon):
         return self.__jobs
 
     @jobs.setter
-    def jobs(self, jobs:Iterable[TransferJob]):
+    def jobs(self, jobs: Iterable[TransferJob]):
         self.__jobs = jobs
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
         self.__destinations = [job.path_remote for job in self.__jobs]
@@ -190,8 +202,12 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(self, recursive: bool = False, no_list: bool = False, overwrite: Literal['sync', 'never', 'always', 'ask'] = 'sync'): #noqa: C901
-
+    def put(  # noqa: C901
+        self,
+        recursive: bool = False,
+        no_list: bool = False,
+        overwrite: Literal["sync", "never", "always", "ask"] = "sync",
+    ):
         # Log all actions before doing them
         if self.dry_run or not no_list:
             logger.info("The following actions would be performed:")
@@ -203,8 +219,10 @@ class iRODSTransfer(iRODSCommon):
             logger.info("Aborting at your request.")
             raise UserCanceledException
 
-        if not self.ask and overwrite == 'ask':
-            logger.warning("Both `overwrite: 'ask'` and `ask: False` given. Falling back to `overwrite: 'sync'`")
+        if not self.ask and overwrite == "ask":
+            logger.warning(
+                "Both `overwrite: 'ask'` and `ask: False` given. Falling back to `overwrite: 'sync'`"
+            )
 
         # Double tqdm for currently transferred file info
         with (
@@ -225,21 +243,26 @@ class iRODSTransfer(iRODSCommon):
                 )
                 try:
                     with self.session as session:
-
                         if recursive:
                             self._create_collections(job)
 
                         remote_exists = session.data_objects.exists(job.path_remote)
-                        logger.debug(f'Remote file {job.path_remote} exists: {remote_exists}')
+                        logger.debug(f"Remote file {job.path_remote} exists: {remote_exists}")
                         # never / file not present yet
-                        if overwrite == 'never' or not remote_exists:
+                        if overwrite == "never" or not remote_exists:
                             kw_options = kw_excl_overwrite
-                        elif overwrite == 'always':
+                        elif overwrite == "always":
                             kw_options = kw_incl_overwrite
-                        #ask: user decides for every file, with --yes default back to sync
-                        elif self.ask and overwrite == 'ask':
+                        # ask: user decides for every file, with --yes default back to sync
+                        elif self.ask and overwrite == "ask":
                             print("\n")
-                            if input("This file is already present, should it be overwritten? [y/N] ").lower().startswith("y"):  # pragma: no cover
+                            if (
+                                input(
+                                    "This file is already present, should it be overwritten? [y/N] "
+                                )
+                                .lower()
+                                .startswith("y")
+                            ):  # pragma: no cover
                                 kw_options = kw_incl_overwrite
                                 logger.info(f"Overwriting: {job.path_local}")
                             else:
@@ -268,11 +291,15 @@ class iRODSTransfer(iRODSCommon):
     def chksum(self):
         """Compute remote checksums for all jobs."""
         common_prefix = os.path.commonpath(self.__destinations)
-        checkjobs = tuple(job for job in self.__jobs if not job.path_remote.endswith("." + self.hash_scheme.lower()))
+        checkjobs = tuple(
+            job
+            for job in self.__jobs
+            if not job.path_remote.endswith("." + self.hash_scheme.lower())
+        )
         logger.info(f"Triggering remote checksum computation for {len(checkjobs)} files.")
         for n, job in enumerate(checkjobs):
             logger.info(
-               f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
+                f"[{n + 1}/{len(checkjobs)}]: {Path(job.path_remote).relative_to(common_prefix)}"
             )
 
             try:
@@ -332,9 +359,7 @@ class iRODSTransfer(iRODSCommon):
 class iRODSRetrieveCollection(iRODSCommon):
     """Class retrieves iRODS Collection associated with Assay"""
 
-    def __init__(
-        self, **kwargs):
-
+    def __init__(self, **kwargs):
         """Constructor.
 
         :param ask: Confirm with user before certain actions.
@@ -346,7 +371,8 @@ class iRODSRetrieveCollection(iRODSCommon):
         super().__init__(**kwargs)
         warnings.warn(
             "iRODSRetrieveCollection will be deprecated. Please use SodarAPI.get_samplesheet_file_list instead.",
-            DeprecationWarning, stacklevel=2
+            DeprecationWarning,
+            stacklevel=2,
         )
 
     def retrieve_irods_data_objects(self, irods_path: str) -> dict[str, list[iRODSDataObject]]:
@@ -390,7 +416,7 @@ class iRODSRetrieveCollection(iRODSCommon):
             Like(CollectionModel.name, f"{root_coll.path}%")
         )
 
-        data_objs = {"files":[], "checksums":{}}
+        data_objs = {"files": [], "checksums": {}}
         for res in query:
             # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
             # likely because a name/path/... attribute is overwritten somewhere

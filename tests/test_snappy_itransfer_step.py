@@ -34,15 +34,21 @@ def test_run_snappy_itransfer_step_help(capsys):
 def test_run_snappy_itransfer_step_nostep(capsys):
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
     argv = [
-        "snappy", "itransfer-step", "--sodar-api-token", "XXXX", "--sodar-server-url",
-        "https://sodar-staging.bihealth.org/", "--tool", "bwa", sodar_uuid,
+        "snappy",
+        "itransfer-step",
+        "--sodar-api-token",
+        "XXXX",
+        "--sodar-server-url",
+        "https://sodar-staging.bihealth.org/",
+        "--tool",
+        "bwa",
+        sodar_uuid,
     ]
 
     with pytest.raises(SystemExit) as e:
         main(argv)
 
     assert e.value.code == 2
-
 
 
 def test_run_snappy_itransfer_step_nothing(capsys):
@@ -57,7 +63,8 @@ def test_run_snappy_itransfer_step_nothing(capsys):
     assert not res.out
     assert res.err
 
-@patch('cubi_tk.snappy.itransfer_step.SnappyItransferStepCommand._no_files_found_warning')
+
+@patch("cubi_tk.snappy.itransfer_step.SnappyItransferStepCommand._no_files_found_warning")
 @patch("cubi_tk.snappy.itransfer_step.SnappyItransferStepCommand._get_lz_info", my_get_lz_info)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 def test_run_snappy_itransfer_step_smoke_test(

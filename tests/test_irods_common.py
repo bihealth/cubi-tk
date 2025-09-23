@@ -43,6 +43,7 @@ def test_init_irods(mocksession, fs):
     iRODSCommon()._init_irods()
     mocksession.assert_called()
 
+
 @patch("getpass.getpass")
 @patch("cubi_tk.irods_common.iRODSSession")
 def check_and_gen_irodsA(mocksession, mockpass, fs):
@@ -110,23 +111,22 @@ def test_irods_transfer_put(mock_createcolls, mocksession, jobs):
     mockexists.return_value = True
     # overwrite: sync (w/ exiting files)
     mockput.reset_mock()
-    itransfer.put(overwrite='sync')
+    itransfer.put(overwrite="sync")
     mockput.assert_has_calls(calls_sync)
     # overwrite: always
     mockput.reset_mock()
-    itransfer.put(overwrite='always')
+    itransfer.put(overwrite="always")
     mockput.assert_has_calls(calls_w_ov)
     # overwrite: never
     mockput.reset_mock()
-    itransfer.put(overwrite='never')
+    itransfer.put(overwrite="never")
     mockput.assert_not_called()
     # overwrite: ask
     mockput.reset_mock()
     itransfer.ask = True
     with patch("builtins.input", side_effect=["y", "y", "n"]):
-        itransfer.put(overwrite='ask')
+        itransfer.put(overwrite="ask")
         mockput.assert_has_calls([calls_w_ov[0]])
-
 
 
 @patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
