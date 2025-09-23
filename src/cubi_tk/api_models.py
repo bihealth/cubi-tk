@@ -67,13 +67,14 @@ class User:
     #: Email address of the user
     email: str
 
+
 @attr.s(frozen=True, auto_attribs=True)
 class iRODSDataObject:
     """Represents an iRODS data object in the SODAR API."""
 
-    #File name
+    # File name
     name: str
-    #iRODS item type (obj for file)
+    # iRODS item type (obj for file)
     type: str
     # Full path to file
     # MAYBE: use a Path object here?
@@ -81,7 +82,7 @@ class iRODSDataObject:
     # Size in bytes
     size: int
     # Datetime of last modification (YYYY-MM-DDThh:mm:ssZ)
-    #TODO use a datetime object here?
+    # TODO use a datetime object here?
     modify_time: str
     # Checksum of data object (from API version 1.1)
     checksum: str

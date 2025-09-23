@@ -132,7 +132,12 @@ def test_run_sodar_ingest_data_ont_preset_regex():
 @patch("cubi_tk.sodar.ingest_data.SodarIngestData._get_lz_info", my_get_lz_info)
 def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock, fs):
     # Patched sodar API call
-    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(), status_code= 200)
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86",
+        json=my_sodar_api_export(),
+        status_code=200,
+    )
 
     fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
@@ -167,9 +172,7 @@ def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock, fs
     }
     args.project_uuid = project_uuid
     assert expected == ingestfastq.get_match_to_collection_mapping("Folder name")
-    assert expected == ingestfastq.get_match_to_collection_mapping(
-        "Folder name", "Library Name"
-    )
+    assert expected == ingestfastq.get_match_to_collection_mapping("Folder name", "Library Name")
 
     # Test for alternative collection column
     expected2 = {
@@ -177,18 +180,26 @@ def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock, fs
         "Folder2": "Sample2-N1-DNA1",
         "Folder3": "Sample3-N1-DNA1",
     }
-    assert expected2 == ingestfastq.get_match_to_collection_mapping(
-        "Folder name", "Extract Name"
-    )
+    assert expected2 == ingestfastq.get_match_to_collection_mapping("Folder name", "Extract Name")
 
     # Test for missing column
     with unittest.TestCase.assertRaises(unittest.TestCase, ParameterException):
         ingestfastq.get_match_to_collection_mapping("Typo-Column")
 
     # Test with additional assay
-    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86", json=my_sodar_api_export(2, offset=1), status_code= 200)
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/export/json/466ab946-ce6a-4c78-9981-19b79e7bbe86",
+        json=my_sodar_api_export(2, offset=1),
+        status_code=200,
+    )
     retval = InvestigationFactory()
-    requests_mock.register_uri("GET", "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86", json= cattr.unstructure(retval), status_code= 200)
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86",
+        json=cattr.unstructure(retval),
+        status_code=200,
+    )
     study_key = list(retval.studies.keys())[0]
     assay_uuid = list(retval.studies[study_key].assays.keys())[0]
     ingestfastq.args.assay_uuid = assay_uuid
@@ -214,7 +225,6 @@ def test_run_sodar_ingest_data_smoke_test(mocker, requests_mock, fs):
         "--yes",
         landing_zone_uuid,
         fake_base_path,
-
     ]
 
     parser, _subparsers = setup_argparse()
@@ -281,7 +291,9 @@ def test_run_sodar_ingest_data_smoke_test(mocker, requests_mock, fs):
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5"))
+    mocker.patch(
+        "cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5")
+    )
 
     # requests mock
     return_value = {
@@ -295,16 +307,17 @@ def test_run_sodar_ingest_data_smoke_test(mocker, requests_mock, fs):
         "sodar_uuid": "",
         "status": "",
         "status_info": "",
-        "status_locked" : "",
+        "status_locked": "",
         "title": "",
-        "user":  "",
+        "user": "",
     }
 
-    url = os.path.join("https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    url = os.path.join(
+        "https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid
+    )
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
     # --- run tests
     res = main(argv)
-
 
     assert not res
 
@@ -419,7 +432,6 @@ def test_run_sodar_ingest_data_smoke_test_ont_preset(mocker, requests_mock, fs):
         my_get_lz_info,
     )
 
-
     mock_check_output = MagicMock(return_value=0)
     mocker.patch("cubi_tk.irods_common.iRODSTransfer.put", mock_check_output)
 
@@ -438,8 +450,9 @@ def test_run_sodar_ingest_data_smoke_test_ont_preset(mocker, requests_mock, fs):
     mocker.patch("cubi_tk.sodar.ingest_data.Value", mock_value)
     mocker.patch("cubi_tk.common.Value", mock_value)
 
-    mocker.patch("cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5"))
-
+    mocker.patch(
+        "cubi_tk.irods_common.iRODSTransfer.irods_hash_scheme", MagicMock(return_value="MD5")
+    )
 
     # requests mock
     return_value = {
@@ -453,11 +466,13 @@ def test_run_sodar_ingest_data_smoke_test_ont_preset(mocker, requests_mock, fs):
         "sodar_uuid": "",
         "status": "",
         "status_info": "",
-        "status_locked" : "",
+        "status_locked": "",
         "title": "",
         "user": "",
     }
-    url = os.path.join("https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid)
+    url = os.path.join(
+        "https://sodar-staging.bihealth.org/", "landingzones", "api", "retrieve", landing_zone_uuid
+    )
     requests_mock.register_uri("GET", url, text=json.dumps(return_value))
 
     # --- run tests

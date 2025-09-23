@@ -1,5 +1,4 @@
-"""``cubi-tk sodar landing-zone-move`` command line program
-"""
+"""``cubi-tk sodar landing-zone-move`` command line program"""
 
 import argparse
 import json
@@ -10,6 +9,7 @@ from loguru import logger
 
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
+
 
 class MoveLandingZoneCommand:
     """Implementation of the ``landing-zone-move`` command."""
@@ -46,7 +46,6 @@ class MoveLandingZoneCommand:
     ) -> typing.Optional[int]:
         """Entry point into the command."""
         return cls(args).execute()
-
 
     def execute(self) -> typing.Optional[int]:
         """Execute the landing zone moving."""

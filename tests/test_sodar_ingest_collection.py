@@ -44,7 +44,9 @@ def ingest(mocker, fs):
     fs.create_dir(Path.home().joinpath(".irods"))
     fs.create_file(Path.home().joinpath(".irods", "irods_environment.json"))
 
-    mocker.patch("cubi_tk.sodar.ingest_collection.SodarIngestCollection._get_lz_info", my_get_lz_info)
+    mocker.patch(
+        "cubi_tk.sodar.ingest_collection.SodarIngestCollection._get_lz_info", my_get_lz_info
+    )
 
     argv = [
         "--recursive",
@@ -64,6 +66,7 @@ def ingest(mocker, fs):
 
     obj = SodarIngestCollection(args)
     return obj
+
 
 @pytest.fixture
 def target_coll_path():
@@ -143,34 +146,39 @@ def test_sodar_ingest_collection_build_jobs(mock_list, mock_target, target_coll_
     for path in paths:
         fs.create_file(path["spath"])
     fs.create_file("myfile.csv.md5")
-    mock_list.return_value=paths
+    mock_list.return_value = paths
     mock_target.return_value = target_coll_path
 
     jobs = ingest.build_jobs(".md5")
     expected_jobs = []
 
     for p in paths:
-        expected_jobs.append(TransferJob(
-            path_local=str(p["spath"]),
-            path_remote=f"{target_coll_path}/{str(p['ipath'])}",
-        ))
-        expected_jobs.append(TransferJob(
-            path_local=str(p["spath"]) + ".md5",
-            path_remote=f"{target_coll_path}/{str(p['ipath']) + '.md5'}",
-        ))
+        expected_jobs.append(
+            TransferJob(
+                path_local=str(p["spath"]),
+                path_remote=f"{target_coll_path}/{str(p['ipath'])}",
+            )
+        )
+        expected_jobs.append(
+            TransferJob(
+                path_local=str(p["spath"]) + ".md5",
+                path_remote=f"{target_coll_path}/{str(p['ipath']) + '.md5'}",
+            )
+        )
 
     assert jobs == sorted(expected_jobs, key=lambda x: x.path_local)
 
 
-#@patch("cubi_tk.sodar.ingest_collection.iRODSTransfer")
+# @patch("cubi_tk.sodar.ingest_collection.iRODSTransfer")
 @patch("cubi_tk.common.check_call")
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 @patch("cubi_tk.sodar_api.requests.get")
 @patch("cubi_tk.sodar.ingest_collection.SodarIngestCollection._no_files_found_warning")
 @patch("cubi_tk.sodar.ingest_collection.SodarIngestCollection._get_lz_info")
 @patch("cubi_tk.common.Value", MagicMock())
-def test_sodar_ingest_collection_smoketest(mock_lzinfo, mock_filecheck, mockapi, mock_transfer, mock_check_call, fs):
-
+def test_sodar_ingest_collection_smoketest(
+    mock_lzinfo, mock_filecheck, mockapi, mock_transfer, mock_check_call, fs
+):
     mock_filecheck.return_value = 0
     mock_check_call.return_value = 0
     # Setup transfer mocks
@@ -201,8 +209,8 @@ def test_sodar_ingest_collection_smoketest(mock_lzinfo, mock_filecheck, mockapi,
         "source",
         lz_uuid,
     ]
-    #setup lz_info mock
-    mock_lzinfo.return_value = lz_uuid, 'target'
+    # setup lz_info mock
+    mock_lzinfo.return_value = lz_uuid, "target"
 
     # Test for existing irods_environment file is (now) handled by iRODSTransfer, which is mocked
     # fs.create_dir(Path.home().joinpath(".irods"))
@@ -251,6 +259,7 @@ def test_sodar_ingest_collection_smoketest(mock_lzinfo, mock_filecheck, mockapi,
     # Test user input for subcollection
     class DummyColl(object):
         pass
+
     dcoll = DummyColl()
     dcoll.subcollections = []
     mocki = MagicMock()  # returned by the session context manager
@@ -284,7 +293,8 @@ def test_sodar_ingest_collection_smoketest(mock_lzinfo, mock_filecheck, mockapi,
         TransferJob(path_local="/source/file1", path_remote="target/coll/file1"),
         TransferJob(path_local="/source/file1.md5", path_remote="target/coll/file1.md5"),
         TransferJob(path_local="/source/subdir/file2", path_remote="target/coll/subdir/file2"),
-        TransferJob(path_local="/source/subdir/file2.md5", path_remote="target/coll/subdir/file2.md5"),
+        TransferJob(
+            path_local="/source/subdir/file2.md5", path_remote="target/coll/subdir/file2.md5"
+        ),
     ]
     mock_filecheck.assert_called_with(expected_jobs)
-

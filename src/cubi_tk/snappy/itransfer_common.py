@@ -12,6 +12,7 @@ from ..exceptions import MissingFileException
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 
+
 def check_args(args):
     """Argument checks that can be checked at program startup but that cannot be sensibly checked with ``argparse``."""
     _ = args
@@ -49,9 +50,7 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
     def get_sample_names(self) -> list[str]:
         # Find biomedsheet file
         project_uuid = self.sodar_api.project_uuid
-        biomedsheet_tsv = get_biomedsheet_path(
-            start_path=self.args.base_path, uuid=project_uuid
-        )
+        biomedsheet_tsv = get_biomedsheet_path(start_path=self.args.base_path, uuid=project_uuid)
 
         # Extract library names from sample sheet
         sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
@@ -93,11 +92,10 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
                     transfer_jobs.append(
                         TransferJob(
                             path_local=real_result + ext,
-                            path_remote=str(os.path.join(remote_dir, rel_result + ext))
+                            path_remote=str(os.path.join(remote_dir, rel_result + ext)),
                         )
                     )
         return sorted(transfer_jobs, key=lambda x: x.path_local)
-
 
 
 class IndexLibrariesOnlyMixin:
@@ -158,4 +156,3 @@ class IndexLibrariesOnlyMixin:
                     continue
             logger.debug("Processing NGS library for donor {}", donor.name)
             yield donor.dna_ngs_library.name
-

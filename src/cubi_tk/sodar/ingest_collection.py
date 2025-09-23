@@ -16,7 +16,7 @@ logger.propagate = True
 class SodarIngestCollection(SodarIngestBase):
     """Implementation of sodar ingest-collection command."""
 
-    command_name = 'ingest-collection'
+    command_name = "ingest-collection"
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -47,7 +47,8 @@ class SodarIngestCollection(SodarIngestBase):
             "sources", help="One or multiple files/directories to ingest.", nargs="+"
         )
         parser.add_argument(
-            "destination", help="Sodar project UUID, landing-zone (irods) path or UUID to upload to."
+            "destination",
+            help="Sodar project UUID, landing-zone (irods) path or UUID to upload to.",
         )
 
     def check_args(self, args) -> int | None:
@@ -55,7 +56,6 @@ class SodarIngestCollection(SodarIngestBase):
         if self.args.yes and not self.args.collection:
             logger.error("Can not skip user input without defined `--collection`.")
             sys.exit(1)
-
 
     def build_target_coll(self) -> str:
         # Initiate iRODS session
@@ -82,7 +82,7 @@ class SodarIngestCollection(SodarIngestBase):
             input_valid = False
             input_message = "####################\nPlease choose target collection:\n"
             for index, item in enumerate(collections):
-                input_message += f"{index+1}) {item}\n"
+                input_message += f"{index + 1}) {item}\n"
             input_message += "Select by number: "
 
             while not input_valid:

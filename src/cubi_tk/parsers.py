@@ -1,4 +1,3 @@
-
 import argparse
 import datetime
 import os
@@ -17,7 +16,9 @@ def print_args(args: argparse.Namespace):
 
 basic_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
 basic_group = basic_config_parser.add_argument_group("Logging Configuration")
-basic_group.add_argument("--verbose", action="store_true", default=False, help="Increase verbosity.")
+basic_group.add_argument(
+    "--verbose", action="store_true", default=False, help="Increase verbosity."
+)
 
 
 def get_basic_parser():
@@ -25,9 +26,14 @@ def get_basic_parser():
 
 
 def get_sodar_parser(
-    with_dest=False, dest_string="project_uuid", dest_help_string="SODAR project UUID", with_assay_uuid=False
+    with_dest=False,
+    dest_string="project_uuid",
+    dest_help_string="SODAR project UUID",
+    with_assay_uuid=False,
 ):
-    sodar_config_parser = argparse.ArgumentParser(description="The basic config parser", add_help=False)
+    sodar_config_parser = argparse.ArgumentParser(
+        description="The basic config parser", add_help=False
+    )
     sodar_group = sodar_config_parser.add_argument_group("Basic Sodar Configuration")
     sodar_group.add_argument(
         "--config",
@@ -38,7 +44,7 @@ def get_sodar_parser(
         "--config-profile",
         default="global",
         help="Sodar profile from configuration file and irods_environment_{config-profile}.json that should be used. "
-             "If not specified global and irods_environment.json will be used",
+        "If not specified global and irods_environment.json will be used",
     )
     sodar_group.add_argument(
         "--sodar-server-url",
@@ -49,7 +55,7 @@ def get_sodar_parser(
         help="SODAR API token to use.",
     )
     if with_dest:
-       sodar_config_parser.add_argument(
+        sodar_config_parser.add_argument(
             dest_string,
             help=dest_help_string,
         )
@@ -62,6 +68,7 @@ def get_sodar_parser(
         )
     return sodar_config_parser
 
+
 # Defining destionation via parent-parses locks it as the first positional arguemtn, which is not backwards compatible
 # with all previous commands
 def get_sodar_ingest_parser(include_dest=True):
@@ -69,7 +76,7 @@ def get_sodar_ingest_parser(include_dest=True):
         with_dest=include_dest,
         with_assay_uuid=True,
         dest_string="destination",
-        dest_help_string="Sodar project UUID, landing-zone (irods) path or UUID to upload to."
+        dest_help_string="Sodar project UUID, landing-zone (irods) path or UUID to upload to.",
     )
     ingest_group = sodar_ingest_parser.add_argument_group("Sodar upload options")
     ingest_group.add_argument(
@@ -77,13 +84,13 @@ def get_sodar_ingest_parser(include_dest=True):
         action="store_true",
         help="Perform a dry-run, i.e. no actual upload.",
     )
-    #TODO: keep support for --sync flag ?
+    # TODO: keep support for --sync flag ?
     ingest_group.add_argument(
         "--overwrite",
-        choices=['sync', 'always', 'never', 'ask'],
+        choices=["sync", "always", "never", "ask"],
         default="sync",
         help="Determine when to overwrite exising remote files. Default (sync) is to only do so when file sizes "
-             "don't match. Alternatively, overwrite always, never or ask for individual files.",
+        "don't match. Alternatively, overwrite always, never or ask for individual files.",
     )
     ingest_group.add_argument(
         "-K",
@@ -118,7 +125,9 @@ def get_sodar_ingest_parser(include_dest=True):
     return sodar_ingest_parser
 
 
-snappy_cmd_basic_parser = argparse.ArgumentParser(description="The basic parser for snappy commands",add_help=False)
+snappy_cmd_basic_parser = argparse.ArgumentParser(
+    description="The basic parser for snappy commands", add_help=False
+)
 snappy_basic_group = snappy_cmd_basic_parser.add_argument_group("Snappy Configuration")
 snappy_basic_group.add_argument(
     "--base-path",
@@ -129,8 +138,12 @@ snappy_basic_group.add_argument(
     ),
 )
 
-snappy_biomedsheet_specific_parser = argparse.ArgumentParser(description="The parser for snappy biomedsheet usage", add_help=False)
-biomedsheet_group_spec = snappy_biomedsheet_specific_parser.add_argument_group("Biomedsheet Configuration")
+snappy_biomedsheet_specific_parser = argparse.ArgumentParser(
+    description="The parser for snappy biomedsheet usage", add_help=False
+)
+biomedsheet_group_spec = snappy_biomedsheet_specific_parser.add_argument_group(
+    "Biomedsheet Configuration"
+)
 biomedsheet_group_spec.add_argument(
     "--tsv-shortcut",
     default="germline",
@@ -140,9 +153,7 @@ biomedsheet_group_spec.add_argument(
 biomedsheet_group_spec.add_argument(
     "--first-batch", default=0, type=int, help="First batch to be transferred. Defaults: 0."
 )
-biomedsheet_group_spec.add_argument(
-    "--last-batch", type=int, help="Last batch to be transferred."
-)
+biomedsheet_group_spec.add_argument("--last-batch", type=int, help="Last batch to be transferred.")
 
 
 def get_snappy_cmd_basic_parser():
@@ -152,9 +163,11 @@ def get_snappy_cmd_basic_parser():
 snappy_itransfer_parser = argparse.ArgumentParser(
     description="The basic parser for snappy itransfer commands",
     parents=[snappy_biomedsheet_specific_parser],
-    add_help=False
+    add_help=False,
 )
-snappy_itransfer_group = snappy_itransfer_parser.add_argument_group("Configuration for snappy itransfer commands")
+snappy_itransfer_group = snappy_itransfer_parser.add_argument_group(
+    "Configuration for snappy itransfer commands"
+)
 snappy_itransfer_group.add_argument(
     "--remote-dir-date",
     default=datetime.date.today().strftime("%Y-%m-%d"),
@@ -166,6 +179,7 @@ snappy_itransfer_group.add_argument(
     help="Pattern to use for constructing remote pattern",
 )
 
+
 def get_snappy_itransfer_parser():
     return snappy_itransfer_parser
 
@@ -173,14 +187,15 @@ def get_snappy_itransfer_parser():
 snappy_pull_data_parser = argparse.ArgumentParser(
     description="The basic parser for snappy pull data commands",
     parents=[snappy_biomedsheet_specific_parser],
-    add_help=False
+    add_help=False,
 )
-snappy_pull_data_group = snappy_pull_data_parser.add_argument_group("Configuration for snappy pull data commands")
+snappy_pull_data_group = snappy_pull_data_parser.add_argument_group(
+    "Configuration for snappy pull data commands"
+)
 snappy_pull_data_group.add_argument(
     "--overwrite", default=False, action="store_true", help="Allow overwriting of files"
 )
-snappy_pull_data_group.add_argument(
-    "--samples", help="Optional list of samples to pull")
+snappy_pull_data_group.add_argument("--samples", help="Optional list of samples to pull")
 snappy_pull_data_group.add_argument(
     "--output-directory",
     default=None,
@@ -190,6 +205,7 @@ snappy_pull_data_group.add_argument(
     "--yes", default=False, action="store_true", help="Assume all answers are yes."
 )
 snappy_pull_data_group.add_argument("project_uuid", help="UUID of project to download data for.")
+
 
 def get_snappy_pull_data_parser():
     return snappy_pull_data_parser

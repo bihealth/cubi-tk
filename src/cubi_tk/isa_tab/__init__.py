@@ -33,9 +33,17 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(dest="isa_tab_cmd")
 
     setup_argparse_add_ped(
-        subparsers.add_parser("add-ped", parents=[basic_parser, sodar_parser], help="Add records from PED file to ISA-tab")
+        subparsers.add_parser(
+            "add-ped",
+            parents=[basic_parser, sodar_parser],
+            help="Add records from PED file to ISA-tab",
+        )
     )
-    setup_argparse_validate(subparsers.add_parser("validate", parents=[basic_parser, sodar_parser], help="Validate ISA-tab"))
+    setup_argparse_validate(
+        subparsers.add_parser(
+            "validate", parents=[basic_parser, sodar_parser], help="Validate ISA-tab"
+        )
+    )
 
 
 def run(args, parser, subparser):

@@ -25,7 +25,7 @@ class PullAllDataCommand:
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
-        #TODO: implement functionality for tsv-shortcut and last-batch
+        # TODO: implement functionality for tsv-shortcut and last-batch
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
         )
@@ -58,14 +58,12 @@ class PullAllDataCommand:
     def execute(self) -> typing.Optional[int]:
         """Execute the download."""
         if self.args.output_directory is None:
-            logger.info('No --output-directory given, defaulting to CWD!')
+            logger.info("No --output-directory given, defaulting to CWD!")
             self.args.output_directory = os.getcwd()
         logger.info("=> will download to {}", self.args.output_directory)
         self.args.output_dir = self.args.output_directory
         logger.info("Using cubi-tk sodar pull-raw-data to actually download data")
-        res = sodar_pull_raw_data.PullRawDataCommand(
-            self.args
-        ).execute()
+        res = sodar_pull_raw_data.PullRawDataCommand(self.args).execute()
 
         if res:
             logger.error("cubi-tk sodar pull-all-data failed")

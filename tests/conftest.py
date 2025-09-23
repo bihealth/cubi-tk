@@ -14,6 +14,7 @@ import pytest
 from loguru import logger
 from _pytest.logging import LogCaptureFixture
 
+
 @pytest.fixture
 def caplog(caplog: LogCaptureFixture):
     handler_id = logger.add(
@@ -72,6 +73,7 @@ def germline_trio_sheet_tsv():
         FAM_index\tmother\t0\t0\tF\tN\tWES\tmother\t1\t.\t466ab946-ce6a-4c78-9981-19b79e7bbe86\tIllumina\tAgilent SureSelect Human All Exons V6r2
         """
     ).lstrip()
+
 
 @pytest.fixture
 def cancer_sheet_tsv():
@@ -144,11 +146,8 @@ def setup_snappy_itransfer_mocks(mocker, fs, step):
 
 
 def my_iRODS_transfer():
-    return MagicMock(
-        size=1000,
-        irods_hash_scheme=MagicMock(return_value="MD5"),
-        put=MagicMock()
-    )
+    return MagicMock(size=1000, irods_hash_scheme=MagicMock(return_value="MD5"), put=MagicMock())
+
 
 def my_exists(self):
     """Method is used to patch pathlib.Path.exists"""
@@ -156,12 +155,12 @@ def my_exists(self):
     return str(self) == "/base/path/.snappy_pipeline"
 
 
-def my_get_lz_info(_self, sodar_api = None):
+def my_get_lz_info(_self, sodar_api=None):
     """Method is used to patch cubi_tk.sodar_common.SodarIngestBase._get_lz_info"""
     return "466ab946-ce6a-4c78-9981-19b79e7bbe86", "/irods/dest"
 
 
-def my_sodar_api_export(n_assays=1, offset =0):
+def my_sodar_api_export(n_assays=1, offset=0):
     """Return contents for api.samplesheet.export"""
     assay = textwrap.dedent(
         """
@@ -174,11 +173,11 @@ def my_sodar_api_export(n_assays=1, offset =0):
 
     isa_dict = {
         "investigation": {"path": "i_Investigation.txt", "tsv": None},
-        "studies": {"s_Study_%d.txt" % offset : {"tsv": ""}},
+        "studies": {"s_Study_%d.txt" % offset: {"tsv": ""}},
         "assays": {"a_name_%d" % offset: {"tsv": assay}},
     }
     if n_assays > 1:
-        for i in range(1+offset, n_assays+offset):
+        for i in range(1 + offset, n_assays + offset):
             isa_dict["assays"]["a_name_%d" % i] = {"tsv": assay}
 
     return isa_dict
