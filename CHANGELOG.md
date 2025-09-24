@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.7.0](https://github.com/bihealth/cubi-tk/compare/v0.6.0...v0.7.0) (2025-09-24)
+
+
+### Features
+
+* add `cubi-tk sodar deletion-requests` ([#297](https://github.com/bihealth/cubi-tk/issues/297)) ([8edec81](https://github.com/bihealth/cubi-tk/commit/8edec813b9041b62e89c98e9b9950d9c5c0e96d3))
+* changes for onko data upload ([#289](https://github.com/bihealth/cubi-tk/issues/289)) ([f20401c](https://github.com/bihealth/cubi-tk/commit/f20401c7822da0226f045f0c7145678f8f58fcc0))
+* introduce and refactor SodarIngestBase incl harmonised options ([#295](https://github.com/bihealth/cubi-tk/issues/295)) ([6d15d9b](https://github.com/bihealth/cubi-tk/commit/6d15d9b9630515d93c5c42396c94d8a275add0b4))
+* major cubi-tk refactoring ([#283](https://github.com/bihealth/cubi-tk/issues/283)) ([1a5397d](https://github.com/bihealth/cubi-tk/commit/1a5397dc04f890b2cbf74666e6c1c3731ae25158))
+* update docs ([#309](https://github.com/bihealth/cubi-tk/issues/309)) ([5f34d4f](https://github.com/bihealth/cubi-tk/commit/5f34d4f33962fbc8bca5ae8c009d75fb7ecd7ce4))
+* update ingest-data for wgs germline ([#301](https://github.com/bihealth/cubi-tk/issues/301)) ([3316e9b](https://github.com/bihealth/cubi-tk/commit/3316e9b56f550deb3db1d4f4b1931aa8b458cffa))
+
+
+### Bug Fixes
+
+* (Sodar)API POST calls need to use the data field, not params ([#288](https://github.com/bihealth/cubi-tk/issues/288)) ([ce7388b](https://github.com/bihealth/cubi-tk/commit/ce7388bc9d333734da896c7d066e05032c9acaae))
+* add defaults for --output-directory in snappy pull-data commands ([#302](https://github.com/bihealth/cubi-tk/issues/302)) ([e581861](https://github.com/bihealth/cubi-tk/commit/e581861b1de69f1c638bf78dc31c87bb0e1e5dc8))
+* bug fix val in feat removed thats needed ([#290](https://github.com/bihealth/cubi-tk/issues/290)) ([971c12f](https://github.com/bihealth/cubi-tk/commit/971c12f00a392782d1103236f4541a3bad95c72b))
+* call altamisa with typer, fixes [#249](https://github.com/bihealth/cubi-tk/issues/249) ([#279](https://github.com/bihealth/cubi-tk/issues/279)) ([70f8667](https://github.com/bihealth/cubi-tk/commit/70f8667e5d8f07a6394d3c8ea24b68bdec4845ef))
+* dict needs items keyword ([#287](https://github.com/bihealth/cubi-tk/issues/287)) ([fa2333d](https://github.com/bihealth/cubi-tk/commit/fa2333d095ee55b322d1bae9a73f6bf8277d649b))
+* dont gen checksum for checksums ([#293](https://github.com/bihealth/cubi-tk/issues/293)) ([1d8fe5b](https://github.com/bihealth/cubi-tk/commit/1d8fe5bb8b175a6ea42f213f44d768607d3c94fd))
+* get assay UUID pull data ([#285](https://github.com/bihealth/cubi-tk/issues/285)) ([f121236](https://github.com/bihealth/cubi-tk/commit/f121236c61c3238c57da58350fff8ae0abec96ad))
+* nicer json output for LZ commands, always write this json to stdout, better test ([#303](https://github.com/bihealth/cubi-tk/issues/303)) ([bd1414a](https://github.com/bihealth/cubi-tk/commit/bd1414a56ed854720b5ed0d926480e1851ffe1eb))
+* refactored function didn't retrun anything ([#286](https://github.com/bihealth/cubi-tk/issues/286)) ([01c849b](https://github.com/bihealth/cubi-tk/commit/01c849b9e02b4b7a9cd922b5b0adb19fe0d62674))
+* replaced deprecated logger with loguru ([#273](https://github.com/bihealth/cubi-tk/issues/273)) ([d065ae9](https://github.com/bihealth/cubi-tk/commit/d065ae9be57b6fc3fe308f5b493aed1e11a1cb8a))
+* resolve merge issues from SodarIngestBase and deletion-request changes ([#300](https://github.com/bihealth/cubi-tk/issues/300)) ([80ab2b7](https://github.com/bihealth/cubi-tk/commit/80ab2b7f19e7cf6e0eda5a34a1158d2e41d987a2))
+* retrun last found match col ([#292](https://github.com/bihealth/cubi-tk/issues/292)) ([1655670](https://github.com/bihealth/cubi-tk/commit/16556709a8b3dd899d551364392896f69a13d247))
+* set assay uuid from lz ([#307](https://github.com/bihealth/cubi-tk/issues/307)) ([cf869dc](https://github.com/bihealth/cubi-tk/commit/cf869dc2b38a8afc85d69a5b4358b4e6bea357d4))
+* switch sodar profile with different irods_env ([#284](https://github.com/bihealth/cubi-tk/issues/284)) ([cf73749](https://github.com/bihealth/cubi-tk/commit/cf73749b9f6e2cb0f3d9b53ef7c88b4556ce9ce1))
+
 ## [0.6.0](https://github.com/bihealth/cubi-tk/compare/v0.5.2...v0.6.0) (2025-02-24)
 
 
