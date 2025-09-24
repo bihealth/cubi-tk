@@ -2,6 +2,35 @@
 
 ## [0.7.0](https://github.com/bihealth/cubi-tk/compare/v0.6.0...v0.7.0) (2025-09-24)
 
+### Breaking Changes
+
+Several commands have been renamed, set for deprecation or removed:
+
+* Renamed `cubi-tk sodar ingest-fastq` to `cubi-tk sodar ingest-data` (now more descriptive)
+* Renamed `cubi-tk sodar ingest` to `cubi-tk sodar ingest-collection` (now more descriptive)
+* Renamed `cubi-tk sodar pull-data-collection` to `cubi-tk sodar pull-data` (now more descriptive)
+* Renamed `cubi-tk sodar landing-zone-create` to `cubi-tk sodar create-landingzone` (acts on project, not LZ)
+* Renamed `cubi-tk sodar landing-zone-list` to `cubi-tk sodar list-landingzones` (acts on project, not LZ)
+* Deprecating `cubi-tk sodar pull-raw-data`
+* Deprecating `cubi-tk sea-snap check-irods`
+* Removed `cubi-tk snappy kickoff`
+* Removed `cubi-tk isa-tab resolve-hpo` and `cubi-tk isa-tab annotate`
+* Removed `cubi-tk org-raw` and `cubi-tk irods`
+
+All `ingest` and `itransfer` functions now use an harmonised cli interface with the same options, some of which have been replaced or renamed:
+
+- `--parallel-checksum-jobs` replaces `--num-parallel-transfers` (same functionality, better name)
+- `--sync` removed in favor of `--overwrite {mode=sync}`
+
+### Additions
+
+- [Documentation](https://cubi-tk.readthedocs.io/en/latest/) has been updated and future-proofed with CI test build
+- Usage of `~/.cubitkrc.toml` has been updated and now allows switching between different Sodar instances
+- Most cubi-tk fucntions have been updated to work with multi-assay Sodar projects and have improved handling of assay (and landingzone) selection
+- The cli interface for `ingest` and `itransfer` functions has new options:
+    - `--overwrite {mode=sync}` allows seelction of overwrite behavior. The new default (sync) is to only overwrite remote files when the local one has a different file size
+    - `--dry-run` added: only print a list of transfers
+    - `--select-lz` added: allows interactive selection of landingzone
 
 ### Features
 
