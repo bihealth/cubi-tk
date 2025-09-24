@@ -1,27 +1,50 @@
-.. _man_ingest_fastq:
+.. _man_ingest_data:
 
 =================================
-Manual for ``sodar ingest-fastq``
+Manual for ``sodar ingest-data``
 =================================
 
-The ``cubi-tk sodar ingest-fastq`` command lets you upload raw data files to SODAR.
+The ``cubi-tk sodar ingest-data`` command lets you upload raw data files to SODAR.
 It is configured for uploading FASTQ files by default, but the parameters can be adjusted to upload any files.
 
 The basic usage is:
 
 .. code-block:: bash
 
-    $ cubi-tk sodar ingest-fastq SOURCE [SOURCE ...] DESTINATION
+    $ cubi-tk sodar ingest-data SOURCE [SOURCE ...] DESTINATION
 
 where each ``SOURCE`` is a path to a folder containing relevant files (this can also be a WebDav URL, see below) and
 ``DESTINATION`` is either an iRODS path to a *landing zone* in SODAR, the UUID of that *landing zone*, or and SODAR project UUID.
 
-----------------
-Other file types
-----------------
+-------
+Presets
+-------
 
-By default, the parameters ``--src-regex`` and ``--remote-dir-pattern`` are configured for FASTQ files, but they may be changed to upload other files as well.
-The two parameters have the following functions:
+The ``cubi-tk sodar ingest-data`` command comes with several presets for uploading specific files,
+used with the ``-p`` option. Each preset includes predefined file inout and output patterns.
+The presets include:
+
+- fastq [default]
+  fastq.gz and fq.gz files with the typical BCLconvert filenames (i.e. "SampleName_S00_L001_R001_01.fastq.gz")
+
+- ONT
+  For bam, pod5, txt, and json files as produced by ONT on-board software.
+
+- digestiflow
+  For fastq.gz files as produced by digestiflow
+
+- onk_analysis
+  For Dragen out from the oncology workflow.
+
+
+If you have another common use-case for uploading specific file sets feel free to request or provide a new preset.
+
+---------------------
+Custom file selection
+---------------------
+
+By default, the parameters ``--src-regex`` and ``--remote-dir-pattern`` are configured for FASTQ files or the chosen preset.
+However, they may also be changed to upload any other files as well. The two parameters have the following functions:
 
 - ``--src-regex``: a regular expression to recognize paths to raw data files to upload (the paths starting from the ``SOURCE`` directories).
 - ``--remote-dir-pattern``: a pattern specifying into which folder structure the raw data files should be uploaded.
@@ -40,7 +63,7 @@ The default ``--remote-dir-pattern`` is
 
     {collection_name}/{date}/{filename}
 
-It contains the wildcard ``{collection_name}``, which represents and irods collection and will be filled with the captured
+It contains the wildcard ``{collection_name}``, which represents an irods collection and will be filled with the captured
 content of group ``(?P<sample>...)``, potentially modified by a regex (see 'Mapping of file names' below).
 Alternatively the irods collection name can be derived by mapping the extracted (and modified) ``(?P<sample>...)``
 group to any column of the assay table associated with the LZ or project. In this case the ``{library_name}`` will be
@@ -48,66 +71,25 @@ filled with the content of the last material column of the assay table (or ``--c
 In addition, the wildcards ``{date}`` and ``{filename}`` can always be used in ``--remote-dir-pattern`` and will be
 filled with the current date (or ``--remote-dir-date``) and full filename (the basename of a matched file), respectively.
 
----------------------
-Mapping of file names
----------------------
+--------------------------------
+Changing/Mapping of sample names
+--------------------------------
 
-In some cases additional mapping of filenames is required (for example to fully macth the irods collections).
+In some cases additional mapping of filenames is required (for example to fully match the irods collections).
 This can be done via the parameter ``--sample-collection-mapping`` or short ``-m``.
 It can be supplied several times, each time for another mapping.
 With each ``-m MATCH REPL`` a pair of a regular expression and a replacement string are specified.
 Internally, pythons ``re.sub`` command is executed on the extracted ``(?P<sample>...)`` capture group.
 Therefore, you can refer to the documentation of the `re package <https://docs.python.org/3/library/re.html>`_ for syntax questions.
 
-----------------------
-Source files on WevDAV
-----------------------
-
-If a ``SOURCE`` is a WebDAV url, the files will temporarily be downloaded into a directory called "./temp/".
-This can be adjusted with the ``--tmp`` option.
-
---------------------
-SODAR authentication
---------------------
-
-To use this command, which internally executes iRODS icommands, you need to authenticate with iRODS by running:
-
-.. code-block:: bash
-
-    $ iinit
-
-To be able to access the SODAR API you also need an API token. For token management for SODAR, the following docs can be used:
-
-- https://sodar.bihealth.org/manual/ui_user_menu.html
-- https://sodar.bihealth.org/manual/ui_api_tokens.html
-
-There are three options how to supply the token.
-Only one is needed.
-The options are the following:
-
-1. configure ``~/.cubitkrc.toml``.
-
-    .. code-block:: toml
-
-        [global]
-
-        sodar_server_url = "https://sodar.bihealth.org/"
-        sodar_api_token = "<your API token here>"
-
-2. pass via command line.
-
-    .. code-block:: bash
-
-        $ cubi-tk sodar ingest-fastq --sodar-url "https://sodar.bihealth.org/" --sodar-api-token "<your API token here>"
-
-3. set as environment variable.
-
-    .. code-block:: bash
-
-        $ SODAR_API_TOKEN="<your API token here>"
+If the file names (or rather file paths) do not contain the necessary information to extract the sodar sample collection
+names, then ``cubi-tk sodar ingest-data`` can also map the extracted sample names and first map them against another
+column from the Sodar samplesheet to derive the matching collection names.
+The ``--match-column`` option is used for this, and needs to be given a column name from the sodar samplesheet (either study
+or assay sheet). The ``-m`` glag can be combined with this option and will be used on the file extracted names first.
 
 ----------------
 More Information
 ----------------
 
-Also see ``cubi-tk sodar ingest-fastq`` :ref:`CLI documentation <cli>` and ``cubi-tk sodar ingest-fastq --help`` for more information.
+Also see ``cubi-tk sodar ingest-data`` :ref:`CLI documentation <cli>` and ``cubi-tk sodar ingest-data --help`` for more information.

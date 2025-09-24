@@ -86,41 +86,6 @@ There are two ways to add the information from an ISA-tab assay file to the gene
 
 Here, ``UUID`` is the UUID of the respective project on SODAR.
 
---------------------
-SODAR authentication
---------------------
-
-To be able to access the SODAR API (which is only required if you download meta-data from SODAR), you also need an API token.
-For token management for SODAR, the following docs can be used:
-
-- https://sodar.bihealth.org/manual/ui_user_menu.html
-- https://sodar.bihealth.org/manual/ui_api_tokens.html
-
-There are three options how to supply the token.
-Only one is needed.
-The options are the following:
-
-1. configure ``~/.cubitkrc.toml``.
-
-    .. code-block:: toml
-
-        [global]
-
-        sodar_server_url = "https://sodar.bihealth.org/"
-        sodar_api_token = "<your API token here>"
-
-2. pass via command line.
-
-    .. code-block:: bash
-
-        $ cubi-tk sodar ingest-fastq --sodar-url "https://sodar.bihealth.org/" --sodar-api-token "<your API token here>"
-
-3. set as environment variable.
-
-    .. code-block:: bash
-
-        $ SODAR_API_TOKEN="<your API token here>"
-
 ------------
 Table format
 ------------

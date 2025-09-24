@@ -7,6 +7,7 @@ Installation & Getting Started
     Instructions for the installation of the module and some examples to get you started.
 
     | :ref:`Installation <installation>`
+    | :ref:`Setup of Sodar access <sodar_setup>`
     | :ref:`API documentation <cli>`
 
 Manual
@@ -14,8 +15,8 @@ Manual
 
     | :ref:`Creating ISA-tab files <man_isa_tpl>`
     | :ref:`Annotating ISA-tab files <man_isa_tab>`
-    | :ref:`Upload data to SODAR <man_sodar_ingest>`
-    | :ref:`Upload fastq files to SODAR <man_ingest_fastq>`
+    | :ref:`Upload data to SODAR <man_sodar_ingest_collection>`
+    | :ref:`Upload fastq files to SODAR <man_ingest_data>`
     | :ref:`Upload results of the Seasnap pipeline to SODAR <man_seasnap_itransfer_results>`
     | :ref:`Create a sample info file for Sea-snap <man_write_sample_info>`
 
@@ -33,6 +34,7 @@ Project Info
     | :ref:`History <history>`
     | :ref:`License <license>`
 
+
 .. toctree::
     :caption: Installation & Getting Started
     :name: getting-started
@@ -41,6 +43,7 @@ Project Info
 
     installation
     cli_docs
+    sodar_setup
 
 .. toctree::
     :caption: Manual
@@ -50,8 +53,8 @@ Project Info
 
     man_isa_tpl
     man_isa_tab
-    man_sodar_ingest
-    man_ingest_fastq
+    man_sodar_ingest_collection
+    man_ingest_data
     man_itransfer_results
     man_write_sample_info
 
