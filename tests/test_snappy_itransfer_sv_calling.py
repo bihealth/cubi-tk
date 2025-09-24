@@ -101,7 +101,10 @@ def test_run_snappy_itransfer_sv_calling_nothing(capsys):
     assert res.err
 
 
-@patch("cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info", my_get_lz_info)
+@patch(
+    "cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info",
+    my_get_lz_info,
+)
 def test_run_snappy_itransfer_sv_calling_no_sv_step(fs):
     fake_base_path = "/base/path"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -135,7 +138,10 @@ def test_run_snappy_itransfer_sv_calling_no_sv_step(fs):
         SnappyItransferSvCallingCommand(args)
 
 
-@patch("cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info", my_get_lz_info)
+@patch(
+    "cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info",
+    my_get_lz_info,
+)
 def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
     fake_base_path = "/base/path"
     sodar_uuid = "466ab946-ce6a-4c78-9981-19b79e7bbe86"
@@ -168,10 +174,18 @@ def test_run_snappy_itransfer_sv_calling_two_sv_steps(fs):
     with pytest.raises(SnappyStepNotFoundException):
         SnappyItransferSvCallingCommand(args)
 
-@patch('cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._no_files_found_warning')
-@patch("cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info", my_get_lz_info)
+
+@patch(
+    "cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._no_files_found_warning"
+)
+@patch(
+    "cubi_tk.snappy.itransfer_sv_calling.SnappyItransferSvCallingCommand._get_lz_info",
+    my_get_lz_info,
+)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
-def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mock_filecheck, mocker, germline_trio_sheet_tsv):
+def test_run_snappy_itransfer_sv_calling_smoke_test(
+    mock_transfer, mock_filecheck, mocker, germline_trio_sheet_tsv
+):
     # Setup transfer mock, for assertion
     mock_transfer_obj = my_iRODS_transfer()
     mock_transfer.return_value = mock_transfer_obj
@@ -247,8 +261,12 @@ def test_run_snappy_itransfer_sv_calling_smoke_test(mock_transfer, mock_filechec
         )
         for f in fake_file_paths
     ]
-    expected_manta = sorted([t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local)
-    expected_gcnv = sorted([t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local)
+    expected_manta = sorted(
+        [t for t in expected_tfj if "manta" in t.path_local], key=lambda x: x.path_local
+    )
+    expected_gcnv = sorted(
+        [t for t in expected_tfj if "gcnv" in t.path_local], key=lambda x: x.path_local
+    )
 
     # Remove index's log MD5 file again so it is recreated.
     fs.remove(fake_file_paths[3])

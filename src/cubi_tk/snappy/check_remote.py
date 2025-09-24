@@ -4,6 +4,7 @@ Only uses local information for checking that the linked-in RAW data files are c
 of the checksum.  Otherwise, just checks for presence of files (for now), the rationale being that
 
 """
+
 import argparse
 from collections import defaultdict
 import os
@@ -30,7 +31,7 @@ class FindFilesCommon:
         """
         self.sheet = sheet
 
-    def parse_sample_sheet(self):  #noqa: C901
+    def parse_sample_sheet(self):  # noqa: C901
         """Parse sample sheet.
 
         :return: Returns list of library names - used to define directory names though out the pipeline.
@@ -262,7 +263,9 @@ class Checker:
                 subset_remote_files_dict[key] = self.remote_files_dict.get(key)
 
         # Parse local files - remove library reference
-        parsed_local_files_dict = {(key, val) for k in self.local_files_dict.values() for key, val in k.items()}
+        parsed_local_files_dict = {
+            (key, val) for k in self.local_files_dict.values() for key, val in k.items()
+        }
 
         # Compare dictionaries
         i_both, i_remote, i_local = self.compare_local_and_remote_files(
@@ -308,7 +311,9 @@ class Checker:
 
         # Define expected MD5 files - report files where missing
         all_expected_local_checksums = [file_ + ".md5" for file_ in in_both_set]
-        all_local_checksums = [file_ for file_ in all_expected_local_checksums if os.path.isfile(file_)]
+        all_local_checksums = [
+            file_ for file_ in all_expected_local_checksums if os.path.isfile(file_)
+        ]
         missing_list = set(all_expected_local_checksums) - set(all_local_checksums)
 
         if len(missing_list) > 0:
@@ -648,9 +653,7 @@ class SnappyCheckRemoteCommand:
             variant_caller_class = VariantCallingChecker
 
         # Find all remote files (iRODS)
-        library_remote_files_dict = RetrieveSodarCollection(
-            self.args
-        ).perform()
+        library_remote_files_dict = RetrieveSodarCollection(self.args).perform()
 
         # Find all local files (canonical paths)
         library_local_files_dict = FindLocalFiles(

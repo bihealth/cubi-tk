@@ -13,8 +13,8 @@ build:
    jobs:
     pre_create_environment:
       - asdf plugin add uv
-      - asdf install uv 0.5.17
-      - asdf global uv 0.5.17
+      - asdf install uv 0.8.18
+      - asdf global uv 0.8.18
     create_environment:
       - uv venv
     install:

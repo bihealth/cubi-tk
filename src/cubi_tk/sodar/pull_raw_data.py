@@ -13,13 +13,15 @@ from loguru import logger
 
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
-#TODO: check if InvestigationTraversal is needed and why
+
+# TODO: check if InvestigationTraversal is needed and why
 from ..isa_support import (
     InvestigationTraversal,
     IsaNodeVisitor,
     first_value,
     isa_dict_to_isa_data,
 )
+
 
 @attr.s(frozen=True, auto_attribs=True)
 class LibraryInfo:
@@ -50,7 +52,7 @@ class LibraryInfoCollector(IsaNodeVisitor):
             self.sources[material.name]["batch_no"] = batch.value[0] if batch else None
             family = characteristics.get("Family", comments.get("Family"))
             self.sources[material.name]["family"] = family.value[0] if family else None
-        elif material.type == "Library Name" or(
+        elif material.type == "Library Name" or (
             material.type == "Extract Name"
             and self.prev_process.protocol_ref.startswith("Library construction")
         ):
@@ -64,6 +66,7 @@ class LibraryInfoCollector(IsaNodeVisitor):
                 "library_name": library.name,
                 "folder_name": folder,
             }
+
     def on_visit_process(self, process, node_path, study=None, assay=None):
         super().on_visit_process(process, study, assay)
         self.prev_process = process
@@ -116,7 +119,8 @@ class PullRawDataCommand:
         """Entry point into the command."""
         warnings.warn(
             "The `pull-raw-data` command will be deprecated. Please use `pull-data -f '*.fastq.gz'` instead",
-            DeprecationWarning, stacklevel=2
+            DeprecationWarning,
+            stacklevel=2,
         )
         args = vars(args)
         args.pop("cmd", None)

@@ -10,6 +10,7 @@ from cubi_tk.irods_common import TransferJob
 
 from ..sodar_common import SodarIngestBase
 
+
 class SeasnapItransferMappingResultsCommand(SodarIngestBase):
     """Implementation of sea-snap itransfer command for ngs_mapping results."""
 
@@ -30,7 +31,8 @@ class SeasnapItransferMappingResultsCommand(SodarIngestBase):
             "executed together in one thread.",
         )
         parser.add_argument(
-            "destination", help="Sodar project UUID, landing-zone (irods) path or UUID to upload to."
+            "destination",
+            help="Sodar project UUID, landing-zone (irods) path or UUID to upload to.",
         )
 
     def build_jobs(self, hash_ending) -> list[TransferJob]:
@@ -76,6 +78,7 @@ class SeasnapItransferMappingResultsCommand(SodarIngestBase):
                     )
                 )
         return sorted(transfer_jobs, key=lambda x: x.path_local)
+
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk sea-snap itransfer-results``."""

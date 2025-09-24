@@ -40,8 +40,12 @@ More Information
 import argparse
 
 from cubi_tk.parsers import (
-    get_basic_parser, get_snappy_cmd_basic_parser, get_snappy_itransfer_parser,
-    get_snappy_pull_data_parser, get_sodar_parser, get_sodar_ingest_parser
+    get_basic_parser,
+    get_snappy_cmd_basic_parser,
+    get_snappy_itransfer_parser,
+    get_snappy_pull_data_parser,
+    get_sodar_parser,
+    get_sodar_ingest_parser,
 )
 
 from ..common import run_nocmd
@@ -85,8 +89,12 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_check_remote(
         subparsers.add_parser(
             "check-remote",
-            parents=[basic_parser, get_sodar_parser(with_dest=True, with_assay_uuid=True), snappy_parser],
-            help="Check consistency within remote sample sheet and files"
+            parents=[
+                basic_parser,
+                get_sodar_parser(with_dest=True, with_assay_uuid=True),
+                snappy_parser,
+            ],
+            help="Check consistency within remote sample sheet and files",
         )
     )
 
@@ -94,14 +102,15 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "itransfer-raw-data",
             parents=[basic_parser, sodar_parser_itransfer, snappy_parser, snappy_itransfer_parser],
-            help="Transfer FASTQs into iRODS landing zone")
+            help="Transfer FASTQs into iRODS landing zone",
+        )
     )
 
     setup_argparse_itransfer_ngs_mapping(
         subparsers.add_parser(
             "itransfer-ngs-mapping",
             parents=[basic_parser, sodar_parser_itransfer, snappy_parser, snappy_itransfer_parser],
-            help="Transfer ngs_mapping results into iRODS landing zone"
+            help="Transfer ngs_mapping results into iRODS landing zone",
         )
     )
 
@@ -125,7 +134,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "itransfer-step",
             parents=[basic_parser, sodar_parser_itransfer, snappy_parser, snappy_itransfer_parser],
-            help="Transfer snappy step results into iRODS landing zone"
+            help="Transfer snappy step results into iRODS landing zone",
         )
     )
 
@@ -133,14 +142,15 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "pull-sheets",
             parents=[basic_parser, sodar_parser_assay_uuid, snappy_parser],
-            help="Pull SODAR sample sheets into biomedsheet")
+            help="Pull SODAR sample sheets into biomedsheet",
+        )
     )
 
     setup_argparse_pull_all_data(
         subparsers.add_parser(
             "pull-all-data",
             parents=[basic_parser, sodar_parser_assay_uuid, snappy_parser, snappy_pull_data_parser],
-            help="Pull all data from SODAR to specified output directory"
+            help="Pull all data from SODAR to specified output directory",
         )
     )
 
@@ -156,7 +166,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "pull-raw-data",
             parents=[basic_parser, sodar_parser_assay_uuid, snappy_parser, snappy_pull_data_parser],
-            help="Pull raw data from SODAR to SNAPPY dataset raw data directory"
+            help="Pull raw data from SODAR to SNAPPY dataset raw data directory",
         )
     )
 
@@ -164,7 +174,8 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
         subparsers.add_parser(
             "varfish-upload",
             parents=[basic_parser, snappy_parser],
-            help="Upload variant analysis results into VarFish")
+            help="Upload variant analysis results into VarFish",
+        )
     )
 
 

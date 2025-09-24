@@ -49,23 +49,22 @@ SRC_REGEX_PRESETS = {
         r"(?:(?P<subfolder>[a-z0-9_]+/))?"
         r".+\.(bam|pod5|txt|json)"
     ),
-    "onk_analysis":(
+    "onk_analysis": (
         r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+(_WGS|_CGP)))"
-        r"(?:_(?P<tissue>(tumor|normal)))?" #r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"#backlog possible other regex: r"(?:(.*?)?(?P<tissue>(tumor|normal)))"
+        r"(?:_(?P<tissue>(tumor|normal)))?"  # r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"#backlog possible other regex: r"(?:(.*?)?(?P<tissue>(tumor|normal)))"
         r"\.?(bam|.*bed$|.*bed.gz|txt|.*json|.*vcf|.*report.html|.*counts|.*maf|.*hla.tsv|.*cnv_metrics.csv|.*wgs_overall_mean_cov|.*wgs_coverage_metrics|.*mapping_metrics.csv|.*tmb.metrics.csv|cnv.tsv|snv.tsv|fus.tsv|ig_sv.tsv)"
-    )
+    ),
 }
 
 DEST_PATTERN_PRESETS = {
     "fastq": r"{collection_name}/raw_data/{date}/{filename}",
     "digestiflow": r"{collection_name}/raw_data/{flowcell}/{filename}",
     "ONT": r"{collection_name}/raw_data/{RunID}/{subfolder}/{filename}",
-    "onk_analysis": r"{collection_name}/analysis/{date}/{filename}"
+    "onk_analysis": r"{collection_name}/analysis/{date}/{filename}",
 }
 
 #: Default number of parallel transfers.
 DEFAULT_NUM_TRANSFERS = 8
-
 
 
 class SodarIngestData(SodarIngestBase):
@@ -167,7 +166,6 @@ class SodarIngestData(SodarIngestBase):
 
         return res
 
-
     def build_base_dir_glob_pattern(self, library_name: str) -> tuple[str, str]:
         raise NotImplementedError(
             "build_base_dir_glob_pattern() not implemented in SodarIngestData!"
@@ -180,41 +178,57 @@ class SodarIngestData(SodarIngestBase):
         to a corresponding `out_column` (default if not defined: last Material column)."""
         isa_dict = self.sodar_api.get_samplesheet_export()
         in_column_dict = None
-        out_column_dict= None
+        out_column_dict = None
 
         for sheet_type in ["assays", "studies"]:
             sheet_file_name = list(isa_dict[sheet_type].keys())[0]
             sheet_tsv = isa_dict[sheet_type][sheet_file_name]["tsv"]
             sheet_header, *sheet_lines = sheet_tsv.rstrip("\n").split("\n")
             sheet_header = sheet_header.split("\t")
-            sheet_lines =  [x.split("\t") for x in sheet_lines]
+            sheet_lines = [x.split("\t") for x in sheet_lines]
 
-            sample_name_idx, in_column_index, out_column_index, conservation_method_idx = self._get_indices(sheet_header, in_column, out_column)
+            sample_name_idx, in_column_index, out_column_index, conservation_method_idx = (
+                self._get_indices(sheet_header, in_column, out_column)
+            )
             if in_column_dict is None:
-                in_column_dict = self._check_col_index_and_get_val(in_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx, conservation_method_idx)
+                in_column_dict = self._check_col_index_and_get_val(
+                    in_column_index,
+                    sheet_type,
+                    sheet_header,
+                    sheet_lines,
+                    sample_name_idx,
+                    conservation_method_idx,
+                )
             if out_column_dict is None:
                 if out_column is None:
-                    #take last extractname without asking user
+                    # take last extractname without asking user
                     out_column_index = [max(out_column_index)]
-                out_column_dict = self._check_col_index_and_get_val(out_column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx, conservation_method_idx)
+                out_column_dict = self._check_col_index_and_get_val(
+                    out_column_index,
+                    sheet_type,
+                    sheet_header,
+                    sheet_lines,
+                    sample_name_idx,
+                    conservation_method_idx,
+                )
 
-            #dont go into studies
+            # dont go into studies
             if in_column_dict is not None and out_column_dict is not None:
                 continue
         if in_column_dict is None:
             msg = "Could not identify any column in the assay or study sheet matching provided data. Please review input: --match-column={}".format(
-                        in_column
-                    )
+                in_column
+            )
             logger.error(msg)
             raise ParameterException
-        #assuming that outcolumn is in study
+        # assuming that outcolumn is in study
         match_dict = {}
         for sample_name in out_column_dict.keys():
             if sample_name in in_column_dict.keys():
                 key = in_column_dict[sample_name]
                 if isinstance(key, list):
-                    #add sample name for tumor/normal check and key[1] conservationmethod
-                    #dont overwrite matchdict key if multiple present
+                    # add sample name for tumor/normal check and key[1] conservationmethod
+                    # dont overwrite matchdict key if multiple present
                     val = match_dict.get(key[0], [])
                     val.append((out_column_dict[sample_name], sample_name, key[1]))
                     match_dict[key[0]] = val
@@ -222,7 +236,7 @@ class SodarIngestData(SodarIngestBase):
                     match_dict[key] = out_column_dict[sample_name]
         return match_dict
 
-    def _get_indices(self,sheet_header, in_column, out_column):
+    def _get_indices(self, sheet_header, in_column, out_column):
         # Never match these (hidden) assay columns
         ignore_cols = (
             "Performer",
@@ -261,7 +275,15 @@ class SodarIngestData(SodarIngestBase):
 
         return sample_name_idx, in_column_index, out_column_index, conservation_method_idx
 
-    def _check_col_index_and_get_val(self, column_index, sheet_type, sheet_header, sheet_lines, sample_name_idx, conservation_method_idx):
+    def _check_col_index_and_get_val(
+        self,
+        column_index,
+        sheet_type,
+        sheet_header,
+        sheet_lines,
+        sample_name_idx,
+        conservation_method_idx,
+    ):
         if not column_index:
             msg = "Could not identify any column in the {} sheet matching provided data.".format(
                 sheet_type[:-1]
@@ -292,15 +314,17 @@ class SodarIngestData(SodarIngestBase):
                 raise UserCanceledException(msg)
         else:
             column_index = column_index[0]
-        column_dict: dict[str,str] = {}
+        column_dict: dict[str, str] = {}
         for line in sheet_lines:
             if conservation_method_idx is not None and self.args.preset == "onk_analysis":
-                #add conservation method
-                column_dict[line[sample_name_idx]] = [line[column_index], line[conservation_method_idx]]
+                # add conservation method
+                column_dict[line[sample_name_idx]] = [
+                    line[column_index],
+                    line[conservation_method_idx],
+                ]
             else:
                 column_dict[line[sample_name_idx]] = line[column_index]
         return column_dict
-
 
     def find_collection_name(self, sample_name, column_match, m):
         if column_match is None:
@@ -309,23 +333,24 @@ class SodarIngestData(SodarIngestBase):
         logger.debug(val)
         if not isinstance(val, list):
             return val
-        if not self.args.preset == "onk_analysis" :
+        if not self.args.preset == "onk_analysis":
             logger.error("preset onk_analysis needs to be set, please check your input parameters")
             raise KeyError
-        #needs further matching with tumor
+        # needs further matching with tumor
         matched_col_name = None
         tissue = m.groupdict(default=None)["tissue"]
         for col_col_name, col_sample_name, _ in val:
             col_tissue = col_sample_name.split("-")[-1][0]
-            tissue_match = (tissue is not None and col_tissue == "T") or (tissue is None and col_tissue  == "N")
+            tissue_match = (tissue is not None and col_tissue == "T") or (
+                tissue is None and col_tissue == "N"
+            )
             if tissue_match:
-                #if multiple present use last one
+                # if multiple present use last one
                 matched_col_name = col_col_name
         if matched_col_name is None:
             logger.warning("Couldnt match to conservation and/or tissue, returning first")
-            matched_col_name = val[0][0] #setting to first
+            matched_col_name = val[0][0]  # setting to first
         return matched_col_name
-
 
     def build_jobs(self, hash_ending) -> tuple[TransferJob, ...]:  # noqa: C901
         """Build file transfer jobs."""
@@ -351,8 +376,8 @@ class SodarIngestData(SodarIngestBase):
                 real_path = os.path.realpath(path)
                 if not os.path.isfile(real_path):
                     continue  # skip if did not resolve to file
-                #dragen generates .md5sum, this prevents generation of eg .md5sum.sha256 or .md5sum.md5
-                #TODO: add list of skippable endings as cmd-line option (default [.md5sum]) and use that variable here
+                # dragen generates .md5sum, this prevents generation of eg .md5sum.sha256 or .md5sum.md5
+                # TODO: add list of skippable endings as cmd-line option (default [.md5sum]) and use that variable here
                 if real_path.endswith((".md5", ".sha256", ".md5sum")):
                     continue  # skip, will be added automatically
 
@@ -375,16 +400,20 @@ class SodarIngestData(SodarIngestBase):
                         sample_name = re.sub(m_pat, r_pat, sample_name)
                     try:
                         collection_name = self.find_collection_name(sample_name, column_match, m)
-                        logger.debug(f"sample-name: {sample_name}, collection_name: {collection_name}")
-                        remote_file = pathlib.Path(self.lz_irods_path) / self.remote_dir_pattern.format(
+                        logger.debug(
+                            f"sample-name: {sample_name}, collection_name: {collection_name}"
+                        )
+                        remote_file = pathlib.Path(
+                            self.lz_irods_path
+                        ) / self.remote_dir_pattern.format(
                             # Removed the `+ self.args.add_suffix` here, since adding anything after the file extension is a bad idea
                             filename=pathlib.Path(path).name,
                             date=self.args.remote_dir_date,
                             collection_name=collection_name,
                             **match_wildcards,
                         )
-                        #if onko and germline analysisdata change analysis to germline_analysis
-                        #TODO: maybe set as commandline/option in presets
+                        # if onko and germline analysisdata change analysis to germline_analysis
+                        # TODO: maybe set as commandline/option in presets
                         if self.args.preset == "onk_analysis" and "DragenGermline" in path:
                             remote_file.replace("analysis", "germline_analysis")
                     except KeyError:

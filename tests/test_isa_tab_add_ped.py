@@ -5,6 +5,7 @@ import shutil
 
 from cubi_tk.__main__ import main
 
+
 def compare_input_output(path_expected, path_output):
     """Compare ISA files from input and output path."""
     path_expected = pathlib.Path(path_expected)

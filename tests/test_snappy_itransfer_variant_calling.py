@@ -41,8 +41,14 @@ def test_run_snappy_itransfer_variant_calling_nothing(capsys):
     assert not res.out
     assert res.err
 
-@patch('cubi_tk.snappy.itransfer_variant_calling.SnappyItransferVariantCallingCommand._no_files_found_warning')
-@patch("cubi_tk.snappy.itransfer_variant_calling.SnappyItransferVariantCallingCommand._get_lz_info", my_get_lz_info)
+
+@patch(
+    "cubi_tk.snappy.itransfer_variant_calling.SnappyItransferVariantCallingCommand._no_files_found_warning"
+)
+@patch(
+    "cubi_tk.snappy.itransfer_variant_calling.SnappyItransferVariantCallingCommand._get_lz_info",
+    my_get_lz_info,
+)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 def test_run_snappy_itransfer_variant_calling_smoke_test(
     mock_transfer, mock_filecheck, mocker, minimal_config, germline_trio_sheet_tsv

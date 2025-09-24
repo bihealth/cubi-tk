@@ -14,6 +14,7 @@ from cubi_tk.irods_common import TransferJob
 
 from .conftest import my_get_lz_info, my_iRODS_transfer
 
+
 def test_run_seasnap_itransfer_results_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
@@ -40,11 +41,18 @@ def test_run_seasnap_itransfer_results_nothing(capsys):
 
 
 @patch("cubi_tk.common.check_call")
-@patch('cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._no_files_found_warning')
-@patch("cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._get_lz_info", my_get_lz_info)
+@patch(
+    "cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._no_files_found_warning"
+)
+@patch(
+    "cubi_tk.sea_snap.itransfer_results.SeasnapItransferMappingResultsCommand._get_lz_info",
+    my_get_lz_info,
+)
 @patch("cubi_tk.sodar_common.iRODSTransfer")
 @patch("cubi_tk.common.Value", MagicMock())
-def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck, mock_check_call, fs):
+def test_run_seasnap_itransfer_results_smoke_test(
+    mock_transfer, mock_filecheck, mock_check_call, fs
+):
     # Setup transfer mock, for assertion
     mock_transfer_obj = my_iRODS_transfer()
     mock_transfer.return_value = mock_transfer_obj
@@ -102,9 +110,8 @@ def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck,
             path_remote=os.path.join(
                 dest_path,
                 # test_blueprint.txt has always the same destination path
-                'fakedest' + ('.md5' if f.endswith('.md5') else ''),
+                "fakedest" + (".md5" if f.endswith(".md5") else ""),
             ),
-
         )
         for f in fake_file_paths
     ]
@@ -116,7 +123,7 @@ def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck,
 
     # Expected jobs (itransfer_common will always add the md5 jobs as well)
     mock_filecheck.assert_called_with(expected_tfj)
-    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite='sync')
+    mock_transfer_obj.put.assert_called_with(recursive=True, overwrite="sync")
 
     # Check that the missing md5 file was created
     assert fs.exists(fake_file_paths[3])
@@ -128,4 +135,3 @@ def test_run_seasnap_itransfer_results_smoke_test(mock_transfer, mock_filecheck,
     )
 
     assert fs.exists(fake_file_paths[3])
-

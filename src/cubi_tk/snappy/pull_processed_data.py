@@ -5,6 +5,7 @@ More Information
 - `SNAPPY Pipeline Documentation <https://snappy-pipeline.readthedocs.io/en/latest/>`__.
 - `BiomedSheet Documentation <https://biomedsheets.readthedocs.io/en/master/>`__.
 """
+
 import argparse
 import os
 import typing
@@ -73,6 +74,7 @@ class PullProcessedDataCommand(PullDataCommon):
                 "present, both versions will be downloaded."
             ),
         )
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -89,7 +91,7 @@ class PullProcessedDataCommand(PullDataCommon):
             res = 1
 
         if self.args.output_directory is None:
-            logger.info('No --output-directory given, defaulting to CWD!')
+            logger.info("No --output-directory given, defaulting to CWD!")
             self.args.output_directory = os.getcwd()
 
         # Validate output directory path
@@ -135,9 +137,7 @@ class PullProcessedDataCommand(PullDataCommon):
             )
 
         # Find all remote files (iRODS) and get assay UUID if not provided
-        sodar_coll = RetrieveSodarCollection(
-            self.args
-        )
+        sodar_coll = RetrieveSodarCollection(self.args)
         remote_files_dict = sodar_coll.perform()
         self.args.assay_uuid = sodar_coll.get_assay_uuid()
 
@@ -161,7 +161,9 @@ class PullProcessedDataCommand(PullDataCommon):
 
         # Retrieve files from iRODS
         self.get_irods_files(
-            irods_local_path_pairs=path_pair_list, force_overwrite=self.args.overwrite, sodar_profile=self.args.config_profile
+            irods_local_path_pairs=path_pair_list,
+            force_overwrite=self.args.overwrite,
+            sodar_profile=self.args.config_profile,
         )
 
         logger.info("All done. Have a nice day!")

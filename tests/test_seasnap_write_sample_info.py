@@ -11,6 +11,7 @@ import pytest
 
 from cubi_tk.__main__ import main, setup_argparse
 
+
 def test_run_seasnap_write_sample_info_help(capsys):
     parser, _subparsers = setup_argparse()
     with pytest.raises(SystemExit) as e:
