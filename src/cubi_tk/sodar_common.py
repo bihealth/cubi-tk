@@ -18,7 +18,11 @@ from cubi_tk.parsers import print_args
 class RetrieveSodarCollection(SodarApi):
     def __init__(self, argparse: Namespace, **kwargs):
         super().__init__(argparse, **kwargs)
-        irods_hash_scheme = iRODSCommon(sodar_profile=argparse.config_profile).irods_hash_scheme()
+        irods_hash_scheme = iRODSCommon(
+            sodar_profile=argparse.config_profile,
+            connection_timeout=getattr(argparse, "connection_timeout", 600),
+            read_timeout=getattr(argparse, "read_timeout", 600),
+        ).irods_hash_scheme()
         self.hash_ending = "." + irods_hash_scheme.lower()
 
     def perform(self, include_hash_files=False) -> dict[str, list[IrodsDataObject]]:
@@ -70,6 +74,8 @@ class SodarIngestBase:
             ask=not self.sodar_api.yes,
             sodar_profile=self.args.config_profile,
             dry_run=self.args.dry_run,
+            connection_timeout=getattr(self.args, "connection_timeout", 600),
+            read_timeout=getattr(self.args, "read_timeout", 600),
         )
         if not self.itransfer.irods_env_path.exists():
             logger.error(

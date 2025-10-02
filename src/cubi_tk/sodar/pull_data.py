@@ -64,6 +64,20 @@ class PullDataCommand:
             help="Allow overwriting of local files.",
         )
 
+        irods_group = parser.add_argument_group("iRODS Connection Options")
+        irods_group.add_argument(
+            "--connection-timeout",
+            default=600,
+            type=int,
+            help="iRODS connection timeout in seconds (default: 600).",
+        )
+        irods_group.add_argument(
+            "--read-timeout",
+            default=600,
+            type=int,
+            help="iRODS read timeout in seconds (default: 600).",
+        )
+
         group_files = parser.add_mutually_exclusive_group(required=True)
 
         group_files.add_argument(
@@ -207,9 +221,12 @@ class PullDataCommand:
         )
 
         # Retrieve files from iRODS
-        iRODSTransfer(transfer_jobs, sodar_profile=self.args.config_profile).get(
-            self.args.overwrite
-        )
+        iRODSTransfer(
+            transfer_jobs,
+            sodar_profile=self.args.config_profile,
+            connection_timeout=getattr(self.args, "connection_timeout", 600),
+            read_timeout=getattr(self.args, "read_timeout", 600),
+        ).get(self.args.overwrite)
 
         logger.info("All done. Have a nice day!")
         return 0

@@ -62,10 +62,21 @@ class iRODSCommon:
     :type ask: bool, optional
     :param irods_env_path: Path to irods_environment.json
     :type irods_env_path: pathlib.Path, optional
+    :param sodar_profile: Profile name for SODAR configuration
+    :type sodar_profile: str, optional
+    :param connection_timeout: Connection timeout in seconds
+    :type connection_timeout: int, optional
+    :param read_timeout: Read timeout in seconds
+    :type read_timeout: int, optional
     """
 
     def __init__(
-        self, ask: bool = False, irods_env_path: Path = None, sodar_profile: str = "global"
+        self,
+        ask: bool = False,
+        irods_env_path: Path | None = None,
+        sodar_profile: str = "global",
+        connection_timeout: int = 600,
+        read_timeout: int = 600,
     ):
         # Path to iRODS environment file
         if irods_env_path is None:
@@ -81,6 +92,8 @@ class iRODSCommon:
         self.irodsA_file_found = False
         self.ask = ask
         self.hash_scheme = DEFAULT_HASH_SCHEME
+        self.connection_timeout = connection_timeout
+        self.read_timeout = read_timeout
 
     @staticmethod
     def get_irods_error(e: Exception):
@@ -95,7 +108,8 @@ class iRODSCommon:
         while True:
             try:
                 session = iRODSSession(irods_env_file=self.irods_env_path)
-                session.connection_timeout = 600
+                session.connection_timeout = self.connection_timeout
+                session.read_timeout = self.read_timeout
                 self._check_and_gen_irods_files()
                 return session
             except Exception as e:  # pragma: no cover
@@ -137,10 +151,10 @@ class iRODSCommon:
                     json.dump({"last_used_env": str(self.irods_env_path)}, last_profile_file)
             elif not self.ask and write_irods_file:
                 logger.error(
-                    "Password for irods conenction needs to be entered, please switch to interactive mode"
+                    "Password for irods connection needs to be entered, please switch to interactive mode"
                 )
 
-            # read hashscheme vom irods env file
+            # read hashscheme from irods env file
             with open(self.irods_env_path) as irods_env_data:
                 irods_env_json = json.load(irods_env_data)
                 self.hash_scheme = irods_env_json["irods_default_hash_scheme"]

@@ -122,6 +122,20 @@ def get_sodar_ingest_parser(include_dest=True):
         help="Number of threas to use for checksum calculation.",
     )
 
+    irods_group = sodar_ingest_parser.add_argument_group("iRODS Connection Options")
+    irods_group.add_argument(
+        "--connection-timeout",
+        default=600,
+        type=int,
+        help="iRODS connection timeout in seconds (default: 600).",
+    )
+    irods_group.add_argument(
+        "--read-timeout",
+        default=600,
+        type=int,
+        help="iRODS read timeout in seconds (default: 600).",
+    )
+
     return sodar_ingest_parser
 
 
