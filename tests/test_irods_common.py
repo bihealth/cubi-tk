@@ -186,12 +186,12 @@ def test_irods_transfer_get(mocksession, jobs):
 
 # This tests `retrieve_irods_data_objects` and by extension `parse_irods_collection`
 # A test for _irods_query would require mocking `session.query` results in a
-# way that allows creation of iRODSDataObject instances from those results
+# way that allows creation of IrodsDataObject instances from those results
 @patch("cubi_tk.irods_common.iRODSCommon._init_irods")
 @patch("cubi_tk.irods_common.iRODSRetrieveCollection._irods_query")
 def test_irods_retrieve_data_objects(mockquery, mocksession):
     # Possible alternative to MagicMocks here:
-    # create a fake iRODSDataObject class with a path attribute
+    # create a fake IrodsDataObject class with a path attribute
     mockobj1 = MagicMock()
     mockobj1.path = "/root/coll1/file1.vcf.gz"
     mockobj1.name = "file1.vcf.gz"

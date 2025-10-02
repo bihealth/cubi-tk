@@ -260,7 +260,7 @@ class PullDataCommand:
         """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``iRODSDataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
         :type remote_files_dict: dict
 
         :param common_assay_path: Path common to all files. If provided, files in this path will be stripped.

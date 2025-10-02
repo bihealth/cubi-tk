@@ -381,7 +381,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         :param irods_path: iRODS path.
 
         :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of iRODSDataObject (native python-irodsclient object).
+        Value: list of IrodsDataObject (native python-irodsclient object).
         """
 
         # Connect to iRODS
@@ -418,7 +418,7 @@ class iRODSRetrieveCollection(iRODSCommon):
 
         data_objs = {"files": [], "checksums": {}}
         for res in query:
-            # If the 'res' dict is not split into Colllection&Object the resulting iRODSDataObject is not fully functional,
+            # If the 'res' dict is not split into Colllection&Object the resulting IrodsDataObject is not fully functional,
             # likely because a name/path/... attribute is overwritten somewhere
             magic_icat_id_separator = 500
             coll_res = {k: v for k, v in res.items() if k.icat_id >= magic_icat_id_separator}
@@ -441,7 +441,7 @@ class iRODSRetrieveCollection(iRODSCommon):
         :type irods_data_objs: dict
 
         :return: Returns dictionary representation of iRODS collection information. Key: File name in iRODS (str);
-        Value: list of iRODSDataObject (native python-irodsclient object).
+        Value: list of IrodsDataObject (native python-irodsclient object).
         """
         # Initialise variables
         output_dict = defaultdict(list)
