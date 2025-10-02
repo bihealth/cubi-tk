@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from loguru import logger
 
-from cubi_tk.api_models import iRODSDataObject
+from cubi_tk.api_models import IrodsDataObject
 from cubi_tk.common import execute_checksum_files_fix
 from cubi_tk.exceptions import CubiTkException, ParameterException, UserCanceledException
 from cubi_tk.irods_common import TransferJob, iRODSTransfer, iRODSCommon
@@ -21,7 +21,7 @@ class RetrieveSodarCollection(SodarApi):
         irods_hash_scheme = iRODSCommon(sodar_profile=argparse.config_profile).irods_hash_scheme()
         self.hash_ending = "." + irods_hash_scheme.lower()
 
-    def perform(self, include_hash_files=False) -> dict[str, list[iRODSDataObject]]:
+    def perform(self, include_hash_files=False) -> dict[str, list[IrodsDataObject]]:
         filelist = self.get_samplesheet_file_list()
 
         output_dict = defaultdict(list)

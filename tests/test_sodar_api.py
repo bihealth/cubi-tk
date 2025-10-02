@@ -6,7 +6,7 @@ import cattr
 import pytest
 from unittest.mock import patch, MagicMock
 
-from cubi_tk.api_models import iRODSDataObject
+from cubi_tk.api_models import IrodsDataObject
 from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH, SodarApi
 from cubi_tk.exceptions import SodarApiException
 from tests.factories import InvestigationFactory
@@ -181,7 +181,7 @@ def test_sodar_api_get_samplesheet_file_list(requests_mock, sodar_api_instance):
     )
 
     expected = [
-        iRODSDataObject(
+        IrodsDataObject(
             name="File name",
             type="file",
             path="collection/File Name",
@@ -189,7 +189,7 @@ def test_sodar_api_get_samplesheet_file_list(requests_mock, sodar_api_instance):
             modify_time="2025-01-01 00:00:00",
             checksum="1234567890",
         ),
-        iRODSDataObject(
+        IrodsDataObject(
             name="collection",
             type="obj",
             path="collection",

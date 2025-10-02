@@ -69,7 +69,7 @@ class User:
 
 
 @attr.s(frozen=True, auto_attribs=True)
-class iRODSDataObject:
+class IrodsDataObject:
     """Represents an iRODS data object in the SODAR API."""
 
     # File name

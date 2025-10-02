@@ -36,7 +36,7 @@ class PullDataCommon:
         :type identifiers: list
 
         :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: list of iRODS data (``iRODSDataObject``).
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: list of iRODS data (``IrodsDataObject``).
         :type remote_files_dict: dict
 
         :param file_type: File type, example: 'bam' or 'vcf'.

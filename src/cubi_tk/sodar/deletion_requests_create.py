@@ -4,7 +4,7 @@ import os
 
 from loguru import logger
 
-from cubi_tk.api_models import iRODSDataObject
+from cubi_tk.api_models import IrodsDataObject
 from cubi_tk.exceptions import CubiTkException
 from cubi_tk.parsers import print_args
 from cubi_tk.sodar_api import SodarApi
@@ -92,7 +92,7 @@ class SodarDeletionRequestsCommand:
         return 0
 
     def gather_deletion_request_paths(
-        self, irods_files: list[iRODSDataObject] | None, assay_path: str
+        self, irods_files: list[IrodsDataObject] | None, assay_path: str
     ) -> list[str]:
         """Gather all paths for which deletion requests should be created."""
 

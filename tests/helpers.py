@@ -20,7 +20,7 @@ class iRODSDataObjectEq(iRODSDataObject):
 def createIrodsDataObject(
     file_name: str, irods_path: str, file_md5sum: str, replicas_md5sum: List[str]
 ):
-    """Create iRODSDataObject from parameters."""
+    """Create IrodsDataObject from parameters."""
 
     parent = pathlib.Path(irods_path).parent
     collection_data = {
