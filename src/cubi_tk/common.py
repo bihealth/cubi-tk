@@ -84,18 +84,16 @@ def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, ha
 
 
 def execute_checksum_files_fix(
-    transfer_jobs: list[TransferJob],
-    hash_scheme,
-    parallel_jobs: int = 8,
-    recompute_checksums = False
+    transfer_jobs: list[TransferJob], hash_scheme, parallel_jobs: int = 8, recompute_checksums=False
 ) -> list[TransferJob]:
     """Create missing checksum files."""
     ok_jobs = []
     todo_jobs = []
 
-
     for job in transfer_jobs:
-        if not os.path.exists(job.path_local) or (job.path_local.endswith(hash_scheme.lower()) and recompute_checksums):
+        if not os.path.exists(job.path_local) or (
+            job.path_local.endswith(hash_scheme.lower()) and recompute_checksums
+        ):
             todo_jobs.append(job)
         else:
             ok_jobs.append(job)
