@@ -126,7 +126,7 @@ def get_sodar_ingest_parser(include_dest=True):
         action="store_true",
         help="Recalculate local checksums, even if already present",
     )
-    
+
 
     return sodar_ingest_parser
 

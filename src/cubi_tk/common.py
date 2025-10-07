@@ -92,8 +92,8 @@ def execute_checksum_files_fix(
     """Create missing checksum files."""
     ok_jobs = []
     todo_jobs = []
-    
-    
+
+
     for job in transfer_jobs:
         if not os.path.exists(job.path_local) or (job.path_local.endswith(hash_scheme.lower()) and recompute_checksums):
             todo_jobs.append(job)
