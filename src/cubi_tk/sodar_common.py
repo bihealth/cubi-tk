@@ -244,7 +244,7 @@ class SodarIngestBase:
         self._no_files_found_warning(transfer_jobs)
         # Check for md5 files and add jobs if needed
         transfer_jobs = execute_checksum_files_fix(
-            transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs
+            transfer_jobs, irods_hash_scheme, self.args.parallel_checksum_jobs, self.args.recompute_checksums
         )
         # Final go from user & transfer
         self.itransfer.jobs = transfer_jobs
