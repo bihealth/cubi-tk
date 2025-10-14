@@ -12,6 +12,7 @@ dependencies = [
     "argcomplete>=3.5.3",
     "attrs>=24.3.0",
     "cattrs>=24.1.2",
+    "click==8.1.8",
     "cookiecutter==2.3.1",
     "cubi-isa-templates==0.1.1",
     "hpo-similarity>=0.5.3",
