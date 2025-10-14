@@ -121,6 +121,11 @@ def get_sodar_ingest_parser(include_dest=True):
         type=int,
         help="Number of threas to use for checksum calculation.",
     )
+    ingest_group.add_argument(
+        "--recompute-checksums",
+        action="store_true",
+        help="Recalculate local checksums, even if already present",
+    )
 
     irods_group = sodar_ingest_parser.add_argument_group("iRODS Connection Options")
     irods_group.add_argument(
