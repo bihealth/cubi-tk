@@ -65,7 +65,7 @@ class UploadSheetCommand:
                 p = pathlib.Path(path)
                 files_dict["file_%d" % no] = (p.name, stack.enter_context(p.open("rt")))
 
-        sodar_api.post_samplesheet_import(files_dict=files_dict)
+            sodar_api.post_samplesheet_import(files_dict=files_dict)
 
         logger.info("All done. Have a nice day!")
         return 0
