@@ -301,7 +301,10 @@ class PullDataCommand:
         for _filename, irodsobjs in remote_files_dict.items():
             for irodsobj in irodsobjs:
                 # Path needs to be stripped down to collections (=remove assay part & upwards)
-                path = PurePosixPath(irodsobj.path).relative_to(PurePosixPath(common_assay_path))
+                try:
+                    path = PurePosixPath(irodsobj.path).relative_to(PurePosixPath(common_assay_path))
+                except ValueError: # wrong assay, skip
+                    continue
 
                 collection = path.parts[0]
 

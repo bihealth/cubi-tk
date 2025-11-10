@@ -184,7 +184,11 @@ class FileComparisonChecker:
         def filedata_from_irodsdata(obj):
             # Helper Function to convert iRodsDataObject (non-hashable) to FileDataObject, also making path relative
             p = Path(obj.path).parent
-            p = p.relative_to(irods_basepath) if irods_basepath else p
+            if irods_basepath:
+                try: 
+                    p = p.relative_to(irods_basepath)
+                except ValueError:
+                    pass
             return FileDataObject(obj.name, str(p), obj.checksum)
 
         # The dictionaries will contain double information on the file path (both as keys & in the objects)
@@ -375,7 +379,7 @@ class SodarCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(self.args)
-        hash_scheme = irodscollector.irods_hash_scheme()
+        hash_scheme = irodscollector.irods_hash_scheme
         remote_files_dict = irodscollector.perform()
         assay_path = irodscollector.get_assay_irods_path()
 

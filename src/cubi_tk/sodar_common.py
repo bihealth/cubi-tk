@@ -18,12 +18,12 @@ from cubi_tk.parsers import print_args
 class RetrieveSodarCollection(SodarApi):
     def __init__(self, argparse: Namespace, **kwargs):
         super().__init__(argparse, **kwargs)
-        irods_hash_scheme = iRODSCommon(
+        self.irods_hash_scheme = iRODSCommon(
             sodar_profile=argparse.config_profile,
             connection_timeout=getattr(argparse, "connection_timeout", 600),
             read_timeout=getattr(argparse, "read_timeout", 600),
         ).irods_hash_scheme()
-        self.hash_ending = "." + irods_hash_scheme.lower()
+        self.hash_ending = "." + self.irods_hash_scheme.lower()
 
     def perform(self, include_hash_files=False) -> dict[str, list[IrodsDataObject]]:
         filelist = self.get_samplesheet_file_list()
