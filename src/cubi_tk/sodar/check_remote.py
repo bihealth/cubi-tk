@@ -159,8 +159,9 @@ class FileComparisonChecker:
     def report_multiple_file_versions_in_sodar(remote_files_dict):
         return SnappyChecker.report_multiple_file_versions_in_sodar(remote_files_dict)
 
+    # FIXME: reduce complexity
     @staticmethod
-    def compare_local_and_remote_files(
+    def compare_local_and_remote_files(  # noqa: C901
         local_dict, remote_dict, filenames_only=False, irods_basepath=""
     ):
         """Compare locally and remotely available files.
@@ -181,10 +182,15 @@ class FileComparisonChecker:
         values are lists of FileDataObjects
         """
 
-        def filedata_from_irodsdata(obj):
-            # Helper Function to convert iRodsDataObject (non-hashable) to FileDataObject, also making path relative
+        def filedata_from_irodsdata(
+            obj,
+        ):  # Helper Function to convert iRodsDataObject (non-hashable) to FileDataObject, also making path relative
             p = Path(obj.path).parent
-            p = p.relative_to(irods_basepath) if irods_basepath else p
+            if irods_basepath:
+                try:
+                    p = p.relative_to(irods_basepath)
+                except ValueError:
+                    pass  # wrong assay, skip
             return FileDataObject(obj.name, str(p), obj.checksum)
 
         # The dictionaries will contain double information on the file path (both as keys & in the objects)
@@ -375,7 +381,7 @@ class SodarCheckRemoteCommand:
 
         # Find all remote files (iRODS)
         irodscollector = RetrieveSodarCollection(self.args)
-        hash_scheme = irodscollector.irods_hash_scheme()
+        hash_scheme = irodscollector.irods_hash_scheme
         remote_files_dict = irodscollector.perform()
         assay_path = irodscollector.get_assay_irods_path()
 
