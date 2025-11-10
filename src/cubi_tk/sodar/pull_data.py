@@ -302,8 +302,10 @@ class PullDataCommand:
             for irodsobj in irodsobjs:
                 # Path needs to be stripped down to collections (=remove assay part & upwards)
                 try:
-                    path = PurePosixPath(irodsobj.path).relative_to(PurePosixPath(common_assay_path))
-                except ValueError: # wrong assay, skip
+                    path = PurePosixPath(irodsobj.path).relative_to(
+                        PurePosixPath(common_assay_path)
+                    )
+                except ValueError:  # wrong assay, skip
                     continue
 
                 collection = path.parts[0]
