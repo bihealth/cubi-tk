@@ -75,7 +75,9 @@ class FindLocalChecksumFiles:
                 )
                 continue
             elif self.regex_pattern and not re.search(self.regex_pattern, str(datafile)):
-                logger.debug(f"Skipping {datafile} as it does not match regex: {self.regex_pattern}")
+                logger.debug(
+                    f"Skipping {datafile} as it does not match regex: {self.regex_pattern}"
+                )
                 continue
 
             with open(checksumfile, "r", encoding="utf8") as f:
@@ -263,7 +265,9 @@ class FileComparisonChecker:
         return in_both, local_only, remote_only
 
     @staticmethod
-    def report_findings(both_locations, only_local, only_remote, report_categories, include_checksum=False):
+    def report_findings(
+        both_locations, only_local, only_remote, report_categories, include_checksum=False
+    ):
         """Report findings
 
         :param both_locations: Dict for files found both locally and in remote directory.
@@ -307,21 +311,21 @@ class FileComparisonChecker:
         dashed_line = "-" * 25
 
         # Write results to stdout
-        if len(both_locations) > 0 and 'both' in report_categories:
+        if len(both_locations) > 0 and "both" in report_categories:
             print(f"Files found BOTH locally and remotely:\n{in_both_str}")
-        elif 'both' in report_categories:
-            print(f"No file was found both locally and remotely.")
-        if 'both' in report_categories and 'local-only' in report_categories:
+        elif "both" in report_categories:
+            print("No file was found both locally and remotely.")
+        if "both" in report_categories and "local-only" in report_categories:
             print(dashed_line)
-        if len(only_local) > 0 and 'local-only' in report_categories:
+        if len(only_local) > 0 and "local-only" in report_categories:
             print(f"Files found ONLY LOCALLY:\n{local_only_str}")
-        elif 'local-only' in report_categories:
-            print(f"No file found only locally.")
-        if 'remote-only' in report_categories and report_categories != ['remote-only']:
+        elif "local-only" in report_categories:
+            print("No file found only locally.")
+        if "remote-only" in report_categories and report_categories != ["remote-only"]:
             print(dashed_line)
-        if len(only_remote) > 0 and 'remote-only' in report_categories:
+        if len(only_remote) > 0 and "remote-only" in report_categories:
             print(f"Files found ONLY REMOTELY:\n{remote_only_str}")
-        elif 'remote-only' in report_categories:
+        elif "remote-only" in report_categories:
             print("No file found only remotely.")
 
 
@@ -351,7 +355,7 @@ class SodarCheckRemoteCommand:
         parser.add_argument(
             "--file-selection-regex",
             default=None,
-            help="(Regex) pattern to select files for comparison. I.e.: 'fastq.gz$'. Default: None (all files used)"
+            help="(Regex) pattern to select files for comparison. I.e.: 'fastq.gz$'. Default: None (all files used)",
         )
         parser.add_argument(
             "--filename-only",
@@ -374,10 +378,10 @@ class SodarCheckRemoteCommand:
         )
         parser.add_argument(
             "--report-categories",
-            choices=['remote-only', 'local-only', 'both'],
-            nargs='+',
-            default=['remote-only', 'local-only', 'both'],
-            help="Flag to select categories of checked files to report (any of: remote-only, local-only, both). Default: all reported."
+            choices=["remote-only", "local-only", "both"],
+            nargs="+",
+            default=["remote-only", "local-only", "both"],
+            help="Flag to select categories of checked files to report (any of: remote-only, local-only, both). Default: all reported.",
         )
 
     @classmethod
@@ -418,7 +422,8 @@ class SodarCheckRemoteCommand:
         if self.args.file_selection_regex:
             pattern = re.compile(self.args.file_selection_regex)
             remote_files_dict = {
-                k: [v for v in vals if re.search(pattern, str(v.name))] for k,vals in remote_files_dict.items()
+                k: [v for v in vals if re.search(pattern, str(v.name))]
+                for k, vals in remote_files_dict.items()
             }
 
         # Find all local files with checksum, includes regex filter
@@ -426,7 +431,7 @@ class SodarCheckRemoteCommand:
             base_path=self.args.base_path,
             hash_scheme=hash_scheme,
             recheck_checksum=self.args.recheck_checksum,
-            regex_pattern=self.args.file_selection_regex
+            regex_pattern=self.args.file_selection_regex,
         ).run()
 
         # Run checks
