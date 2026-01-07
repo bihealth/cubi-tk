@@ -43,12 +43,13 @@ class FileDataObject:
 class FindLocalChecksumFiles:
     """Class contains methods to find local files with associated checksums"""
 
-    def __init__(self, base_path, hash_scheme, recheck_checksum=False):
+    def __init__(self, base_path, hash_scheme, recheck_checksum=False, regex_pattern=None):
         """Constructor: init vars"""
 
         self.searchpath = Path(base_path)
         self.recheck_checksum = recheck_checksum
         self.hash_scheme = hash_scheme
+        self.regex_pattern = re.compile(regex_pattern) if regex_pattern else None
 
     # Adapted from snappy check remote
     def run(self):
@@ -62,7 +63,7 @@ class FindLocalChecksumFiles:
         # Initialise variables
         rawdata_structure_dict = defaultdict(list)
 
-        # Find all chcksum files
+        # Find all checksum files
         checksum_files = self.searchpath.rglob("*." + self.hash_scheme.lower())
 
         # Check that corresponding files exist
@@ -71,6 +72,11 @@ class FindLocalChecksumFiles:
             if not datafile.exists():
                 logger.warning(
                     f"Ignoring orphaned local checksum file: {checksumfile}.\nExpected associated file not found: {datafile}"
+                )
+                continue
+            elif self.regex_pattern and not re.search(self.regex_pattern, str(datafile)):
+                logger.debug(
+                    f"Skipping {datafile} as it does not match regex: {self.regex_pattern}"
                 )
                 continue
 
@@ -110,6 +116,7 @@ class FileComparisonChecker:
         self,
         local_files_dict,
         remote_files_dict,
+        report_categories: list[typing.Literal["both", "remote-only", "local-only"]],
         filenames_only=False,
         irods_basepath=None,
         report_checksums=False,
@@ -122,6 +129,9 @@ class FileComparisonChecker:
         :param remote_files_dict: Dictionary with remote filenames as keys and list of IrodsDataObject as values.
         :type remote_files_dict: dict
 
+        :param report_categories: List of category names to report.
+        :type report_categories: list[typing.Literal["both", "remote-only", "local-only"]]
+
         :param filenames_only: Flag to indicate if checksums should not be used for comparison
 
         :param irods_basepath: assay basepath in irods that should be removed for reporting
@@ -130,6 +140,7 @@ class FileComparisonChecker:
         """
         self.local_files_dict = local_files_dict
         self.remote_files_dict = remote_files_dict
+        self.report_categories = report_categories
         self.filenames_only = filenames_only
         self.irods_basepath = irods_basepath
         self.report_checksums = report_checksums
@@ -149,6 +160,7 @@ class FileComparisonChecker:
             both_locations=in_both,
             only_local=local_only,
             only_remote=remote_unmatched,
+            report_categories=self.report_categories,
             include_checksum=self.report_checksums,
         )
 
@@ -253,7 +265,9 @@ class FileComparisonChecker:
         return in_both, local_only, remote_only
 
     @staticmethod
-    def report_findings(both_locations, only_local, only_remote, include_checksum=False):
+    def report_findings(
+        both_locations, only_local, only_remote, report_categories, include_checksum=False
+    ):
         """Report findings
 
         :param both_locations: Dict for files found both locally and in remote directory.
@@ -267,6 +281,9 @@ class FileComparisonChecker:
         :param only_remote: Dict with files found only in the remote directory.
         Keys: irods paths, values: list of FileDataObject
         :type only_remote: dict
+
+        :param report_categories: List of category names to report.
+        :type report_categories: list[typing.Literal["both", "remote-only", "local-only"]]
 
         :param include_checksum: Flag to indicate if checksums should be included in reports
         """
@@ -293,19 +310,23 @@ class FileComparisonChecker:
 
         dashed_line = "-" * 25
 
-        # Log
-        if len(both_locations) > 0:
-            logger.info(f"Files found BOTH locally and remotely:\n{in_both_str}\n{dashed_line}")
-        else:
-            logger.warning(f"No file was found both locally and remotely.\n{dashed_line}")
-        if len(only_local) > 0:
-            logger.warning(f"Files found ONLY LOCALLY:\n{local_only_str}\n{dashed_line}")
-        else:
-            logger.info(f"No file found only locally.\n{dashed_line}")
-        if len(only_remote) > 0:
-            logger.info(f"Files found ONLY REMOTELY:\n{remote_only_str}")
-        else:
-            logger.info("No file found only remotely.")
+        # Write results to stdout
+        if len(both_locations) > 0 and "both" in report_categories:
+            print(f"Files found BOTH locally and remotely:\n{in_both_str}")
+        elif "both" in report_categories:
+            print("No file was found both locally and remotely.")
+        if "both" in report_categories and "local-only" in report_categories:
+            print(dashed_line)
+        if len(only_local) > 0 and "local-only" in report_categories:
+            print(f"Files found ONLY LOCALLY:\n{local_only_str}")
+        elif "local-only" in report_categories:
+            print("No file found only locally.")
+        if "remote-only" in report_categories and report_categories != ["remote-only"]:
+            print(dashed_line)
+        if len(only_remote) > 0 and "remote-only" in report_categories:
+            print(f"Files found ONLY REMOTELY:\n{remote_only_str}")
+        elif "remote-only" in report_categories:
+            print("No file found only remotely.")
 
 
 # Adapted from snappy check_remote
@@ -332,6 +353,11 @@ class SodarCheckRemoteCommand:
             ),
         )
         parser.add_argument(
+            "--file-selection-regex",
+            default=None,
+            help="(Regex) pattern to select files for comparison. I.e.: 'fastq.gz$'. Default: None (all files used)",
+        )
+        parser.add_argument(
             "--filename-only",
             default=False,
             action="store_true",
@@ -349,6 +375,13 @@ class SodarCheckRemoteCommand:
             default=False,
             action="store_true",
             help="Flag to indicate if checksums should be included in file report",
+        )
+        parser.add_argument(
+            "--report-categories",
+            choices=["remote-only", "local-only", "both"],
+            nargs="+",
+            default=["remote-only", "local-only", "both"],
+            help="Flag to select categories of checked files to report (any of: remote-only, local-only, both). Default: all reported.",
         )
 
     @classmethod
@@ -385,19 +418,30 @@ class SodarCheckRemoteCommand:
         remote_files_dict = irodscollector.perform()
         assay_path = irodscollector.get_assay_irods_path()
 
-        # Find all local files with checksum
+        # Filter irods file list by file-name regex if given
+        if self.args.file_selection_regex:
+            pattern = re.compile(self.args.file_selection_regex)
+            remote_files_dict = {
+                k: [v for v in vals if re.search(pattern, str(v.name))]
+                for k, vals in remote_files_dict.items()
+            }
+
+        # Find all local files with checksum, includes regex filter
         local_files_dict = FindLocalChecksumFiles(
             base_path=self.args.base_path,
             hash_scheme=hash_scheme,
             recheck_checksum=self.args.recheck_checksum,
+            regex_pattern=self.args.file_selection_regex,
         ).run()
 
         # Run checks
         FileComparisonChecker(
             remote_files_dict=remote_files_dict,
             local_files_dict=local_files_dict,
+            report_categories=self.args.report_categories,
             filenames_only=self.args.filename_only,
             irods_basepath=assay_path,
+            report_checksums=self.args.report_checksums,
         ).run()
 
         logger.info("All done.")
