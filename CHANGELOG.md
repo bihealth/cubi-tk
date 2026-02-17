@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.0](https://github.com/bihealth/cubi-tk/compare/v0.7.0...v0.8.0) (2026-02-17)
+
+
+### Features
+
+* add --recompute-checksums flag to ingest parser ([#314](https://github.com/bihealth/cubi-tk/issues/314)) ([1734b03](https://github.com/bihealth/cubi-tk/commit/1734b03182356afc9963fd7e5f285f4af3787f09))
+* add new options to sodar check-remote ([#321](https://github.com/bihealth/cubi-tk/issues/321)) ([fe2551f](https://github.com/bihealth/cubi-tk/commit/fe2551f627876cc86c858a2da6b87797cb01f898))
+
+
+### Bug Fixes
+
+* added timeout parameter to irods connection ([#315](https://github.com/bihealth/cubi-tk/issues/315)) ([6c8be93](https://github.com/bihealth/cubi-tk/commit/6c8be938b30ece8fb804ce4a23c484002f9a5750))
+* change class-name to IrodsDataObject  ([#312](https://github.com/bihealth/cubi-tk/issues/312)) ([6438368](https://github.com/bihealth/cubi-tk/commit/6438368c6b94fc2f7e690441f4f97717162187b1))
+* pin click version for varfish-cli ([#316](https://github.com/bihealth/cubi-tk/issues/316)) ([82f6a0a](https://github.com/bihealth/cubi-tk/commit/82f6a0a1a82dd33803c8d7723556c4ac6922976e))
+* setuptool version ([#322](https://github.com/bihealth/cubi-tk/issues/322)) ([30509c1](https://github.com/bihealth/cubi-tk/commit/30509c1bc7b198737ab672a55328d8f562709804))
+* skip remote files if wrong assay ([#318](https://github.com/bihealth/cubi-tk/issues/318)) ([65df088](https://github.com/bihealth/cubi-tk/commit/65df0880be65db8dab864244de9869626665a353))
+* upload sheet commands in with block for file operations ([#317](https://github.com/bihealth/cubi-tk/issues/317)) ([168fb3e](https://github.com/bihealth/cubi-tk/commit/168fb3ea931ddc33c224d7a88a9b7b1f3825b4cf))
+
 ## [0.7.0](https://github.com/bihealth/cubi-tk/compare/v0.6.0...v0.7.0) (2025-09-24)
 
 ### Breaking Changes
