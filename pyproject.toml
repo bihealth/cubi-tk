@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=75.8.0", "wheel"]
+requires = ["setuptools>=75.8.0,<81", "wheel<0.45"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -33,6 +33,7 @@ dependencies = [
     "vcfpy >=0.13.8",
     "altamisa @ git+https://github.com/bihealth/altamisa.git@817dc491ff819e4c80686082bf3e5f602f1ac14c",
     "biomedsheets @ git+https://github.com/bihealth/biomedsheets@4e0a8484850c39d1511036c3fe29ec0b4f9271f8",
+    "setuptools>=75.8.0,<81",
 ]
 
 [project.license]
