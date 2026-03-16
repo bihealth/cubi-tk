@@ -147,7 +147,7 @@ class AddPedCommand:
             logger.info("-- updating sample sheet --")
             self.args["input_investigation_file"] = str(tmp_path / next(tmp_path.glob("i_*")))
 
-            add_res = AddPedIsaTabCommand(self.args).execute()
+            add_res = AddPedIsaTabCommand(argparse.Namespace(**self.args)).execute()
             if add_res != 0:
                 logger.error("-- updating sheet failed --")
                 return 1
