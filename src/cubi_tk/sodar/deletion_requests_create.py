@@ -125,10 +125,10 @@ class SodarDeletionRequestsCommand:
         matched_objects = set()
         for pattern in given_path_patterns:
             # Note: from py3.13 could also use pathlib.PurePath.full_match here, which supports recursive **
-            matches = {pp for pp in existing_object_paths if pp.match(pattern) or pp.name.endswith(pattern.split("*")[-1])}
+            matches = {pp for pp in existing_object_paths if pp.match(pattern)}
             existing_object_paths -= matches
             matched_objects |= matches
-        logger.debug(f"Matched irods paths: {', '.join(map(str, matched_objects))}")
+        logger.info(f"Matched irods paths: {', '.join(map(str, matched_objects))}")
 
         # apply collection whitelist, if given
         if self.args.collections:
