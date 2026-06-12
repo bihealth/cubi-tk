@@ -74,7 +74,7 @@ class SodarDeletionRequestsCommand:
         assay, study = sodar_api.get_assay_from_uuid()
         # Find all remote files
         irods_files = sodar_api.get_samplesheet_file_list()
-
+        irods_files = [f for f in irods_files if f.path.startswith(assay.irods_path)]
         deletion_request_paths = self.gather_deletion_request_paths(irods_files, assay.irods_path)
         for path in deletion_request_paths:
             if self.args.dry_run:
@@ -122,11 +122,10 @@ class SodarDeletionRequestsCommand:
         logger.debug(
             f"Matching {len(existing_object_paths)} paths from {len(irods_files)} irods files"
         )
-
         matched_objects = set()
         for pattern in given_path_patterns:
             # Note: from py3.13 could also use pathlib.PurePath.full_match here, which supports recursive **
-            matches = {pp for pp in existing_object_paths if pp.match(pattern)}
+            matches = {pp for pp in existing_object_paths if pp.match(pattern) or pp.name.endswith(pattern.split("*")[-1])}
             existing_object_paths -= matches
             matched_objects |= matches
         logger.debug(f"Matched irods paths: {', '.join(map(str, matched_objects))}")
