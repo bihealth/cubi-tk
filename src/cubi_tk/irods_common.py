@@ -4,6 +4,8 @@ import json
 import os.path
 from pathlib import Path
 import re
+import shutil
+from time import time
 from typing import Iterable, Literal, Union
 import warnings
 
@@ -94,6 +96,7 @@ class iRODSCommon:
         self.hash_scheme = DEFAULT_HASH_SCHEME
         self.connection_timeout = connection_timeout
         self.read_timeout = read_timeout
+        self.sodar_profile = sodar_profile
 
     @staticmethod
     def get_irods_error(e: Exception):
@@ -124,43 +127,62 @@ class iRODSCommon:
         if self.irodsA_file_found is True and not overwrite:
             return
         try:
-            # check if irodsfile exists
-            irodsA_path = self.irods_env_path.parent.joinpath(".irodsA")
-            ##check path of last authorized irods_environment.json
-            last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
-            if irodsA_path.exists():
-                self.irodsA_file_found = True
-                if last_profile_path.exists():
-                    with open(last_profile_path) as last_profile_file:
-                        last_used_env = json.load(last_profile_file)["last_used_env"]
-                        overwrite = (
-                            last_used_env != str(self.irods_env_path)
-                        )  # overwrite irodsA file if last authenticated profile is different to current
-                elif not self.irods_env_path.name == "irods_environment.json":
-                    overwrite = True  # overwrite if other profile than global is used and no last_profile exists
-
-            write_irods_file = not self.irodsA_file_found or overwrite
-            if self.ask and write_irods_file:
-                write_pam_irodsA_file(
-                    getpass.getpass("Enter current PAM password -> "),
-                    overwrite=overwrite,
-                    irods_env_file=self.irods_env_path,
-                )
-                self.irodsA_file_found = True
-                with open(last_profile_path, mode="w") as last_profile_file:
-                    json.dump({"last_used_env": str(self.irods_env_path)}, last_profile_file)
-            elif not self.ask and write_irods_file:
-                logger.error(
-                    "Password for irods connection needs to be entered, please switch to interactive mode"
-                )
-
-            # read hashscheme from irods env file
+            # read hashscheme and irodsA path from irods env file
+            irods_env_json = {}
             with open(self.irods_env_path) as irods_env_data:
                 irods_env_json = json.load(irods_env_data)
                 self.hash_scheme = irods_env_json["irods_default_hash_scheme"]
                 if self.hash_scheme not in HASH_SCHEMES:
                     logger.error("Hashscheme currently not supported")
                 logger.debug(f"Hashscheme to use: {self.hash_scheme}")
+                irodsA_path = irods_env_json.get("irods_authentication_file", None)
+            # check date of last authorized irods_environment.json
+            last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
+            last_profile_json = {}
+            default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
+            if irodsA_path is not None and os.path.exists(irodsA_path):
+                self.irodsA_file_found = True
+                # copy irodsA_<profile> to .irodsA for use by irods client
+                shutil.copy(irodsA_path, default_irodsA)
+                # check if relogin is needed
+                if last_profile_path.exists():
+                    with open(last_profile_path) as last_profile_file:
+                        last_profile_json = json.load(last_profile_file)
+                        timestamp = last_profile_json.get(self.sodar_profile, 0)
+                        timestamp_today = int(time())
+                        overwrite = timestamp != 0 and timestamp < (
+                            timestamp_today - 14 * 24 * 3600
+                        )
+                elif not self.irods_env_path.name == "irods_environment.json":
+                    overwrite = True  # overwrite if other profile than global is used and no last_profile exists
+
+            write_irods_file = not self.irodsA_file_found or overwrite
+            if self.ask and write_irods_file:
+                # set irodsA path and add entry to irodsenv json if doesnt exist yet
+                if irodsA_path is None:
+                    irodsA_path = self.irods_env_path.parent.joinpath(
+                        ".irodsA_" + self.sodar_profile
+                    )
+                    with open(self.irods_env_path, mode="w") as irods_env_data:
+                        # add irodsA path to irods env json
+                        irods_env_json["irods_authentication_file"] = str(irodsA_path)
+                        json.dump(irods_env_json, irods_env_data)
+                write_pam_irodsA_file(
+                    getpass.getpass("Enter current PAM password -> "),
+                    overwrite=True,
+                    irods_env_file=self.irods_env_path,
+                )
+                # irods client uses irodsA, save to irodsA_<profile> for backup and switching between profiles
+                shutil.copy(default_irodsA, irodsA_path)
+                self.irodsA_file_found = True
+                with open(last_profile_path, mode="w") as last_profile_file:
+                    last_profile_json[self.sodar_profile] = time()
+                    json.dump(last_profile_json, last_profile_file)
+            elif not self.ask and write_irods_file:
+                logger.error(
+                    "Password for irods connection needs to be entered, please switch to interactive mode"
+                )
+
         except FileNotFoundError as e:
             logger.error("Please check the irods_env_path")
             logger.error(e)
