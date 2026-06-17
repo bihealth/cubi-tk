@@ -73,6 +73,7 @@ def test_check_and_gen_irods_files_creates_irodsA(mock_write_pam, mockpass, fs, 
     mockpass.assert_called()
     mock_write_pam.assert_called_once()
     assert irods_a_path.exists()
+    assert Path(Path(irods_env_file).parent / ".irodsA_global").exists()
 
 
 @patch("getpass.getpass")
