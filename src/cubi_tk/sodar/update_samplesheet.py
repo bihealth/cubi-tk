@@ -4,7 +4,7 @@ import argparse
 from collections import defaultdict
 from io import StringIO
 import re
-from typing import Iterable, Optional
+from typing import Iterable, TypedDict
 
 from loguru import logger
 import pandas as pd
@@ -27,6 +27,15 @@ IsaColumnDetails = dict[str, list[tuple[str, str]]]
 # short names are without the type, i.e. "organism"
 # original column names are the names as they are returned by pandas.read_csv, this
 #   may include numerical suffixes for duplicate column names (e.g. "Extract Name.1")
+
+
+class IsaDataBlock(TypedDict):
+    i_path: str
+    investigation: str
+    study_key: str
+    study: pd.DataFrame
+    assay_key: str
+    assay: pd.DataFrame
 
 
 sheet_default_config_yaml = """
@@ -120,6 +129,7 @@ class UpdateSamplesheetCommand:
     def __init__(self, args):
         #: Command line arguments.
         self.args = args
+        self.sodar_api = SodarApi(self.args, with_dest=True)
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -241,22 +251,15 @@ class UpdateSamplesheetCommand:
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-    ) -> Optional[int]:
+    ) -> int | None:
         """Entry point into the command."""
         return cls(args).execute()
 
-    def execute(self) -> Optional[int]:
-        """Execute the command."""
+    def unpack_isa_data(self) -> tuple[IsaDataBlock, IsaColumnDetails]:
+        """Get samplehseet from SODAR API and load as DataFrame"""
 
-        if self.args.overwrite:
-            logger.warning(
-                "Existing values in the ISA samplesheet may get overwritten, there will be no checks or further warnings."
-            )
-
-        # Get samplehseet from SODAR API
-        sodar_api = SodarApi(self.args, with_dest=True)
-        print_args(self.args)
-        isa_data = sodar_api.get_samplesheet_export()
+        isa_data = self.sodar_api.get_samplesheet_export()
+        investigation_path = isa_data["investigation"]["path"]
         investigation = isa_data["investigation"]["tsv"]
         study_key = list(isa_data["studies"].keys())[0]
         study = pd.read_csv(StringIO(isa_data["studies"][study_key]["tsv"]), sep="\t", dtype=str)
@@ -264,18 +267,28 @@ class UpdateSamplesheetCommand:
         assay = pd.read_csv(StringIO(isa_data["assays"][assay_key]["tsv"]), sep="\t", dtype=str)
         isa_names = self.gather_ISA_column_names(study, assay)
 
-        # Check that given sample-data field names can be used
-        sample_fields_mapping = self.parse_sampledata_args(isa_names)
+        isa_data_block: IsaDataBlock = {
+            "i_path": investigation_path,
+            "investigation": investigation,
+            "study_key": study_key,
+            "study": study,
+            "assay_key": assay_key,
+            "assay": assay,
+        }
 
-        # Collect ped & sample data, check that they can be combined
-        samples = self.collect_sample_data(
-            isa_names, sample_fields_mapping, self.args.snappy_compatible
-        )
+        return isa_data_block, isa_names
 
-        # add metadata values to samples
-        if self.args.metadata_all:
-            samples = samples.assign(**dict(self.args.metadata_all))
+    def update_uplaod_isa(
+        self,
+        samples: pd.DataFrame,
+        isa_data_block: IsaDataBlock,
+        isa_names: IsaColumnDetails,
+        sample_fields_mapping: dict[str, str],
+    ):
+        """Take `samples` Dataframe and merge it with isa_data based on isa_names and sample_fields_mapping"""
 
+        study = isa_data_block["study"]
+        assay = isa_data_block["assay"]
         # Match sample data to ISA columns and get new study & assay dataframes
         study_new, assay_new = self.match_sample_data_to_isa(
             samples, isa_names, sample_fields_mapping
@@ -305,12 +318,33 @@ class UpdateSamplesheetCommand:
         )
 
         files_dict = {
-            "file_investigation": (isa_data["investigation"]["path"], investigation),
-            "file_study": (study_key, study_tsv),
-            "file_assay": (assay_key, assay_tsv),
+            "file_investigation": (isa_data_block["i_path"], isa_data_block["investigation"]),
+            "file_study": (isa_data_block["study_key"], study_tsv),
+            "file_assay": (isa_data_block["assay_key"], assay_tsv),
         }
-        ret = sodar_api.post_samplesheet_import(files_dict)
+        ret = self.sodar_api.post_samplesheet_import(files_dict)
         return ret
+
+    def execute(self) -> int | None:
+        """Execute the command."""
+
+        if self.args.overwrite:
+            logger.warning(
+                "Existing values in the ISA samplesheet may get overwritten, there will be no checks or further warnings."
+            )
+        print_args(self.args)
+
+        # Get samplehseet from SODAR API
+        isa_data_block, isa_names = self.unpack_isa_data()
+
+        # Check that given sample-data field names can be used
+        sample_fields_mapping = self.parse_sampledata_args(isa_names)
+        # Collect ped & sample data, check that they can be combined
+        samples = self.collect_sample_data(
+            isa_names, sample_fields_mapping, self.args.snappy_compatible
+        )
+
+        return self.update_uplaod_isa(samples, isa_data_block, isa_names, sample_fields_mapping)
 
     def parse_sampledata_args(self, isa_names: IsaColumnDetails) -> dict[str, str]:
         """Build a dict to collect and map the names for ped or sampledata [-s] fields to ISA column names."""
@@ -452,6 +486,10 @@ class UpdateSamplesheetCommand:
             samples[col_name] = samples.apply(
                 lambda row, format_str=format_str: format_str.format(**row), axis=1
             )
+
+        # add metadata values to samples
+        if self.args.metadata_all:
+            samples = samples.assign(**dict(self.args.metadata_all))
 
         return samples
 
