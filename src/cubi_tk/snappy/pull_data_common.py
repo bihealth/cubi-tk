@@ -1,75 +1,70 @@
 from datetime import datetime
-from typing import Dict, List
-import warnings
+import re
 
-from irods.data_object import iRODSDataObject
 from loguru import logger
 
-from ..irods_common import TransferJob, iRODSTransfer
+from ..sodar_common import SodarPullBase
+from .common import get_biomedsheet_path, load_sheet_tsv
 
 #: Valid file extensions
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
 
 
-# FIXME: this is not used by the new `pull-data` command and should also be deprecated
-class PullDataCommon:
+class SnappyPullBase(SodarPullBase):
     """Implementation of common pull data methods."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
     file_type_to_extensions_dict = None
 
-    def __init__(self):
-        warnings.warn(
-            "The `PullDataCommon` class will be deprecated", DeprecationWarning, stacklevel=2
+    def get_output_basepath(self):
+        return self.args.output_dir
+
+    def get_output_filepath(self, out_parts: dict[str, str]):
+        # apply regexes
+        for filepart, m_pat, r_pat in self.args.output_regex:
+            out_parts[filepart] = re.sub(m_pat, r_pat, out_parts[filepart])
+        return self.args.output_pattern.format(**out_parts)
+
+    def get_sample_list(self) -> set[str] | None:
+
+        # Find biomedsheet file
+        biomedsheet_tsv = get_biomedsheet_path(
+            start_path=self.args.base_path, uuid=self.args.project_uuid
         )
-        pass
+        # Raw sample sheet.
+        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
 
-    def filter_irods_collection(
-        self,
-        identifiers: List[str],
-        remote_files_dict: Dict[str, List[iRODSDataObject]],
-        file_type: str,
-    ) -> Dict[str, List[iRODSDataObject]]:
-        """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
+        # Filter requested samples or libraries
+        if self.args.samples:
+            selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
+                sheet=sheet,
+                selected_samples=self.args.samples,
+                by_sample_id=self.args.sample_id,
+            )
+        else:
+            selected_identifiers = self._filter_requested_samples_or_libraries(
+                sheet=sheet,
+                min_batch=self.args.first_batch,
+                max_batch=self.args.last_batch,
+                by_sample_id=self.args.sample_id,
+            )
 
-        :param identifiers: List of sample identifiers or library names.
-        :type identifiers: list
 
-        :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
-        'P001-N1-DNA1-WES1.vcf.gz'); Value: list of iRODS data (``IrodsDataObject``).
-        :type remote_files_dict: dict
+        return samples
 
-        :param file_type: File type, example: 'bam' or 'vcf'.
-        :type file_type: str
+    def get_file_patterns(self) -> list[str]:
+        """Function to get samples to filter downloadable files by collection"""
+        if self.args.all_files:
+            file_patterns = []
+        elif self.args.preset:
+            file_patterns = self.presets[self.args.preset]
+        else:  # self.args.file_pattern
+            file_patterns = self.args.file_pattern
+        return file_patterns
 
-        :return: Returns dictionary: Key: identifier (sample name [str]); Value: list of iRODS objects.
-        """
-        # Initialise variables
-        filtered_dict = {}
-        extensions_tuple = self.file_type_to_extensions_dict.get(file_type)
+    def get_substring_match(self) -> bool:
+        return False
 
-        # Iterate
-        for key, value in remote_files_dict.items():
-            # Simplify criteria: must have the correct file extension
-            if not key.endswith(extensions_tuple):
-                continue
-
-            # Check for common links
-            # Note: if a file with the same name is present in both assay and in a common file, it will be ignored.
-            in_common_links = False
-            for irods_obj in value:
-                in_common_links = self._irods_path_in_common_links(irods_obj.path)
-                if in_common_links:
-                    break
-
-            # Filter
-            if (
-                any(id_ in key for id_ in identifiers)  # presence of identifiers
-                and not in_common_links  # not in common links
-            ):
-                filtered_dict[key] = value
-
-        return filtered_dict
 
     @staticmethod
     def _irods_path_in_common_links(irods_path):
@@ -84,45 +79,7 @@ class PullDataCommon:
         path_part_set = set(irods_path.split("/"))
         return len(common_links.intersection(path_part_set)) > 0
 
-    @staticmethod
-    def get_irods_files(irods_local_path_pairs, force_overwrite=False, sodar_profile="global"):
-        """Get iRODS files
 
-        Retrieves iRODS path and stores it locally.
-
-        :param irods_local_path_pairs: List of tuples (iRODS path [str], local output directory [str]).
-        :type irods_local_path_pairs: list
-
-        :param force_overwrite: Flag to indicate if local files should be overwritten.
-        :type force_overwrite: bool
-        """
-
-        transfer_jobs = [
-            TransferJob(local_out_path, irods_path)
-            for irods_path, local_out_path in irods_local_path_pairs
-        ]
-        iRODSTransfer(transfer_jobs).get(force_overwrite)
-
-    @staticmethod
-    def report_no_file_found(available_files):
-        """Report no files found
-
-        :param available_files: List of available files in SODAR.
-        :type available_files: list
-        """
-        available_files = sorted(available_files)
-        if len(available_files) > 50:
-            limited_str = " (limited to first 50)"
-            ellipsis_ = "..."
-            remote_files_str = "\n".join(available_files[:50])
-        else:
-            limited_str = ""
-            ellipsis_ = ""
-            remote_files_str = "\n".join(available_files)
-        logger.warning(
-            f"No file was found using the selected criteria.\n"
-            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
-        )
 
     def sort_irods_object_by_date_in_path(self, irods_obj_list):
         """Sort list of iRODS object: latest to earliest.

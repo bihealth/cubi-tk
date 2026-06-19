@@ -17,13 +17,13 @@ from cubi_tk.parsers import print_args
 from ..sodar_common import RetrieveSodarCollection
 from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
-from .pull_data_common import PullDataCommon
+from .pull_data_common import SnappyPullBase
 
 #: Valid file extensions
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
 
 
-class PullProcessedDataCommand(PullDataCommon):
+class PullProcessedDataCommand(SnappyPullBase):
     """Implementation of the ``pull-processed-data`` command."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
@@ -35,10 +35,10 @@ class PullProcessedDataCommand(PullDataCommon):
         "csv": ("csv",),
     }
 
-    def __init__(self, args):
-        PullDataCommon.__init__(self)
-        # Command line arguments.
-        self.args = args
+    # def __init__(self, args):
+    #     PullDataCommon.__init__(self)
+    #     # Command line arguments.
+    #     self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
@@ -63,7 +63,10 @@ class PullProcessedDataCommand(PullDataCommon):
             choices=VALID_FILE_TYPES,
             type=str,
             help=f"File extensions to be retrieved. Valid options: {VALID_FILE_TYPES}",
+            # TODO: specify multiple times
         )
+
+        # TODO
         parser.add_argument(
             "--download-all-versions",
             default=False,
@@ -75,16 +78,16 @@ class PullProcessedDataCommand(PullDataCommon):
             ),
         )
 
-    @classmethod
-    def run(
-        cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
-    ) -> typing.Optional[int]:
-        """Entry point into the command."""
-        return cls(args).execute()
+    # @classmethod
+    # def run(
+    #     cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
+    # ) -> typing.Optional[int]:
+    #     """Entry point into the command."""
+    #     return cls(args).execute()
 
     def check_args(self, args):
         """Called for checking arguments."""
-        res = 0
+        res = super().check_args(args)
         # Validate base path
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error(f"Base path does not exist: {args.base_path}")
@@ -114,27 +117,27 @@ class PullProcessedDataCommand(PullDataCommon):
         logger.info("Starting cubi-tk snappy pull-processed-data")
         print_args(self.args)
 
-        # Find biomedsheet file
-        biomedsheet_tsv = get_biomedsheet_path(
-            start_path=self.args.base_path, uuid=self.args.project_uuid
-        )
-        # Raw sample sheet.
-        sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
-
-        # Filter requested samples or libraries
-        if self.args.samples:
-            selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
-                sheet=sheet,
-                selected_samples=self.args.samples,
-                by_sample_id=self.args.sample_id,
-            )
-        else:
-            selected_identifiers = self._filter_requested_samples_or_libraries(
-                sheet=sheet,
-                min_batch=self.args.first_batch,
-                max_batch=self.args.last_batch,
-                by_sample_id=self.args.sample_id,
-            )
+        # # Find biomedsheet file
+        # biomedsheet_tsv = get_biomedsheet_path(
+        #     start_path=self.args.base_path, uuid=self.args.project_uuid
+        # )
+        # # Raw sample sheet.
+        # sheet = load_sheet_tsv(biomedsheet_tsv, self.args.tsv_shortcut)
+        #
+        # # Filter requested samples or libraries
+        # if self.args.samples:
+        #     selected_identifiers = self._filter_requested_samples_or_libraries_by_selected_samples(
+        #         sheet=sheet,
+        #         selected_samples=self.args.samples,
+        #         by_sample_id=self.args.sample_id,
+        #     )
+        # else:
+        #     selected_identifiers = self._filter_requested_samples_or_libraries(
+        #         sheet=sheet,
+        #         min_batch=self.args.first_batch,
+        #         max_batch=self.args.last_batch,
+        #         by_sample_id=self.args.sample_id,
+        #     )
 
         # Find all remote files (iRODS) and get assay UUID if not provided
         sodar_coll = RetrieveSodarCollection(self.args)

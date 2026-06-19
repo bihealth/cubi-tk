@@ -1,8 +1,12 @@
 import os
 import sys
+import re
+import pandas as pd
 
 from argparse import Namespace
 from collections import defaultdict
+from pathlib import PurePosixPath
+from typing import TypedDict
 
 from loguru import logger
 
@@ -50,9 +54,11 @@ class RetrieveSodarCollection(SodarApi):
 
 
 class SodarIngestBase:
-    """Base class for iRODS transfers to Sodar.
+    """
+    Base class for iRODS transfers to Sodar.
     Includes methods for proper (study, assay &) landing zone selection/creation.
-    Should always be used with argparse base parser `get_sodar_parser(with_dest=True, with_assay_uuid=True, dest_string="destination")
+    Should always be used with argparse base parser `get_sodar_ingest_parser` or
+      `get_sodar_parser(with_dest=True, with_assay_uuid=True, dest_string="destination")
     """
 
     command_name: str | None = None
@@ -282,3 +288,252 @@ class SodarIngestBase:
 
         logger.info("All done")
         return None
+
+
+class FilePathParts(TypedDict):
+    collection: str
+    subcollections: str
+    filename: str
+
+
+class SodarPullBase:
+    """
+    Base class for iRODS transfers from Sodar.
+    Should always be used with argparse base parser `get_sodar_pull_parser()
+    """
+
+    command_name: str | None = None
+    cubitk_section: str = "sodar"
+
+    def __init__(self, args: Namespace):
+        self.args = args
+        self.sodar_api_searcher = RetrieveSodarCollection(args, with_dest=False)
+        # Check arguments & print to log
+        self.check_args(self.args)
+        logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
+        print_args(self.args)
+
+        # Init itransfer class, check that irods_environment.json exists
+        self.itransfer = iRODSTransfer(
+            None,
+            ask=not self.sodar_api_searcher.yes,
+            sodar_profile=self.args.config_profile,
+            dry_run=self.args.dry_run,
+            connection_timeout=getattr(self.args, "connection_timeout", 600),
+            read_timeout=getattr(self.args, "read_timeout", 600),
+        )
+        if not self.itransfer.irods_env_path.exists():
+            logger.error(
+                f"Expected json config for irods ({self.itransfer.irods_env_path}) does not exist"
+            )
+            sys.exit(1)
+
+    @classmethod
+    def run(cls, args, _parser: Namespace, _subparser: Namespace) -> int | None:
+        """Entry point into the command."""
+        return cls(args).execute()
+
+    def check_args(self, args) -> int | None:
+        """Called for checking arguments, override to change behaviour."""
+        return 0
+
+    def get_output_basepath(self) -> str:
+        """Abstract method for output_path"""
+        logger.debug(
+            f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_output_basepath` function, using CWD by default."
+        )
+        return os.getcwd()
+
+    def get_output_filepath(self, out_parts: FilePathParts) -> str:
+        """Abstract method for output_path"""
+        logger.debug(
+            f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_output_filepath` function, using pattern from iRODs by default."
+        )
+        return "{collection}/{subcollections}/{filename}".format(**out_parts)
+
+    def build_jobs(
+        self, remote_files_dict: dict[str, list[IrodsDataObject]], assay_path: str
+    ) -> list[TransferJob]:
+        """Build list of download jobs for iRODS files."""
+        # Initiate output
+        output_list = []
+        # Iterate over iRODS objects
+        for collection, irods_objects in remote_files_dict.items():
+            for irods_obj in irods_objects:
+                relpath = PurePosixPath(irods_obj.path).relative_to(PurePosixPath(assay_path))
+                coll, *subcolls, filename = relpath.parts
+                assert coll == collection
+                out_parts: FilePathParts = {
+                    "collection": coll,
+                    "subcollections": "/".join(subcolls),
+                    "filename": filename,
+                }
+                job = TransferJob(
+                    os.path.join(
+                        self.get_output_basepath(), self.get_output_filepath(out_parts)
+                    ),
+                    irods_obj.path,
+                )
+                output_list.append(job)
+
+        return output_list
+
+    def _no_files_found_warning(self, transfer_jobs) -> int:
+        if not transfer_jobs:
+            logger.error("No files for download were found!")
+            return 1
+        else:
+            return 0
+
+    def get_sample_list(self) -> set[str]:
+        """Function to get samples to filter downloadable files by collection"""
+        logger.debug(
+            f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_sample_list` function, using all samples by default."
+        )
+        return set()
+
+    def get_file_patterns(self) -> list[str]:
+        """Function to get samples to filter downloadable files by collection"""
+        logger.debug(
+            f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_file_patterns` function, using all files by default."
+        )
+        return []
+
+    def get_substring_match(self) -> bool:
+        """Function to get samples to filter downloadable files by collection"""
+        logger.debug(
+            f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_substring_match` function, not using substring_match by default."
+        )
+        return False
+
+
+    def execute(self) -> int | None:
+        """Execute the transfer."""
+        ret = 0
+        # Get iRODS hash scheme, build list of transfer
+        irods_hash_scheme = self.itransfer.irods_hash_scheme()
+        irods_hash_ending = "." + irods_hash_scheme.lower()
+
+        # Get & filter all remote files from iRODS
+        # Note: subclasses should overwrite the get_... functions to modify filtering
+        filtered_remote_files_dict = self.filter_irods_file_list(
+            self.sodar_api_searcher.perform(), self.sodar_api_searcher.get_assay_irods_path(),  self.get_file_patterns(), self.get_sample_list(), self.get_substring_match()
+        )
+
+        transfer_jobs = self.build_jobs(filtered_remote_files_dict, irods_hash_ending)
+        # Exit early if no files were found/matched
+        ret = self._no_files_found_warning(transfer_jobs)
+        # Optionally add checksum files to download
+        if self.args.include_checksums:
+            transfer_jobs += [TransferJob(path_local=job.path_local+irods_hash_ending, path_remote=job.path_remote+irods_hash_ending) for job in transfer_jobs]
+        transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
+        # TODO: check for local clashes
+
+        # Final go from user & transfer
+        self.itransfer.jobs = transfer_jobs
+        self.itransfer.get(overwrite=self.args.overwrite)
+
+        logger.info("All done")
+        return ret
+
+    @staticmethod
+    def report_no_file_found(available_files):
+        """Report no files found
+
+        :param available_files: List of available files in SODAR.
+        :type available_files: list
+        """
+        available_files = sorted(available_files)
+        if len(available_files) > 50:
+            limited_str = " (limited to first 50)"
+            ellipsis_ = "..."
+            remote_files_str = "\n".join(available_files[:50])
+        else:
+            limited_str = ""
+            ellipsis_ = ""
+            remote_files_str = "\n".join(available_files)
+        logger.warning(
+            f"No file was found using the selected criteria.\n"
+            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+        )
+
+    @staticmethod
+    def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> set[str]:
+        extra_args = {"comment": "#"} if skip_comments else {}
+        df = pd.read_csv(tsv_path, sep="\t", skiprows=skip_rows, **extra_args)
+        try:
+            samples = set(df.iloc[:, sample_col - 1])
+        except IndexError:
+            logger.error(
+                f"Error extracting column no. {sample_col} from {tsv_path}, only {len(df.columns)} where detected."
+            )
+            raise
+
+        return samples
+
+    @staticmethod
+    def filter_irods_file_list(
+        remote_files_dict: dict[str, list[IrodsDataObject]],
+        common_assay_path: str,
+        file_patterns: list[str],
+        samples: set[str],
+        substring_match: bool = False,
+    ) -> dict[str, list[IrodsDataObject]]:
+        """Filter iRODS collection based on identifiers (sample id or library name) and file type/extension.
+
+        :param remote_files_dict: Dictionary with iRODS collection information. Key: file name as string (e.g.,
+        'P001-N1-DNA1-WES1.vcf.gz'); Value: iRODS data (``IrodsDataObject``).
+        :type remote_files_dict: dict
+
+        :param common_assay_path: Path common to all files. If provided, files in this path will be stripped.
+        :type common_assay_path: str
+
+        :param file_patterns: List of file patterns to use for file selection. Ignored if empty.
+        :type file_patterns: list of strings
+
+        :param samples: List of collection identifiers or substrings. Ignored if empty.
+        :type samples: list
+
+        :param substring_match: Fiter by extact collection matches or by substring matches.
+        :type substring_match: bool
+
+        :return: Returns dictionary: Key: sample (collection name [str]); Value: list of iRODS objects.
+        """
+        # Initialise variables
+        filtered_dict = defaultdict(list)
+
+        # Iterate
+        for _filename, irodsobjs in remote_files_dict.items():
+            for irodsobj in irodsobjs:
+                # Path needs to be stripped down to collections (=remove assay part & upwards)
+                try:
+                    path = PurePosixPath(irodsobj.path).relative_to(
+                        PurePosixPath(common_assay_path)
+                    )
+                except ValueError:  # wrong assay, skip
+                    continue
+
+                collection = path.parts[0]
+
+                # Check if collection (=1st element of striped path) matches any of the samples
+                if samples and not substring_match:
+                    sample_match = any(s == collection for s in samples)
+                elif samples:
+                    sample_match = any(s in collection for s in samples)
+                else:
+                    sample_match = True
+
+                if not sample_match:
+                    continue
+
+                if file_patterns:
+                    file_pattern_match = any(p for p in file_patterns if path.match(p))
+                else:
+                    file_pattern_match = True
+
+                if not file_pattern_match:
+                    continue
+
+                filtered_dict[collection].append(irodsobj)
+
+        return filtered_dict

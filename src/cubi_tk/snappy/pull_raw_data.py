@@ -19,32 +19,25 @@ import yaml
 from ..sodar_common import RetrieveSodarCollection
 from .common import find_snappy_root_dir, get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
-from .pull_data_common import PullDataCommon
+from .pull_data_common import SnappyPullBase
 
 
-class PullRawDataCommand(PullDataCommon):
+class SnappyPullBase(PullDataCommon):
     """Implementation of the ``snappy pull-raw-data`` command."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
     file_type_to_extensions_dict = {"fastq": ("fastq.gz",)}
 
-    def __init__(self, args: argparse.Namespace):
-        PullDataCommon.__init__(self)
-        #: Command line arguments.
-        self.args = args
+    # def __init__(self, args: argparse.Namespace):
+    #     PullDataCommon.__init__(self)
+    #     #: Command line arguments.
+    #     self.args = args
 
     @classmethod
     def setup_argparse(cls, parser: argparse.ArgumentParser) -> None:
         """Setup argument parser."""
         parser.add_argument(
             "--hidden-cmd", dest="snappy_cmd", default=cls.run, help=argparse.SUPPRESS
-        )
-        parser.add_argument(
-            "--dry-run",
-            "-n",
-            default=False,
-            action="store_true",
-            help="Perform a dry run, i.e., just displays the files that would be downloaded.",
         )
         parser.add_argument(
             "--use-library-name",

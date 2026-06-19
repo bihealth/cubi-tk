@@ -216,12 +216,11 @@ class iRODSTransfer(iRODSCommon):
         with self.session as session:
             session.collections.create(collection)
 
-    def put(  # noqa: C901
+    def _transfer_checks(
         self,
-        recursive: bool = False,
         no_list: bool = False,
-        overwrite: Literal["sync", "never", "always", "ask"] = "sync",
-    ):
+        overwrite: Literal["sync", "never", "always", "ask"] = "sync"
+    ) -> None:
         # Log all actions before doing them
         if self.dry_run or not no_list:
             logger.info("The following actions would be performed:")
@@ -238,6 +237,72 @@ class iRODSTransfer(iRODSCommon):
                 "Both `overwrite: 'ask'` and `ask: False` given. Falling back to `overwrite: 'sync'`"
             )
 
+    def _determine_overwrite(
+        self,
+        session,
+        job: TransferJob,
+        write_to: Literal['local', 'remote'],
+        overwrite: Literal["sync", "never", "always", "ask"] = "sync",
+    ) -> tuple[dict, bool]:
+
+        kw_incl_overwrite = {FORCE_FLAG_KW: None}
+        kw_excl_overwrite = {}
+        skip_write = False
+
+        if write_to == 'remote':
+            file_exists = session.data_objects.exists(job.path_remote)
+            file_path = job.path_remote
+        elif write_to == 'local':
+            file_exists = os.path.exists(job.path_local)
+            file_path = job.path_local
+        else:
+            raise ValueError
+
+        if file_exists:
+            logger.debug(f"{write_to.capitalize()} file {file_path} exists already.")
+            if overwrite == 'never':
+                skip_write = True
+
+        # never / file not present yet
+        if overwrite == "never" or not file_exists:
+            kw_options = kw_excl_overwrite
+        elif overwrite == "always":
+            kw_options = kw_incl_overwrite
+        # ask: user decides for every file, with --yes default back to sync
+        elif self.ask and overwrite == "ask":
+            print("\n")
+            if (
+                input(
+                    f"This file is already present: {file_path}\nShould it be overwritten? [y/N] "
+                )
+                    .lower()
+                    .startswith("y")
+            ):  # pragma: no cover
+                kw_options = kw_incl_overwrite
+                logger.info(f"Overwriting: {file_path}")
+            else:
+                kw_options = kw_excl_overwrite
+                skip_write = True
+                logger.info(f"NOT overwriting: {file_path}")
+        # sync (or --yes and 'ask'): Check if file size is identical, if yes skip upload
+        else:
+            # job.bytes is always loca file size  (or -1 if it doesn't exist)
+            if session.data_objects.get(job.path_remote).size != job.bytes:
+                kw_options = kw_incl_overwrite
+            else:
+                skip_write = True
+                kw_options = kw_excl_overwrite
+
+        return kw_options, skip_write
+
+    def put(  # noqa: C901
+        self,
+        recursive: bool = False,
+        no_list: bool = False,
+        overwrite: Literal["sync", "never", "always", "ask"] = "sync",
+    ):
+        # Log all actions before doing them
+        self._transfer_checks(no_list, overwrite)
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -249,8 +314,6 @@ class iRODSTransfer(iRODSCommon):
             ) as t,
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
-            kw_incl_overwrite = {FORCE_FLAG_KW: None}
-            kw_excl_overwrite = {}
             for n, job in enumerate(self.__jobs):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
@@ -259,42 +322,9 @@ class iRODSTransfer(iRODSCommon):
                     with self.session as session:
                         if recursive:
                             self._create_collections(job)
-
-                        remote_exists = session.data_objects.exists(job.path_remote)
-                        logger.debug(f"Remote file {job.path_remote} exists: {remote_exists}")
-                        # never / file not present yet
-                        if overwrite == "never" or not remote_exists:
-                            kw_options = kw_excl_overwrite
-                        elif overwrite == "always":
-                            kw_options = kw_incl_overwrite
-                        # ask: user decides for every file, with --yes default back to sync
-                        elif self.ask and overwrite == "ask":
-                            print("\n")
-                            if (
-                                input(
-                                    "This file is already present, should it be overwritten? [y/N] "
-                                )
-                                .lower()
-                                .startswith("y")
-                            ):  # pragma: no cover
-                                kw_options = kw_incl_overwrite
-                                logger.info(f"Overwriting: {job.path_local}")
-                            else:
-                                kw_options = kw_excl_overwrite
-                                logger.info(f"NOT overwriting: {job.path_local}")
-                        # sync (or --yes and 'ask'): Check if file size is identical, if yes skip upload
-                        else:
-                            obj = session.data_objects.get(job.path_remote)
-                            if obj.size != job.bytes:
-                                kw_options = kw_incl_overwrite
-                            else:
-                                kw_options = kw_excl_overwrite
-
-                        # kw_options will be {} if no overwrite should be done
-                        if remote_exists and not kw_options:
-                            t.update(job.bytes)
-                            continue
-                        session.data_objects.put(job.path_local, job.path_remote, **kw_options)
+                        kw_options, skip_write = self._determine_overwrite(session, overwrite, job, 'remote')
+                        if not skip_write:
+                            session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
                 except Exception as e:  # pragma: no cover
                     logger.error(f"Problem during transfer of {job.path_local}")
@@ -325,18 +355,19 @@ class iRODSTransfer(iRODSCommon):
                 logger.error("Problem during iRODS checksumming.")
                 logger.error(self.get_irods_error(e))
 
-    def get(self, force_overwrite: bool = False):
+    def get(
+        self,
+        no_list: bool = False,
+        overwrite: Literal["sync", "never", "always", "ask"] = "sync",
+    ):
         """Download files from SODAR."""
-        with self.session as session:
-            self.__jobs = [
-                attrs.evolve(job, bytes=session.data_objects.get(job.path_remote).size)
-                for job in self.__jobs
-            ]
-        self.__total_bytes = sum([job.bytes for job in self.__jobs])
+        # Log all actions before doing them
+        self._transfer_checks(no_list, overwrite)
 
-        kw_options = {}
-        if force_overwrite:
-            kw_options = {FORCE_FLAG_KW: None}  # Keyword has no value, just needs to be present
+        # Total transfer size
+        with self.session as session:
+            self.__total_bytes = sum([session.data_objects.get(job.path_remote).size for job in self.__jobs])
+
         # Double tqdm for currently transferred file info
         with (
             tqdm(
@@ -352,16 +383,16 @@ class iRODSTransfer(iRODSCommon):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
-                if os.path.exists(job.path_local) and not force_overwrite:  # pragma: no cover
-                    logger.info(
-                        f"{Path(job.path_local).name} already exists. Skipping, use force_overwrite to re-download."
-                    )
+                kw_options, skip_write = self._determine_overwrite(session, overwrite, job, 'local')
+                if not skip_write:
+                    # Note with overwrite='never' this COULD be wrong for incomplete local files
+                    t.update(job.bytes)
                     continue
                 try:
                     Path(job.path_local).parent.mkdir(parents=True, exist_ok=True)
                     with self.session as session:
                         session.data_objects.get(job.path_remote, job.path_local, **kw_options)
-                    t.update(job.bytes)
+                        t.update(session.data_objects.get(job.path_remote).size)
                 except FileNotFoundError:  # pragma: no cover
                     raise
                 except Exception as e:  # pragma: no cover
