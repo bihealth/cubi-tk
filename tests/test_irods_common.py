@@ -75,7 +75,7 @@ def test_check_and_gen_irods_files_creates_irodsA(mock_write_pam, mockpass, fs, 
     assert irods_a_path.exists()
     assert Path(Path(irods_env_file).parent / ".irodsA_global").exists()
     assert Path(Path(irods_env_file).parent / ".irodsA_backup").exists()
-    icommon.__del__()  # to trigger cleanup of irodsA file
+    del icommon  # to trigger cleanup of irodsA file
     assert irods_a_path.exists()
     with open(irods_a_path) as f:
         assert f.read() == "test"
