@@ -64,16 +64,22 @@ def test_check_and_gen_irods_files_creates_irodsA(mock_write_pam, mockpass, fs, 
     password = "1234"
     icommon = iRODSCommon(ask=True)
     mockpass.return_value = password
-
+    #only irodsA file exists but no irods_profile, so profile should be created and irodsA backed up and restored
+    fs.create_file(str(Path(irods_env_file).parent / ".irodsA"), contents="""test""")
     irods_a_path = Path(irods_env_file).parent / ".irodsA"
-    mock_write_pam.side_effect = lambda *args, **kwargs: fs.create_file(str(irods_a_path))
-
+    mock_write_pam.side_effect = lambda *args, **kwargs: irods_a_path.write_text("test_2")
     icommon._check_and_gen_irods_files()
 
     mockpass.assert_called()
     mock_write_pam.assert_called_once()
     assert irods_a_path.exists()
     assert Path(Path(irods_env_file).parent / ".irodsA_global").exists()
+    assert Path(Path(irods_env_file).parent / ".irodsA_backup").exists()
+    icommon.__del__()  # to trigger cleanup of irodsA file
+    assert irods_a_path.exists()
+    with open(irods_a_path) as f:
+        assert f.read() == "test"
+    assert not Path(Path(irods_env_file).parent / ".irodsA_backup").exists()
 
 
 @patch("getpass.getpass")

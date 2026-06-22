@@ -152,13 +152,13 @@ class iRODSCommon:
             last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
             last_profile_json = {}
             default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
+            if default_irodsA.exists():
+                irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
+                shutil.copy(default_irodsA, irodsA_backup)
             irodsA_path = self.irods_env_path.parent.joinpath(".irodsA_" + self.sodar_profile)
             if os.path.exists(irodsA_path):
                 self.irodsA_file_found = True
                 # copy irodsA_<profile> to .irodsA for use by irods client
-                irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
-                if default_irodsA.exists():
-                    shutil.copy(default_irodsA, irodsA_backup)
                 shutil.copy(irodsA_path, default_irodsA)
                 # check if relogin is needed
                 if last_profile_path.exists():
