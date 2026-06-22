@@ -64,7 +64,7 @@ def test_check_and_gen_irods_files_creates_irodsA(mock_write_pam, mockpass, fs, 
     password = "1234"
     icommon = iRODSCommon(ask=True)
     mockpass.return_value = password
-    #only irodsA file exists but no irods_profile, so profile should be created and irodsA backed up and restored
+    # only irodsA file exists but no irods_profile, so profile should be created and irodsA backed up and restored
     fs.create_file(str(Path(irods_env_file).parent / ".irodsA"), contents="""test""")
     irods_a_path = Path(irods_env_file).parent / ".irodsA"
     mock_write_pam.side_effect = lambda *args, **kwargs: irods_a_path.write_text("test_2")
