@@ -98,6 +98,18 @@ class iRODSCommon:
         self.read_timeout = read_timeout
         self.sodar_profile = sodar_profile
 
+    def __del__(self):
+        if self.irodsA_file_found:
+            # Remove the .irodsA file used for this profile and restore backup if exists, to avoid issues with other profiles or global config
+            default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
+            if default_irodsA.exists():
+                default_irodsA.unlink()
+            # restore backup if exists
+            irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
+            if irodsA_backup.exists():
+                shutil.copy(irodsA_backup, default_irodsA)
+                irodsA_backup.unlink()
+
     @staticmethod
     def get_irods_error(e: Exception):
         """Return logger friendly iRODS exception."""
@@ -133,7 +145,8 @@ class iRODSCommon:
                 irods_env_json = json.load(irods_env_data)
                 self.hash_scheme = irods_env_json["irods_default_hash_scheme"]
                 if self.hash_scheme not in HASH_SCHEMES:
-                    logger.error("Hashscheme currently not supported")
+                    logger.error(f"Hashscheme '{self.hash_scheme}' currently not supported")
+                    raise ValueError(f"Hashscheme '{self.hash_scheme}' currently not supported")
                 logger.debug(f"Hashscheme to use: {self.hash_scheme}")
             # check date of last authorized irods_environment.json
             last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
@@ -143,6 +156,9 @@ class iRODSCommon:
             if os.path.exists(irodsA_path):
                 self.irodsA_file_found = True
                 # copy irodsA_<profile> to .irodsA for use by irods client
+                irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
+                if default_irodsA.exists():
+                    shutil.copy(default_irodsA, irodsA_backup)
                 shutil.copy(irodsA_path, default_irodsA)
                 # check if relogin is needed
                 if last_profile_path.exists():
