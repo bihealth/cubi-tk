@@ -821,7 +821,10 @@ def test_update_uplaod_isa_multiassay(
         json=MV_isa_json,
         status_code=200,
     )
-    updated_files_dict_MV["file_assay_2"] = ("extra_assay.tsv", MV_isa_json['studies']["s_modellvorhaben_rare_diseases.txt"]["tsv"])
+    updated_files_dict_MV["file_assay_2"] = (
+        "extra_assay.tsv",
+        MV_isa_json["studies"]["s_modellvorhaben_rare_diseases.txt"]["tsv"],
+    )
     # This information is needed for assay selection
     mock_isa_retrieve.return_value = return_api_investigation_mock(
         s_filename="s_modellvorhaben_rare_diseases.txt",
@@ -835,7 +838,7 @@ def test_update_uplaod_isa_multiassay(
                 measurement_type=OntologyTermRef(name="genome sequencing"),
                 comments={},
             )
-        }
+        },
     )
 
     UCS_class_object.sodar_api.assay_uuid = "123e4567-e89b-12d3-a456-123456654321"

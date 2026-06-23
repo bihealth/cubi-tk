@@ -9,10 +9,10 @@ from cubi_tk import api_models
 def return_api_investigation_mock(
     i_filename: str = "i_Investigation.txt",
     s_filename: str = "s_investigation_title.txt",
-    extra_assays: dict | None = None
+    extra_assays: dict | None = None,
 ):
     if extra_assays is None:
-        extra_assays = dict()
+        extra_assays = {}
     investigation = api_models.Investigation(
         sodar_uuid="c339b4de-23a9-4cc3-8801-5f65b4739680",
         archive_name="None",
@@ -66,7 +66,8 @@ def return_api_investigation_mock(
                         ),
                         comments={},
                     ),
-                } | ({} if extra_assays is None else extra_assays),
+                }
+                | extra_assays,
             )
         },
         title="Investigation Title",

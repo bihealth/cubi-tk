@@ -321,18 +321,18 @@ class UpdateSamplesheetCommand:
 
         # Get full ISA
         full_isa = self.sodar_api.get_samplesheet_export(get_all=True)
-        full_isa["studies"][isa_data_block["study_key"]]['tsv'] = study_tsv
-        full_isa["assays"][isa_data_block["assay_key"]]['tsv'] = assay_tsv
+        full_isa["studies"][isa_data_block["study_key"]]["tsv"] = study_tsv
+        full_isa["assays"][isa_data_block["assay_key"]]["tsv"] = assay_tsv
         files_dict = (
             {
                 "file_investigation": (isa_data_block["i_path"], isa_data_block["investigation"]),
             }
             | {
-                f"file_study_{i + 1}": (file_key, file_content['tsv'])
+                f"file_study_{i + 1}": (file_key, file_content["tsv"])
                 for i, (file_key, file_content) in enumerate(full_isa["studies"].items())
             }
             | {
-                f"file_assay_{i + 1}": (file_key, file_content['tsv'])
+                f"file_assay_{i + 1}": (file_key, file_content["tsv"])
                 for i, (file_key, file_content) in enumerate(full_isa["assays"].items())
             }
         )
