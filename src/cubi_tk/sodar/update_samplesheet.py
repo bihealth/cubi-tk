@@ -29,6 +29,7 @@ IsaColumnDetails = dict[str, list[tuple[str, str]]]
 #   may include numerical suffixes for duplicate column names (e.g. "Extract Name.1")
 
 
+# More/differently structured representation of the `sodar_api.get_samplesheet_export()` output
 class IsaDataBlock(TypedDict):
     i_path: str
     investigation: str
@@ -258,6 +259,7 @@ class UpdateSamplesheetCommand:
     def unpack_isa_data(self) -> tuple[IsaDataBlock, IsaColumnDetails]:
         """Get samplehseet from SODAR API and load as DataFrame"""
 
+        # Without `get_all=True` this will select a single study & assay
         isa_data = self.sodar_api.get_samplesheet_export()
         investigation_path = isa_data["investigation"]["path"]
         investigation = isa_data["investigation"]["tsv"]
@@ -317,11 +319,23 @@ class UpdateSamplesheetCommand:
             sep="\t", index=False, header=list(map(orig_col_name, assay_final.columns))
         )
 
-        files_dict = {
-            "file_investigation": (isa_data_block["i_path"], isa_data_block["investigation"]),
-            "file_study": (isa_data_block["study_key"], study_tsv),
-            "file_assay": (isa_data_block["assay_key"], assay_tsv),
-        }
+        # Get full ISA
+        full_isa = self.sodar_api.get_samplesheet_export(get_all=True)
+        full_isa["studies"][isa_data_block["study_key"]]['tsv'] = study_tsv
+        full_isa["assays"][isa_data_block["assay_key"]]['tsv'] = assay_tsv
+        files_dict = (
+            {
+                "file_investigation": (isa_data_block["i_path"], isa_data_block["investigation"]),
+            }
+            | {
+                f"file_study_{i + 1}": (file_key, file_content['tsv'])
+                for i, (file_key, file_content) in enumerate(full_isa["studies"].items())
+            }
+            | {
+                f"file_assay_{i + 1}": (file_key, file_content['tsv'])
+                for i, (file_key, file_content) in enumerate(full_isa["assays"].items())
+            }
+        )
         ret = self.sodar_api.post_samplesheet_import(files_dict)
         return ret
 

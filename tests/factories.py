@@ -6,7 +6,13 @@ import factory
 from cubi_tk import api_models
 
 
-def return_api_investigation_mock():
+def return_api_investigation_mock(
+    i_filename: str = "i_Investigation.txt",
+    s_filename: str = "s_investigation_title.txt",
+    extra_assays: dict | None = None
+):
+    if extra_assays is None:
+        extra_assays = dict()
     investigation = api_models.Investigation(
         sodar_uuid="c339b4de-23a9-4cc3-8801-5f65b4739680",
         archive_name="None",
@@ -15,7 +21,7 @@ def return_api_investigation_mock():
             "Last Opened With Configuration": "bih_cancer",
         },
         description="",
-        file_name="i_Investigation.txt",
+        file_name=i_filename,
         identifier="",
         irods_status=True,
         parser_version="0.2.9",
@@ -24,7 +30,7 @@ def return_api_investigation_mock():
             "7b5f6a28-92d0-4871-8cba-8c74db8ee298": api_models.Study(
                 sodar_uuid="7b5f6a28-92d0-4871-8cba-8c74db8ee298",
                 identifier="investigation_title",
-                file_name="s_investigation_title.txt",
+                file_name=s_filename,
                 irods_path="/sodarZone/projects/ad/ad002ac2-b06c-4012-9dc4-8c2ade3e7378/sample_data/study_7b5f6a28-92d0-4871-8cba-8c74db8ee298",
                 title="Investigation Title",
                 description="",
@@ -60,7 +66,7 @@ def return_api_investigation_mock():
                         ),
                         comments={},
                     ),
-                },
+                } | ({} if extra_assays is None else extra_assays),
             )
         },
         title="Investigation Title",

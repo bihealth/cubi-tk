@@ -12,6 +12,8 @@ import pytest
 from cubi_tk.exceptions import ParameterException
 from cubi_tk.sodar.update_samplesheet import UpdateSamplesheetCommand, IsaDataBlock
 from cubi_tk.sodar_api import SodarApi
+from cubi_tk.api_models import Assay, OntologyTermRef
+from tests.factories import return_api_investigation_mock
 
 
 @pytest.fixture
@@ -31,9 +33,13 @@ def MV_ped_samples():
 
 
 @pytest.fixture
-@patch("cubi_tk.sodar_api.SodarApi._api_call")
-def mock_isa_data(API_call, MV_isa_json):
-    API_call.return_value = MV_isa_json
+def mock_isa_data(requests_mock, MV_isa_json):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
+        json=MV_isa_json,
+        status_code=200,
+    )
     parser_args = argparse.Namespace(
         config=None,
         sodar_server_url="https://sodar-dummy.bihealth.org/",
@@ -92,8 +98,8 @@ def updated_files_dict_default(MV_isa_json, sample_df):
 
     return {
         "file_investigation": ("i_Investigation.txt", expected_i),
-        "file_study": ("s_modellvorhaben_rare_diseases.txt", expected_s),
-        "file_assay": ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
+        "file_study_1": ("s_modellvorhaben_rare_diseases.txt", expected_s),
+        "file_assay_1": ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
     }
 
 
@@ -141,8 +147,8 @@ def updated_files_dict_MV(MV_isa_json, sample_df):
 
     return {
         "file_investigation": ("i_Investigation.txt", expected_i),
-        "file_study": ("s_modellvorhaben_rare_diseases.txt", expected_s),
-        "file_assay": ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
+        "file_study_1": ("s_modellvorhaben_rare_diseases.txt", expected_s),
+        "file_assay_1": ("a_modellvorhaben_rare_diseases_genome_sequencing.txt", expected_a),
     }
 
 
@@ -240,10 +246,13 @@ def helper_update_UCS(arg_list, UCS):
     return UCS
 
 
-@patch("cubi_tk.sodar_api.SodarApi._api_call")
-def test_unpack_isa_data(API_call, MV_isa_json, mock_isa_data, UCS_class_object):
-    API_call.return_value = MV_isa_json
-
+def test_unpack_isa_data(requests_mock, MV_isa_json, mock_isa_data, UCS_class_object):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
+        json=MV_isa_json,
+        status_code=200,
+    )
     # isa_names has separate test
     isa_data_block, _ = UCS_class_object.unpack_isa_data()
 
@@ -752,17 +761,21 @@ def test_update_isa_table(UCS_class_object, caplog):
 
 
 @patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
-@patch("cubi_tk.sodar.update_samplesheet.SodarApi._api_call")
 def test_update_uplaod_isa(
-    mock_api_call,
     mock_upload_isa,
+    requests_mock,
     MV_isa_json,
     UCS_class_object,
     updated_files_dict_MV,
     sample_df,
 ):
     mock_upload_isa.return_value = 0
-    mock_api_call.return_value = MV_isa_json
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
+        json=MV_isa_json,
+        status_code=200,
+    )
 
     isa_data_block, isa_names = UCS_class_object.unpack_isa_data()
     sample_fields_mapping = {
@@ -785,11 +798,73 @@ def test_update_uplaod_isa(
     mock_upload_isa.assert_called_with(updated_files_dict_MV)
 
 
+@patch("cubi_tk.sodar.update_samplesheet.SodarApi.get_samplesheet_investigation_retrieve")
 @patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
-@patch("cubi_tk.sodar.update_samplesheet.SodarApi._api_call")
-def test_execute(
-    mock_api_call,
+def test_update_uplaod_isa_multiassay(
     mock_upload_isa,
+    mock_isa_retrieve,
+    requests_mock,
+    MV_isa_json,
+    UCS_class_object,
+    updated_files_dict_MV,
+    sample_df,
+):
+    # Test that a second existing assay is preserved (& not changed)
+    # Note: intentionally nonsense second assay, we only test retention of the existing tsv data here
+    MV_isa_json["assays"]["extra_assay.tsv"] = {}
+    MV_isa_json["assays"]["extra_assay.tsv"]["tsv"] = MV_isa_json["studies"][
+        "s_modellvorhaben_rare_diseases.txt"
+    ]["tsv"]
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
+        json=MV_isa_json,
+        status_code=200,
+    )
+    updated_files_dict_MV["file_assay_2"] = ("extra_assay.tsv", MV_isa_json['studies']["s_modellvorhaben_rare_diseases.txt"]["tsv"])
+    # This information is needed for assay selection
+    mock_isa_retrieve.return_value = return_api_investigation_mock(
+        s_filename="s_modellvorhaben_rare_diseases.txt",
+        extra_assays={
+            "123e4567-e89b-12d3-a456-123456654321": Assay(
+                sodar_uuid="123e4567-e89b-12d3-a456-123456654321",
+                file_name="a_modellvorhaben_rare_diseases_genome_sequencing.txt",
+                irods_path="/sodarZone/mock/path/assay_123e4567-e89b-12d3-a456-123456654321",
+                technology_platform="Illumina",
+                technology_type=OntologyTermRef(name="nucleotide sequencing"),
+                measurement_type=OntologyTermRef(name="genome sequencing"),
+                comments={},
+            )
+        }
+    )
+
+    UCS_class_object.sodar_api.assay_uuid = "123e4567-e89b-12d3-a456-123456654321"
+    UCS_class_object.args.no_autofill = True
+
+    isa_data_block, isa_names = UCS_class_object.unpack_isa_data()
+    sample_fields_mapping = {
+        "Family-ID": "Family",
+        "Analysis-ID": "Source Name",
+        "Paternal-ID": "Father",
+        "Maternal-ID": "Mother",
+        "Sex": "Sex",
+        "Phenotype": "Disease status",
+        "Individual-ID": "Individual-ID",
+        "Probe-ID": "Probe-ID",
+        "Barcode": "Barcode sequence",
+        "Barcode-Name": "Barcode name",
+    }
+
+    UCS_class_object.update_uplaod_isa(
+        sample_df.iloc[0:1, :], isa_data_block, isa_names, sample_fields_mapping
+    )
+    mock_upload_isa.assert_called_with(updated_files_dict_MV)
+
+
+@patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
+def test_execute(
+    mock_upload_isa,
+    requests_mock,
     MV_isa_json,
     sample_df,
     updated_files_dict_default,
@@ -799,7 +874,12 @@ def test_execute(
     parser = argparse.ArgumentParser(parents=[sodar_parser])
     UpdateSamplesheetCommand.setup_argparse(parser)
 
-    mock_api_call.return_value = MV_isa_json
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
+        json=MV_isa_json,
+        status_code=200,
+    )
     mock_upload_isa.return_value = 0
 
     # Test germlinesheet default
@@ -808,7 +888,7 @@ def test_execute(
             "--sodar-api-token",
             "1234",
             "--sodar-server-url",
-            "https://sodar-staging.bihealth.org/",
+            "https://sodar-dummy.bihealth.org/",
             "-s",
             "FAM_01",
             "Ana_01",
@@ -829,7 +909,7 @@ def test_execute(
             "--sodar-api-token",
             "1234",
             "--sodar-server-url",
-            "https://sodar-staging.bihealth.org/",
+            "https://sodar-dummy.bihealth.org/",
             "-d",
             "MV",
             "-s",
