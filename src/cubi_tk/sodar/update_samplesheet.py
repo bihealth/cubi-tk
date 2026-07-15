@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 from io import StringIO
 import re
+import tempfile
 from typing import Iterable, TypedDict
 
 from loguru import logger
@@ -12,6 +13,7 @@ from ruamel.yaml import YAML
 
 from cubi_tk.parsers import print_args
 
+from ..common import _overwrite_helper_show_diff
 from ..exceptions import ParameterException
 from ..parse_ped import parse_ped
 from ..sodar_api import SodarApi
@@ -249,6 +251,12 @@ class UpdateSamplesheetCommand:
             "(replaces '-' with '_' in required ISA fields).",
         )
 
+        parser.add_argument(
+            "--dryrun",
+            action="store_true",
+            help="Do not upload changes ISA table, instead print diff of old and new TSVs.",
+        )
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -317,6 +325,7 @@ class UpdateSamplesheetCommand:
         isa_data_block: IsaDataBlock,
         study: pd.DataFrame,
         assay: pd.DataFrame,
+        dry_run: bool = False,
     ) -> int:
         # Write new samplesheet to tsv strings, then upload via API
         study_tsv = study.to_csv(
@@ -328,6 +337,10 @@ class UpdateSamplesheetCommand:
 
         # Get full ISA
         full_isa = self.sodar_api.get_samplesheet_export(get_all=True)
+        if dry_run:
+            self.show_upload_diff(full_isa["studies"][isa_data_block["study_key"]]["tsv"], study_tsv, 'Study-tsv')
+            self.show_upload_diff(full_isa["assays"][isa_data_block["assay_key"]]["tsv"], assay_tsv, 'Assay-tsv')
+            return 0
         full_isa["studies"][isa_data_block["study_key"]]["tsv"] = study_tsv
         full_isa["assays"][isa_data_block["assay_key"]]["tsv"] = assay_tsv
         files_dict = (
@@ -369,7 +382,7 @@ class UpdateSamplesheetCommand:
             samples, isa_data_block, isa_names, sample_fields_mapping
         )
 
-        return self.upload_isa_updates(isa_data_block, study, assay)
+        return self.upload_isa_updates(isa_data_block, study, assay, self.args.dryrun)
 
     def parse_sampledata_args(self, isa_names: IsaColumnDetails) -> dict[str, str]:
         """Build a dict to collect and map the names for ped or sampledata [-s] fields to ISA column names."""
@@ -563,6 +576,17 @@ class UpdateSamplesheetCommand:
         else:
             samples = ped_data if self.args.ped else sample_data
         return samples
+
+    @staticmethod
+    def show_upload_diff(old_tsv, new_tsv, name = 'tsv'):
+
+        old_lines = old_tsv.split('\n')
+        new_lines = new_tsv.split('\n')
+
+        with tempfile.NamedTemporaryFile(mode="w+t") as out_file:
+            diff_lines = _overwrite_helper_show_diff(
+                [], new_lines, out_file, name, name, False, old_lines
+            )
 
     @staticmethod
     def gather_isa_column_names(study: pd.DataFrame, assay: pd.DataFrame) -> IsaColumnDetails:

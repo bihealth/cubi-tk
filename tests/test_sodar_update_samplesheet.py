@@ -935,13 +935,16 @@ def test_execute(
     )
     mock_upload_isa.return_value = 0
 
+    base_args = [
+        "--sodar-api-token",
+        "1234",
+        "--sodar-server-url",
+        "https://sodar-dummy.bihealth.org/",
+    ]
+
     # Test germlinesheet default
     args = parser.parse_args(
-        [
-            "--sodar-api-token",
-            "1234",
-            "--sodar-server-url",
-            "https://sodar-dummy.bihealth.org/",
+        base_args + [
             "-s",
             "FAM_01",
             "Ana_01",
@@ -958,11 +961,7 @@ def test_execute(
 
     # Test MV default
     args = parser.parse_args(
-        [
-            "--sodar-api-token",
-            "1234",
-            "--sodar-server-url",
-            "https://sodar-dummy.bihealth.org/",
+        base_args + [
             "-d",
             "MV",
             "-s",
@@ -982,6 +981,26 @@ def test_execute(
     )
     UpdateSamplesheetCommand(args).execute()
     mock_upload_isa.assert_called_with(updated_files_dict_MV)
+
+    # test dryrun
+    mock_upload_isa.reset_mock()
+    args = parser.parse_args(
+        base_args + [
+            "-s",
+            "FAM_01",
+            "Ana_01",
+            "0",
+            "0",
+            "male",
+            "affected",
+            "--no-autofill",
+            "123e4567-e89b-12d3-a456-426655440000",
+            "--dryrun"
+        ]
+    )
+    UpdateSamplesheetCommand(args).execute()
+    mock_upload_isa.assert_not_called()
+    #TODO: check caplog / capsys if diff works as intended
 
 
 # TODO - more tests needed:
