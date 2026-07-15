@@ -103,8 +103,8 @@ def updated_files_dict_default(MV_isa_json, sample_df):
     }
 
 
-@pytest.fixture
-def updated_files_dict_MV(MV_isa_json, sample_df):
+@pytest.fixture()
+def updated_dataframes_MV(MV_isa_json, sample_df):
     # restrict to 1 sample, match cols to ISA
     sample_df = sample_df.iloc[0:1, :]
     sample_df.columns = [
@@ -122,8 +122,6 @@ def updated_files_dict_MV(MV_isa_json, sample_df):
         "Extract Name",
         "Library Name",
     ]
-
-    expected_i = MV_isa_json["investigation"]["tsv"]
     study_tsv = MV_isa_json["studies"]["s_modellvorhaben_rare_diseases.txt"]["tsv"]
     assay_tsv = MV_isa_json["assays"]["a_modellvorhaben_rare_diseases_genome_sequencing.txt"]["tsv"]
     start_s = pd.read_csv(StringIO(study_tsv), sep="\t", dtype=str)
@@ -133,18 +131,25 @@ def updated_files_dict_MV(MV_isa_json, sample_df):
         [start_s, sample_df.iloc[:, [0, 1, 2, 3, 4, 5, 6, 7, 10]]], ignore_index=True
     )
     expected_s["Protocol REF"] = "Sample collection"
-    expected_s = expected_s.to_csv(
-        sep="\t", index=False, header=study_tsv.split("\n")[0].split("\t")
-    )
+    expected_s.fillna("", inplace=True)
 
     expected_a = pd.concat([start_a, sample_df.iloc[:, [8, 9, 10, 11, 12]]], ignore_index=True)
     expected_a["Protocol REF"] = "Nucleic acid extraction WGS"
     expected_a["Protocol REF.1"] = "Library construction WGS"
     expected_a["Protocol REF.2"] = "Nucleic acid sequencing WGS"
-    expected_a = expected_a.to_csv(
-        sep="\t", index=False, header=assay_tsv.split("\n")[0].split("\t")
-    )
+    expected_a.fillna("", inplace=True)
 
+    return expected_s, expected_a
+
+
+@pytest.fixture
+def updated_files_dict_MV(MV_isa_json, updated_dataframes_MV):
+    expected_i = MV_isa_json["investigation"]["tsv"]
+    study_tsv = MV_isa_json["studies"]["s_modellvorhaben_rare_diseases.txt"]["tsv"]
+    assay_tsv = MV_isa_json["assays"]["a_modellvorhaben_rare_diseases_genome_sequencing.txt"]["tsv"]
+    study, assay = updated_dataframes_MV
+    expected_s = study.to_csv(sep="\t", index=False, header=study_tsv.split("\n")[0].split("\t"))
+    expected_a = assay.to_csv(sep="\t", index=False, header=assay_tsv.split("\n")[0].split("\t"))
     return {
         "file_investigation": ("i_Investigation.txt", expected_i),
         "file_study_1": ("s_modellvorhaben_rare_diseases.txt", expected_s),
@@ -271,7 +276,7 @@ def test_gather_ISA_column_names(mock_isa_data, UCS_class_object):
     study = mock_isa_data[1]
     assay = mock_isa_data[2]
 
-    isa_names = UCS_class_object.gather_ISA_column_names(study, assay)
+    isa_names = UCS_class_object.gather_isa_column_names(study, assay)
 
     assert not all(col in isa_names for col in ISA_NON_SETTABLE)
     assert all(col in isa_names for col in REQUIRED_COLUMNS)
@@ -289,7 +294,7 @@ def test_gather_ISA_column_names(mock_isa_data, UCS_class_object):
 
 
 def test_parse_sampledata_args(mock_isa_data, UCS_class_object):
-    isa_names = UCS_class_object.gather_ISA_column_names(mock_isa_data[1], mock_isa_data[2])
+    isa_names = UCS_class_object.gather_isa_column_names(mock_isa_data[1], mock_isa_data[2])
 
     # base mapping from default
     arg_list = [
@@ -491,7 +496,7 @@ def test_collect_sample_data(
 
     def run_usc_collect_sampledata(arg_list, **kwargs):
         USC = helper_update_UCS(arg_list, UCS_class_object)
-        isa_names = USC.gather_ISA_column_names(mock_isa_data[1], mock_isa_data[2])
+        isa_names = USC.gather_isa_column_names(mock_isa_data[1], mock_isa_data[2])
         sampledata_fields = USC.parse_sampledata_args(isa_names)
         return USC.collect_sample_data(isa_names, sampledata_fields, **kwargs)
 
@@ -651,7 +656,7 @@ def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
         "123e4567-e89b-12d3-a456-426655440000",
     ]
     UCS = helper_update_UCS(arg_list, UCS_class_object)
-    isa_names = UCS.gather_ISA_column_names(mock_isa_data[1], mock_isa_data[2])
+    isa_names = UCS.gather_isa_column_names(mock_isa_data[1], mock_isa_data[2])
     sampledata_fields = UCS.parse_sampledata_args(isa_names)
     samples = sample_df
 
@@ -713,6 +718,7 @@ def test_update_isa_table(UCS_class_object, caplog):
             "Parameter Value[Library layout]": ["paired", "paired", "paired"],
             "Parameter Value[Barcode sequence]": ["ATCG", "ACTG", ""],
             "Parameter Value[Barcode name]": ["A1", "A2", ""],
+            "Parameter Value[Sequencer]": ["NSX"] * 3,
             "Extract Name.1": ["Ana_01", "Ana_02", "Ana_03"],
             "RawData File": ["", "", ""],
         }
@@ -724,6 +730,7 @@ def test_update_isa_table(UCS_class_object, caplog):
             "Extract Name.1": ["Ana_02", "Ana_03", "Ana_04"],
             "Parameter Value[Barcode sequence]": ["XXXX", "ATTT", "UUUU"],
             "Parameter Value[Barcode name]": ["A2", "A3", "A4"],
+            "Parameter Value[Sequencer]": ["NSX", "NSX", ""],
         }
     )
     expected = pd.concat(
@@ -731,8 +738,28 @@ def test_update_isa_table(UCS_class_object, caplog):
             orig_isa.loc[[True, True, False]],
             pd.DataFrame(
                 [
-                    ["Probe_03", "Ana_03", "DNA extraction", "paired", "ATTT", "A3", "Ana_03", ""],
-                    ["Probe_04", "Ana_04", "DNA extraction", "paired", "UUUU", "A4", "Ana_04", ""],
+                    [
+                        "Probe_03",
+                        "Ana_03",
+                        "DNA extraction",
+                        "paired",
+                        "ATTT",
+                        "A3",
+                        "NSX",
+                        "Ana_03",
+                        "",
+                    ],
+                    [
+                        "Probe_04",
+                        "Ana_04",
+                        "DNA extraction",
+                        "paired",
+                        "UUUU",
+                        "A4",
+                        "",
+                        "Ana_04",
+                        "",
+                    ],
                 ],
                 columns=orig_isa.columns,
             ),
@@ -740,7 +767,7 @@ def test_update_isa_table(UCS_class_object, caplog):
         ignore_index=True,
     )
 
-    # Default case, no overwriting of non-empty fields, autofilling of columns with only 1 value
+    # Default case, no overwriting of non-empty fields, autofilling of columns only in orig with only 1 value
     actual = UCS_class_object.update_isa_table(orig_isa, parsed_assay)
     pd.testing.assert_frame_equal(actual, expected)
 
@@ -760,23 +787,21 @@ def test_update_isa_table(UCS_class_object, caplog):
     pd.testing.assert_frame_equal(actual, expected)
 
 
-@patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
-def test_update_uplaod_isa(
-    mock_upload_isa,
+def test_update_isa_tables(
     requests_mock,
     MV_isa_json,
     UCS_class_object,
-    updated_files_dict_MV,
+    updated_dataframes_MV,
     sample_df,
 ):
-    mock_upload_isa.return_value = 0
+    expected_s, expected_a = updated_dataframes_MV
     requests_mock.register_uri(
         "GET",
         "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
         json=MV_isa_json,
         status_code=200,
     )
-
+    # Setup test
     isa_data_block, isa_names = UCS_class_object.unpack_isa_data()
     sample_fields_mapping = {
         "Family-ID": "Family",
@@ -790,17 +815,41 @@ def test_update_uplaod_isa(
         "Barcode": "Barcode sequence",
         "Barcode-Name": "Barcode name",
     }
-
     UCS_class_object.args.no_autofill = True
-    UCS_class_object.update_uplaod_isa(
+    study, assay = UCS_class_object.update_isa_tables(
         sample_df.iloc[0:1, :], isa_data_block, isa_names, sample_fields_mapping
     )
+    pd.testing.assert_frame_equal(study, expected_s)
+    pd.testing.assert_frame_equal(assay, expected_a)
+
+
+@patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
+def test_uplaod_isa_updates(
+    mock_upload_isa,
+    requests_mock,
+    MV_isa_json,
+    UCS_class_object,
+    updated_dataframes_MV,
+    updated_files_dict_MV,
+):
+    mock_upload_isa.return_value = 0
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-dummy.bihealth.org/samplesheets/api/export/json/123e4567-e89b-12d3-a456-426655440000",
+        json=MV_isa_json,
+        status_code=200,
+    )
+    study, assay = updated_dataframes_MV
+
+    isa_data_block, isa_names = UCS_class_object.unpack_isa_data()
+    UCS_class_object.args.no_autofill = True
+    UCS_class_object.upload_isa_updates(isa_data_block, study, assay)
     mock_upload_isa.assert_called_with(updated_files_dict_MV)
 
 
 @patch("cubi_tk.sodar.update_samplesheet.SodarApi.get_samplesheet_investigation_retrieve")
 @patch("cubi_tk.sodar.update_samplesheet.SodarApi.post_samplesheet_import")
-def test_update_uplaod_isa_multiassay(
+def test_uplaod_isa_updates_multiassay(
     mock_upload_isa,
     mock_isa_retrieve,
     requests_mock,
@@ -858,9 +907,10 @@ def test_update_uplaod_isa_multiassay(
         "Barcode-Name": "Barcode name",
     }
 
-    UCS_class_object.update_uplaod_isa(
+    study, assay = UCS_class_object.update_isa_tables(
         sample_df.iloc[0:1, :], isa_data_block, isa_names, sample_fields_mapping
     )
+    UCS_class_object.upload_isa_updates(isa_data_block, study, assay)
     mock_upload_isa.assert_called_with(updated_files_dict_MV)
 
 
@@ -932,3 +982,7 @@ def test_execute(
     )
     UpdateSamplesheetCommand(args).execute()
     mock_upload_isa.assert_called_with(updated_files_dict_MV)
+
+
+# TODO - more tests needed:
+# - check that multiple subsequent updates work as expected
