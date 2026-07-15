@@ -329,7 +329,7 @@ def print_line(line):
 
 
 def _overwrite_helper_show_diff(
-    lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side, old_lines = None
+    lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side, old_lines=None
 ):
     if old_lines is None and out_path != "-" and out_path_obj.exists():
         with out_path_obj.open("rt") as inputf:

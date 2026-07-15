@@ -944,7 +944,8 @@ def test_execute(
 
     # Test germlinesheet default
     args = parser.parse_args(
-        base_args + [
+        base_args
+        + [
             "-s",
             "FAM_01",
             "Ana_01",
@@ -961,7 +962,8 @@ def test_execute(
 
     # Test MV default
     args = parser.parse_args(
-        base_args + [
+        base_args
+        + [
             "-d",
             "MV",
             "-s",
@@ -985,7 +987,8 @@ def test_execute(
     # test dryrun
     mock_upload_isa.reset_mock()
     args = parser.parse_args(
-        base_args + [
+        base_args
+        + [
             "-s",
             "FAM_01",
             "Ana_01",
@@ -995,13 +998,9 @@ def test_execute(
             "affected",
             "--no-autofill",
             "123e4567-e89b-12d3-a456-426655440000",
-            "--dryrun"
+            "--dryrun",
         ]
     )
     UpdateSamplesheetCommand(args).execute()
     mock_upload_isa.assert_not_called()
-    #TODO: check caplog / capsys if diff works as intended
-
-
-# TODO - more tests needed:
-# - check that multiple subsequent updates work as expected
+    # TODO: check caplog / capsys if diff works as intended

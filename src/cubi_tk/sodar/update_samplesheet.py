@@ -338,8 +338,12 @@ class UpdateSamplesheetCommand:
         # Get full ISA
         full_isa = self.sodar_api.get_samplesheet_export(get_all=True)
         if dry_run:
-            self.show_upload_diff(full_isa["studies"][isa_data_block["study_key"]]["tsv"], study_tsv, 'Study-tsv')
-            self.show_upload_diff(full_isa["assays"][isa_data_block["assay_key"]]["tsv"], assay_tsv, 'Assay-tsv')
+            self.show_upload_diff(
+                full_isa["studies"][isa_data_block["study_key"]]["tsv"], study_tsv, "Study-tsv"
+            )
+            self.show_upload_diff(
+                full_isa["assays"][isa_data_block["assay_key"]]["tsv"], assay_tsv, "Assay-tsv"
+            )
             return 0
         full_isa["studies"][isa_data_block["study_key"]]["tsv"] = study_tsv
         full_isa["assays"][isa_data_block["assay_key"]]["tsv"] = assay_tsv
@@ -578,15 +582,12 @@ class UpdateSamplesheetCommand:
         return samples
 
     @staticmethod
-    def show_upload_diff(old_tsv, new_tsv, name = 'tsv'):
-
-        old_lines = old_tsv.split('\n')
-        new_lines = new_tsv.split('\n')
+    def show_upload_diff(old_tsv, new_tsv, name="tsv"):
+        old_lines = old_tsv.split("\n")
+        new_lines = new_tsv.split("\n")
 
         with tempfile.NamedTemporaryFile(mode="w+t") as out_file:
-            diff_lines = _overwrite_helper_show_diff(
-                [], new_lines, out_file, name, name, False, old_lines
-            )
+            _overwrite_helper_show_diff([], new_lines, out_file, name, name, False, old_lines)
 
     @staticmethod
     def gather_isa_column_names(study: pd.DataFrame, assay: pd.DataFrame) -> IsaColumnDetails:
