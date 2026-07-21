@@ -922,7 +922,7 @@ def test_execute(
     sample_df,
     updated_files_dict_default,
     updated_files_dict_MV,
-    capsys
+    capsys,
 ):
     sodar_parser = get_sodar_parser(with_dest=True)
     parser = argparse.ArgumentParser(parents=[sodar_parser])
@@ -1005,9 +1005,11 @@ def test_execute(
     UpdateSamplesheetCommand(args).execute()
     mock_upload_isa.assert_not_called()
     out, _ = capsys.readouterr()
-    out_lines = out.split('\n')
+    out_lines = out.split("\n")
     assert len(out_lines) == 17  # 2x (3 head, 1 + 3 context, 1 blank), 1 blank
-    assert out_lines[0] == '--- Study-tsv'
-    assert out_lines[6].startswith('+Ana_01') and re.search(r'FAM_01\s+0\t0\t\tmale\taffected', out_lines[6])
-    assert out_lines[9] == '+++ Assay-tsv'
-    assert out_lines[14].startswith('+Ana_01')
+    assert out_lines[0] == "--- Study-tsv"
+    assert out_lines[6].startswith("+Ana_01") and re.search(
+        r"FAM_01\s+0\t0\t\tmale\taffected", out_lines[6]
+    )
+    assert out_lines[9] == "+++ Assay-tsv"
+    assert out_lines[14].startswith("+Ana_01")
