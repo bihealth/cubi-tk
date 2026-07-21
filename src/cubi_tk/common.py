@@ -329,12 +329,13 @@ def print_line(line):
 
 
 def _overwrite_helper_show_diff(
-    lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side
+    lines, new_lines, out_file, out_path, out_path_obj, show_diff_side_by_side, old_lines=None
 ):
-    old_lines = []
-    if out_path != "-" and out_path_obj.exists():
+    if old_lines is None and out_path != "-" and out_path_obj.exists():
         with out_path_obj.open("rt") as inputf:
             old_lines = inputf.read().splitlines(keepends=False)
+    elif old_lines is None:
+        old_lines = []
 
     if not show_diff_side_by_side:
         lines = list(

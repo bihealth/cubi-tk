@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 from io import StringIO
 import re
+import tempfile
 from typing import Iterable, TypedDict
 
 from loguru import logger
@@ -12,6 +13,7 @@ from ruamel.yaml import YAML
 
 from cubi_tk.parsers import print_args
 
+from ..common import _overwrite_helper_show_diff
 from ..exceptions import ParameterException
 from ..parse_ped import parse_ped
 from ..sodar_api import SodarApi
@@ -249,6 +251,12 @@ class UpdateSamplesheetCommand:
             "(replaces '-' with '_' in required ISA fields).",
         )
 
+        parser.add_argument(
+            "--dryrun",
+            action="store_true",
+            help="Do not upload changes ISA table, instead print diff of old and new TSVs.",
+        )
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -267,7 +275,7 @@ class UpdateSamplesheetCommand:
         study = pd.read_csv(StringIO(isa_data["studies"][study_key]["tsv"]), sep="\t", dtype=str)
         assay_key = list(isa_data["assays"].keys())[0]
         assay = pd.read_csv(StringIO(isa_data["assays"][assay_key]["tsv"]), sep="\t", dtype=str)
-        isa_names = self.gather_ISA_column_names(study, assay)
+        isa_names = self.gather_isa_column_names(study, assay)
 
         isa_data_block: IsaDataBlock = {
             "i_path": investigation_path,
@@ -280,13 +288,13 @@ class UpdateSamplesheetCommand:
 
         return isa_data_block, isa_names
 
-    def update_uplaod_isa(
+    def update_isa_tables(
         self,
         samples: pd.DataFrame,
         isa_data_block: IsaDataBlock,
         isa_names: IsaColumnDetails,
         sample_fields_mapping: dict[str, str],
-    ):
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Take `samples` Dataframe and merge it with isa_data based on isa_names and sample_fields_mapping"""
 
         study = isa_data_block["study"]
@@ -298,9 +306,9 @@ class UpdateSamplesheetCommand:
         req_cols = set(REQUIRED_COLUMNS) | (
             set(REQUIRED_IF_EXISTING_COLUMNS) & set(isa_names.keys())
         )
-        colset = set(study.columns.tolist() + assay.columns.tolist())
-        if not req_cols.issubset(colset):
-            missing_cols = req_cols - colset
+        col_set = set(study.columns.tolist() + assay.columns.tolist())
+        if not req_cols.issubset(col_set):
+            missing_cols = req_cols - col_set
             raise ValueError(f"Missing required columns in sample data: {', '.join(missing_cols)}")
 
         # Update ISA tables with new data
@@ -310,17 +318,33 @@ class UpdateSamplesheetCommand:
         assay_final = self.update_isa_table(
             assay, assay_new, self.args.overwrite, self.args.no_autofill
         )
+        return study_final, assay_final
 
+    def upload_isa_updates(
+        self,
+        isa_data_block: IsaDataBlock,
+        study: pd.DataFrame,
+        assay: pd.DataFrame,
+        dry_run: bool = False,
+    ) -> int:
         # Write new samplesheet to tsv strings, then upload via API
-        study_tsv = study_final.to_csv(
-            sep="\t", index=False, header=list(map(orig_col_name, study_final.columns))
+        study_tsv = study.to_csv(
+            sep="\t", index=False, header=list(map(orig_col_name, study.columns))
         )
-        assay_tsv = assay_final.to_csv(
-            sep="\t", index=False, header=list(map(orig_col_name, assay_final.columns))
+        assay_tsv = assay.to_csv(
+            sep="\t", index=False, header=list(map(orig_col_name, assay.columns))
         )
 
         # Get full ISA
         full_isa = self.sodar_api.get_samplesheet_export(get_all=True)
+        if dry_run:
+            self.show_upload_diff(
+                full_isa["studies"][isa_data_block["study_key"]]["tsv"], study_tsv, "Study-tsv"
+            )
+            self.show_upload_diff(
+                full_isa["assays"][isa_data_block["assay_key"]]["tsv"], assay_tsv, "Assay-tsv"
+            )
+            return 0
         full_isa["studies"][isa_data_block["study_key"]]["tsv"] = study_tsv
         full_isa["assays"][isa_data_block["assay_key"]]["tsv"] = assay_tsv
         files_dict = (
@@ -358,7 +382,11 @@ class UpdateSamplesheetCommand:
             isa_names, sample_fields_mapping, self.args.snappy_compatible
         )
 
-        return self.update_uplaod_isa(samples, isa_data_block, isa_names, sample_fields_mapping)
+        study, assay = self.update_isa_tables(
+            samples, isa_data_block, isa_names, sample_fields_mapping
+        )
+
+        return self.upload_isa_updates(isa_data_block, study, assay, self.args.dryrun)
 
     def parse_sampledata_args(self, isa_names: IsaColumnDetails) -> dict[str, str]:
         """Build a dict to collect and map the names for ped or sampledata [-s] fields to ISA column names."""
@@ -408,32 +436,6 @@ class UpdateSamplesheetCommand:
             raise NameError(msg)
 
         return sample_field_mapping
-
-    def gather_ISA_column_names(self, study: pd.DataFrame, assay: pd.DataFrame) -> IsaColumnDetails:
-        isa_regex = re.compile(r"(Characteristics|Parameter Value|Comment)\[(.*?)]")
-        study_cols = study.columns.tolist()
-        assay_cols = assay.columns.tolist()
-
-        isa_short_names = [
-            orig_col_name(isa_regex.sub(r"\2", x)) for x in (study_cols + assay_cols)
-        ]
-        isa_long_names = list(map(orig_col_name, study_cols + assay_cols))
-        isa_names_unique = study_cols + assay_cols
-        isa_table = ["study"] * len(study_cols) + ["assay"] * len(assay_cols)
-
-        out = defaultdict(list)
-        for short, long, uniq, table in zip(
-            isa_short_names, isa_long_names, isa_names_unique, isa_table, strict=True
-        ):
-            out[short].append((uniq, table))
-            out[long].append((uniq, table))
-
-        for col in ISA_NON_SETTABLE:
-            if col in out:
-                del out[col]
-
-        # do NOT retain defaultdict class
-        return dict(out)
 
     def get_dynamic_columns(
         self,
@@ -579,8 +581,43 @@ class UpdateSamplesheetCommand:
             samples = ped_data if self.args.ped else sample_data
         return samples
 
+    @staticmethod
+    def show_upload_diff(old_tsv, new_tsv, name="tsv"):
+        old_lines = old_tsv.split("\n")
+        new_lines = new_tsv.split("\n")
+
+        with tempfile.NamedTemporaryFile(mode="w+t") as out_file:
+            _overwrite_helper_show_diff([], new_lines, out_file, name, name, False, old_lines)
+
+    @staticmethod
+    def gather_isa_column_names(study: pd.DataFrame, assay: pd.DataFrame) -> IsaColumnDetails:
+        isa_regex = re.compile(r"(Characteristics|Parameter Value|Comment)\[(.*?)]")
+        study_cols = study.columns.tolist()
+        assay_cols = assay.columns.tolist()
+
+        isa_short_names = [
+            orig_col_name(isa_regex.sub(r"\2", x)) for x in (study_cols + assay_cols)
+        ]
+        isa_long_names = list(map(orig_col_name, study_cols + assay_cols))
+        isa_names_unique = study_cols + assay_cols
+        isa_table = ["study"] * len(study_cols) + ["assay"] * len(assay_cols)
+
+        out = defaultdict(list)
+        for short, long, uniq, table in zip(
+            isa_short_names, isa_long_names, isa_names_unique, isa_table, strict=True
+        ):
+            out[short].append((uniq, table))
+            out[long].append((uniq, table))
+
+        for col in ISA_NON_SETTABLE:
+            if col in out:
+                del out[col]
+
+        # do NOT retain defaultdict class
+        return dict(out)
+
+    @staticmethod
     def match_sample_data_to_isa(
-        self,
         samples: pd.DataFrame,
         isa_names: IsaColumnDetails,
         sample_field_mapping: dict[str, str],
@@ -618,13 +655,22 @@ class UpdateSamplesheetCommand:
 
         return new_study_data, new_assay_data
 
+    @staticmethod
     def update_isa_table(
-        self,
         isa_table: pd.DataFrame,
         update_table: pd.DataFrame,
         overwrite: bool = False,
         no_autofill: bool = False,
-    ):
+    ) -> pd.DataFrame:
+        """
+        Function to merge existing isa (study or assay) table Dataframe with new one.
+        :param isa_table: pd.DataFrame of current assay or study table with names as loaded by pandas
+        :param update_table: pd.DataFrame with additions & updates for isa_table with reconstructed column names
+        :param overwrite: Allow overwriting of values other than null or empty string
+        :param no_autofill: Skip autofill of columns with unique values (that weren't specified in update_table and aren't special ISA columns).
+        :return: merged DataFrame or new and old table
+        """
+
         if not all(update_table.columns.isin(isa_table.columns)):
             raise ValueError(
                 "New ISA table has columns that are not present in the existing ISA table."
@@ -687,13 +733,16 @@ class UpdateSamplesheetCommand:
             if orig_col_name(col) == "Protocol REF"
         }
         if not no_autofill:
-            # Do not autofill ontology terms or references (an autofilled ontology reference without values
-            # would not pass altamisa validation)
+            # Do not automatically autofill columns with any specified data, ontology terms, or references
+            # (an autofilled ontology reference without values would not pass altamisa validation,
+            # also autofill on terms & references would have to take the actual value column into account as well)
             autofill_cols.update(
                 {
                     col: isa_table[col].unique()[0]
                     for col in isa_table.columns
-                    if isa_table[col].nunique() == 1 and orig_col_name(col) not in ISA_NON_SETTABLE
+                    if isa_table[col].nunique() == 1
+                    and orig_col_name(col) not in ISA_NON_SETTABLE
+                    and col not in update_table.columns
                 }
             )
 
