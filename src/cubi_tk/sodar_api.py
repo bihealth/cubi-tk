@@ -405,7 +405,7 @@ class SodarApi:
                     assay = study.assays[assays_[0]]
                     self.assay_uuid = assays_[0]
                     if self.yes and len(assays_) > 1:
-                        multi_assay_study_warning(assays=assays_)
+                        multi_assay_study_warning(assays_)
                     return assay, study
                 # multiple assays and interactive, print uuids and ask for which
                 self.assay_uuid = get_user_input_assay_study(assays_, study.assays)

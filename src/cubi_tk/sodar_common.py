@@ -22,6 +22,7 @@ class RetrieveSodarCollection(SodarApi):
             sodar_profile=argparse.config_profile,
             connection_timeout=getattr(argparse, "connection_timeout", 600),
             read_timeout=getattr(argparse, "read_timeout", 600),
+            ask=True if not getattr(argparse, "yes", False) else False,
         ).irods_hash_scheme()
         self.hash_ending = "." + self.irods_hash_scheme.lower()
 
