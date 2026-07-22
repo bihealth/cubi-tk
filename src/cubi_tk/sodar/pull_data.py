@@ -226,6 +226,7 @@ class PullDataCommand:
             sodar_profile=self.args.config_profile,
             connection_timeout=getattr(self.args, "connection_timeout", 600),
             read_timeout=getattr(self.args, "read_timeout", 600),
+            ask=True , #always interactive
         ).get(self.args.overwrite)
 
         logger.info("All done. Have a nice day!")
