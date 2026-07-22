@@ -703,6 +703,7 @@ class UpdateSamplesheetCommand:
         else:
             # Update only values those columns that are empty/falsy
             # Give a warning if any existing values are different
+            clash_df = pd.DataFrame({"Source Name": [], "Sample Name": []})
             for col in updates.columns:
                 isa_col = isa_table[col].loc[common_rows_isa]
                 equal_values = isa_col.reset_index(drop=True) == updates[col].reset_index(drop=True)
@@ -715,15 +716,21 @@ class UpdateSamplesheetCommand:
                     continue
                 elif clash_rows.any():
                     clash = isa_table.loc[isa_col.index[clash_rows], mat_cols + [col]]
-                    clash["<New values:>" + col] = updates[col].loc[clash_rows].values
-                    logger.warning(
-                        f"Given values for ISA column '{col}' have different existing values, "
-                        "these will not be updated. Use `--overwrite` to force update.\n"
-                        + clash.to_string(index=False, na_rep="")
+                    clash["<New values:>" + col] = (
+                        updates[col].loc[updates.index[clash_rows]].values
                     )
+                    clash_df = pd.merge(clash_df, clash, how="outer")
 
                 isa_table.loc[isa_col.index[empty_values], col] = (
-                    updates[col].loc[empty_values].values
+                    updates[col].loc[updates.index[empty_values]].values
+                )
+
+            if not clash_df.empty:
+                logger.warning(
+                    f"Given values for ISA columns "
+                    f"{', '.join(col for col in clash_df.columns if col not in mat_cols + REQUIRED_COLUMNS + REQUIRED_IF_EXISTING_COLUMNS and '<New values:>' not in col)}"
+                    f" have different existing values, these will not be updated. Use `--overwrite` to force update.\n"
+                    + clash_df.to_string(index=False, na_rep="")
                 )
 
         # Check which cols should be autofilled ("Protocol REF" needs to be, for ISA to work)

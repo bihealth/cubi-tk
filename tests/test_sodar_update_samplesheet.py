@@ -712,30 +712,32 @@ def test_match_sample_data_to_isa(mock_isa_data, UCS_class_object, sample_df):
 def test_update_isa_table(UCS_class_object, caplog):
     orig_isa = pd.DataFrame(
         {
-            "Sample Name": ["Probe_01", "Probe_02", "Probe_03"],
-            "Extract Name": ["Ana_01", "Ana_02", "Ana_03"],
-            "Protocol REF": ["DNA extraction", "DNA extraction", "DNA extraction"],
-            "Parameter Value[Library layout]": ["paired", "paired", "paired"],
-            "Parameter Value[Barcode sequence]": ["ATCG", "ACTG", ""],
-            "Parameter Value[Barcode name]": ["A1", "A2", ""],
-            "Parameter Value[Sequencer]": ["NSX"] * 3,
-            "Extract Name.1": ["Ana_01", "Ana_02", "Ana_03"],
-            "RawData File": ["", "", ""],
+            "Sample Name": ["Probe_00"] * 5 + ["Probe_01", "Probe_02", "Probe_03"],
+            "Extract Name": ["Ana_00"] * 5 + ["Ana_01", "Ana_02", "Ana_03"],
+            "Protocol REF": ["DNA extraction"] * 5
+            + ["DNA extraction", "DNA extraction", "DNA extraction"],
+            "Parameter Value[Library layout]": ["paired"] * 8,
+            "Parameter Value[Barcode sequence]": ["ATCG"] * 5 + ["ATCG", "ACTG", ""],
+            "Parameter Value[Barcode name]": ["A1"] * 5 + ["A1", "A2", ""],
+            "Parameter Value[Sequencer]": ["NSX"] * 8,
+            "Extract Name.1": ["Ana_00"] * 5 + ["Ana_01", "Ana_02", "Ana_03"],
+            "RawData File": [""] * 8,
         }
     )
+    # The order of overwriting samples (start or not) does make a difference for pandas (Index order/mismatches)
     parsed_assay = pd.DataFrame(
         {
-            "Sample Name": ["Probe_02", "Probe_03", "Probe_04"],
-            "Extract Name": ["Ana_02", "Ana_03", "Ana_04"],
-            "Extract Name.1": ["Ana_02", "Ana_03", "Ana_04"],
-            "Parameter Value[Barcode sequence]": ["XXXX", "ATTT", "UUUU"],
-            "Parameter Value[Barcode name]": ["A2", "A3", "A4"],
-            "Parameter Value[Sequencer]": ["NSX", "NSX", ""],
+            "Sample Name": ["Probe_N", "Probe_01", "Probe_02", "Probe_03", "Probe_04"],
+            "Extract Name": ["Ana_N", "Ana_01", "Ana_02", "Ana_03", "Ana_04"],
+            "Extract Name.1": ["Ana_N", "Ana_01", "Ana_02", "Ana_03", "Ana_04"],
+            "Parameter Value[Barcode sequence]": ["UUUU", "XXXX", "XXXX", "ATTT", "UUUU"],
+            "Parameter Value[Barcode name]": ["NN", "A1", "YY", "A3", "A4"],
+            "Parameter Value[Sequencer]": ["NSX", "NSX", "NSX", "NSX", ""],
         }
     )
     expected = pd.concat(
         [
-            orig_isa.loc[[True, True, False]],
+            orig_isa.loc[[True] * 5 + [True, True, False]],
             pd.DataFrame(
                 [
                     [
@@ -747,6 +749,17 @@ def test_update_isa_table(UCS_class_object, caplog):
                         "A3",
                         "NSX",
                         "Ana_03",
+                        "",
+                    ],
+                    [
+                        "Probe_N",
+                        "Ana_N",
+                        "DNA extraction",
+                        "paired",
+                        "UUUU",
+                        "NN",
+                        "NSX",
+                        "Ana_N",
                         "",
                     ],
                     [
@@ -766,21 +779,48 @@ def test_update_isa_table(UCS_class_object, caplog):
         ],
         ignore_index=True,
     )
+    caplog.at_level("WARNING")
 
     # Default case, no overwriting of non-empty fields, autofilling of columns only in orig with only 1 value
     actual = UCS_class_object.update_isa_table(orig_isa, parsed_assay)
     pd.testing.assert_frame_equal(actual, expected)
 
-    # Check for warning message regarding non overwrite of for XXXX
-    assert "XXXX" in caplog.records[-1].message and "Barcode sequence" in caplog.records[-1].message
+    # Check for a single warning message regarding non overwrite of for XXXX (sequence, 2 samples) and YY (name, 1 sample)
+    assert len(caplog.messages) == 1
+    message_lines = caplog.messages[0].split("\n")
+    assert (
+        "columns Parameter Value[Barcode sequence], Parameter Value[Barcode name] have"
+        in message_lines[0]
+    )
+    assert " XXXX" in message_lines[2]
+    assert " XXXX " in message_lines[3] and message_lines[3].endswith(" YY")
 
     # no auto-filling
-    expected["Parameter Value[Library layout]"] = ["paired", "paired", "paired", ""]
+    expected["Parameter Value[Library layout]"] = ["paired"] * 5 + [
+        "paired",
+        "paired",
+        "paired",
+        "",
+        "",
+    ]
     actual = UCS_class_object.update_isa_table(orig_isa, parsed_assay, no_autofill=True)
     pd.testing.assert_frame_equal(actual, expected)
 
     # allow overwriting
-    expected["Parameter Value[Barcode sequence]"] = ["ATCG", "XXXX", "ATTT", "UUUU"]
+    expected["Parameter Value[Barcode sequence]"] = ["ATCG"] * 5 + [
+        "XXXX",
+        "XXXX",
+        "ATTT",
+        "UUUU",
+        "UUUU",
+    ]
+    expected["Parameter Value[Barcode name]"] = ["A1"] * 5 + [
+        "A1",
+        "YY",
+        "A3",
+        "NN",
+        "A4",
+    ]
     actual = UCS_class_object.update_isa_table(
         orig_isa, parsed_assay, overwrite=True, no_autofill=True
     )
