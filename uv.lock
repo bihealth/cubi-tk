@@ -365,7 +365,7 @@ requires-dist = [
     { name = "icdiff", specifier = ">=2.0.7" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "python-irodsclient", specifier = "==3.1.0" },
+    { name = "python-irodsclient", specifier = ">=3.1.1,<3.2" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "retrying", specifier = ">=1.3.4" },
@@ -1001,15 +1001,15 @@ wheels = [
 
 [[package]]
 name = "python-irodsclient"
-version = "3.1.0"
+version = "3.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "defusedxml" },
     { name = "prettytable" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/a3/5771c33ab6be10ffd07869989c5528db9a315be01f39b51bed0f77d6754a/python_irodsclient-3.1.0.tar.gz", hash = "sha256:e5734de7ec0af6612a28b605215ab92cc0ded3c0a73803de595f0128e2cd609e", size = 290079 }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/04/79fff7ef2ad0c16b20b35ad4177d4fdd872408114ae28a225b593737f5d3/python-irodsclient-3.1.1.tar.gz", hash = "sha256:e44e2aa0246d12057a68f69f4eb6ade08ffa60b0e0d86783bebc9f663513efde", size = 298027 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a8/a2/d2df01859afa8788a87e2d3d008bd11e0e3263a96e95f482998fb5d5b856/python_irodsclient-3.1.0-py3-none-any.whl", hash = "sha256:3f54ba512cb151a0d6de22c2f2bdc1d7d946f3abc76eac9d0e6e11b1b19c8060", size = 263876 },
+    { url = "https://files.pythonhosted.org/packages/4d/71/95f7115a6e2e2b44b4cebfc833f95ad165790a8a3a41bb929cd051c6740f/python_irodsclient-3.1.1-py3-none-any.whl", hash = "sha256:ad1534d03acf3062337eaa00709534c5eb3a3a2c57b2ea43e12293fcca94c4b2", size = 268523 },
 ]
 
 [[package]]
