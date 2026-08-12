@@ -93,7 +93,7 @@ class LandingZone:
     """Represent a landing zone in the SODAR API."""
 
     #: UUID of the landing zone.
-    sodar_uuid: typing.Optional[str] = None
+    sodar_uuid: str
     #: Date of last modification.
     date_modified: str
 

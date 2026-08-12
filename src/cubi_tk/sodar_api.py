@@ -278,7 +278,7 @@ class SodarApi:
 
     # maybe use status_locked of lz and only retrun not locked if wanted (instead of filter_for_state filter_for_not_locked:bool)
     def get_landingzone_list(
-        self, sort_reverse: bool = False, filter_for_state: list[str] = LANDING_ZONE_STATES
+        self, sort_by: Literal['creation', 'modification'] = 'modification', sort_reverse: bool = False, filter_for_state: list[str] = LANDING_ZONE_STATES
     ) -> List[api_models.LandingZone] | None:
         logger.debug("Get list of Landing Zones...")
         try:
@@ -287,7 +287,11 @@ class SodarApi:
         except SodarApiException as e:
             logger.error(f"Failed to retrieve Landingzone:\n{e}")
             return None
-        landingzones = sorted(landingzones, key=lambda lz: lz.date_modified, reverse=sort_reverse)
+        # By default the Sodar API returns LZ sorted by creation (oldest first, newest last)
+        if sort_by == 'modification':
+            landingzones = sorted(landingzones, key=lambda lz: lz.date_modified, reverse=sort_reverse)
+        elif sort_by == 'creation' and sort_reverse:
+            landingzones = landingzones[::-1]
         # if assay_uuid filter for assay_uuid
         if self.assay_uuid:
             landingzones = list(filter(lambda lz: lz.assay == self.assay_uuid, landingzones))
@@ -327,8 +331,9 @@ class SodarApi:
                     logger.info("Waiting for end of landingzone creation.")
                     logged = True
                 lzs = self.get_landingzone_list(filter_for_state=["ACTIVE"])
-                if len(lzs) == 1:
-                    wait_until_ready = False
+                # TODO: can not assume there is only 1 active LZ, unsure if LZ identity check will work (modification_date?)
+                if lz in lzs:
+                    break
                 logger.debug("Waiting 5 seconds for LZ {} to become usable...", lz.sodar_uuid)
                 time.sleep(5)  # wait and ask API again
             return lz
