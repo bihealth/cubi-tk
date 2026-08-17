@@ -157,7 +157,7 @@ class SodarIngestBase:
         if (
             noninteractive_override
             or self.sodar_api.yes
-            or (input("Can the process create a new landing zone? [yN] ").lower().startswith("y"))
+            or (input("Can the process create a new landing zone? [y/N] ").lower().startswith("y"))
         ):
             lz = self.sodar_api.post_landingzone_create(wait_until_ready=True)
             if lz:
@@ -167,6 +167,48 @@ class SodarIngestBase:
         else:
             msg = "Not possible to continue the process without a landing zone path. Breaking..."
             raise UserCanceledException(msg)
+
+    def _select_existing_lz(self, existing_lzs, select_mode, sort_by) -> tuple[str, str]:
+        if len(existing_lzs) == 1 and select_mode != "manual":
+            lz = existing_lzs[0]
+            logger.debug(f"Single active landingzone with UUID {lz.sodar_uuid} will be used")
+            return lz.sodar_uuid, lz.irods_path
+
+        if select_mode in ("newest", "last_used") or (select_mode is None and self.args.yes):
+            lz = existing_lzs[-1]
+            logger.info(
+                f"Newest active landingzone (by {sort_by}) with UUID {lz.sodar_uuid} will be used"
+            )
+            return lz.sodar_uuid, lz.irods_path
+
+        if select_mode == "oldest":
+            lz = existing_lzs[0]
+            logger.info(f"Oldest active landingzone with UUID {lz.sodar_uuid} will be used")
+            return lz.sodar_uuid, lz.irods_path
+
+        # select manually
+        options = [
+            f"{index + 1}) {os.path.basename(lz.irods_path)} ({lz.sodar_uuid})"
+            for index, lz in enumerate(existing_lzs)
+        ]
+        input_message = (
+            "####################\n"
+            "Please choose target landing zone:\n"
+            "0) <Create new landingzone>\n" + "\n".join(options) + "\nSelect by number: "
+        )
+
+        selection = -1
+        while selection not in range(len(existing_lzs) + 1):
+            user_input = input(input_message)
+            if user_input.isdigit():
+                selection = int(user_input)
+
+        if selection == 0:
+            logger.debug("User selected to create a new landing zone")
+            return self._create_lz(noninteractive_override=True)
+
+        lz = existing_lzs[selection - 1]
+        return lz.sodar_uuid, lz.irods_path
 
     def _get_landing_zone(
         self,
@@ -178,17 +220,16 @@ class SodarIngestBase:
         :param select_mode: str or None
         :return: lz_uuid, lz_irods_path
         """
-        # Get existing LZs from API
         sort_by = "modification" if select_mode == "last_used" else "creation"
         existing_lzs = self.sodar_api.get_landingzone_list(
             filter_for_state=["ACTIVE", "FAILED"], sort_by=sort_by
         )
-        if select_mode == "create":
-            return self._create_lz(noninteractive_override=True)
-        elif not existing_lzs:
-            # No active landing zones available
-            logger.info("No active Landing Zone available, creating new one.")
-            return self._create_lz()
+        if select_mode == "create" or not existing_lzs:
+            logger.info(
+                "No active landing zones found or selection mode is 'create', creating a new one..."
+            )
+            return self._create_lz(noninteractive_override=select_mode == "create")
+
         logger.info(
             "Found {} active landing zone{}.".format(
                 len(existing_lzs), "s" if len(existing_lzs) > 1 else ""
@@ -199,48 +240,15 @@ class SodarIngestBase:
             not self.args.yes
             and select_mode is None
             and (
-                not input("Should the process use an existing landing zone? [yN] ")
+                not input("Should the process use an existing landing zone? [y/N] ")
                 .lower()
                 .startswith("y")
             )
         ):
+            logger.info("Creating a new landing zone...")
             return self._create_lz()
-        if len(existing_lzs) == 1 and select_mode != "manual":
-            lz = existing_lzs[0]
-            logger.debug(f"Single active landingzone with UUID {lz.sodar_uuid} will be used")
-        else:
-            if select_mode in ("newest", "last_used") or (select_mode is None and self.args.yes):
-                # Get latest active landing zone
-                lz = existing_lzs[-1]
-                logger.info(
-                    f"Newest active landingzone (by {sort_by}) with UUID {lz.sodar_uuid} will be used"
-                )
-            elif select_mode == "oldest":
-                lz = existing_lzs[0]
-                logger.info(f"Oldest active landingzone with UUID {lz.sodar_uuid} will be used")
-            # select_mode == 'manual'
-            else:
-                # Ask User which landing zone to use
-                user_input = ""
-                input_valid = False
-                input_message = "####################\nPlease choose target landing zone:\n"
-                input_message += "0) <Create new landingzone>\n"
-                for index, lz in enumerate(existing_lzs):
-                    input_message += (
-                        f"{index + 1}) {os.path.basename(lz.irods_path)} ({lz.sodar_uuid})\n"
-                    )
-                input_message += "Select by number: "
-                while not input_valid:
-                    user_input = input(input_message)
-                    if user_input.isdigit():
-                        user_input = int(user_input)
-                        if 0 <= user_input <= len(existing_lzs):
-                            input_valid = True
-                if user_input == 0:
-                    return self._create_lz(noninteractive_override=True)
-                else:
-                    lz = existing_lzs[user_input - 1]
-        return lz.sodar_uuid, lz.irods_path
+
+        return self._select_existing_lz(existing_lzs, select_mode, sort_by)
 
     @classmethod
     def run(cls, args, _parser: Namespace, _subparser: Namespace) -> int | None:
