@@ -46,16 +46,16 @@ lz_select_group = lz_parser.add_argument_group("Sodar LZ selection options")
 lz_select_group.add_argument(
     "--select-lz",
     nargs="?",
-    const='manual',
+    const="manual",
     default=None,
-    choices=['manual', 'newest', 'last_used', 'oldest', 'create'],
+    choices=["manual", "newest", "last_used", "oldest", "create"],
     help="Determine how a LZ should be selected when a project-uuid is used as `Destination`.\n"
-         " - 'manual': ask which available Landing zone to use. Note: incomaptible with `--yes`.\n"
-         " - 'newest': use newest available (open) zone (Sodar ordering). Note: This is the default without this option or with --yes.\n"
-         " - 'last_used': use the available (open) zone with the latest modification (creation, upload or validation).\n"
-         " - 'oldest': use oldest available (open) zone (Sodar ordering).\n"
-         " - 'create': always create a new LZ.\n"
-         "Backwards compatibility: if `--select-lz` is used without argument, 'manual' is selected.",
+    "'manual': ask which available Landing zone to use. Note: incomaptible with `--yes`.\n"
+    "'newest': use newest available (open) zone (Sodar ordering). Note: This is the default without this option or with --yes.\n"
+    "'last_used': use the available (open) zone with the latest modification.\n"
+    "'oldest': use oldest available (open) zone (Sodar ordering).\n"
+    "'create': always create a new LZ.\n"
+    "Backwards compatibility: if `--select-lz` is used without argument, 'manual' is selected.",
 )
 # lz_select_group.add_argument(
 #     "--sort-lz-by",
@@ -64,12 +64,13 @@ lz_select_group.add_argument(
 #     help="By which value to sort Landing zones: creation date/name (default) or modification date (any change/upload).",
 # )
 
+
 def get_sodar_parser(
     with_dest=False,
     dest_string="project_uuid",
     dest_help_string="SODAR project UUID",
     with_assay_uuid=False,
-    parents=None
+    parents=None,
 ):
     if parents is None:
         parents = []
@@ -120,7 +121,7 @@ def get_sodar_ingest_parser(include_dest=True):
         with_assay_uuid=True,
         dest_string="destination",
         dest_help_string="Sodar project UUID, landing-zone (irods) path or UUID to upload to.",
-        parents=[lz_parser, irods_parser]
+        parents=[lz_parser, irods_parser],
     )
     ingest_group = sodar_ingest_parser.add_argument_group("Sodar upload options")
     ingest_group.add_argument(

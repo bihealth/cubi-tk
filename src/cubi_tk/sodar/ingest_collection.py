@@ -55,8 +55,10 @@ class SodarIngestCollection(SodarIngestBase):
         """Called for checking arguments, override to change behaviour."""
         res = super().check_args(args)
         if self.args.yes and not self.args.collection:
-            raise ValueError("Can not skip user input without defined collection! The `--yes` option requires `--collection`.")
-        return  res
+            raise ValueError(
+                "Can not skip user input without defined collection! The `--yes` option requires `--collection`."
+            )
+        return res
 
     def build_target_coll(self) -> str:
         # Initiate iRODS session

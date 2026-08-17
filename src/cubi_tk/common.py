@@ -84,7 +84,11 @@ def compute_checksum_parallel(job: TransferJob, counter: Value, t: tqdm.tqdm, ha
 
 
 def execute_checksum_files_fix(
-    transfer_jobs: list[TransferJob], hash_scheme, parallel_jobs: int = 8, recompute_checksums=False
+    transfer_jobs: list[TransferJob],
+    hash_scheme,
+    parallel_jobs: int = 8,
+    recompute_checksums=False,
+    dryrun=False,
 ) -> list[TransferJob]:
     """Create missing checksum files."""
     ok_jobs = []
@@ -102,12 +106,15 @@ def execute_checksum_files_fix(
         [os.path.getsize(j.path_local[: -len("." + hash_scheme.lower())]) for j in todo_jobs]
     )
     logger.info(
-        "Computing checksum sums for {} files of {} with up to {} processes",
+        ("Would compute" if dryrun else "Computing")
+        + " checksum sums for {} files of {} with up to {} processes",
         len(todo_jobs),
         sizeof_fmt(total_bytes),
         parallel_jobs,
     )
     logger.info("Missing checksum files:\n{}", "\n".join(j.path_local for j in todo_jobs))
+    if dryrun:
+        return tuple(sorted(todo_jobs + ok_jobs, key=lambda x: x.path_local))
     counter = Value(c_ulonglong, 0)
     with tqdm.tqdm(total=total_bytes, unit="B", unit_scale=True) as t:
         if parallel_jobs == 0:  # pragma: nocover

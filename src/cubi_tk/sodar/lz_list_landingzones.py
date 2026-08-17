@@ -34,8 +34,8 @@ class ListLandingZoneCommand:
 
         parser.add_argument(
             "--sort-lz-by",
-            default='creation',
-            choices=['creation', 'modification'],
+            default="creation",
+            choices=["creation", "modification"],
             help="By which value to sort Landing zones: creation date/name (default) or modification date (any change/upload).",
         )
 
@@ -62,7 +62,9 @@ class ListLandingZoneCommand:
         sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
-        existing_lzs = sodar_api.get_landingzone_list(filter_for_state=self.args.filter_status, sort_by=self.args.sort_lz_by)
+        existing_lzs = sodar_api.get_landingzone_list(
+            filter_for_state=self.args.filter_status, sort_by=self.args.sort_lz_by
+        )
         if existing_lzs is None:
             return 1
         for lz in existing_lzs:
