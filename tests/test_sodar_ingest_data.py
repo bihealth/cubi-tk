@@ -26,7 +26,7 @@ from cubi_tk.sodar.ingest_data import (
 )
 
 from .conftest import my_get_lz_info, my_sodar_api_export
-from .factories import InvestigationFactory
+from .factories import AssayFactory, InvestigationFactory, StudyFactory
 
 
 def test_run_sodar_ingest_data_help(capsys):
@@ -193,7 +193,9 @@ def test_run_sodar_ingest_data_get_match_to_collection_mapping(requests_mock, fs
         json=my_sodar_api_export(2, offset=1),
         status_code=200,
     )
-    retval = InvestigationFactory()
+    assay = AssayFactory(file_name="a_name_1")
+    study = StudyFactory(file_name="s_Study_1.txt", assays={assay.sodar_uuid: assay})
+    retval = InvestigationFactory(studies={study.file_name: study})
     requests_mock.register_uri(
         "GET",
         "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/466ab946-ce6a-4c78-9981-19b79e7bbe86",
