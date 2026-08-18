@@ -330,16 +330,15 @@ class SodarApi:
             else:
                 logger.info("Landingzone creation triggered successfully.")
             lz = cattr.structure(ret_val, api_models.LandingZone)
-            self.lz_path = lz.irods_path
+            self.lz_path = lz.irods_path # set lz_path to enable filtering for lz_path in get_landingzone_list
             logged = False
             while wait_until_ready:
                 # check that async LZ creation task is done
                 if not logged:
                     logger.info("Waiting for end of landingzone creation.")
                     logged = True
-                lzs = self.get_landingzone_list(filter_for_state=["ACTIVE"])
-                # TODO: can not assume there is only 1 active LZ, unsure if LZ identity check will work (modification_date?)
-                if lz in lzs:
+                lzs = self.get_landingzone_list(filter_for_state=["ACTIVE"]) # filters returned lzs for self.lz_path
+                if len(lzs) == 1:
                     break
                 logger.debug("Waiting 5 seconds for LZ {} to become usable...", lz.sodar_uuid)
                 time.sleep(5)  # wait and ask API again
