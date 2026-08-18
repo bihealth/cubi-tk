@@ -57,12 +57,6 @@ lz_select_group.add_argument(
     "'create': always create a new LZ.\n"
     "Backwards compatibility: if `--select-lz` is used without argument, 'manual' is selected.",
 )
-# lz_select_group.add_argument(
-#     "--sort-lz-by",
-#     default='creation',
-#     choices=['creation', 'modification'],
-#     help="By which value to sort Landing zones: creation date/name (default) or modification date (any change/upload).",
-# )
 
 
 def get_sodar_parser(
