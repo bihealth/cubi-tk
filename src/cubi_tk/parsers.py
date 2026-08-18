@@ -25,14 +25,52 @@ def get_basic_parser():
     return basic_config_parser
 
 
+irods_parser = argparse.ArgumentParser(description="iRods options", add_help=False)
+irods_group = irods_parser.add_argument_group("iRODS Connection Options")
+irods_group.add_argument(
+    "--connection-timeout",
+    default=600,
+    type=int,
+    help="iRODS connection timeout in seconds (default: 600).",
+)
+irods_group.add_argument(
+    "--read-timeout",
+    default=600,
+    type=int,
+    help="iRODS read timeout in seconds (default: 600).",
+)
+
+
+lz_parser = argparse.ArgumentParser(description="LZ-selection options", add_help=False)
+lz_select_group = lz_parser.add_argument_group("Sodar LZ selection options")
+lz_select_group.add_argument(
+    "--select-lz",
+    nargs="?",
+    const="manual",
+    default=None,
+    choices=["manual", "newest", "last_used", "oldest", "create"],
+    help="Determine how a LZ should be selected when a project-uuid is used as `Destination`.\n"
+    "'manual': ask which available Landing zone to use. Note: incomaptible with `--yes`.\n"
+    "'newest': use newest available (open) zone (Sodar ordering). Note: This is the default without this option or with --yes.\n"
+    "'last_used': use the available (open) zone with the latest modification.\n"
+    "'oldest': use oldest available (open) zone (Sodar ordering).\n"
+    "'create': always create a new LZ.\n"
+    "Backwards compatibility: if `--select-lz` is used without argument, 'manual' is selected.",
+)
+
+
 def get_sodar_parser(
     with_dest=False,
     dest_string="project_uuid",
     dest_help_string="SODAR project UUID",
     with_assay_uuid=False,
+    parents=None,
 ):
+    if parents is None:
+        parents = []
+
     sodar_config_parser = argparse.ArgumentParser(
-        description="The basic config parser", add_help=False
+        description="The basic config parser", add_help=False, parents=parents
     )
     sodar_group = sodar_config_parser.add_argument_group("Basic Sodar Configuration")
     sodar_group.add_argument(
@@ -69,14 +107,15 @@ def get_sodar_parser(
     return sodar_config_parser
 
 
-# Defining destionation via parent-parses locks it as the first positional arguemtn, which is not backwards compatible
-# with all previous commands
+# Defining destination via parent-parses locks it as the first positional argument, which is not backwards compatible
+# with all previous commands (and therefore the reason this separate function exists)
 def get_sodar_ingest_parser(include_dest=True):
     sodar_ingest_parser = get_sodar_parser(
         with_dest=include_dest,
         with_assay_uuid=True,
         dest_string="destination",
         dest_help_string="Sodar project UUID, landing-zone (irods) path or UUID to upload to.",
+        parents=[lz_parser, irods_parser],
     )
     ingest_group = sodar_ingest_parser.add_argument_group("Sodar upload options")
     ingest_group.add_argument(
@@ -106,11 +145,6 @@ def get_sodar_ingest_parser(include_dest=True):
         "existing available landing zones without asking.",
     )
     ingest_group.add_argument(
-        "--select-lz",
-        action="store_true",
-        help="Ask which available Landing zone to use. Note: `--yes` overrides this option.",
-    )
-    ingest_group.add_argument(
         "--validate-and-move",
         action="store_true",
         help="After files are transferred to SODAR, it will proceed with validation and move.",
@@ -125,20 +159,6 @@ def get_sodar_ingest_parser(include_dest=True):
         "--recompute-checksums",
         action="store_true",
         help="Recalculate local checksums, even if already present",
-    )
-
-    irods_group = sodar_ingest_parser.add_argument_group("iRODS Connection Options")
-    irods_group.add_argument(
-        "--connection-timeout",
-        default=600,
-        type=int,
-        help="iRODS connection timeout in seconds (default: 600).",
-    )
-    irods_group.add_argument(
-        "--read-timeout",
-        default=600,
-        type=int,
-        help="iRODS read timeout in seconds (default: 600).",
     )
 
     return sodar_ingest_parser

@@ -3,6 +3,7 @@ import sys
 
 from argparse import Namespace
 from collections import defaultdict
+from typing import Literal
 
 from loguru import logger
 
@@ -61,10 +62,9 @@ class SodarIngestBase:
 
     def __init__(self, args: Namespace):
         self.args = args
-        self.select_lz = getattr(args, "select_lz", True)
-        self.sodar_api = SodarApi(args, with_dest=True, dest_string="destination")
         # Check arguments & print to log
         self.check_args(self.args)
+        self.sodar_api = SodarApi(args, with_dest=True, dest_string="destination")
         logger.info("Starting cubi-tk {} {}", self.cubitk_section, self.command_name)
         print_args(self.args)
         # Set / select (study, assay & ) landing zone
@@ -101,6 +101,8 @@ class SodarIngestBase:
             existing_lzs = self.sodar_api.get_landingzone_list(
                 sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"]
             )
+            if self.args.select_lz is not None:
+                self._select_lz_warning()
             if existing_lzs is not None and len(existing_lzs) == 1:  # lz exists
                 lz_uuid = existing_lzs[0].sodar_uuid
                 assay_uuid = existing_lzs[0].assay
@@ -122,11 +124,13 @@ class SodarIngestBase:
             if lz is not None:
                 lz_uuid = lz.sodar_uuid
                 lz_path = lz.irods_path
+                if self.args.select_lz is not None:
+                    self._select_lz_warning()
             # if None: projectuuid is possibly given
             # check if projectuuid is valid and start lz selection
             elif self.sodar_api.get_samplesheet_investigation_retrieve(log_error=False) is not None:
                 try:
-                    lz_uuid, lz_path = self._get_landing_zone(latest=not self.select_lz)
+                    lz_uuid, lz_path = self._get_landing_zone(select_mode=self.args.select_lz)
                 except UserCanceledException as e:
                     raise e
             # neither project nor lz uuid
@@ -145,13 +149,15 @@ class SodarIngestBase:
         logger.info("Target iRODS path: {}", lz_path)
         return lz_uuid, lz_path
 
-    def _create_lz(self) -> tuple[str, str]:
+    def _create_lz(self, noninteractive_override: bool = False) -> tuple[str, str]:
         """
         Create a new landing zone (asking for user confirmation unless --yes is given) and check that is usable.
         :return: lz_uuid, lz_irods_path
         """
-        if self.sodar_api.yes or (
-            input("Can the process create a new landing zone? [yN] ").lower().startswith("y")
+        if (
+            noninteractive_override
+            or self.sodar_api.yes
+            or (input("Can the process create a new landing zone? [y/N] ").lower().startswith("y"))
         ):
             lz = self.sodar_api.post_landingzone_create(wait_until_ready=True)
             if lz:
@@ -162,62 +168,87 @@ class SodarIngestBase:
             msg = "Not possible to continue the process without a landing zone path. Breaking..."
             raise UserCanceledException(msg)
 
-    def _get_landing_zone(self, latest=True) -> tuple[str, str]:
+    def _select_existing_lz(self, existing_lzs, select_mode, sort_by) -> tuple[str, str]:
+        if len(existing_lzs) == 1 and select_mode != "manual":
+            lz = existing_lzs[0]
+            logger.debug(f"Single active landingzone with UUID {lz.sodar_uuid} will be used")
+            return lz.sodar_uuid, lz.irods_path
+
+        if select_mode in ("newest", "last_used") or (select_mode is None and self.args.yes):
+            lz = existing_lzs[-1]
+            logger.info(
+                f"Newest active landingzone (by {sort_by}) with UUID {lz.sodar_uuid} will be used"
+            )
+            return lz.sodar_uuid, lz.irods_path
+
+        if select_mode == "oldest":
+            lz = existing_lzs[0]
+            logger.info(f"Oldest active landingzone with UUID {lz.sodar_uuid} will be used")
+            return lz.sodar_uuid, lz.irods_path
+
+        # select manually
+        options = [
+            f"{index + 1}) {os.path.basename(lz.irods_path)} ({lz.sodar_uuid})"
+            for index, lz in enumerate(existing_lzs)
+        ]
+        input_message = (
+            "####################\n"
+            "Please choose target landing zone:\n"
+            "0) <Create new landingzone>\n" + "\n".join(options) + "\nSelect by number: "
+        )
+
+        selection = -1
+        while selection not in range(len(existing_lzs) + 1):
+            user_input = input(input_message)
+            if user_input.isdigit():
+                selection = int(user_input)
+
+        if selection == 0:
+            logger.debug("User selected to create a new landing zone")
+            return self._create_lz(noninteractive_override=True)
+
+        lz = existing_lzs[selection - 1]
+        return lz.sodar_uuid, lz.irods_path
+
+    def _get_landing_zone(
+        self,
+        select_mode: None | Literal["manual", "last_used", "oldest", "newest", "create"] = None,
+    ) -> tuple[str, str]:
         """
-        Selection of landing zone to use for transfer. If --yes is given will use latest active landing zone
-        or create a new one. With latest=False will ask user to select one of the available landing zones.
-        :param latest: boolean
+        Selection of landing zone to use for transfer. If --yes is given and select_mode not defined will use newest created zone
+        or create a new one. Use select_mode for more control over LZ selection ('manual' not compatible with --yes).
+        :param select_mode: str or None
         :return: lz_uuid, lz_irods_path
         """
-        # Get existing LZs from API
+        sort_by = "modification" if select_mode == "last_used" else "creation"
         existing_lzs = self.sodar_api.get_landingzone_list(
-            sort_reverse=True, filter_for_state=["ACTIVE", "FAILED"]
+            filter_for_state=["ACTIVE", "FAILED"], sort_by=sort_by
         )
-        if not existing_lzs:
-            # No active landing zones available
-            logger.info("No active Landing Zone available.")
-            return self._create_lz()
+        if select_mode == "create" or not existing_lzs:
+            logger.info(
+                "No active landing zones found or selection mode is 'create', creating a new one..."
+            )
+            return self._create_lz(noninteractive_override=select_mode == "create")
+
         logger.info(
             "Found {} active landing zone{}.".format(
                 len(existing_lzs), "s" if len(existing_lzs) > 1 else ""
             )
         )
+        # Only ask about LZ creation if neither --select-lz nor --yes are given
         if (
-            not self.sodar_api.yes
-            and not latest
+            not self.args.yes
+            and select_mode is None
             and (
-                not input("Should the process use an existing landing zone? [yN] ")
+                not input("Should the process use an existing landing zone? [y/N] ")
                 .lower()
                 .startswith("y")
             )
         ):
+            logger.info("Creating a new landing zone...")
             return self._create_lz()
-        if len(existing_lzs) == 1:
-            lz = existing_lzs[0]
-            logger.debug(f"Single active landingzone with UUID {lz.sodar_uuid} will be used")
-        elif len(existing_lzs) > 1:
-            if latest or self.sodar_api.yes:
-                # Get latest active landing zone
-                lz = existing_lzs[-1]
-                logger.info(f"Latest active landingzone with UUID {lz.sodar_uuid} will be used")
-            else:
-                # Ask User which landing zone to use
-                user_input = ""
-                input_valid = False
-                input_message = "####################\nPlease choose target landing zone:\n"
-                for index, lz in enumerate(existing_lzs):
-                    input_message += (
-                        f"{index + 1}) {os.path.basename(lz.irods_path)} ({lz.sodar_uuid})\n"
-                    )
-                input_message += "Select by number: "
-                while not input_valid:
-                    user_input = input(input_message)
-                    if user_input.isdigit():
-                        user_input = int(user_input)
-                        if 0 < user_input <= len(existing_lzs):
-                            input_valid = True
-                lz = existing_lzs[user_input - 1]
-        return lz.sodar_uuid, lz.irods_path
+
+        return self._select_existing_lz(existing_lzs, select_mode, sort_by)
 
     @classmethod
     def run(cls, args, _parser: Namespace, _subparser: Namespace) -> int | None:
@@ -226,7 +257,29 @@ class SodarIngestBase:
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
-        res = 0
+        # Check that all arguments provided by `get_sodar_ingest_parser / ingest_group` are present
+        required_args = (
+            "dry_run",
+            "overwrite",
+            "remote_checksums",
+            "yes",
+            "validate_and_move",
+            "parallel_checksum_jobs",
+            "recompute_checksums",
+            "select_lz",
+            "destination",
+        )
+        missing = []
+        for arg in required_args:
+            if not hasattr(args, arg):
+                missing.append(arg)
+        logger.warning(
+            f"Missing the following required arguments for a (child) class of SodarIngestBase: {', '.join(missing)}\n."
+            f"`setup_argparse` has not been used correctly!"
+        )
+        res = 1 if missing else 0
+        if args.yes and args.select_lz == "manual":
+            raise ValueError("The `--yes` and `--select-lz manual` options can not be combined!")
         return res
 
     def build_jobs(self, hash_ending) -> tuple[TransferJob]:
@@ -255,13 +308,14 @@ class SodarIngestBase:
             irods_hash_scheme,
             self.args.parallel_checksum_jobs,
             self.args.recompute_checksums,
+            dryrun=self.args.dry_run,
         )
         # Final go from user & transfer
         self.itransfer.jobs = transfer_jobs
         self.itransfer.put(recursive=True, overwrite=self.args.overwrite)
 
         # Compute server-side checksums
-        if self.args.remote_checksums:  # pragma: no cover
+        if self.args.remote_checksums and not self.args.dry_run:  # pragma: no cover
             logger.info("Computing server-side checksums.")
             self.itransfer.chksum()
 
@@ -274,12 +328,19 @@ class SodarIngestBase:
                 "Transferred files move to Landing Zone {} will be validated and moved in SODAR...",
                 self.lz_uuid,
             )
-            uuid = self.sodar_api.post_landingzone_submit_move(self.lz_uuid)
-            if uuid is None:
-                logger.error("Could not submit LZ for asynchronous moving")
-                return None
+            if not self.args.dry_run:
+                uuid = self.sodar_api.post_landingzone_submit_move(self.lz_uuid)
+                if uuid is None:
+                    logger.error("Could not submit LZ for asynchronous moving")
+                    return None
         else:
             logger.info("Transferred files will not be automatically moved in SODAR.")
 
         logger.info("All done")
         return None
+
+    @staticmethod
+    def _select_lz_warning():
+        logger.warning(
+            "The `--select-lz` option has no effect and will be ignored, unless used with a Sodar project UUID as destnation!"
+        )

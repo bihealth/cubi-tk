@@ -155,8 +155,7 @@ class SodarIngestData(SodarIngestBase):
 
     def check_args(self, args):
         """Called for checking arguments, override to change behaviour."""
-        res = 0
-
+        res = super().check_args(args)
         if args.src_regex and args.remote_dir_pattern and args.preset != "fastq":
             logger.error(
                 "Using both --src-regex and --remote-dir-pattern at the same time overwrites all values defined "

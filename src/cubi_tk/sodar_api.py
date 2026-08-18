@@ -278,8 +278,13 @@ class SodarApi:
 
     # maybe use status_locked of lz and only retrun not locked if wanted (instead of filter_for_state filter_for_not_locked:bool)
     def get_landingzone_list(
-        self, sort_reverse: bool = False, filter_for_state: list[str] = LANDING_ZONE_STATES
+        self,
+        sort_by: Literal["creation", "modification"] = "modification",
+        sort_reverse: bool = False,
+        filter_for_state: None | list[str] = None,
     ) -> List[api_models.LandingZone] | None:
+        if filter_for_state is None:
+            filter_for_state = LANDING_ZONE_STATES
         logger.debug("Get list of Landing Zones...")
         try:
             landingzones_json = self._api_call("landingzones", "list")
@@ -287,7 +292,13 @@ class SodarApi:
         except SodarApiException as e:
             logger.error(f"Failed to retrieve Landingzone:\n{e}")
             return None
-        landingzones = sorted(landingzones, key=lambda lz: lz.date_modified, reverse=sort_reverse)
+        # By default, the Sodar API returns LZ sorted by creation time(=title) (oldest first, newest last)
+        if sort_by == "modification":
+            landingzones = sorted(
+                landingzones, key=lambda lz: lz.date_modified, reverse=sort_reverse
+            )
+        elif sort_by == "creation" and sort_reverse:
+            landingzones = landingzones[::-1]
         # if assay_uuid filter for assay_uuid
         if self.assay_uuid:
             landingzones = list(filter(lambda lz: lz.assay == self.assay_uuid, landingzones))
@@ -319,16 +330,20 @@ class SodarApi:
             else:
                 logger.info("Landingzone creation triggered successfully.")
             lz = cattr.structure(ret_val, api_models.LandingZone)
-            self.lz_path = lz.irods_path
+            self.lz_path = (
+                lz.irods_path
+            )  # set lz_path to enable filtering for lz_path in get_landingzone_list
             logged = False
             while wait_until_ready:
                 # check that async LZ creation task is done
                 if not logged:
                     logger.info("Waiting for end of landingzone creation.")
                     logged = True
-                lzs = self.get_landingzone_list(filter_for_state=["ACTIVE"])
+                lzs = self.get_landingzone_list(
+                    filter_for_state=["ACTIVE"]
+                )  # filters returned lzs for self.lz_path
                 if len(lzs) == 1:
-                    wait_until_ready = False
+                    break
                 logger.debug("Waiting 5 seconds for LZ {} to become usable...", lz.sodar_uuid)
                 time.sleep(5)  # wait and ask API again
             return lz

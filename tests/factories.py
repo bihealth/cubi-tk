@@ -149,6 +149,7 @@ class LandingZoneFactory(factory.Factory):
     description = factory.Sequence(lambda n: "This is no. %d" % n)
     user = factory.LazyAttribute(lambda o: str(uuid.uuid4()))
     date_modified = factory.LazyAttribute(lambda o: datetime.now().isoformat())
+    status_locked = False
     project = factory.LazyAttribute(
         lambda o: o._investigation_obj.project  # pylint: disable=protected-access
     )

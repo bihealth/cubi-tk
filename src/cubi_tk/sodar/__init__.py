@@ -177,7 +177,7 @@ def setup_argparse(parser: argparse.ArgumentParser) -> None:
     setup_argparse_update_samplesheet(
         subparsers.add_parser(
             "update-samplesheet",
-            parents=[basic_parser, get_sodar_parser(with_dest=True)],
+            parents=[basic_parser, sodar_parser_project_uuid],
             help="Update sample sheet",
         )
     )
