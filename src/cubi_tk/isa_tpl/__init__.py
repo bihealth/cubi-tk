@@ -154,11 +154,10 @@ def run(args, parser, subparser):  # pragma: nocover
             )
             for i in i_files:
                 try:
-                    with i.open() as i_file:
-                        altamisa.apps.isatab_validate.main(
-                            input_investigation_file=i_file,
-                            show_duplicate_warnings=False,
-                        )
+                    altamisa.apps.isatab_validate.main(
+                        input_investigation_file=i,
+                        show_duplicate_warnings=False,
+                    )
                 except (
                     altamisa.exceptions.ParseIsatabException,
                     altamisa.exceptions.CriticalIsaValidationWarning,
