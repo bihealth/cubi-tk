@@ -4,8 +4,9 @@ import argparse
 import os
 import re
 
-from ..sodar_common import SodarPullBase
+from ..sodar_common import SodarPullBase, FilePathParts
 from loguru import logger
+
 
 class PullDataCommand(SodarPullBase):
     """Implementation of pull data command."""
@@ -116,18 +117,26 @@ class PullDataCommand(SodarPullBase):
                 f"Output directory path either does not exist or it is not writable: {args.base_path}"
             )
             res = 1
+        if self.args.output_regex:
+            wrong_fp = [fp for fp, _, _ in self.args.output_regex if fp not in ("collection", "subcollections", "filename")]
+            if wrong_fp:
+                logger.error(
+                    f"The first argument for --output_regex can only be one of: collection, subcollections, filename (got: {', '.join(wrong_fp)}"
+                )
+                res = 1
         return res
 
     def get_output_basepath(self):
         return self.args.output_dir
 
-    def get_output_filepath(self, out_parts: dict[str, str]):
+    def get_output_filepath(self, out_parts: FilePathParts):
+        #TODO: add typeguard? (ensured by check_args)
         # apply regexes
         for filepart, m_pat, r_pat in self.args.output_regex:
             out_parts[filepart] = re.sub(m_pat, r_pat, out_parts[filepart])
         return self.args.output_pattern.format(**out_parts)
 
-    def get_sample_list(self) -> set[str] | None:
+    def get_sample_list(self) -> set[str]:
         # Get list of sample ids
         if self.args.sample_list:
             samples = set(self.args.sample_list)
@@ -138,7 +147,7 @@ class PullDataCommand(SodarPullBase):
                 self.args.tsv, sample_col=self.args.tsv_column, skip_rows=self.args.tsv_skip_rows
             )
         else:
-            samples = None
+            samples = set()
 
         return samples
 

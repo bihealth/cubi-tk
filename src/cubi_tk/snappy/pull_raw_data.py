@@ -22,7 +22,7 @@ from .parse_sample_sheet import ParseSampleSheet
 from .pull_data_common import SnappyPullBase
 
 
-class SnappyPullBase(PullDataCommon):
+class SnappyPullRawData(SnappyPullBase):
     """Implementation of the ``snappy pull-raw-data`` command."""
 
     #: File type dictionary. Key: file type; Value: additional expected extensions (tuple).
@@ -358,4 +358,4 @@ class SnappyPullBase(PullDataCommon):
 
 def setup_argparse(parser: argparse.ArgumentParser) -> None:
     """Setup argument parser for ``cubi-tk snappy pull-raw-data``."""
-    return PullRawDataCommand.setup_argparse(parser)
+    return SnappyPullRawData.setup_argparse(parser)

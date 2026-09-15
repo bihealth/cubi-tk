@@ -15,7 +15,6 @@ from loguru import logger
 from cubi_tk.parsers import print_args
 
 from ..sodar_common import RetrieveSodarCollection
-from .common import get_biomedsheet_path, load_sheet_tsv
 from .parse_sample_sheet import ParseSampleSheet
 from .pull_data_common import SnappyPullBase
 
@@ -144,6 +143,8 @@ class PullProcessedDataCommand(SnappyPullBase):
         remote_files_dict = sodar_coll.perform()
         self.args.assay_uuid = sodar_coll.get_assay_uuid()
 
+        selected_identifiers = self.get_sample_list()
+
         # Filter based on identifiers and file type
         filtered_remote_files_dict = self.filter_irods_collection(
             identifiers=selected_identifiers,
@@ -171,59 +172,6 @@ class PullProcessedDataCommand(SnappyPullBase):
 
         logger.info("All done. Have a nice day!")
         return 0
-
-    @staticmethod
-    def _filter_requested_samples_or_libraries_by_selected_samples(
-        sheet, selected_samples, by_sample_id
-    ):
-        """Filter requested samples or libraries based on selected sample list
-
-        :param sheet: Sample sheet.
-        :type sheet: biomedsheets.models.Sheet
-
-        :param selected_samples: List of sample identifiers as string, e.g., 'P001,P002,P003'.
-        :type selected_samples: str
-
-        :param by_sample_id: Flag filter by sample id instead of library name.
-        :type by_sample_id: bool
-
-        :return: Returns filtered list of identifiers based on inputted parameters.
-        """
-        selected_samples_list = selected_samples.split(",")
-        if by_sample_id:
-            return selected_samples_list
-        else:
-            parser = ParseSampleSheet()
-            return list(
-                parser.yield_ngs_library_names_filtered_by_samples(
-                    sheet=sheet, selected_samples=selected_samples_list
-                )
-            )
-
-    @staticmethod
-    def _filter_requested_samples_or_libraries(sheet, min_batch, max_batch, by_sample_id):
-        """Filter requested samples or libraries
-
-        :param sheet: Sample sheet.
-        :type sheet: biomedsheets.models.Sheet
-
-        :param min_batch: First batch number.
-        :type min_batch:  int
-
-        :param max_batch: Last batch number.
-        :type max_batch: int
-
-        :param by_sample_id: Flag filter by sample id instead of library name.
-        :type by_sample_id: bool
-
-        :return: Returns filtered list of identifiers based on inputted parameters.
-        """
-        parser = ParseSampleSheet()
-        if by_sample_id:  # example: 'P001'
-            yield_names_method = parser.yield_sample_names
-        else:  # example: 'P001-N1-DNA1-WGS1'
-            yield_names_method = parser.yield_ngs_library_names
-        return list(yield_names_method(sheet=sheet, min_batch=min_batch, max_batch=max_batch))
 
     def pair_ipath_with_outdir(self, remote_files_dict, output_dir, assay_uuid, retrieve_all=False):
         """Pair iRODS path with local output directory

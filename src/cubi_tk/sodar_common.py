@@ -1,6 +1,5 @@
 import os
 import sys
-import re
 import pandas as pd
 
 from argparse import Namespace
@@ -430,9 +429,7 @@ class SodarPullBase:
                     "filename": filename,
                 }
                 job = TransferJob(
-                    os.path.join(
-                        self.get_output_basepath(), self.get_output_filepath(out_parts)
-                    ),
+                    os.path.join(self.get_output_basepath(), self.get_output_filepath(out_parts)),
                     irods_obj.path,
                 )
                 output_list.append(job)
@@ -467,7 +464,6 @@ class SodarPullBase:
         )
         return False
 
-
     def execute(self) -> int | None:
         """Execute the transfer."""
         ret = 0
@@ -478,7 +474,11 @@ class SodarPullBase:
         # Get & filter all remote files from iRODS
         # Note: subclasses should overwrite the get_... functions to modify filtering
         filtered_remote_files_dict = self.filter_irods_file_list(
-            self.sodar_api_searcher.perform(), self.sodar_api_searcher.get_assay_irods_path(),  self.get_file_patterns(), self.get_sample_list(), self.get_substring_match()
+            self.sodar_api_searcher.perform(),
+            self.sodar_api_searcher.get_assay_irods_path(),
+            self.get_file_patterns(),
+            self.get_sample_list(),
+            self.get_substring_match(),
         )
 
         transfer_jobs = self.build_jobs(filtered_remote_files_dict, irods_hash_ending)
@@ -486,9 +486,14 @@ class SodarPullBase:
         ret = self._no_files_found_warning(transfer_jobs)
         # Optionally add checksum files to download
         if self.args.include_checksums:
-            transfer_jobs += [TransferJob(path_local=job.path_local+irods_hash_ending, path_remote=job.path_remote+irods_hash_ending) for job in transfer_jobs]
+            transfer_jobs += [
+                TransferJob(
+                    path_local=job.path_local + irods_hash_ending,
+                    path_remote=job.path_remote + irods_hash_ending,
+                )
+                for job in transfer_jobs
+            ]
         transfer_jobs = sorted(transfer_jobs, key=lambda x: x.path_local)
-        # TODO: check for local clashes
 
         # Final go from user & transfer
         self.itransfer.jobs = transfer_jobs

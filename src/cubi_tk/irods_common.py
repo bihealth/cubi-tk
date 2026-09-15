@@ -247,9 +247,7 @@ class iRODSTransfer(iRODSCommon):
             session.collections.create(collection)
 
     def _transfer_checks(
-        self,
-        no_list: bool = False,
-        overwrite: Literal["sync", "never", "always", "ask"] = "sync"
+        self, no_list: bool = False, overwrite: Literal["sync", "never", "always", "ask"] = "sync"
     ) -> None:
         # Log all actions before doing them
         if self.dry_run or not no_list:
@@ -271,18 +269,17 @@ class iRODSTransfer(iRODSCommon):
         self,
         session,
         job: TransferJob,
-        write_to: Literal['local', 'remote'],
+        write_to: Literal["local", "remote"],
         overwrite: Literal["sync", "never", "always", "ask"] = "sync",
     ) -> tuple[dict, bool]:
-
         kw_incl_overwrite = {FORCE_FLAG_KW: None}
         kw_excl_overwrite = {}
         skip_write = False
 
-        if write_to == 'remote':
+        if write_to == "remote":
             file_exists = session.data_objects.exists(job.path_remote)
             file_path = job.path_remote
-        elif write_to == 'local':
+        elif write_to == "local":
             file_exists = os.path.exists(job.path_local)
             file_path = job.path_local
         else:
@@ -290,7 +287,7 @@ class iRODSTransfer(iRODSCommon):
 
         if file_exists:
             logger.debug(f"{write_to.capitalize()} file {file_path} exists already.")
-            if overwrite == 'never':
+            if overwrite == "never":
                 skip_write = True
 
         # never / file not present yet
@@ -305,8 +302,8 @@ class iRODSTransfer(iRODSCommon):
                 input(
                     f"This file is already present: {file_path}\nShould it be overwritten? [y/N] "
                 )
-                    .lower()
-                    .startswith("y")
+                .lower()
+                .startswith("y")
             ):  # pragma: no cover
                 kw_options = kw_incl_overwrite
                 logger.info(f"Overwriting: {file_path}")
@@ -316,7 +313,7 @@ class iRODSTransfer(iRODSCommon):
                 logger.info(f"NOT overwriting: {file_path}")
         # sync (or --yes and 'ask'): Check if file size is identical, if yes skip upload
         else:
-            # job.bytes is always loca file size  (or -1 if it doesn't exist)
+            # job.bytes is always local file size  (or -1 if it doesn't exist)
             if session.data_objects.get(job.path_remote).size != job.bytes:
                 kw_options = kw_incl_overwrite
             else:
@@ -352,7 +349,9 @@ class iRODSTransfer(iRODSCommon):
                     with self.session as session:
                         if recursive:
                             self._create_collections(job)
-                        kw_options, skip_write = self._determine_overwrite(session, overwrite, job, 'remote')
+                        kw_options, skip_write = self._determine_overwrite(
+                            session, job, "remote", overwrite
+                        )
                         if not skip_write:
                             session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                         t.update(job.bytes)
@@ -396,7 +395,9 @@ class iRODSTransfer(iRODSCommon):
 
         # Total transfer size
         with self.session as session:
-            self.__total_bytes = sum([session.data_objects.get(job.path_remote).size for job in self.__jobs])
+            self.__total_bytes = sum(
+                [session.data_objects.get(job.path_remote).size for job in self.__jobs]
+            )
 
         # Double tqdm for currently transferred file info
         with (
@@ -413,8 +414,8 @@ class iRODSTransfer(iRODSCommon):
                 file_log.set_description_str(
                     f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
                 )
-                kw_options, skip_write = self._determine_overwrite(session, overwrite, job, 'local')
-                if not skip_write:
+                kw_options, skip_write = self._determine_overwrite(session, job, "local", overwrite)
+                if skip_write:
                     # Note with overwrite='never' this COULD be wrong for incomplete local files
                     t.update(job.bytes)
                     continue

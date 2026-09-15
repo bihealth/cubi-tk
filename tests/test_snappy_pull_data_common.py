@@ -2,7 +2,7 @@
 
 import pytest
 
-from cubi_tk.snappy.pull_data_common import PullDataCommon
+from cubi_tk.snappy.pull_data_common import SnappyPullBase
 
 from .helpers import createIrodsDataObject as IrodsDataObject
 
@@ -95,7 +95,7 @@ def irods_objects_list_missing_date():
 
 def test_pull_data_common_sort_irods_object_by_date_in_path(irods_objects_list):
     """Tests PullDataCommon.sort_irods_object_by_date_in_path() - format '%Y-%m-%d'"""
-    raw_data_class = PullDataCommon()
+    raw_data_class = SnappyPullBase()
     expected = ("2038-01-19", "2000-01-01", "1999-09-09")
     actual = raw_data_class.sort_irods_object_by_date_in_path(irods_obj_list=irods_objects_list)
     for count, irods_obj in enumerate(actual):
@@ -104,7 +104,7 @@ def test_pull_data_common_sort_irods_object_by_date_in_path(irods_objects_list):
 
 def test_pull_data_common_sort_irods_object_by_date_in_path_mixed(irods_objects_list_format_mixed):
     """Tests PullDataCommon.sort_irods_object_by_date_in_path() - mixed dates formats"""
-    raw_data_class = PullDataCommon()
+    raw_data_class = SnappyPullBase()
     expected = ("2038_01_19", "20000101", "1999-09-09")
     actual = raw_data_class.sort_irods_object_by_date_in_path(
         irods_obj_list=irods_objects_list_format_mixed
@@ -117,7 +117,7 @@ def test_pull_data_common_sort_irods_object_by_date_in_path_missing_date(
     irods_objects_list_missing_date,
 ):
     """Tests PullDataCommon.sort_irods_object_by_date_in_path() - missing date in path"""
-    raw_data_class = PullDataCommon()
+    raw_data_class = SnappyPullBase()
     with pytest.raises(ValueError):
         raw_data_class.sort_irods_object_by_date_in_path(
             irods_obj_list=irods_objects_list_missing_date

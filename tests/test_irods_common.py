@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 import irods.exception
+from irods.keywords import FORCE_FLAG_KW
 import pytest
 
 from cubi_tk.irods_common import (
@@ -201,27 +202,87 @@ def test_irods_transfer_chksum(mocksession, jobs):
 
 
 @patch("cubi_tk.irods_common.iRODSTransfer._init_irods")
-def test_irods_transfer_get(mocksession, jobs):
+def test_irods_transfer_get(mocksession, jobs, fs):
     mockget = MagicMock()
+    mockget.return_value.size = 123
     mockobj = MagicMock()
     mockobj.get = mockget
     mocksession.return_value.__enter__.return_value.data_objects = mockobj
+
     itransfer = iRODSTransfer(jobs)
 
-    mockget.return_value.size = 111
-    itransfer.get()
+    # Call args
+    base_calls = [
+        # Size calculation for all jobs
+        call(jobs[0].path_remote),
+        call(jobs[1].path_remote),
+    ]
+    job1_size = call(jobs[0].path_remote)
+    job1_write = call(jobs[0].path_remote, jobs[0].path_local)
+    job1_overwrite = call(jobs[0].path_remote, jobs[0].path_local, **{FORCE_FLAG_KW: None})
+    job2_size = call(jobs[1].path_remote)
+    job2_write = call(jobs[1].path_remote, jobs[1].path_local)
+    job2_overwrite = call(jobs[1].path_remote, jobs[1].path_local, **{FORCE_FLAG_KW: None})
 
-    for job in jobs:
-        # size check
-        mockget.assert_any_call(job.path_remote)
-        # download
-        mockget.assert_any_call(job.path_remote, job.path_local)
-    assert itransfer.size == 222
+    # No local files, no overwrite
+    # each job writes, then checks size for counter update
+    calls = base_calls + [job1_write, job1_size, job2_write, job2_size]
+    itransfer.get(overwrite="never")
+    mockget.assert_has_calls(calls)
+    # Sync & overwrite behave the same, since they don't see a local file
+    mockget.reset_mock()
+    itransfer.get()
+    mockget.assert_has_calls(calls)
+    mockget.reset_mock()
+    itransfer.get(overwrite="always")
+    mockget.assert_has_calls(calls)
+
+    fs.create_file(jobs[1].path_local, st_size=jobs[1].bytes)
+    # With one local file & no overwrite: job2 has no data_object.get calls
+    calls = base_calls + [job1_write, job1_size]
+    mockget.reset_mock()
+    itransfer.get(overwrite="never")
+    mockget.assert_has_calls(calls)
+    # Sync will check the local fail and (in this case) overwrite, the update counter size
+    calls = base_calls + [job1_write, job1_size, job2_size, job2_overwrite, job2_size]
+    mockget.reset_mock()
+    itransfer.get()
+    mockget.assert_has_calls(calls)
+    # Overwrite similar, only without the extra size check call
+    calls = base_calls + [job1_write, job1_size, job2_overwrite, job2_size]
+    mockget.reset_mock()
+    itransfer.get(overwrite="always")
+    mockget.assert_has_calls(calls)
+
+    fs.create_file(jobs[0].path_local, st_size=jobs[0].bytes)
+    # With both local files & overwrite
+    # each job _over_writes, then checks size for counter update
+    calls = base_calls + [job1_overwrite, job1_size, job2_overwrite, job2_size]
+    mockget.reset_mock()
+    itransfer.get(overwrite="always")
+    mockget.assert_has_calls(calls)
+
+    # With both local files & sync
+    # each job checks size, potentially _over_writes, then checks size for counter update if it was written
+    calls = base_calls + [job1_size, job2_size, job2_overwrite, job2_size]
+    mockget.reset_mock()
+    itransfer.get()
+    mockget.assert_has_calls(calls)
+
+    # With both local files & overwrite: ask
+    # it can be fine controlled - size check before is never done though (first "y" is for execution)
+    itransfer.ask = True
+    mockget.reset_mock()
+    with patch("builtins.input", side_effect=["y", "y", "n"]):
+        itransfer.get(overwrite="ask")
+        mockget.assert_has_calls(base_calls + [job1_overwrite, job1_size])
+    mockget.reset_mock()
+    with patch("builtins.input", side_effect=["y", "n", "y"]):
+        itransfer.get(overwrite="ask")
+        mockget.assert_has_calls(base_calls + [job2_overwrite, job2_size])
 
 
 # Test iRODSRetrieveCollection #########
-
-
 # This tests `retrieve_irods_data_objects` and by extension `parse_irods_collection`
 # A test for _irods_query would require mocking `session.query` results in a
 # way that allows creation of IrodsDataObject instances from those results

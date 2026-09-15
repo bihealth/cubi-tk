@@ -164,10 +164,7 @@ def get_sodar_ingest_parser(include_dest=True):
 
 
 def get_sodar_pull_parser():
-    sodar_pull_parser = get_sodar_parser(
-        with_dest=False,
-        with_assay_uuid=True
-    )
+    sodar_pull_parser = get_sodar_parser(with_dest=False, with_assay_uuid=True)
 
     pull_group = sodar_pull_parser.add_argument_group("Sodar download options")
     pull_group.add_argument(
@@ -180,18 +177,18 @@ def get_sodar_pull_parser():
         choices=["sync", "always", "never", "ask"],
         default="sync",
         help="Determine when to overwrite exising remote files. Default (sync) is to only do so when file sizes "
-             "don't match. Alternatively, overwrite always, never or ask for individual files.",
+        "don't match. Alternatively, overwrite always, never or ask for individual files.",
     )
     pull_group.add_argument(
         "--yes",
         action="store_true",
         help="Assume all answers are yes, e.g., will create or use "
-             "existing available landing zones without asking.",
+        "existing available landing zones without asking.",
     )
     pull_group.add_argument(
         "--include-checksums",
         action="store_true",
-        help="Also download checksum file (md5/sha256) for each downloaded file"
+        help="Also download checksum file (md5/sha256) for each downloaded file",
     )
 
     irods_group = sodar_pull_parser.add_argument_group("iRODS Connection Options")

@@ -89,7 +89,10 @@ def test_filter_irods_collection(filtered_data_objects):
         assert result == expected
 
 
-def test_build_download_jobs(filtered_data_objects):
+# TODO: adapt / transfer test?!
+
+
+def test_build_jobs(filtered_data_objects, fs):
     mockargs = MagicMock()
     mockargs.output_dir = "/path/to/output"
     mockargs.output_regex = []  # ['', '', '']
@@ -104,7 +107,7 @@ def test_build_download_jobs(filtered_data_objects):
         for k, l in filtered_data_objects.items()
         for obj in l
     ]
-    out = testinstance.build_download_jobs(filtered_data_objects, "/irods/project")
+    out = testinstance.build_jobs(filtered_data_objects, "/irods/project")
     assert out == expected_out
 
     # Test with different output pattern
@@ -119,7 +122,7 @@ def test_build_download_jobs(filtered_data_objects):
         for k, l in filtered_data_objects.items()
         for obj in l
     ]
-    out = testinstance.build_download_jobs(filtered_data_objects, "/irods/project")
+    out = testinstance.build_jobs(filtered_data_objects, "/irods/project")
     assert out == expected_out
 
     # Test with regex
@@ -142,7 +145,7 @@ def test_build_download_jobs(filtered_data_objects):
     assert out == expected_out
 
 
-def test_parse_samplesheet():
+def test_sodar_pull_data_parse_samplesheet():
     # Test on Biomedsheet
     samples = PullDataCommand.parse_sample_tsv(
         pathlib.Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv",
@@ -150,6 +153,14 @@ def test_parse_samplesheet():
         skip_rows=12,
     )
     assert samples == {"index", "mother", "father"}
+
+def test_sodar_pull_data_check_args():
+
+    raise NotImplementedError
+
+    # test check that --output-dir can be created or is writable
+
+    # test that --output-regex first var is correct
 
 
 def test_run_sodar_pull_data_collection_help(capsys):

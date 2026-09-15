@@ -258,3 +258,6 @@ def test_sodar_ingest_base__get_lz_info_invalid_project_uuid(
     mock_get_landingzone_retrieve.return_value = None
     with pytest.raises(ParameterException, match="could neither be associated with a project"):
         SIB._get_lz_info()
+
+
+# TODO: add tests for SodarPullBase

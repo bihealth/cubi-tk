@@ -3,8 +3,10 @@ import re
 
 from loguru import logger
 
-from ..sodar_common import SodarPullBase
+from ..sodar_common import SodarPullBase, FilePathParts
+from ..api_models import IrodsDataObject
 from .common import get_biomedsheet_path, load_sheet_tsv
+from .parse_sample_sheet import ParseSampleSheet
 
 #: Valid file extensions
 VALID_FILE_TYPES = ("bam", "vcf", "txt", "csv", "log")
@@ -19,14 +21,13 @@ class SnappyPullBase(SodarPullBase):
     def get_output_basepath(self):
         return self.args.output_dir
 
-    def get_output_filepath(self, out_parts: dict[str, str]):
+    def get_output_filepath(self, out_parts: FilePathParts) -> str:
         # apply regexes
         for filepart, m_pat, r_pat in self.args.output_regex:
             out_parts[filepart] = re.sub(m_pat, r_pat, out_parts[filepart])
         return self.args.output_pattern.format(**out_parts)
 
-    def get_sample_list(self) -> set[str] | None:
-
+    def get_sample_list(self) -> set[str]:
         # Find biomedsheet file
         biomedsheet_tsv = get_biomedsheet_path(
             start_path=self.args.base_path, uuid=self.args.project_uuid
@@ -49,8 +50,7 @@ class SnappyPullBase(SodarPullBase):
                 by_sample_id=self.args.sample_id,
             )
 
-
-        return samples
+        return selected_identifiers
 
     def get_file_patterns(self) -> list[str]:
         """Function to get samples to filter downloadable files by collection"""
@@ -65,7 +65,6 @@ class SnappyPullBase(SodarPullBase):
     def get_substring_match(self) -> bool:
         return False
 
-
     @staticmethod
     def _irods_path_in_common_links(irods_path):
         """Checks if iRODS path is from common links, i.e., in 'ResultsReports', 'MiscFiles', 'TrackHubs'.
@@ -79,9 +78,8 @@ class SnappyPullBase(SodarPullBase):
         path_part_set = set(irods_path.split("/"))
         return len(common_links.intersection(path_part_set)) > 0
 
-
-
-    def sort_irods_object_by_date_in_path(self, irods_obj_list):
+    @classmethod
+    def sort_irods_object_by_date_in_path(cls, irods_obj_list: list[IrodsDataObject]):
         """Sort list of iRODS object: latest to earliest.
 
         Sort by date as defined in path, hence the main assumption is that there is a date somewhere in iRODS path:
@@ -97,7 +95,7 @@ class SnappyPullBase(SodarPullBase):
             return irods_obj_list
         return sorted(
             irods_obj_list,
-            key=lambda irods_obj: self._find_date_in_path(irods_obj.path),
+            key=lambda irods_obj: cls._find_date_in_path(irods_obj.path),
             reverse=True,
         )
 
@@ -128,3 +126,56 @@ class SnappyPullBase(SodarPullBase):
         raise ValueError(
             f"Could not find a valid date in path: {path}\nTested date formats: {accepted_date_format_str}."
         )
+
+    @staticmethod
+    def _filter_requested_samples_or_libraries_by_selected_samples(
+        sheet, selected_samples, by_sample_id
+    ) -> set[str]:
+        """Filter requested samples or libraries based on selected sample list
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param selected_samples: List of sample identifiers as string, e.g., 'P001,P002,P003'.
+        :type selected_samples: str
+
+        :param by_sample_id: Flag filter by sample id instead of library name.
+        :type by_sample_id: bool
+
+        :return: Returns filtered list of identifiers based on inputted parameters.
+        """
+        selected_samples_list = selected_samples.split(",")
+        if by_sample_id:
+            return set(selected_samples_list)
+        else:
+            parser = ParseSampleSheet()
+            return set(
+                parser.yield_ngs_library_names_filtered_by_samples(
+                    sheet=sheet, selected_samples=selected_samples_list
+                )
+            )
+
+    @staticmethod
+    def _filter_requested_samples_or_libraries(sheet, min_batch, max_batch, by_sample_id) -> set[str]:
+        """Filter requested samples or libraries
+
+        :param sheet: Sample sheet.
+        :type sheet: biomedsheets.models.Sheet
+
+        :param min_batch: First batch number.
+        :type min_batch:  int
+
+        :param max_batch: Last batch number.
+        :type max_batch: int
+
+        :param by_sample_id: Flag filter by sample id instead of library name.
+        :type by_sample_id: bool
+
+        :return: Returns filtered list of identifiers based on inputted parameters.
+        """
+        parser = ParseSampleSheet()
+        if by_sample_id:  # example: 'P001'
+            yield_names_method = parser.yield_sample_names
+        else:  # example: 'P001-N1-DNA1-WGS1'
+            yield_names_method = parser.yield_ngs_library_names
+        return set(yield_names_method(sheet=sheet, min_batch=min_batch, max_batch=max_batch))
