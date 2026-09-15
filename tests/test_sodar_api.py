@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 from cubi_tk.api_models import IrodsDataObject
 from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH, SodarApi
 from cubi_tk.exceptions import SodarApiException
-from tests.factories import InvestigationFactory
+from tests.factories import InvestigationFactory, LandingZoneFactory
 
 
 @pytest.fixture
@@ -200,3 +200,53 @@ def test_sodar_api_get_samplesheet_file_list(requests_mock, sodar_api_instance):
     ]
 
     assert expected == sodar_api_instance.get_samplesheet_file_list()
+
+
+def test_sodar_api_get_landingzone_list(requests_mock, sodar_api_instance):
+    lz1 = LandingZoneFactory(
+        status="ACTIVE",
+        date_modified="2025-01-02T00:00:00Z",
+        assay="assay-1",
+        irods_path="/testZone/path/to/zone/1",
+    )
+    lz2 = LandingZoneFactory(
+        status="FAILED",
+        date_modified="2025-01-01T00:00:00Z",
+        assay="assay-1",
+        irods_path="/testZone/path/to/zone/2",
+    )
+    lz3 = LandingZoneFactory(
+        status="VALIDATING",
+        date_modified="2025-01-03T00:00:00Z",
+        assay="assay-2",
+        irods_path="/testZone/path/to/zone/1",
+    )
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/landingzones/api/list/123e4567-e89b-12d3-a456-426655440000",
+        json=[
+            cattr.unstructure(lz1),
+            cattr.unstructure(lz2),
+            cattr.unstructure(lz3),
+        ],
+        status_code=200,
+    )
+
+    assert [lz2, lz1, lz3] == sodar_api_instance.get_landingzone_list()
+
+    sodar_api_instance.assay_uuid = "assay-1"
+    sodar_api_instance.lz_path = "/testZone/path/to/zone/1"
+    assert [lz1] == sodar_api_instance.get_landingzone_list(
+        sort_by="creation", sort_reverse=True, filter_for_state=["ACTIVE"]
+    )
+
+
+def test_sodar_api_get_landingzone_list_errors(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/landingzones/api/list/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+
+    assert sodar_api_instance.get_landingzone_list() is None

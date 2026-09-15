@@ -24,19 +24,19 @@ class ListLandingZoneCommand:
         parser.add_argument(
             "--hidden-cmd", dest="sodar_cmd", default=cls.run, help=argparse.SUPPRESS
         )
-        parser.add_argument(
-            "--dry-run",
-            "-n",
-            default=False,
-            action="store_true",
-            help="Perform a dry run, i.e., don't change anything only display change, implies '--show-diff'.",
-        )
 
         parser.add_argument(
             "--format",
             dest="format_string",
             default=None,
             help="Format string for printing, e.g. %%(uuid)s",
+        )
+
+        parser.add_argument(
+            "--sort-lz-by",
+            default="creation",
+            choices=["creation", "modification"],
+            help="By which value to sort Landing zones: creation date/name (default) or modification date (any change/upload).",
         )
 
         parser.add_argument(
@@ -62,7 +62,9 @@ class ListLandingZoneCommand:
         sodar_api = SodarApi(self.args, with_dest=True)
         print_args(self.args)
 
-        existing_lzs = sodar_api.get_landingzone_list(filter_for_state=self.args.filter_status)
+        existing_lzs = sodar_api.get_landingzone_list(
+            filter_for_state=self.args.filter_status, sort_by=self.args.sort_lz_by
+        )
         if existing_lzs is None:
             return 1
         for lz in existing_lzs:

@@ -1,5 +1,6 @@
+import os
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, call, patch
+from unittest.mock import MagicMock, call, patch
 
 import irods.exception
 import pytest
@@ -35,27 +36,64 @@ def test_get_irods_error(mocksession):
     assert iRODSCommon().get_irods_error(e) == "Connection reset"
 
 
+@pytest.fixture
+def irods_env_file(fs):
+    mockirodsjson = """
+    {
+        "irods_host": "host",
+        "irods_port": 1234,
+        "irods_default_hash_scheme": "MD5"
+    }
+    """
+    env_path = os.path.expanduser("~/.irods/irods_environment.json")
+    fs.create_file(env_path, contents=mockirodsjson)
+    return env_path
+
+
 @patch("cubi_tk.irods_common.iRODSSession")
-def test_init_irods(mocksession, fs):
-    fs.create_file(".irods/irods_environment.json")
-    fs.create_file(".irods/.irodsA")
+def test_init_irods(mocksession, fs, irods_env_file):
+    fs.create_file(str(Path(irods_env_file).parent / ".irodsA"))
 
     iRODSCommon()._init_irods()
     mocksession.assert_called()
 
 
 @patch("getpass.getpass")
-@patch("cubi_tk.irods_common.iRODSSession")
-def check_and_gen_irodsA(mocksession, mockpass, fs):
-    fs.create_file(".irods/irods_environment.json")
+@patch("cubi_tk.irods_common.write_pam_irodsA_file")
+def test_check_and_gen_irods_files_creates_irodsA(mock_write_pam, mockpass, fs, irods_env_file):
     password = "1234"
-    icommon = iRODSCommon()
+    icommon = iRODSCommon(ask=True)
     mockpass.return_value = password
+    # only irodsA file exists but no irods_profile, so profile should be created and irodsA backed up and restored
+    fs.create_file(str(Path(irods_env_file).parent / ".irodsA"), contents="""test""")
+    irods_a_path = Path(irods_env_file).parent / ".irodsA"
+    mock_write_pam.side_effect = lambda *args, **kwargs: irods_a_path.write_text("test_2")
+    icommon._check_and_gen_irods_files()
+
+    mockpass.assert_called()
+    mock_write_pam.assert_called_once()
+    assert irods_a_path.exists()
+    assert Path(Path(irods_env_file).parent / ".irodsA_global").exists()
+    assert Path(Path(irods_env_file).parent / ".irodsA_backup").exists()
+    del icommon  # to trigger cleanup of irodsA file
+    assert irods_a_path.exists()
+    with open(irods_a_path) as f:
+        assert f.read() == "test"
+    assert not Path(Path(irods_env_file).parent / ".irodsA_backup").exists()
+
+
+@patch("getpass.getpass")
+@patch("cubi_tk.irods_common.write_pam_irodsA_file")
+def test_check_and_gen_irods_files_skips_when_irodsA_exists(
+    mock_write_pam, mockpass, fs, irods_env_file
+):
+    fs.create_file(str(Path(irods_env_file).parent / ".irodsA_global"))
+    icommon = iRODSCommon(ask=True)
 
     icommon._check_and_gen_irods_files()
-    mockpass.assert_called()
-    mocksession.assert_any_call(irods_env_file=ANY, password=password)
-    assert icommon.irods_env_path.parent.joinpath(".irodsA").exists()
+
+    mockpass.assert_not_called()
+    mock_write_pam.assert_not_called()
 
 
 # Test iRODSTransfer #########

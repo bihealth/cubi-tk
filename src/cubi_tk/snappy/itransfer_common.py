@@ -37,7 +37,7 @@ class SnappyItransferCommandBase(SodarIngestBase, ParseSampleSheet):
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
-        res = 0
+        res = super().check_args(args)
         if not os.path.exists(args.base_path):  # pragma: nocover
             logger.error("Base path {} does not exist", args.base_path)
             res = 1
