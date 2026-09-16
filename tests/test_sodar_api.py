@@ -311,9 +311,7 @@ def test_sodar_api_post_samplesheet_import(requests_mock, sodar_api_instance):
         json={},
         status_code=200,
     )
-    ret = sodar_api_instance.post_samplesheet_import(
-        {"file1": ("file1.txt", "content")}
-    )
+    ret = sodar_api_instance.post_samplesheet_import({"file1": ("file1.txt", "content")})
     assert ret == 0
 
 
@@ -324,9 +322,7 @@ def test_sodar_api_post_samplesheet_import_with_warnings(requests_mock, sodar_ap
         json={"sodar_warnings": ["warning1"]},
         status_code=200,
     )
-    ret = sodar_api_instance.post_samplesheet_import(
-        {"file1": ("file1.txt", "content")}
-    )
+    ret = sodar_api_instance.post_samplesheet_import({"file1": ("file1.txt", "content")})
     assert ret == 0
 
 
@@ -337,9 +333,7 @@ def test_sodar_api_post_samplesheet_import_error(requests_mock, sodar_api_instan
         status_code=500,
         text="text",
     )
-    ret = sodar_api_instance.post_samplesheet_import(
-        {"file1": ("file1.txt", "content")}
-    )
+    ret = sodar_api_instance.post_samplesheet_import({"file1": ("file1.txt", "content")})
     assert ret == 1
 
 
@@ -356,7 +350,9 @@ def test_sodar_api_post_samplesheet_deletion_request_create(requests_mock, sodar
     assert ret == 0
 
 
-def test_sodar_api_post_samplesheet_deletion_request_create_error(requests_mock, sodar_api_instance):
+def test_sodar_api_post_samplesheet_deletion_request_create_error(
+    requests_mock, sodar_api_instance
+):
     requests_mock.register_uri(
         "POST",
         "https://sodar-staging.bihealth.org/samplesheets/api/irods/request/create/123e4567-e89b-12d3-a456-426655440000",
