@@ -97,7 +97,7 @@ class IrodsDataRequest:
     sodar_uuid: str
     # Request action
     action: str
-    # Request status 
+    # Request status
     status: str
     # Request path
     path: str
@@ -107,6 +107,7 @@ class IrodsDataRequest:
     date_created: datetime
     # user UUID of the user who created the request
     user: str
+
 
 @attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class LandingZone:
