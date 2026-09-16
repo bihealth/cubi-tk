@@ -4,6 +4,7 @@ In some cases, ``typing.Optional[str]`` is used for the ``sodar_uuid`` attribute
 the UUID as an attribute.
 """
 
+import datetime
 import typing
 
 import attr
@@ -87,6 +88,25 @@ class IrodsDataObject:
     # Checksum of data object (from API version 1.1)
     checksum: str
 
+
+@attr.s(frozen=True, auto_attribs=True)
+class IrodsDataRequest:
+    """Represents an iRODS data request in the SODAR API."""
+
+    # Request UUID
+    sodar_uuid: str
+    # Request action
+    action: str
+    # Request status 
+    status: str
+    # Request path
+    path: str
+    # Project UUID
+    project: str
+    # Request creation time (YYYY-MM-DDThh:mm:ssZ)
+    date_created: datetime
+    # user UUID of the user who created the request
+    user: str
 
 @attr.s(frozen=True, auto_attribs=True, kw_only=True)
 class LandingZone:
