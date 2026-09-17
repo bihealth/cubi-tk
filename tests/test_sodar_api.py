@@ -365,8 +365,24 @@ def test_sodar_api_post_samplesheet_deletion_request_create_error(
 
 def test_sodar_api_get_pending_deletion_requests(requests_mock, sodar_api_instance):
     ret_json = [
-        {"path": "/some/path/sample1"},
-        {"path": "/some/path/sample2"},
+        {
+            "sodar_uuid": "123e4567-e89b-12d3-a456-426655440001",
+            "action": "delete",
+            "status": "ACTIVE",
+            "path": "/some/path/sample1",
+            "project": "123e4567-e89b-12d3-a456-426655440000",
+            "date_created": "2025-01-01T00:00:00Z",
+            "user": "123e4567-e89b-12d3-a456-426655440002",
+        },
+        {
+            "sodar_uuid": "123e4567-e89b-12d3-a456-426655440002",
+            "action": "delete",
+            "status": "ACTIVE",
+            "path": "/some/path/sample2",
+            "project": "123e4567-e89b-12d3-a456-426655440000",
+            "date_created": "2025-01-01T00:00:00Z",
+            "user": "123e4567-e89b-12d3-a456-426655440002",
+        },
     ]
     requests_mock.register_uri(
         "GET",

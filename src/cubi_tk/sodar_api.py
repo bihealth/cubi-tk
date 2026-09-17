@@ -258,22 +258,22 @@ class SodarApi:
             return 1
 
     def get_pending_deletion_requests(
-        self, sample_numbers: list[str] | None = None
+        self, collections: list[str] | None = None
     ) -> List[api_models.IrodsDataRequest] | None:
         """Fetches the pending (ACTIVE/FAILED) iRODS deletion requests for the source project via the Sodar API
-        and returns only the ones matching one of the provided sample numbers."""
+        and returns only the ones matching one of the provided collections."""
         try:
             requests = self._api_call("samplesheets", "irods/requests", method="get")
         except SodarApiException as e:
             logger.error(f"Failed to retrieve pending Sodar deletion requests:\n{e}")
             return None
-        if sample_numbers is None:
+        if collections is None:
             return requests
         else:
             return [
                 req
                 for req in requests
-                if any(sample_number in req["path"] for sample_number in sample_numbers)
+                if any(collection in req["path"] for collection in collections)
             ]
 
     def accept_deletion_request(self, request_obj: api_models.IrodsDataRequest) -> int:
