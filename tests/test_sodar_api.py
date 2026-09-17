@@ -250,3 +250,377 @@ def test_sodar_api_get_landingzone_list_errors(requests_mock, sodar_api_instance
     )
 
     assert sodar_api_instance.get_landingzone_list() is None
+
+
+def test_sodar_api_get_samplesheet_investigation_retrieve(requests_mock, sodar_api_instance):
+    investigation = InvestigationFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(investigation),
+        status_code=200,
+    )
+    assert investigation == sodar_api_instance.get_samplesheet_investigation_retrieve()
+
+
+def test_sodar_api_get_samplesheet_investigation_retrieve_error(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.get_samplesheet_investigation_retrieve() is None
+
+
+def test_sodar_api_get_samplesheet_remote(requests_mock, sodar_api_instance):
+    ret_json = {"investigation": {"path": "i_Investigation.txt", "tsv": ""}}
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/remote/get/123e4567-e89b-12d3-a456-426655440000?isa=1",
+        json=ret_json,
+        status_code=200,
+    )
+    assert ret_json == sodar_api_instance.get_samplesheet_remote()
+
+
+def test_sodar_api_get_samplesheet_remote_error(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/remote/get/123e4567-e89b-12d3-a456-426655440000?isa=1",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.get_samplesheet_remote() is None
+
+
+def test_sodar_api_get_samplesheet_file_list_error(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/file/list/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.get_samplesheet_file_list() is None
+
+
+def test_sodar_api_post_samplesheet_import(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/import/123e4567-e89b-12d3-a456-426655440000",
+        json={},
+        status_code=200,
+    )
+    ret = sodar_api_instance.post_samplesheet_import({"file1": ("file1.txt", "content")})
+    assert ret == 0
+
+
+def test_sodar_api_post_samplesheet_import_with_warnings(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/import/123e4567-e89b-12d3-a456-426655440000",
+        json={"sodar_warnings": ["warning1"]},
+        status_code=200,
+    )
+    ret = sodar_api_instance.post_samplesheet_import({"file1": ("file1.txt", "content")})
+    assert ret == 0
+
+
+def test_sodar_api_post_samplesheet_import_error(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/import/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    ret = sodar_api_instance.post_samplesheet_import({"file1": ("file1.txt", "content")})
+    assert ret == 1
+
+
+def test_sodar_api_post_samplesheet_deletion_request_create(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/irods/request/create/123e4567-e89b-12d3-a456-426655440000",
+        json={},
+        status_code=200,
+    )
+    ret = sodar_api_instance.post_samplesheet_deletion_request_create(
+        "/some/path", description="desc"
+    )
+    assert ret == 0
+
+
+def test_sodar_api_post_samplesheet_deletion_request_create_error(
+    requests_mock, sodar_api_instance
+):
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/irods/request/create/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    ret = sodar_api_instance.post_samplesheet_deletion_request_create("/some/path")
+    assert ret == 1
+
+
+def test_sodar_api_get_pending_deletion_requests(requests_mock, sodar_api_instance):
+    ret_json = [
+        {
+            "sodar_uuid": "123e4567-e89b-12d3-a456-426655440001",
+            "action": "delete",
+            "status": "ACTIVE",
+            "path": "/some/path/sample1",
+            "project": "123e4567-e89b-12d3-a456-426655440000",
+            "date_created": "2025-01-01T00:00:00Z",
+            "user": "123e4567-e89b-12d3-a456-426655440002",
+        },
+        {
+            "sodar_uuid": "123e4567-e89b-12d3-a456-426655440002",
+            "action": "delete",
+            "status": "ACTIVE",
+            "path": "/some/path/sample2",
+            "project": "123e4567-e89b-12d3-a456-426655440000",
+            "date_created": "2025-01-01T00:00:00Z",
+            "user": "123e4567-e89b-12d3-a456-426655440002",
+        },
+    ]
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/irods/requests/123e4567-e89b-12d3-a456-426655440000",
+        json=ret_json,
+        status_code=200,
+    )
+    assert ret_json == sodar_api_instance.get_pending_deletion_requests()
+    assert [ret_json[0]] == sodar_api_instance.get_pending_deletion_requests(["sample1"])
+
+
+def test_sodar_api_get_pending_deletion_requests_error(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/irods/requests/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.get_pending_deletion_requests() is None
+
+
+def test_sodar_api_accept_deletion_request(requests_mock, sodar_api_instance):
+    from cubi_tk.api_models import IrodsDataRequest
+
+    request_obj = IrodsDataRequest(
+        sodar_uuid="123e4567-e89b-12d3-a456-426655440001",
+        action="delete",
+        status="ACTIVE",
+        path="/some/path",
+        project="123e4567-e89b-12d3-a456-426655440000",
+        date_created="2025-01-01T00:00:00Z",
+        user="123e4567-e89b-12d3-a456-426655440002",
+    )
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/irods/request/accept/123e4567-e89b-12d3-a456-426655440001",
+        json={},
+        status_code=200,
+    )
+    assert sodar_api_instance.accept_deletion_request(request_obj) == 0
+
+
+def test_sodar_api_accept_deletion_request_error(requests_mock, sodar_api_instance):
+    from cubi_tk.api_models import IrodsDataRequest
+
+    request_obj = IrodsDataRequest(
+        sodar_uuid="123e4567-e89b-12d3-a456-426655440001",
+        action="delete",
+        status="ACTIVE",
+        path="/some/path",
+        project="123e4567-e89b-12d3-a456-426655440000",
+        date_created="2025-01-01T00:00:00Z",
+        user="123e4567-e89b-12d3-a456-426655440002",
+    )
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/samplesheets/api/irods/request/accept/123e4567-e89b-12d3-a456-426655440001",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.accept_deletion_request(request_obj) == 1
+
+
+def test_sodar_api_get_landingzone_retrieve(requests_mock, sodar_api_instance):
+    lz = LandingZoneFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/landingzones/api/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(lz),
+        status_code=200,
+    )
+    ret = sodar_api_instance.get_landingzone_retrieve()
+    assert ret == lz
+    assert sodar_api_instance.project_uuid == lz.project
+    assert sodar_api_instance.lz_path == lz.irods_path
+    assert sodar_api_instance.assay_uuid == lz.assay
+
+
+def test_sodar_api_get_landingzone_retrieve_error(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/landingzones/api/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.get_landingzone_retrieve() is None
+
+
+def test_sodar_api_post_landingzone_create(requests_mock, sodar_api_instance):
+    investigation = InvestigationFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(investigation),
+        status_code=200,
+    )
+    lz = LandingZoneFactory(status="ACTIVE")
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/landingzones/api/create/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(lz),
+        status_code=200,
+    )
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/landingzones/api/list/123e4567-e89b-12d3-a456-426655440000",
+        json=[cattr.unstructure(lz)],
+        status_code=200,
+    )
+    sodar_api_instance.yes = True
+    ret = sodar_api_instance.post_landingzone_create()
+    assert ret == lz
+    assert sodar_api_instance.lz_path == lz.irods_path
+
+
+def test_sodar_api_post_landingzone_create_error(requests_mock, sodar_api_instance):
+    investigation = InvestigationFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(investigation),
+        status_code=200,
+    )
+    requests_mock.register_uri(
+        "POST",
+        "https://sodar-staging.bihealth.org/landingzones/api/create/123e4567-e89b-12d3-a456-426655440000",
+        status_code=503,
+        text="text",
+    )
+    sodar_api_instance.yes = True
+    assert sodar_api_instance.post_landingzone_create() is None
+
+
+def test_sodar_api_post_landingzone_submit_move(requests_mock, sodar_api_instance):
+    lz_uuid = "123e4567-e89b-12d3-a456-426655440001"
+    requests_mock.register_uri(
+        "POST",
+        f"https://sodar-staging.bihealth.org/landingzones/api/submit/move/{lz_uuid}",
+        json={"sodar_uuid": lz_uuid},
+        status_code=200,
+    )
+    assert sodar_api_instance.post_landingzone_submit_move(lz_uuid) == lz_uuid
+
+
+def test_sodar_api_post_landingzone_submit_move_error(requests_mock, sodar_api_instance):
+    lz_uuid = "123e4567-e89b-12d3-a456-426655440001"
+    requests_mock.register_uri(
+        "POST",
+        f"https://sodar-staging.bihealth.org/landingzones/api/submit/move/{lz_uuid}",
+        status_code=503,
+        text="text",
+    )
+    assert sodar_api_instance.post_landingzone_submit_move(lz_uuid) is None
+
+
+def test_sodar_api_post_landingzone_submit_validate(requests_mock, sodar_api_instance):
+    lz_uuid = "123e4567-e89b-12d3-a456-426655440001"
+    requests_mock.register_uri(
+        "POST",
+        f"https://sodar-staging.bihealth.org/landingzones/api/submit/validate/{lz_uuid}",
+        json={"sodar_uuid": lz_uuid},
+        status_code=200,
+    )
+    assert sodar_api_instance.post_landingzone_submit_validate(lz_uuid) == lz_uuid
+
+
+def test_sodar_api_post_landingzone_submit_validate_error(requests_mock, sodar_api_instance):
+    lz_uuid = "123e4567-e89b-12d3-a456-426655440001"
+    requests_mock.register_uri(
+        "POST",
+        f"https://sodar-staging.bihealth.org/landingzones/api/submit/validate/{lz_uuid}",
+        status_code=503,
+        text="text",
+    )
+    assert sodar_api_instance.post_landingzone_submit_validate(lz_uuid) is None
+
+
+def test_sodar_api_get_assay_from_uuid(requests_mock, sodar_api_instance):
+    investigation = InvestigationFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(investigation),
+        status_code=200,
+    )
+    study = list(investigation.studies.values())[0]
+    assay = list(study.assays.values())[0]
+    sodar_api_instance.assay_uuid = assay.sodar_uuid
+    ret_assay, ret_study = sodar_api_instance.get_assay_from_uuid()
+    assert ret_assay == assay
+    assert ret_study == study
+
+
+def test_sodar_api_get_assay_from_uuid_no_assay_uuid(requests_mock, sodar_api_instance):
+    investigation = InvestigationFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(investigation),
+        status_code=200,
+    )
+    sodar_api_instance.yes = True
+    ret_assay, ret_study = sodar_api_instance.get_assay_from_uuid()
+    study = list(investigation.studies.values())[0]
+    assert ret_study == study
+    assert ret_assay in study.assays.values()
+
+
+def test_sodar_api_get_assay_from_uuid_not_found(requests_mock, sodar_api_instance):
+    investigation = InvestigationFactory()
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        json=cattr.unstructure(investigation),
+        status_code=200,
+    )
+    sodar_api_instance.assay_uuid = "does-not-exist"
+    from cubi_tk.exceptions import ParameterException
+
+    with pytest.raises(ParameterException):
+        sodar_api_instance.get_assay_from_uuid()
+
+
+def test_sodar_api_get_assay_from_uuid_no_investigation(requests_mock, sodar_api_instance):
+    requests_mock.register_uri(
+        "GET",
+        "https://sodar-staging.bihealth.org/samplesheets/api/investigation/retrieve/123e4567-e89b-12d3-a456-426655440000",
+        status_code=500,
+        text="text",
+    )
+    assert sodar_api_instance.get_assay_from_uuid() == (None, None)
+
+
+def test_sodar_api_load_toml_config_missing(sodar_api_instance, fs):
+    assert sodar_api_instance.load_toml_config(None) is None
+
+
+def test_sodar_api_load_toml_config_explicit_path(sodar_api_instance, mock_toml_config, fs):
+    fs.create_file("/tmp/my_config.toml", contents=mock_toml_config)
+    config = sodar_api_instance.load_toml_config("/tmp/my_config.toml")
+    assert config["global"]["sodar_api_token"] == "token123"
