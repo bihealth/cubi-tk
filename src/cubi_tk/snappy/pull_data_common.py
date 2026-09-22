@@ -52,6 +52,7 @@ class SnappyPullBase(SodarPullBase):
 
         return selected_identifiers
 
+    # TODO: this is probably not applicaple to snappy functions ?!
     def get_file_patterns(self) -> list[str]:
         """Function to get samples to filter downloadable files by collection"""
         if self.args.all_files:
@@ -156,7 +157,9 @@ class SnappyPullBase(SodarPullBase):
             )
 
     @staticmethod
-    def _filter_requested_samples_or_libraries(sheet, min_batch, max_batch, by_sample_id) -> set[str]:
+    def _filter_requested_samples_or_libraries(
+        sheet, min_batch, max_batch, by_sample_id
+    ) -> set[str]:
         """Filter requested samples or libraries
 
         :param sheet: Sample sheet.
@@ -179,3 +182,24 @@ class SnappyPullBase(SodarPullBase):
         else:  # example: 'P001-N1-DNA1-WGS1'
             yield_names_method = parser.yield_ngs_library_names
         return set(yield_names_method(sheet=sheet, min_batch=min_batch, max_batch=max_batch))
+
+    @staticmethod
+    def report_no_file_found(available_files):
+        """Report no files found
+
+        :param available_files: List of available files in SODAR.
+        :type available_files: list
+        """
+        available_files = sorted(available_files)
+        if len(available_files) > 50:
+            limited_str = " (limited to first 50)"
+            ellipsis_ = "..."
+            remote_files_str = "\n".join(available_files[:50])
+        else:
+            limited_str = ""
+            ellipsis_ = ""
+            remote_files_str = "\n".join(available_files)
+        logger.warning(
+            f"No file was found using the selected criteria.\n"
+            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
+        )

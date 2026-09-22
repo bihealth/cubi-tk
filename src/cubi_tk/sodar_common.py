@@ -5,7 +5,7 @@ import pandas as pd
 from argparse import Namespace
 from collections import defaultdict
 from pathlib import PurePosixPath
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, Iterable
 
 from loguru import logger
 
@@ -436,7 +436,8 @@ class SodarPullBase:
 
         return output_list
 
-    def _no_files_found_warning(self, transfer_jobs) -> int:
+    @staticmethod
+    def _no_files_found_warning(transfer_jobs: Iterable) -> int:
         if not transfer_jobs:
             logger.error("No files for download were found!")
             return 1
@@ -501,27 +502,6 @@ class SodarPullBase:
 
         logger.info("All done")
         return ret
-
-    @staticmethod
-    def report_no_file_found(available_files):
-        """Report no files found
-
-        :param available_files: List of available files in SODAR.
-        :type available_files: list
-        """
-        available_files = sorted(available_files)
-        if len(available_files) > 50:
-            limited_str = " (limited to first 50)"
-            ellipsis_ = "..."
-            remote_files_str = "\n".join(available_files[:50])
-        else:
-            limited_str = ""
-            ellipsis_ = ""
-            remote_files_str = "\n".join(available_files)
-        logger.warning(
-            f"No file was found using the selected criteria.\n"
-            f"Available files{limited_str}:\n{remote_files_str}\n{ellipsis_}"
-        )
 
     @staticmethod
     def parse_sample_tsv(tsv_path, sample_col=1, skip_rows=0, skip_comments=True) -> set[str]:

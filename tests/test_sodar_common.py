@@ -1,13 +1,23 @@
+import unittest
 from argparse import Namespace
+from copy import deepcopy
 import io
-import pytest
-from unittest.mock import patch, MagicMock
+from typing import Callable
 
-from cubi_tk.sodar_common import SodarIngestBase
-from cubi_tk.api_models import LandingZone
+import pytest
+import os
+import re
+from unittest.mock import patch, MagicMock
+from pathlib import Path
+
+from cubi_tk.sodar_common import SodarIngestBase, SodarPullBase
+from cubi_tk.irods_common import TransferJob
+from cubi_tk.api_models import LandingZone, IrodsDataObject
 from cubi_tk.exceptions import ParameterException
 
-
+#############################
+# Tests for SodarIngestBase #
+#############################
 def get_SodarIngestBase(dest="123e4567-e89b-12d3-a456-426655440000", select_lz=None, yes=False):
     args = Namespace(
         config_profile="global",
@@ -260,4 +270,201 @@ def test_sodar_ingest_base__get_lz_info_invalid_project_uuid(
         SIB._get_lz_info()
 
 
-# TODO: add tests for SodarPullBase
+def test_sodar_ingest_base_warnings():
+    raise NotImplementedError
+
+    _no_files_found_warning
+
+    _select_lz_warning
+
+
+def test_sodar_ingest_base_execute():
+    raise NotImplementedError
+
+
+###########################
+# Tests for SodarPullBase #
+###########################
+def make_data_obj(path):
+    return IrodsDataObject(
+        name=Path(path).name, type="file", path=path, size=0, modify_time="", checksum=""
+    )
+
+
+@pytest.fixture
+def filtered_data_objects():
+    return {
+        "coll1-N1-DNA1": [
+            make_data_obj(path="/irods/project/coll1-N1-DNA1/subcol1/file1.vcf.gz"),
+            make_data_obj(path="/irods/project/coll1-N1-DNA1/subcol2/file1.vcf.gz"),
+            make_data_obj(path="/irods/project/coll1-N1-DNA1/subcol1/miscFile.txt"),
+        ],
+        "coll2-N1-DNA1": [
+            make_data_obj(path="/irods/project/coll2-N1-DNA1/subcol1/file2.vcf.gz"),
+            make_data_obj(path="/irods/project/coll2-N1-DNA1/subcol1/file2.bam"),
+            make_data_obj(path="/irods/project/coll2-N1-DNA1/subcol1/miscFile.txt"),
+        ],
+    }
+
+
+def test_sodarpullbase_filter_irods_collection(filtered_data_objects):
+    fake_irods_data_dict = {
+        "file1.vcf.gz": [
+            make_data_obj(path="/irods/project/coll1-N1-DNA1/subcol1/file1.vcf.gz"),
+            make_data_obj(path="/irods/project/coll1-N1-DNA1/subcol2/file1.vcf.gz"),
+        ],
+        "file2.vcf.gz": [
+            make_data_obj(path="/irods/project/coll2-N1-DNA1/subcol1/file2.vcf.gz"),
+        ],
+        "file2.bam": [
+            make_data_obj(path="/irods/project/coll2-N1-DNA1/subcol1/file2.bam"),
+        ],
+        "miscFile.txt": [
+            make_data_obj(path="/irods/project/coll1-N1-DNA1/subcol1/miscFile.txt"),
+            make_data_obj(path="/irods/project/coll2-N1-DNA1/subcol1/miscFile.txt"),
+        ],
+    }
+
+    kwarg_list = [
+        # No filters at all -> all files
+        {"file_patterns": [], "samples": [], "substring_match": False},
+        # Test filepattern filter works
+        {"file_patterns": ["*.vcf.gz"], "samples": [], "substring_match": False},
+        # Test file pattern with mutiple patterns, also **/*.X & *.Y
+        {"file_patterns": ["*.vcf.gz", "**/*.txt"], "samples": [], "substring_match": False},
+        # Test Sample/Collection filter works
+        {"file_patterns": [], "samples": ["coll1-N1-DNA1"], "substring_match": False},
+        # Test substring matching works
+        {"file_patterns": [], "samples": ["coll1"], "substring_match": True},
+    ]
+
+    expected_results = [
+        deepcopy(filtered_data_objects),
+        {
+            k: [v for v in l if v.path.endswith("vcf.gz")]
+            for k, l in deepcopy(filtered_data_objects).items()
+        },
+        {
+            k: [v for v in l if not v.path.endswith("bam")]
+            for k, l in deepcopy(filtered_data_objects).items()
+        },
+        {k: l for k, l in deepcopy(filtered_data_objects).items() if k == "coll1-N1-DNA1"},
+        {k: l for k, l in deepcopy(filtered_data_objects).items() if k == "coll1-N1-DNA1"},
+    ]
+
+    for kwargs, expected in zip(kwarg_list, expected_results, strict=True):
+        result = SodarPullBase.filter_irods_file_list(
+            fake_irods_data_dict, "/irods/project", **kwargs
+        )
+        assert result == expected
+
+    # TODO: add tests for `common_assay_path` (different assays in project)
+
+
+def get_SodarPullBase(yes=False, output_dir='/path/to/output'):
+    args = Namespace(
+        config_profile="global",
+        sodar_server_url="https://sodar-dummy.bihealth.org/",
+        sodar_api_token="token123",
+        dry_run=False,
+        overwrite=False,
+        yes=yes,
+        project_uuid="123e4567-e89b-12d3-a456-426655440000",
+        output_dir = output_dir
+    )
+    return SodarPullBase(args)
+
+@patch("cubi_tk.sodar_common.iRODSTransfer", return_value=MagicMock())
+@patch("cubi_tk.sodar_common.RetrieveSodarCollection")
+def test_sodarpullbase_build_jobs(mock_retrieve, filtered_data_objects, fs):
+
+    testinstance = get_SodarPullBase()
+    mock_retrieve.yes = testinstance.args.yes
+
+    id_func = lambda i: i
+    def get_expected_out(base: str = os.getcwd(), file_mod_func: Callable = id_func):
+        return [
+            TransferJob(
+                path_remote=obj.path, path_local=file_mod_func(obj.path.replace("/irods/project", base))
+            )
+            for k, l in filtered_data_objects.items()
+            for obj in l
+        ]
+    # base functionality: write to CWD and replicate irods file structure
+    assert testinstance.build_jobs(filtered_data_objects, "/irods/project") == get_expected_out()
+
+    # Test with modified output basepath
+    with patch("cubi_tk.sodar_common.SodarPullBase.get_output_basepath", return_value='/path/to/data'):
+        assert testinstance.build_jobs(filtered_data_objects, "/irods/project") == get_expected_out('/path/to/data')
+
+    # Test with modified output filepath (from irods)
+    expected_out = get_expected_out(file_mod_func = lambda s: re.sub(r'/subcol[12]/', '/', s))
+    with patch("cubi_tk.sodar_common.SodarPullBase.get_output_filepath", lambda d: "{collection}/{filename}".format(**d) ):
+        assert testinstance.build_jobs(filtered_data_objects, "/irods/project") == expected_out
+
+
+def test_sodarpullbase_parse_sample_tsv():
+    # Test on Biomedsheet
+    samples = SodarPullBase.parse_sample_tsv(
+        Path(__file__).resolve().parent / "data" / "pull_sheets" / "sheet_germline.tsv",
+        sample_col=2,
+        skip_rows=12,
+    )
+    assert samples == {"index", "mother", "father"}
+
+
+def test_sodarpullbase_report_no_files(caplog):
+    assert SodarPullBase._no_files_found_warning([1,2,3]) == 0
+    assert len(caplog.messages) == 0
+    assert SodarPullBase._no_files_found_warning([]) == 1
+    assert caplog.messages[0] == "No files for download were found!"
+
+
+def test_sodarpullbase_get_functions():
+    raise NotImplementedError
+
+    # def get_sample_list(self) -> set[str]:
+    #     """Function to get samples to filter downloadable files by collection"""
+    #     logger.debug(
+    #         f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_sample_list` function, using all samples by default."
+    #     )
+    #     return set()
+    #
+    # def get_file_patterns(self) -> list[str]:
+    #     """Function to get samples to filter downloadable files by collection"""
+    #     logger.debug(
+    #         f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_file_patterns` function, using all files by default."
+    #     )
+    #     return []
+    #
+    # def get_substring_match(self) -> bool:
+    #     """Function to get samples to filter downloadable files by collection"""
+    #     logger.debug(
+    #         f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_substring_match` function, not using substring_match by default."
+    #     )
+    #     return False
+
+    # def get_output_basepath(self) -> str:
+    #     """Abstract method for output_path"""
+    #     logger.debug(
+    #         f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_output_basepath` function, using CWD by default."
+    #     )
+    #     return os.getcwd()
+    #
+    # def get_output_filepath(self, out_parts: FilePathParts) -> str:
+    #     """Abstract method for output_path"""
+    #     logger.debug(
+    #         f"`cubi-tk {self.cubitk_section} {self.command_name}` does not implement it's own `get_output_filepath` function, using pattern from iRODs by default."
+    #     )
+    #     return "{collection}/{subcollections}/{filename}".format(**out_parts)
+
+
+# TODO: Tests for RetrieveSodarCollection
+
+def test_sodarpullbase_execute():
+    raise NotImplementedError
+
+def test_sodar_common_RetrieveSodarCollection():
+    raise NotImplementedError
+
+    test: RetrieveSodarCollection.perform()

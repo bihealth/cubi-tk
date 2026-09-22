@@ -118,7 +118,11 @@ class PullDataCommand(SodarPullBase):
             )
             res = 1
         if self.args.output_regex:
-            wrong_fp = [fp for fp, _, _ in self.args.output_regex if fp not in ("collection", "subcollections", "filename")]
+            wrong_fp = [
+                fp
+                for fp, _, _ in self.args.output_regex
+                if fp not in ("collection", "subcollections", "filename")
+            ]
             if wrong_fp:
                 logger.error(
                     f"The first argument for --output_regex can only be one of: collection, subcollections, filename (got: {', '.join(wrong_fp)}"
@@ -130,7 +134,7 @@ class PullDataCommand(SodarPullBase):
         return self.args.output_dir
 
     def get_output_filepath(self, out_parts: FilePathParts):
-        #TODO: add typeguard? (ensured by check_args)
+        # TODO: add typeguard? (ensured by check_args)
         # apply regexes
         for filepart, m_pat, r_pat in self.args.output_regex:
             out_parts[filepart] = re.sub(m_pat, r_pat, out_parts[filepart])
