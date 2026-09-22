@@ -52,7 +52,7 @@ class FindLocalChecksumFiles:
         self.regex_pattern = re.compile(regex_pattern) if regex_pattern else None
 
     # Adapted from snappy check remote
-    def run(self):
+    def run(self) -> dict[str, list[FileDataObject]]:
         """Runs class routines.
 
         :return: Returns dictionary of dictionaries:
@@ -84,7 +84,13 @@ class FindLocalChecksumFiles:
                 checksum = f.readline()
                 # Expected format example:
                 # `459db8f7cb0d3a23a38fdc98286a9a9b  out.vcf.gz`
-                checksum = re.search(HASH_SCHEMES[self.hash_scheme]["regex"], checksum).group(0)
+                format_check = re.search(HASH_SCHEMES[self.hash_scheme]["regex"], checksum)
+                if not format_check:
+                    logger.warning(
+                        f"Ignoring misformatted local checksum file: {checksumfile} (content: {checksum})"
+                    )
+                    continue
+                checksum = format_check.group(0)
 
             # Check that checksum in local file is correct, this is slow so don't make it default
             if self.recheck_checksum:
@@ -104,8 +110,8 @@ class FindLocalChecksumFiles:
 
         logger.info("... done with raw data files search.")
 
-        # Return dictionary of dictionaries
-        return rawdata_structure_dict
+        # Return dictionary of dictionaries (not defaultdict)
+        return dict(rawdata_structure_dict)
 
 
 # Adapted from snappy.check_remote

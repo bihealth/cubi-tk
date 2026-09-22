@@ -1,6 +1,8 @@
 """Tests for ``cubi_tk.snappy.check_remote``."""
 
-import pathlib
+import hashlib
+from pathlib import Path as RealPath
+from pyfakefs.fake_pathlib import FakePath
 import re
 
 import pytest
@@ -12,13 +14,24 @@ from cubi_tk.sodar.check_remote import (
     FindLocalChecksumFiles,
 )
 from cubi_tk.__main__ import main
+from cubi_tk.exceptions import FileChecksumMismatchException
 
 from .helpers import createIrodsDataObject as IrodsDataObject
 
 
+# Monkey-Patch Path comparison with Pyfake-fs
+def path_eq(self, other):
+    if isinstance(other, (RealPath, FakePath)):
+        return str(self) == str(other)
+    return super(RealPath, self).__eq__(other)
+
+
+RealPath.__eq__ = path_eq
+
+
 @pytest.fixture()
 def local_file_objects():
-    test_dir_path = pathlib.Path(__file__).resolve().parent / "data" / "sodar_check_remote"
+    test_dir_path = RealPath("data") / "sodar_check_remote"
     all_files = {
         test_dir_path / "test1": [
             FileDataObject(
@@ -43,6 +56,34 @@ def local_file_objects():
         ],
     }
     return all_files
+
+
+def md5_file_checksum(str_value):
+    full_str = str_value + "\n"
+    the_hash = hashlib.md5(full_str.encode("utf-8"))
+    return the_hash.hexdigest()
+
+
+@pytest.fixture()
+def fake_file_setup(local_file_objects, fs):
+    fs.create_dir("data/sodar_check_remote")
+    for dir, objs in local_file_objects.items():
+        fs.create_dir(dir)
+        content = RealPath(dir).name.capitalize()
+        # Setup intentional mismatch
+        if dir == RealPath("data/sodar_check_remote") / "test3":
+            content = "Tset3"
+        fs.create_file(objs[0].file_path, contents=content + "\n")
+        fs.create_file(
+            objs[0].file_path + ".md5",
+            contents=f"{objs[0].file_checksum}  {RealPath(objs[0].file_path).name}",
+        )
+    # Add file without checksum
+    fs.create_file("data/sodar_check_remote/test2/testx.txt")
+    # Add checksum file from different hash_scheme
+    fs.create_file(
+        "data/sodar_check_remote/test2/test2.txt.sha256", contents="0123456789  test2.txt"
+    )
 
 
 @pytest.fixture()
@@ -78,13 +119,13 @@ def irods_file_objects():
     }
 
 
-def test_findlocalmd5_run(local_file_objects):
+def test_findlocalmd5_run(local_file_objects, fake_file_setup, fs, caplog):
     # Run 3 simple & 1 combined test
     # test1: single file with md5sum in 1 folder
     # test2: folder has 1 file with md5sum & one without
     # test3: empty folder
     # combined: all folder + 1 extra
-    test_dir_path = pathlib.Path(__file__).resolve().parent / "data" / "sodar_check_remote"
+    test_dir_path = RealPath("data") / "sodar_check_remote"
     expected_all = local_file_objects.copy()
     expected_1 = {k: v for k, v in local_file_objects.items() if str(k).endswith("1")}
     expected_2 = {k: v for k, v in local_file_objects.items() if str(k).endswith("2")}
@@ -108,12 +149,32 @@ def test_findlocalmd5_run(local_file_objects):
     empty_dir.rmdir()
 
     actual = FindLocalChecksumFiles(test_dir_path, hash_scheme="MD5", recheck_checksum=False).run()
-    assert all(expected_all[dirname] == filelist for dirname, filelist in actual.items())
+    for dirname, filelist in expected_all.items():
+        entry = actual.pop(dirname)
+        assert entry == filelist
+    assert actual == {}
+
+    # Additional test with mis-formatted checksum file and orphaned checksum file
+    caplog.clear()
+    caplog.set_level("WARNING")
+    fs.create_file("data/sodar_check_remote/test2/testA.txt.md5", contents="0123456789  testA.txt")
+    fs.create_file("data/sodar_check_remote/test2/testB.txt", contents="123")
+    fs.create_file("data/sodar_check_remote/test2/testB.txt.md5", contents="123456")
+    actual_2 = FindLocalChecksumFiles(
+        test_dir_path / "test2", hash_scheme="MD5", recheck_checksum=False
+    ).run()
+    assert caplog.messages == [
+        "Ignoring orphaned local checksum file: data/sodar_check_remote/test2/testA.txt.md5.\nExpected associated file not found: data/sodar_check_remote/test2/testA.txt",
+        "Ignoring misformatted local checksum file: data/sodar_check_remote/test2/testB.txt.md5 (content: 123456)",
+    ]
+    assert actual_2 == expected_2
 
 
-def test_filecomparisoncheck_compare_local_and_remote_files(irods_file_objects, local_file_objects):
+def test_filecomparisoncheck_compare_local_and_remote_files(
+    irods_file_objects, local_file_objects, fake_file_setup
+):
     """Tests FileComparisonChecker.compare_local_and_remote_files()"""
-    test_dir_path = pathlib.Path(__file__).resolve().parent / "data" / "sodar_check_remote"
+    test_dir_path = RealPath("data") / "sodar_check_remote"
     # Setup extra local FileDataObjects:
     local_file_objects.update(
         {
@@ -149,7 +210,7 @@ def test_filecomparisoncheck_compare_local_and_remote_files(irods_file_objects, 
 
 # Smoketest, including regex and out
 @patch("cubi_tk.sodar.check_remote.RetrieveSodarCollection")
-def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
+def test_sodar_check_remote(mock_rsc, irods_file_objects, fake_file_setup, capsys, fs):  # noqa: C901
     mock_rsc.return_value = MagicMock(
         irods_hash_scheme="MD5",
         perform=MagicMock(return_value=irods_file_objects),
@@ -159,7 +220,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
         "sodar",
         "check-remote",
         "-p",
-        str(pathlib.Path(__file__).resolve().parent / "data" / "sodar_check_remote"),
+        "data/sodar_check_remote",
         "DUMMY-UUID",
     ]
 
@@ -172,9 +233,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
         if both:
             expected += ["Files found BOTH locally and remotely:"]
             for n in both:
-                expected += [
-                    f"{pathlib.Path(__file__).resolve().parent}/data/sodar_check_remote/test{n}:"
-                ]
+                expected += [f"data/sodar_check_remote/test{n}:"]
                 expected += [
                     f"    test{n}.txt" + (f"  ({next(checksums)})" if incl_checksums else "")
                 ]
@@ -185,9 +244,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
         if local:
             expected += ["Files found ONLY LOCALLY:"]
             for n in local:
-                expected += [
-                    f"{pathlib.Path(__file__).resolve().parent}/data/sodar_check_remote/test{n}:"
-                ]
+                expected += [f"data/sodar_check_remote/test{n}:"]
                 expected += [
                     f"    test{n}.txt" + (f"  ({next(checksums)})" if incl_checksums else "")
                 ]
@@ -211,7 +268,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
     output = [
         l
         for l in capsys.readouterr().out.split("\n")
-        if l and not re.match(r"(I -|S -| \.\.\.)", l)
+        if l and not re.match(r"(W -|I -|S -| \.\.\.)", l)
     ]
     assert output == get_expected()
 
@@ -220,7 +277,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
     output = [
         l
         for l in capsys.readouterr().out.split("\n")
-        if l and not re.match(r"(I -|S -| \.\.\.)", l)
+        if l and not re.match(r"(W -|I -|S -| \.\.\.)", l)
     ]
     assert output == get_expected((1, 2, 3), False, (5,))
 
@@ -229,7 +286,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
     output = [
         l
         for l in capsys.readouterr().out.split("\n")
-        if l and not re.match(r"(I -|S -| \.\.\.)", l)
+        if l and not re.match(r"(W -|I -|S -| \.\.\.)", l)
     ]
     assert output == get_expected((1, 2), (3,), (3,))
 
@@ -238,7 +295,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
     output = [
         l
         for l in capsys.readouterr().out.split("\n")
-        if l and not re.match(r"(I -|S -| \.\.\.)", l)
+        if l and not re.match(r"(W -|I -|S -| \.\.\.)", l)
     ]
     assert output == get_expected((1, 2), (3,), None)
 
@@ -247,7 +304,7 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
     output = [
         l
         for l in capsys.readouterr().out.split("\n")
-        if l and not re.match(r"(I -|S -| \.\.\.)", l)
+        if l and not re.match(r"(W -|I -|S -| \.\.\.)", l)
     ]
     assert output == get_expected((1, 2), (3,), (3, 5), incl_checksums=True)
 
@@ -256,7 +313,13 @@ def test_sodar_check_remote(mock_rsc, irods_file_objects, capsys):  # noqa: C901
     output = [
         l
         for l in capsys.readouterr().out.split("\n")
-        if l and not re.match(r"(I -|S -| \.\.\.)", l)
+        if l and not re.match(r"(W -|I -|S -| \.\.\.)", l)
     ]
     assert output == get_expected((1, 2), (3,), (3, 5), incl_checksums=True)
-    # FIXME: add test with mismatching local checksum between md5 file & actual md5
+    # Invalidate a local checksum
+    file = fs.get_object("data/sodar_check_remote/test3/test3.txt.md5")
+    file.set_contents("0" * 32 + "  test3.txt\n")
+    expected_msg = f"Wrong checksum recorded for file: data/sodar_check_remote/test3/test3.txt. Recorded checksum: {'0' * 32}, excepted checksum: d6618babc17b25b73eb0d0a68947babd."
+    with pytest.raises(FileChecksumMismatchException):
+        main(argv + ["--recheck-checksum", "--report-checksums"])
+    assert expected_msg in capsys.readouterr().out.split("\n")[-2]
