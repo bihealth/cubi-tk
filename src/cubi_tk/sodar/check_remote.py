@@ -456,7 +456,7 @@ class SodarCheckRemoteCommand:
             hash_scheme=hash_scheme,
             recheck_checksum=self.args.recheck_checksum,
             regex_pattern=self.args.file_selection_regex,
-            skip_faulty_checksums=self.args.skip_faulty_checksums
+            skip_faulty_checksums=self.args.skip_faulty_checksums,
         ).run()
 
         # Run checks
