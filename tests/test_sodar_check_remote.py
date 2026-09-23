@@ -164,7 +164,7 @@ def test_findlocalmd5_run(local_file_objects, fake_file_setup, fs, caplog):
         test_dir_path / "test2",
         hash_scheme="MD5",
         recheck_checksum=False,
-        skip_unreadable_checksum=True,
+        skip_faulty_checksums=True,
     ).run()
     assert caplog.messages == [
         "Ignoring orphaned local checksum file: data/sodar_check_remote/test2/testA.txt.md5.\nExpected associated file not found: data/sodar_check_remote/test2/testA.txt",
