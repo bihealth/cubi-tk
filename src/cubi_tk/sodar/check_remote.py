@@ -49,7 +49,7 @@ class FindLocalChecksumFiles:
         hash_scheme,
         recheck_checksum=False,
         regex_pattern=None,
-        skip_unreadable_checksum=False,
+        skip_faulty_checksums=False,
     ):
         """Constructor: init vars"""
 
@@ -57,7 +57,7 @@ class FindLocalChecksumFiles:
         self.recheck_checksum = recheck_checksum
         self.hash_scheme = hash_scheme
         self.regex_pattern = re.compile(regex_pattern) if regex_pattern else None
-        self.skip_unreadable_checksum = skip_unreadable_checksum
+        self.skip_faulty_checksums = skip_faulty_checksums
 
     # Adapted from snappy check remote
     def run(self) -> dict[Path, list[FileDataObject]]:
@@ -93,7 +93,7 @@ class FindLocalChecksumFiles:
                 # Expected format example:
                 # `459db8f7cb0d3a23a38fdc98286a9a9b  out.vcf.gz`
                 format_check = re.search(HASH_SCHEMES[self.hash_scheme]["regex"], checksum)
-                if not format_check and self.skip_unreadable_checksum:
+                if not format_check and self.skip_faulty_checksums:
                     logger.warning(
                         f"Ignoring misformatted local checksum file: {checksumfile} (content: {checksum})"
                     )
@@ -456,6 +456,7 @@ class SodarCheckRemoteCommand:
             hash_scheme=hash_scheme,
             recheck_checksum=self.args.recheck_checksum,
             regex_pattern=self.args.file_selection_regex,
+            skip_faulty_checksums=self.args.skip_faulty_checksums
         ).run()
 
         # Run checks
