@@ -161,13 +161,24 @@ def test_findlocalmd5_run(local_file_objects, fake_file_setup, fs, caplog):
     fs.create_file("data/sodar_check_remote/test2/testB.txt", contents="123")
     fs.create_file("data/sodar_check_remote/test2/testB.txt.md5", contents="123456")
     actual_2 = FindLocalChecksumFiles(
-        test_dir_path / "test2", hash_scheme="MD5", recheck_checksum=False
+        test_dir_path / "test2",
+        hash_scheme="MD5",
+        recheck_checksum=False,
+        skip_unreadable_checksum=True,
     ).run()
     assert caplog.messages == [
         "Ignoring orphaned local checksum file: data/sodar_check_remote/test2/testA.txt.md5.\nExpected associated file not found: data/sodar_check_remote/test2/testA.txt",
         "Ignoring misformatted local checksum file: data/sodar_check_remote/test2/testB.txt.md5 (content: 123456)",
     ]
     assert actual_2 == expected_2
+    # Raise error without skip_unreadable_checksum=True
+    with pytest.raises(
+        FileChecksumMismatchException,
+        match="Local checksum file is not formatted correctly: data/sodar_check_remote/test2/testB.txt.md5",
+    ):
+        FindLocalChecksumFiles(
+            test_dir_path / "test2", hash_scheme="MD5", recheck_checksum=False
+        ).run()
 
 
 def test_filecomparisoncheck_compare_local_and_remote_files(
