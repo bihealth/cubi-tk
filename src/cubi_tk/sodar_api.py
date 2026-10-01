@@ -257,24 +257,15 @@ class SodarApi:
             logger.error(f"Failed to create Sodar deletion request:\n{e}")
             return 1
 
-    def get_pending_deletion_requests(
-        self, collections: list[str] | None = None
-    ) -> List[api_models.IrodsDataRequest] | None:
-        """Fetches the pending (ACTIVE/FAILED) iRODS deletion requests for the source project via the Sodar API
-        and returns only the ones matching one of the provided collections."""
+    def get_pending_deletion_requests(self) -> List[api_models.IrodsDataRequest] | None:
+        """Fetches the pending (ACTIVE/FAILED) iRODS deletion requests for the source project via the Sodar API."""
         try:
-            requests = self._api_call("samplesheets", "irods/requests", method="get")
+            requests_json = self._api_call("samplesheets", "irods/requests", method="get")
         except SodarApiException as e:
             logger.error(f"Failed to retrieve pending Sodar deletion requests:\n{e}")
             return None
-        if collections is None:
-            return requests
-        else:
-            return [
-                req
-                for req in requests
-                if any(collection in req["path"] for collection in collections)
-            ]
+        requests = [cattr.structure(req, api_models.IrodsDataRequest) for req in requests_json]
+        return requests
 
     def accept_deletion_request(self, request_obj: api_models.IrodsDataRequest) -> int:
         """Accepts the pending (ACTIVE/FAILED) iRODS deletion request for the given request object."""
