@@ -1,4 +1,5 @@
 import argparse
+import datetime
 from functools import reduce
 import sys
 import time
@@ -16,6 +17,10 @@ from cubi_tk import api_models
 import toml
 import os
 from .exceptions import ParameterException, SodarApiException
+
+cattr.register_structure_hook(
+    datetime.datetime, lambda ts, _: datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+)
 
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"

@@ -104,7 +104,7 @@ class IrodsDataRequest:
     # Project UUID
     project: str
     # Request creation time (YYYY-MM-DDThh:mm:ssZ)
-    date_created: datetime
+    date_created: datetime.datetime
     # user UUID of the user who created the request
     user: str
 

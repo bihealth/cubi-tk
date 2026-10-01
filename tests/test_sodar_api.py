@@ -1,4 +1,5 @@
 from argparse import Namespace
+import datetime
 import os
 
 import cattr
@@ -6,7 +7,7 @@ import cattr
 import pytest
 from unittest.mock import patch, MagicMock
 
-from cubi_tk.api_models import IrodsDataObject
+from cubi_tk.api_models import IrodsDataObject, IrodsDataRequest
 from cubi_tk.sodar_api import GLOBAL_CONFIG_PATH, SodarApi
 from cubi_tk.exceptions import SodarApiException
 from tests.factories import InvestigationFactory, LandingZoneFactory
@@ -390,8 +391,13 @@ def test_sodar_api_get_pending_deletion_requests(requests_mock, sodar_api_instan
         json=ret_json,
         status_code=200,
     )
-    assert ret_json == sodar_api_instance.get_pending_deletion_requests()
-    assert [ret_json[0]] == sodar_api_instance.get_pending_deletion_requests(["sample1"])
+    expected = [
+        IrodsDataRequest(
+            **{**item, "date_created": datetime.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)}
+        )
+        for item in ret_json
+    ]
+    assert expected == sodar_api_instance.get_pending_deletion_requests()
 
 
 def test_sodar_api_get_pending_deletion_requests_error(requests_mock, sodar_api_instance):
