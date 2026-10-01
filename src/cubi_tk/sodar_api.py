@@ -1,4 +1,5 @@
 import argparse
+import datetime
 from functools import reduce
 import sys
 import time
@@ -16,6 +17,10 @@ from cubi_tk import api_models
 import toml
 import os
 from .exceptions import ParameterException, SodarApiException
+
+cattr.register_structure_hook(
+    datetime.datetime, lambda ts, _: datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+)
 
 #: Paths to search the global configuration in.
 GLOBAL_CONFIG_PATH = "~/.cubitkrc.toml"
@@ -234,6 +239,7 @@ class SodarApi:
             logger.error(f"Failed to upload ISA-tab:\n{e}")
             return 1
 
+    # deletion request API calls
     def post_samplesheet_deletion_request_create(self, path, description=None) -> int:
         params = {"path": path}
         if description:
@@ -255,6 +261,33 @@ class SodarApi:
         except SodarApiException as e:
             logger.error(f"Failed to create Sodar deletion request:\n{e}")
             return 1
+
+    def get_pending_deletion_requests(self) -> List[api_models.IrodsDataRequest] | None:
+        """Fetches the pending (ACTIVE/FAILED) iRODS deletion requests for the source project via the Sodar API."""
+        try:
+            requests_json = self._api_call("samplesheets", "irods/requests", method="get")
+        except SodarApiException as e:
+            logger.error(f"Failed to retrieve pending Sodar deletion requests:\n{e}")
+            return None
+        requests = [cattr.structure(req, api_models.IrodsDataRequest) for req in requests_json]
+        return requests
+
+    def accept_deletion_request(self, request_obj: api_models.IrodsDataRequest) -> int:
+        """Accepts the pending (ACTIVE/FAILED) iRODS deletion request for the given request object."""
+        try:
+            self._api_call(
+                "samplesheets",
+                "irods/request/accept",
+                method="post",
+                dest_uuid=request_obj.sodar_uuid,
+            )
+        except SodarApiException as e:
+            logger.error(
+                f"Failed to accept Sodar deletion request {request_obj.sodar_uuid} for {request_obj.path}:\n{e}"
+            )
+            return 1
+        logger.info(f"Accepted deletion request for {request_obj.sodar_uuid} ({request_obj.path})")
+        return 0
 
     # landingzone Api calls
     def get_landingzone_retrieve(
@@ -310,7 +343,11 @@ class SodarApi:
         return landingzones
 
     def post_landingzone_create(
-        self, wait_until_ready=False, create_colls: bool = True, restrict_colls: bool = True
+        self,
+        wait_until_ready=False,
+        create_colls: bool = True,
+        restrict_colls: bool = True,
+        title: str = "",
     ) -> api_models.LandingZone | None:
         logger.debug("Creating new Landing Zone...")
         if not self.assay_uuid:
@@ -320,7 +357,11 @@ class SodarApi:
                 "landingzones",
                 "create",
                 method="post",
-                params={"create_colls": create_colls, "restrict_colls": restrict_colls},
+                params={
+                    "create_colls": create_colls,
+                    "restrict_colls": restrict_colls,
+                    "title": title,
+                },
                 data={"assay": self.assay_uuid},
             )
             if "sodar_warnings" in ret_val:

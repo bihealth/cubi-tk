@@ -40,6 +40,13 @@ class CreateLandingZoneCommand:
             help="Format string for printing, e.g. %%(uuid)s",
         )
 
+        parser.add_argument(
+            "--title",
+            dest="title_string",
+            default="",
+            help="Title suffix of the landing zone",
+        )
+
     @classmethod
     def run(
         cls, args, _parser: argparse.ArgumentParser, _subparser: argparse.ArgumentParser
@@ -58,7 +65,7 @@ class CreateLandingZoneCommand:
         if existing_lzs and self.args.unless_exists:
             lz = existing_lzs[-1]
         else:
-            lz = sodar_api.post_landingzone_create()
+            lz = sodar_api.post_landingzone_create(title=self.args.title_string)
             if lz is None:
                 return 1
 
