@@ -77,7 +77,7 @@ class SodarIngestBase:
             dry_run=self.args.dry_run,
             connection_timeout=self.args.connection_timeout,
             read_timeout=self.args.read_timeout,
-            bytes_per_batch=self.args.batch_size_bytes
+            bytes_per_batch=self.args.batch_size_bytes,
         )
         if not self.itransfer.irods_env_path.exists():
             logger.error(
@@ -259,7 +259,7 @@ class SodarIngestBase:
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
         # Check that all arguments provided by `get_sodar_ingest_parser` (incl ingest_group, lz_select_group, irods_group) are present
-        #Note: A check for the `get_sodar_parser` / sodar_group args could be added as a mixin?
+        # Note: A check for the `get_sodar_parser` / sodar_group args could be added as a mixin?
         required_args = (
             # `get_sodar_ingest_parser`
             "destination",
