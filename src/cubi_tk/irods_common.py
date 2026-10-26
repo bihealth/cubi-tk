@@ -216,7 +216,7 @@ class iRODSTransfer(iRODSCommon):
         self,
         jobs: Iterable[TransferJob] | None,
         dry_run: bool = False,
-        bytes_per_batch: int = 50 * 1024 * 1024,
+        bytes_per_batch: int = 50 * 1024 * 1024 * 1024,
         **kwargs,
     ):
         super().__init__(**kwargs)

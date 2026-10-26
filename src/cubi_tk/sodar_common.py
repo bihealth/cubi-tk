@@ -75,8 +75,9 @@ class SodarIngestBase:
             ask=not self.sodar_api.yes,
             sodar_profile=self.args.config_profile,
             dry_run=self.args.dry_run,
-            connection_timeout=getattr(self.args, "connection_timeout", 600),
-            read_timeout=getattr(self.args, "read_timeout", 600),
+            connection_timeout=self.args.connection_timeout,
+            read_timeout=self.args.read_timeout,
+            bytes_per_batch=self.args.batch_size_bytes
         )
         if not self.itransfer.irods_env_path.exists():
             logger.error(
@@ -257,8 +258,12 @@ class SodarIngestBase:
 
     def check_args(self, args) -> int | None:
         """Called for checking arguments, override to change behaviour."""
-        # Check that all arguments provided by `get_sodar_ingest_parser / ingest_group` are present
+        # Check that all arguments provided by `get_sodar_ingest_parser` (incl ingest_group, lz_select_group, irods_group) are present
+        #Note: A check for the `get_sodar_parser` / sodar_group args could be added as a mixin?
         required_args = (
+            # `get_sodar_ingest_parser`
+            "destination",
+            # ingest_group
             "dry_run",
             "overwrite",
             "remote_checksums",
@@ -266,17 +271,22 @@ class SodarIngestBase:
             "validate_and_move",
             "parallel_checksum_jobs",
             "recompute_checksums",
+            # lz_select_group
             "select_lz",
-            "destination",
+            # irods_group
+            "connection_timeout",
+            "read_timeout",
+            "batch_size_bytes",
         )
         missing = []
         for arg in required_args:
             if not hasattr(args, arg):
                 missing.append(arg)
-        logger.warning(
-            f"Missing the following required arguments for a (child) class of SodarIngestBase: {', '.join(missing)}\n."
-            f"`setup_argparse` has not been used correctly!"
-        )
+        if missing:
+            logger.warning(
+                f"Missing the following required arguments for a (child) class of SodarIngestBase: {', '.join(missing)}\n."
+                f"`setup_argparse` has not been used correctly!"
+            )
         res = 1 if missing else 0
         if args.yes and args.select_lz == "manual":
             raise ValueError("The `--yes` and `--select-lz manual` options can not be combined!")
