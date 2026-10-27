@@ -24,7 +24,7 @@ def get_SodarIngestBase(dest="123e4567-e89b-12d3-a456-426655440000", select_lz=N
         destination=dest,
         connection_timeout=600,
         read_timeout=600,
-        batch_size_bytes=50 * 1024 * 1024 * 1024
+        batch_size_bytes=50 * 1024 * 1024 * 1024,
     )
     return SodarIngestBase(args)
 
@@ -42,7 +42,7 @@ def test_sodar_ingest_base_check_args():
         destination="123e4567-e89b-12d3-a456-426655440000",
         connection_timeout=600,
         read_timeout=600,
-        batch_size_bytes=50 * 1024 * 1024 * 1024
+        batch_size_bytes=50 * 1024 * 1024 * 1024,
     )
 
     # All required args present

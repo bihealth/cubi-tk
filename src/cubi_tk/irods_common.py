@@ -134,7 +134,7 @@ class iRODSCommon:
         self.sodar_profile = sodar_profile
 
     def __del__(self):
-        if self.irodsA_file_found:
+        if self.irodsA_file_found and not self.skip_default_irodsA:
             # Remove the .irodsA file used for this profile and restore backup if exists, to avoid issues with other profiles or global config
             default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
             if default_irodsA.exists():
@@ -190,6 +190,8 @@ class iRODSCommon:
             if "irods_authentication_file" in irods_env_json:
                 irodsA_path = irods_env_json["irods_authentication_file"]
                 self.skip_default_irodsA = True
+                if os.path.exists(irodsA_path):
+                    self.irodsA_file_found = True
             # Default case, copy .irodsA around to allow profile switching
             else:
                 if self.default_irodsA.exists():
