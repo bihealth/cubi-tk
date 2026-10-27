@@ -1,3 +1,4 @@
+import contextlib
 from collections import defaultdict
 import getpass
 import json
@@ -46,7 +47,7 @@ class TransferJob:
     path_remote: str
 
     #: Number of bytes to transfer (optional).
-    bytes: str = attrs.field()
+    bytes: int = attrs.field()
 
     @bytes.default
     def _get_file_size(self):
@@ -54,6 +55,38 @@ class TransferJob:
             return Path(self.path_local).stat().st_size
         except FileNotFoundError:
             return -1
+
+
+# From stackoverflow, needed because `write_pam_irodsA_file` only respects the ENV var IRODS_AUTHENTICATION_FILE
+@contextlib.contextmanager
+def modified_environ(*remove, **update):
+    """
+    Temporarily updates the ``os.environ`` dictionary in-place.
+
+    The ``os.environ`` dictionary is updated in-place so that the modification
+    is sure to work in all situations.
+
+    :param remove: Environment variables to remove.
+    :param update: Dictionary of environment variables and values to add/update.
+    """
+    env = os.environ
+    update = update or {}
+    remove = remove or []
+
+    # List of environment variables being updated or removed.
+    stomped = (set(update.keys()) | set(remove)) & set(env.keys())
+    # Environment variables and values to restore on exit.
+    update_after = {k: env[k] for k in stomped}
+    # Environment variables and values to remove on exit.
+    remove_after = frozenset(k for k in update if k not in env)
+
+    try:
+        env.update(update)
+        [env.pop(k, None) for k in remove]
+        yield
+    finally:
+        env.update(update_after)
+        [env.pop(k) for k in remove_after]
 
 
 class iRODSCommon:
@@ -92,6 +125,8 @@ class iRODSCommon:
             self.irods_env_path = Path(irods_env_path)
         logger.debug(f"using irods_file: {self.irods_env_path}")
         self.irodsA_file_found = False
+        self.default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
+        self.skip_default_irodsA = False
         self.ask = ask
         self.hash_scheme = DEFAULT_HASH_SCHEME
         self.connection_timeout = connection_timeout
@@ -99,7 +134,7 @@ class iRODSCommon:
         self.sodar_profile = sodar_profile
 
     def __del__(self):
-        if self.irodsA_file_found:
+        if self.irodsA_file_found and not self.skip_default_irodsA:
             # Remove the .irodsA file used for this profile and restore backup if exists, to avoid issues with other profiles or global config
             default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
             if default_irodsA.exists():
@@ -134,7 +169,7 @@ class iRODSCommon:
                 if count_tries > 3:
                     raise e
 
-    def _check_and_gen_irods_files(self, overwrite=False):
+    def _check_and_gen_irods_files(self, overwrite=False):  # noqa: C901
         """check if irodsA exists and generate it"""
         if self.irodsA_file_found is True and not overwrite:
             return
@@ -151,37 +186,52 @@ class iRODSCommon:
             # check date of last authorized irods_environment.json
             last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
             last_profile_json = {}
-            default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
-            if default_irodsA.exists():
-                irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
-                shutil.copy(default_irodsA, irodsA_backup)
-            irodsA_path = self.irods_env_path.parent.joinpath(".irodsA_" + self.sodar_profile)
-            if os.path.exists(irodsA_path):
-                self.irodsA_file_found = True
-                # copy irodsA_<profile> to .irodsA for use by irods client
-                shutil.copy(irodsA_path, default_irodsA)
-                # check if relogin is needed
-                if last_profile_path.exists():
-                    with open(last_profile_path) as last_profile_file:
-                        last_profile_json = json.load(last_profile_file)
-                        timestamp = last_profile_json.get(self.sodar_profile, 0)
-                        timestamp_today = int(time())
-                        overwrite = timestamp != 0 and timestamp < (
-                            timestamp_today - 14 * 24 * 3600
-                        )
-                elif not self.irods_env_path.name == "irods_environment.json":
-                    overwrite = True  # overwrite if other profile than global is used and no last_profile exists
+            # Specifically defined `.irodsA` file in irods_env_json
+            if "irods_authentication_file" in irods_env_json:
+                irodsA_path = irods_env_json["irods_authentication_file"]
+                self.skip_default_irodsA = True
+                if os.path.exists(irodsA_path):
+                    self.irodsA_file_found = True
+            # Default case, copy .irodsA around to allow profile switching
+            else:
+                if self.default_irodsA.exists():
+                    irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
+                    shutil.copy(self.default_irodsA, irodsA_backup)
+                irodsA_path = self.irods_env_path.parent.joinpath(".irodsA_" + self.sodar_profile)
+
+                if os.path.exists(irodsA_path):
+                    self.irodsA_file_found = True
+                    # copy irodsA_<profile> to .irodsA for use by irods client
+                    shutil.copy(irodsA_path, self.default_irodsA)
+
+            # check if relogin is needed
+            if last_profile_path.exists():
+                with open(last_profile_path) as last_profile_file:
+                    last_profile_json = json.load(last_profile_file)
+                    timestamp = last_profile_json.get(self.sodar_profile, 0)
+                    timestamp_today = int(time())
+                    overwrite = timestamp != 0 and timestamp < (timestamp_today - 14 * 24 * 3600)
+            elif not self.irods_env_path.name == "irods_environment.json":
+                overwrite = True  # overwrite if other profile than global is used and no last_profile exists
 
             write_irods_file = not self.irodsA_file_found or overwrite
             if self.ask and write_irods_file:
                 # set irodsA path and add entry to irodsenv json if doesnt exist yet
-                write_pam_irodsA_file(
-                    getpass.getpass("Enter current PAM password -> "),
-                    overwrite=True,
-                    irods_env_file=self.irods_env_path,
-                )
-                # irods client uses irodsA, save to irodsA_<profile> for backup and switching between profiles
-                shutil.copy(default_irodsA, irodsA_path)
+                if self.skip_default_irodsA:
+                    with modified_environ(update={"IRODS_AUTHENTICATION_FILE": irodsA_path}):
+                        write_pam_irodsA_file(
+                            getpass.getpass("Enter current PAM password -> "),
+                            overwrite=True,
+                            irods_env_file=self.irods_env_path,
+                        )
+                else:
+                    write_pam_irodsA_file(
+                        getpass.getpass("Enter current PAM password -> "),
+                        overwrite=True,
+                        irods_env_file=self.irods_env_path,
+                    )
+                    # irods client uses irodsA, save to irodsA_<profile> for backup and switching between profiles
+                    shutil.copy(self.default_irodsA, irodsA_path)
                 self.irodsA_file_found = True
                 with open(last_profile_path, mode="w") as last_profile_file:
                     last_profile_json[self.sodar_profile] = time()
@@ -212,9 +262,16 @@ class iRODSTransfer(iRODSCommon):
     :type jobs: Union[list,tuple,dict,set]
     """
 
-    def __init__(self, jobs: Iterable[TransferJob] | None, dry_run: bool = False, **kwargs):
+    def __init__(
+        self,
+        jobs: Iterable[TransferJob] | None,
+        dry_run: bool = False,
+        bytes_per_batch: int = 50 * 1024 * 1024 * 1024,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.dry_run = dry_run
+        self.bytes_per_batch = bytes_per_batch
         self.__jobs = jobs
         if jobs is not None:
             self.__total_bytes = sum([job.bytes for job in self.__jobs])
@@ -252,6 +309,14 @@ class iRODSTransfer(iRODSCommon):
         no_list: bool = False,
         overwrite: Literal["sync", "never", "always", "ask"] = "sync",
     ):
+        if self.__jobs is None or not self.__jobs:
+            logger.error("iRODSTransfer.get called without any defined transfer jobs!")
+            return
+
+        batched_jobs = self.batch_transfer_jobs(self.__jobs)
+        total_jobs = len(self.__jobs)
+        self.__total_bytes = sum([job.bytes for batch in batched_jobs for job in batch])
+
         # Log all actions before doing them
         if self.dry_run or not no_list:
             logger.info("The following actions would be performed:")
@@ -281,54 +346,56 @@ class iRODSTransfer(iRODSCommon):
         ):
             kw_incl_overwrite = {FORCE_FLAG_KW: None}
             kw_excl_overwrite = {}
-            for n, job in enumerate(self.__jobs):
-                file_log.set_description_str(
-                    f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
-                )
-                try:
-                    with self.session as session:
-                        if recursive:
-                            self._create_collections(job)
-
-                        remote_exists = session.data_objects.exists(job.path_remote)
-                        logger.debug(f"Remote file {job.path_remote} exists: {remote_exists}")
-                        # never / file not present yet
-                        if overwrite == "never" or not remote_exists:
-                            kw_options = kw_excl_overwrite
-                        elif overwrite == "always":
-                            kw_options = kw_incl_overwrite
-                        # ask: user decides for every file, with --yes default back to sync
-                        elif self.ask and overwrite == "ask":
-                            print("\n")
-                            if (
-                                input(
-                                    "This file is already present, should it be overwritten? [y/N] "
-                                )
-                                .lower()
-                                .startswith("y")
-                            ):  # pragma: no cover
-                                kw_options = kw_incl_overwrite
-                                logger.info(f"Overwriting: {job.path_local}")
-                            else:
+            n = 0
+            for batch in batched_jobs:
+                with self.session as session:
+                    for job in batch:
+                        n += 1
+                        file_log.set_description_str(
+                            f"File [{n}/{total_jobs}]: {Path(job.path_local).name}"
+                        )
+                        try:
+                            if recursive:
+                                self._create_collections(job)
+                            remote_exists = session.data_objects.exists(job.path_remote)
+                            logger.debug(f"Remote file {job.path_remote} exists: {remote_exists}")
+                            # never / file not present yet
+                            if overwrite == "never" or not remote_exists:
                                 kw_options = kw_excl_overwrite
-                                logger.info(f"NOT overwriting: {job.path_local}")
-                        # sync (or --yes and 'ask'): Check if file size is identical, if yes skip upload
-                        else:
-                            obj = session.data_objects.get(job.path_remote)
-                            if obj.size != job.bytes:
+                            elif overwrite == "always":
                                 kw_options = kw_incl_overwrite
+                            # ask: user decides for every file, with --yes default back to sync
+                            elif self.ask and overwrite == "ask":
+                                print("\n")
+                                if (
+                                    input(
+                                        "This file is already present, should it be overwritten? [y/N] "
+                                    )
+                                    .lower()
+                                    .startswith("y")
+                                ):  # pragma: no cover
+                                    kw_options = kw_incl_overwrite
+                                    logger.info(f"Overwriting: {job.path_local}")
+                                else:
+                                    kw_options = kw_excl_overwrite
+                                    logger.info(f"NOT overwriting: {job.path_local}")
+                            # sync (or --yes and 'ask'): Check if file size is identical, if yes skip upload
                             else:
-                                kw_options = kw_excl_overwrite
+                                obj = session.data_objects.get(job.path_remote)
+                                if obj.size != job.bytes:
+                                    kw_options = kw_incl_overwrite
+                                else:
+                                    kw_options = kw_excl_overwrite
 
-                        # kw_options will be {} if no overwrite should be done
-                        if remote_exists and not kw_options:
+                            # kw_options will be {} if no overwrite should be done
+                            if remote_exists and not kw_options:
+                                t.update(job.bytes)
+                                continue
+                            session.data_objects.put(job.path_local, job.path_remote, **kw_options)
                             t.update(job.bytes)
-                            continue
-                        session.data_objects.put(job.path_local, job.path_remote, **kw_options)
-                        t.update(job.bytes)
-                except Exception as e:  # pragma: no cover
-                    logger.error(f"Problem during transfer of {job.path_local}")
-                    logger.error(self.get_irods_error(e))
+                        except Exception as e:  # pragma: no cover
+                            logger.error(f"Problem during transfer of {job.path_local}")
+                            logger.error(self.get_irods_error(e))
             t.clear()
             logger.info("File transfer complete.")
 
@@ -340,6 +407,7 @@ class iRODSTransfer(iRODSCommon):
             for job in self.__jobs
             if not job.path_remote.endswith("." + self.hash_scheme.lower())
         )
+        # Note: remote checksum computation may take considerbaly longer than up-/downlaods. Is the same session batching useful?
         logger.info(f"Triggering remote checksum computation for {len(checkjobs)} files.")
         for n, job in enumerate(checkjobs):
             logger.info(
@@ -357,12 +425,18 @@ class iRODSTransfer(iRODSCommon):
 
     def get(self, force_overwrite: bool = False):
         """Download files from SODAR."""
+        if self.__jobs is None or not self.__jobs:
+            logger.error("iRODSTransfer.get called without any defined transfer jobs!")
+            return
+
         with self.session as session:
             self.__jobs = [
                 attrs.evolve(job, bytes=session.data_objects.get(job.path_remote).size)
                 for job in self.__jobs
             ]
         self.__total_bytes = sum([job.bytes for job in self.__jobs])
+        batched_jobs = self.batch_transfer_jobs(self.__jobs)
+        total_jobs = len(self.__jobs)
 
         kw_options = {}
         if force_overwrite:
@@ -378,26 +452,51 @@ class iRODSTransfer(iRODSCommon):
             ) as t,
             tqdm(total=0, position=0, bar_format="{desc}", leave=False) as file_log,
         ):
-            for n, job in enumerate(self.__jobs):
-                file_log.set_description_str(
-                    f"File [{n + 1}/{len(self.__jobs)}]: {Path(job.path_local).name}"
-                )
-                if os.path.exists(job.path_local) and not force_overwrite:  # pragma: no cover
-                    logger.info(
-                        f"{Path(job.path_local).name} already exists. Skipping, use force_overwrite to re-download."
-                    )
-                    continue
-                try:
-                    Path(job.path_local).parent.mkdir(parents=True, exist_ok=True)
-                    with self.session as session:
-                        session.data_objects.get(job.path_remote, job.path_local, **kw_options)
-                    t.update(job.bytes)
-                except FileNotFoundError:  # pragma: no cover
-                    raise
-                except Exception as e:  # pragma: no cover
-                    logger.error(f"Problem during transfer of {job.path_remote}")
-                    logger.error(self.get_irods_error(e))
+            n = 0
+            for batch in batched_jobs:
+                with self.session as session:
+                    for job in batch:
+                        n += 1
+                        file_log.set_description_str(
+                            f"File [{n}/{total_jobs}]: {Path(job.path_local).name}"
+                        )
+                        if (
+                            os.path.exists(job.path_local) and not force_overwrite
+                        ):  # pragma: no cover
+                            logger.info(
+                                f"{Path(job.path_local).name} already exists. Skipping, use force_overwrite to re-download."
+                            )
+                            continue
+                        try:
+                            Path(job.path_local).parent.mkdir(parents=True, exist_ok=True)
+                            session.data_objects.get(job.path_remote, job.path_local, **kw_options)
+                            t.update(job.bytes)
+                        except FileNotFoundError:  # pragma: no cover
+                            raise
+                        except Exception as e:  # pragma: no cover
+                            logger.error(f"Problem during transfer of {job.path_remote}")
+                            logger.error(self.get_irods_error(e))
             t.clear()
+
+    def batch_transfer_jobs(self, jobs: Iterable[TransferJob]) -> tuple[list[TransferJob], ...]:
+        out_batches = []
+        batch = []
+        batch_size = 0
+        file_size_not_set = [job.path_local for job in jobs if job.bytes == -1]
+        if file_size_not_set:
+            raise ValueError(
+                "All transfer jobs need to have defined file size for batching!\nMissing: "
+                + ", ".join(file_size_not_set)
+            )
+        for job in jobs:
+            if batch_size > self.bytes_per_batch:
+                out_batches.append(batch)
+                batch = []
+                batch_size = 0
+            batch.append(job)
+            batch_size += job.bytes
+        out_batches.append(batch)
+        return tuple(out_batches)
 
 
 class iRODSRetrieveCollection(iRODSCommon):

@@ -39,6 +39,12 @@ irods_group.add_argument(
     type=int,
     help="iRODS read timeout in seconds (default: 600).",
 )
+irods_group.add_argument(
+    "--batch-size-bytes",
+    default=50 * 1024 * 1024 * 1024,
+    type=int,
+    help="Byte size for batching. A new irods connection is initiated after at least this many bytes (default: 50GB).",
+)
 
 
 lz_parser = argparse.ArgumentParser(description="LZ-selection options", add_help=False)

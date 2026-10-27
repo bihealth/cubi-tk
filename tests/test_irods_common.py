@@ -139,6 +139,8 @@ def test_irods_transfer_put(mock_createcolls, mocksession, jobs):
     # put, no options, no remote files
     itransfer.put()
     mockput.assert_has_calls(calls_no_ov)
+    # default batch size takes all test jobs
+    assert mocksession.call_count == 1
 
     # recursive
     itransfer.put(recursive=True)
@@ -206,7 +208,7 @@ def test_irods_transfer_get(mocksession, jobs):
     mockobj = MagicMock()
     mockobj.get = mockget
     mocksession.return_value.__enter__.return_value.data_objects = mockobj
-    itransfer = iRODSTransfer(jobs)
+    itransfer = iRODSTransfer(jobs, bytes_per_batch=100)
 
     mockget.return_value.size = 111
     itransfer.get()
@@ -217,6 +219,21 @@ def test_irods_transfer_get(mocksession, jobs):
         # download
         mockget.assert_any_call(job.path_remote, job.path_local)
     assert itransfer.size == 222
+    # one session for all size checks, then One batch = one session per file
+    assert mocksession.call_count == 3
+
+
+def test_irods_transfer_batch_jobs(jobs):
+    # one batch per job (each file > `bytes_per_batch`)
+    expected = ([jobs[0]], [jobs[1]])
+    assert iRODSTransfer(jobs, bytes_per_batch=100).batch_transfer_jobs(jobs) == expected
+    # one batch overall (only last file brings sum over `bytes_per_batch`)
+    expected = ([jobs[0], jobs[1]],)
+    assert iRODSTransfer(jobs, bytes_per_batch=1000).batch_transfer_jobs(jobs) == expected
+    # multiple files
+    more_jobs = [jobs[0]] + 2 * list(jobs)
+    expected = ([jobs[0], jobs[0], jobs[1]], [jobs[0], jobs[1]])
+    assert iRODSTransfer(jobs, bytes_per_batch=500).batch_transfer_jobs(more_jobs) == expected
 
 
 # Test iRODSRetrieveCollection #########
