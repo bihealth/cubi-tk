@@ -1,3 +1,4 @@
+import contextlib
 from collections import defaultdict
 import getpass
 import json
@@ -56,6 +57,38 @@ class TransferJob:
             return -1
 
 
+# From stackoverflow, needed because `write_pam_irodsA_file` only respects the ENV var IRODS_AUTHENTICATION_FILE
+@contextlib.contextmanager
+def modified_environ(*remove, **update):
+    """
+    Temporarily updates the ``os.environ`` dictionary in-place.
+
+    The ``os.environ`` dictionary is updated in-place so that the modification
+    is sure to work in all situations.
+
+    :param remove: Environment variables to remove.
+    :param update: Dictionary of environment variables and values to add/update.
+    """
+    env = os.environ
+    update = update or {}
+    remove = remove or []
+
+    # List of environment variables being updated or removed.
+    stomped = (set(update.keys()) | set(remove)) & set(env.keys())
+    # Environment variables and values to restore on exit.
+    update_after = {k: env[k] for k in stomped}
+    # Environment variables and values to remove on exit.
+    remove_after = frozenset(k for k in update if k not in env)
+
+    try:
+        env.update(update)
+        [env.pop(k, None) for k in remove]
+        yield
+    finally:
+        env.update(update_after)
+        [env.pop(k) for k in remove_after]
+
+
 class iRODSCommon:
     """
     Implementation of common iRODS utility functions.
@@ -92,6 +125,8 @@ class iRODSCommon:
             self.irods_env_path = Path(irods_env_path)
         logger.debug(f"using irods_file: {self.irods_env_path}")
         self.irodsA_file_found = False
+        self.default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
+        self.skip_default_irodsA = False
         self.ask = ask
         self.hash_scheme = DEFAULT_HASH_SCHEME
         self.connection_timeout = connection_timeout
@@ -134,7 +169,7 @@ class iRODSCommon:
                 if count_tries > 3:
                     raise e
 
-    def _check_and_gen_irods_files(self, overwrite=False):
+    def _check_and_gen_irods_files(self, overwrite=False):  # noqa: C901
         """check if irodsA exists and generate it"""
         if self.irodsA_file_found is True and not overwrite:
             return
@@ -151,37 +186,50 @@ class iRODSCommon:
             # check date of last authorized irods_environment.json
             last_profile_path = self.irods_env_path.parent.joinpath("last_profile.json")
             last_profile_json = {}
-            default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
-            if default_irodsA.exists():
-                irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
-                shutil.copy(default_irodsA, irodsA_backup)
-            irodsA_path = self.irods_env_path.parent.joinpath(".irodsA_" + self.sodar_profile)
-            if os.path.exists(irodsA_path):
-                self.irodsA_file_found = True
-                # copy irodsA_<profile> to .irodsA for use by irods client
-                shutil.copy(irodsA_path, default_irodsA)
-                # check if relogin is needed
-                if last_profile_path.exists():
-                    with open(last_profile_path) as last_profile_file:
-                        last_profile_json = json.load(last_profile_file)
-                        timestamp = last_profile_json.get(self.sodar_profile, 0)
-                        timestamp_today = int(time())
-                        overwrite = timestamp != 0 and timestamp < (
-                            timestamp_today - 14 * 24 * 3600
-                        )
-                elif not self.irods_env_path.name == "irods_environment.json":
-                    overwrite = True  # overwrite if other profile than global is used and no last_profile exists
+            # Specifically defined `.irodsA` file in irods_env_json
+            if "irods_authentication_file" in irods_env_json:
+                irodsA_path = irods_env_json["irods_authentication_file"]
+                self.skip_default_irodsA = True
+            # Default case, copy .irodsA around to allow profile switching
+            else:
+                if self.default_irodsA.exists():
+                    irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
+                    shutil.copy(self.default_irodsA, irodsA_backup)
+                irodsA_path = self.irods_env_path.parent.joinpath(".irodsA_" + self.sodar_profile)
+
+                if os.path.exists(irodsA_path):
+                    self.irodsA_file_found = True
+                    # copy irodsA_<profile> to .irodsA for use by irods client
+                    shutil.copy(irodsA_path, self.default_irodsA)
+
+            # check if relogin is needed
+            if last_profile_path.exists():
+                with open(last_profile_path) as last_profile_file:
+                    last_profile_json = json.load(last_profile_file)
+                    timestamp = last_profile_json.get(self.sodar_profile, 0)
+                    timestamp_today = int(time())
+                    overwrite = timestamp != 0 and timestamp < (timestamp_today - 14 * 24 * 3600)
+            elif not self.irods_env_path.name == "irods_environment.json":
+                overwrite = True  # overwrite if other profile than global is used and no last_profile exists
 
             write_irods_file = not self.irodsA_file_found or overwrite
             if self.ask and write_irods_file:
                 # set irodsA path and add entry to irodsenv json if doesnt exist yet
-                write_pam_irodsA_file(
-                    getpass.getpass("Enter current PAM password -> "),
-                    overwrite=True,
-                    irods_env_file=self.irods_env_path,
-                )
-                # irods client uses irodsA, save to irodsA_<profile> for backup and switching between profiles
-                shutil.copy(default_irodsA, irodsA_path)
+                if self.skip_default_irodsA:
+                    with modified_environ(update={"IRODS_AUTHENTICATION_FILE": irodsA_path}):
+                        write_pam_irodsA_file(
+                            getpass.getpass("Enter current PAM password -> "),
+                            overwrite=True,
+                            irods_env_file=self.irods_env_path,
+                        )
+                else:
+                    write_pam_irodsA_file(
+                        getpass.getpass("Enter current PAM password -> "),
+                        overwrite=True,
+                        irods_env_file=self.irods_env_path,
+                    )
+                    # irods client uses irodsA, save to irodsA_<profile> for backup and switching between profiles
+                    shutil.copy(self.default_irodsA, irodsA_path)
                 self.irodsA_file_found = True
                 with open(last_profile_path, mode="w") as last_profile_file:
                     last_profile_json[self.sodar_profile] = time()
