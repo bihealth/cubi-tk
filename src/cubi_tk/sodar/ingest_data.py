@@ -50,9 +50,9 @@ SRC_REGEX_PRESETS = {
         r".+\.(bam|pod5|txt|json)"
     ),
     "onk_analysis": (
-        r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>[a-zA-Z0-9_-]+(_WGS|_CGP)))"
+        r"(.*/)?(?:(UMI_collapsing_)?(?P<sample>T[0-9]{5}-[0-9]{2}(_WGS|_WES)))"
         r"(?:_(?P<tissue>(tumor|normal)))?"  # r"(?:(.*?)?(?P<tissue>(tumor|normal)))?"#backlog possible other regex: r"(?:(.*?)?(?P<tissue>(tumor|normal)))"
-        r"\.?(bam|.*bed$|.*bed.gz|txt|.*json|.*vcf|.*report.html|.*counts|.*maf|.*hla.tsv|.*cnv_metrics.csv|.*wgs_overall_mean_cov|.*wgs_coverage_metrics|.*mapping_metrics.csv|.*tmb.metrics.csv|cnv.tsv|snv.tsv|fus.tsv|ig_sv.tsv)"
+        r"\.?(bam|cram|.*bed$|.*bed.gz|txt|.*json|.*vcf|.*report.html|.*counts|.*maf|.*hla.tsv|.*cnv_metrics.csv|.*wgs_overall_mean_cov|.*wgs_coverage_metrics|.*mapping_metrics.csv|.*tmb.metrics.csv|cnv.tsv|snv.tsv|fus.tsv|ig_sv.tsv)"
     ),
 }
 
