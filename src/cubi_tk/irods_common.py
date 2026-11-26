@@ -134,7 +134,7 @@ class iRODSCommon:
                 if count_tries > 3:
                     raise e
 
-    def _check_and_gen_irods_files(self, overwrite=False):
+    def _check_and_gen_irods_files(self, overwrite=False):  # noqa: C901
         """check if irodsA exists and generate it"""
         if self.irodsA_file_found is True and not overwrite:
             return
