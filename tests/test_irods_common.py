@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
@@ -94,6 +95,91 @@ def test_check_and_gen_irods_files_skips_when_irodsA_exists(
 
     mockpass.assert_not_called()
     mock_write_pam.assert_not_called()
+
+
+@patch("getpass.getpass", return_value="password")
+@patch("cubi_tk.irods_common.write_pam_irodsA_file")
+@pytest.mark.parametrize(
+    ("timestamp", "should_relogin"),
+    (
+        (0, False),
+        (1_700_000_000 - 13 * 24 * 3600, False),
+        (1_700_000_000 - 15 * 24 * 3600, True),
+    ),
+)
+def test_check_and_gen_irods_files_profile_timestamp(
+    mock_write_pam,
+    mockpass,
+    timestamp,
+    should_relogin,
+    fs,
+    irods_env_file,
+):
+    irods_dir = Path(irods_env_file).parent
+    fs.create_file(irods_dir / ".irodsA_global", contents="cached")
+    fs.create_file(irods_dir / ".irodsA", contents="cached")
+    fs.create_file(
+        irods_dir / "last_profile.json",
+        contents=json.dumps({"global": timestamp}),
+    )
+
+    default_irods_a = irods_dir / ".irodsA"
+    mock_write_pam.side_effect = lambda *args, **kwargs: default_irods_a.write_text("new")
+
+    icommon = iRODSCommon(ask=True)
+    with patch("cubi_tk.irods_common.time", return_value=1_700_000_000):
+        icommon._check_and_gen_irods_files()
+
+    if should_relogin:
+        mockpass.assert_called_once()
+        mock_write_pam.assert_called_once()
+    else:
+        mockpass.assert_not_called()
+        mock_write_pam.assert_not_called()
+
+
+@patch("getpass.getpass", return_value="password")
+@patch("cubi_tk.irods_common.write_pam_irodsA_file")
+@pytest.mark.parametrize(
+    ("last_used_env", "should_relogin"),
+    (
+        ("global", False),
+        ("charite", True),
+    ),
+)
+def test_check_and_gen_irods_files_last_used_env(
+    mock_write_pam,
+    mockpass,
+    last_used_env,
+    should_relogin,
+    fs,
+    irods_env_file,
+):
+    irods_dir = Path(irods_env_file).parent
+    fs.create_file(irods_dir / ".irodsA_global", contents="cached")
+    fs.create_file(irods_dir / ".irodsA", contents="cached")
+
+    icommon = iRODSCommon(ask=True)
+    if last_used_env == "global":
+        stored_env = str(icommon.irods_env_path)
+    else:
+        stored_env = "charite.json"
+    fs.create_file(
+        irods_dir / "last_profile.json",
+        contents=json.dumps({"last_used_env": stored_env}),
+    )
+
+    default_irods_a = irods_dir / ".irodsA"
+    mock_write_pam.side_effect = lambda *args, **kwargs: default_irods_a.write_text("new")
+
+    icommon._check_and_gen_irods_files()
+
+    if should_relogin:
+        mockpass.assert_called_once()
+        mock_write_pam.assert_called_once()
+    else:
+        mockpass.assert_not_called()
+        mock_write_pam.assert_not_called()
 
 
 # Test iRODSTransfer #########

@@ -155,6 +155,12 @@ class iRODSCommon:
             if default_irodsA.exists():
                 irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
                 shutil.copy(default_irodsA, irodsA_backup)
+            else:
+                # create empty file to avoid error when copying irodsA_<profile> to .irodsA in next step or deleting irodsA_backup
+                default_irodsA = self.irods_env_path.parent.joinpath(".irodsA")
+                default_irodsA.touch()
+                irodsA_backup = self.irods_env_path.parent.joinpath(".irodsA_backup")
+                irodsA_backup.touch()
             irodsA_path = self.irods_env_path.parent.joinpath(".irodsA_" + self.sodar_profile)
             if os.path.exists(irodsA_path):
                 self.irodsA_file_found = True
@@ -164,11 +170,17 @@ class iRODSCommon:
                 if last_profile_path.exists():
                     with open(last_profile_path) as last_profile_file:
                         last_profile_json = json.load(last_profile_file)
-                        timestamp = last_profile_json.get(self.sodar_profile, 0)
-                        timestamp_today = int(time())
-                        overwrite = timestamp != 0 and timestamp < (
-                            timestamp_today - 14 * 24 * 3600
-                        )
+                        if "last_used_env" in last_profile_json:
+                            # Backward compatibility
+                            overwrite = last_profile_json["last_used_env"] != str(
+                                self.irods_env_path
+                            )
+                        else:
+                            timestamp = last_profile_json.get(self.sodar_profile, 0)
+                            timestamp_today = int(time())
+                            overwrite = timestamp != 0 and timestamp < (
+                                timestamp_today - 14 * 24 * 3600
+                            )
                 elif not self.irods_env_path.name == "irods_environment.json":
                     overwrite = True  # overwrite if other profile than global is used and no last_profile exists
 
